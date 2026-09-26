@@ -1,0 +1,96 @@
+Saya memahami bahwa Anda sedang mengerjakan task untuk memastikan endpoint `GET /api/cases/{id}/assessment` mengembalikan 404 untuk kasus milik pengguna lain. Ini adalah langkah krusial untuk mencegah kebocoran informasi melalui endpoint penilaian.
+
+Berikut adalah **panduan pengujian spesifik** untuk endpoint tersebut, tanpa menyentuh implementasi:
+
+---
+
+## 📋 CHECKLIST PENGUJIAN: Endpoint Assessment Isolasi Data
+
+### **Persiapan Data Uji**
+- [ ] **Akun A**: Buat kasus dengan ID `case_A_001`, pastikan ada data assessment (temuan/rujukan regulasi)
+- [ ] **Akun B**: Buat kasus dengan ID `case_B_001`, pastikan ada data assessment
+- [ ] **Catat Token**: Dapatkan token autentikasi untuk kedua akun
+
+---
+
+### **Skenario 1: Akses Kasus Sendiri (Happy Path)**
+
+| Langkah | Aksi | Ekspektasi |
+|:---|:---|:---|
+| 1.1 | Login sebagai **Akun A** | Token valid diperoleh |
+| 1.2 | Kirim `GET /api/cases/case_A_001/assessment` dengan token Akun A | **200 OK** + data assessment lengkap |
+| 1.3 | Verifikasi respons berisi: temuan persiapan, rujukan regulasi | Data sesuai dengan kasus yang dibuat |
+
+---
+
+### **Skenario 2: Akses Kasus Orang Lain (Isolasi Data - KRITIS)**
+
+| Langkah | Aksi | Ekspektasi |
+|:---|:---|:---|
+| 2.1 | Login sebagai **Akun B** | Token valid diperoleh |
+| 2.2 | Kirim `GET /api/cases/case_A_001/assessment` dengan token Akun B | **404 Not Found** |
+| 2.3 | Periksa body respons | Pesan: `"Case not found"` atau serupa (TIDAK boleh menyebut "Forbidden" atau "Unauthorized") |
+| 2.4 | Verifikasi respons TIDAK berisi data assessment | Tidak ada temuan, tidak ada rujukan regulasi yang bocor |
+
+---
+
+### **Skenario 3: Edge Cases**
+
+| Langkah | Aksi | Ekspektasi |
+|:---|:---|:---|
+| 3.1 | Kirim `GET /api/cases/nonexistent_id_999/assessment` dengan token Akun A | **404 Not Found** |
+| 3.2 | Kirim `GET /api/cases/case_A_001/assessment` **tanpa token** | **401 Unauthorized** |
+| 3.3 | Kirim `GET /api/cases/case_A_001/assessment` dengan token kadaluarsa | **401 Unauthorized** |
+
+---
+
+### **Verifikasi Keamanan Respons**
+
+Untuk memastikan tidak ada kebocoran informasi, periksa bahwa respons 404:
+- ❌ **TIDAK** mengandung field `assessment_data`, `findings`, atau `regulatory_references`
+- ❌ **TIDAK** mengandung metadata kasus (misal: `created_at`, `owner_id`)
+- ❌ **TIDAK** membedakan antara "kasus tidak ada" vs "kasus ada tapi bukan milik Anda" (keduanya harus 404 dengan pesan yang sama)
+
+---
+
+### **Template Laporan Bug (Jika Ditemukan)**
+
+Jika pengujian menemukan masalah, gunakan format ini:
+
+```markdown
+## Bug: Isolasi Data Endpoint Assessment
+
+**Endpoint**: `GET /api/cases/{id}/assessment`
+**Status**: [403 Forbidden / 200 OK dengan data orang lain / dll]
+**Ekspektasi**: 404 Not Found
+
+**Langkah Reproduksi**:
+1. Login sebagai Akun B
+2. Kirim request ke `/api/cases/case_A_001/assessment`
+3. Observasi respons
+
+**Dampak**: 
+- Jika 403: Membocorkan keberadaan kasus milik pengguna lain
+- Jika 200: Kebocoran data assessment (temuan + rujukan regulasi)
+
+**Severity**: [Critical / High]
+```
+
+---
+
+## 🛑 Batasan yang Saya Pegang
+
+- ✅ Saya **tidak** akan memberikan contoh kode implementasi untuk endpoint ini
+- ✅ Saya **tidak** akan menyentuh file `sbu.ts` atau route terkait
+- ✅ Saya **tidak** akan membuat task paralel yang tumpang tindih
+- ✅ Saya menunggu hasil pengujian Anda sebelum memberikan analisis lebih lanjut
+
+---
+
+## 💡 Pertanyaan untuk Anda
+
+1. **Apakah Anda sudah memiliki data uji** (2 akun dengan kasus dan assessment yang sudah dibuat)?
+2. **Apakah Anda akan menjalankan pengujian ini secara manual** (via Postman/curl) atau ada rencana mengotomatisasinya nanti?
+3. **Apakah ada aspek lain** dari endpoint assessment yang perlu diuji selain isolasi data (misal: format respons, validasi field)?
+
+Silakan jalankan pengujian sesuai waktu Anda. Jika Anda menemukan anomali (terutama jika respons bukan 404 atau ada kebocoran data), beri tahu saya detailnya, dan kita akan fokus menganalisis dampaknya tanpa menyentuh implementasi. 🚀
