@@ -101,11 +101,11 @@ test("respons kasus mempertahankan kedaluwarsa SBU tetapi penilaian tidak mengir
 
     const { body: assessment, raw } = await request(server, "/api/cases/12/assessment");
     assert.equal(assessment.caseId, 12);
-    const transition = assessment.findings.find((finding) => finding.code === "transisi");
+    const transition = assessment.findings.find((finding) => finding.code === "transisi_konversi");
     assert.ok(transition);
     assert.equal(transition.status, "perlu_tinjauan");
     assert.match(transition.detail, /surat Pasal 20 ayat \(2\).*belum terkonfirmasi/);
-    assert.match(transition.detail, /belum tersedia telaah ahli/);
+    assert.match(transition.detail, /belum ditelaah ahli/);
     assert.match(transition.detail, /bukan tanggal Kepdirjen/);
     assert.doesNotMatch(raw, /\b20\d{2}-\d{2}-\d{2}\b/,
       "tanggal dari input kasus atau Kepdirjen tidak boleh menjadi tanggal konversi di penilaian");

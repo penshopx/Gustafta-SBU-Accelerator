@@ -28,13 +28,16 @@ const evidence = [
 
 test("konversi SBU tetap belum terverifikasi tanpa surat Pasal 20 ayat (2), meski ada tanggal lain", () => {
   const assessment = assessCase(caseWithDates, evidence);
-  const transition = assessment.findings.find((item) => item.code === "transisi");
+  const lsbu = assessment.findings.find((item) => item.code === "transisi");
+  const operational = assessment.findings.find((item) => item.code === "transisi_operasional");
+  const transition = assessment.findings.find((item) => item.code === "transisi_konversi");
 
-  assert.ok(transition, "perpanjangan harus memuat panduan transisi");
+  assert.ok(lsbu && operational && transition, "perpanjangan harus memuat keputusan masing-masing alur");
   assert.equal(transition.status, "perlu_tinjauan");
   assert.match(transition.detail, /Konversi SBU eksisting memakai 6 bulan sejak terbitnya surat Pasal 20 ayat \(2\), bukan tanggal Kepdirjen/);
   assert.match(transition.detail, /surat Pasal 20 ayat \(2\).*belum terkonfirmasi/);
-  assert.match(transition.detail, /LSBU.*6 bulan sejak penetapan Kepdirjen/);
+  assert.match(lsbu.detail, /6 bulan sejak penetapan/);
+  assert.match(operational.detail, /kesiapan SIJK/);
   assert.equal(assessment.status, "perlu_bukti");
   assert.equal("conversionDeadline" in assessment, false);
   assert.equal("deadline" in transition, false);
@@ -43,7 +46,7 @@ test("konversi SBU tetap belum terverifikasi tanpa surat Pasal 20 ayat (2), mesk
 
 test("tidak ada tenggat konversi atau hitung mundur untuk jenis permohonan lain", () => {
   const assessment = assessCase({ ...caseWithDates, requestType: "baru" }, evidence);
-  assert.equal(assessment.findings.some((item) => item.code === "transisi"), false);
+  assert.equal(assessment.findings.some((item) => item.code.startsWith("transisi")), false);
   assert.equal("conversionDeadline" in assessment, false);
   assert.doesNotMatch(JSON.stringify(assessment), /\b20\d{2}-\d{2}-\d{2}\b|"(?:\w*deadline|\w*countdown|\w*dueDate)"/i);
 });

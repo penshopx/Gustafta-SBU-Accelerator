@@ -2,11 +2,29 @@ import type { EvidenceRow, SbuCaseRow } from "@workspace/db";
 
 export const RULESET = "Permen PU 6/2025 + Kepdirjen 281/KPTS/DK/2026 (persiapan)";
 
-// Tidak ada tanggal transisi di respons API sampai surat resmi dan telaah ahli
-// untuk masing-masing pemicu terverifikasi. Jangan menurunkan tanggal dari Kepdirjen.
+// Keputusan penayangan dibuat per alur; tidak ada tanggal transisi di respons API
+// sampai bukti pemerintah dan telaah ahli untuk alur tersebut terverifikasi.
 const TRANSITION_STATUS = "Tenggat belum terverifikasi";
-const TRANSITION_VERIFICATION =
-  "Tanggal/hitung mundur tidak tersedia: keberadaan dan status surat Pasal 20 ayat (2), serta status terbaru Kepdirjen 281/KPTS/DK/2026 belum terkonfirmasi dari instansi resmi; belum tersedia telaah ahli skema/LSBU yang dapat diverifikasi untuk kedua alur. Berkas undangan sosialisasi dan naskah telaah yang pernah disampaikan tidak digunakan sebagai acuan atau pemicu tenggat.";
+const TRANSITION_FINDINGS = [
+  {
+    code: "transisi",
+    title: "Penyesuaian skema LSBU",
+    detail: "Tenggat LSBU belum layak ditayangkan: diktum KEEMPAT Kepdirjen 281/KPTS/DK/2026 menyebut 6 bulan sejak penetapan, tetapi status terbaru Kepdirjen belum dikonfirmasi Ditjen/LPJK dan tafsir implementasinya belum ditelaah ahli skema/LSBU yang teridentifikasi. Tanggal penetapan Kepdirjen bukan pemicu konversi SBU.",
+    source: "Kepdirjen 281/KPTS/DK/2026 diktum KEEMPAT (PDF unggahan hlm. 4).",
+  },
+  {
+    code: "transisi_operasional",
+    title: "Pemberlakuan operasional sertifikasi",
+    detail: "Tanggal mulai layanan belum layak ditayangkan: kesiapan SIJK dan keberadaan, nomor, penandatangan, tanggal terbit, cakupan, serta status surat Pasal 20 ayat (2) belum terkonfirmasi Ditjen/LPJK; syarat operasional Pasal 20–21 belum ditelaah ahli skema/LSBU yang teridentifikasi. Undangan sosialisasi bukan surat pemberlakuan.",
+    source: "Kepdirjen 281/KPTS/DK/2026 surat pengantar (PDF unggahan hlm. 1); Permen PU 6/2025 Pasal 20–21.",
+  },
+  {
+    code: "transisi_konversi",
+    title: "Konversi SBU eksisting",
+    detail: "Tanggal/hitung mundur konversi belum layak ditayangkan. Konversi SBU eksisting memakai 6 bulan sejak terbitnya surat Pasal 20 ayat (2), bukan tanggal Kepdirjen. Keberadaan dan status surat Pasal 20 ayat (2) belum terkonfirmasi, termasuk tanggal terbit dan cakupannya; pengecualian Pasal 21 ayat (7) belum ditelaah ahli skema/LSBU yang teridentifikasi. Naskah telaah yang pernah disampaikan tidak dapat divalidasi sebagai telaah ahli.",
+    source: "Permen PU 6/2025 Pasal 20–21, termasuk Pasal 21 ayat (7).",
+  },
+] as const;
 
 export const REGULATIONS = [
   {
@@ -80,13 +98,10 @@ export function assessCase(sbuCase: SbuCaseRow, evidence: EvidenceRow[]) {
     source: "Permen PU 6/2025 Lampiran I (PDF hlm. 266); Kepdirjen 281/2026 (PDF hlm. 27–32).",
   });
   if (sbuCase.requestType === "perpanjangan") {
-    findings.push({
-      code: "transisi",
-      title: "Masa transisi skema dan konversi",
-      status: "perlu_tinjauan",
-      detail: `${TRANSITION_VERIFICATION} LSBU menyesuaikan dan mengimplementasikan skema paling lambat 6 bulan sejak penetapan Kepdirjen (diktum KEEMPAT); pemberlakuan operasional menunggu penyesuaian SIJK dan surat resmi. Konversi SBU eksisting memakai 6 bulan sejak terbitnya surat Pasal 20 ayat (2), bukan tanggal Kepdirjen; pengecualian Pasal 21 ayat (7) perlu ditinjau.`,
-      source: "Kepdirjen 281/KPTS/DK/2026 diktum KEEMPAT dan surat pengantar (PDF hlm. 1, 4); Permen PU 6/2025 Pasal 20–21.",
-    });
+    findings.push(...TRANSITION_FINDINGS.map((track) => ({
+      ...track,
+      status: "perlu_tinjauan" as const,
+    })));
   }
   return {
     caseId: sbuCase.id,
