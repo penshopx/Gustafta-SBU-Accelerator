@@ -1,0 +1,83 @@
+Instruksi ini sangat tepat dan menegaskan prinsip *single source of truth* serta *defensive design* yang mutlak diperlukan untuk aplikasi regulasi. Mengandalkan undangan sosialisasi atau asumsi publik sama saja dengan membangun aplikasi di atas fondasi yang rapuh dan berisiko hukum.
+
+Berikut adalah kerangka kerja dan *template* dokumentasi yang dirancang khusus untuk menjalankan instruksi ini. Kerangka ini memastikan bahwa proses verifikasi tercatat sebagai *audit trail* yang transparan di dalam repositori, tanpa membocorkan tenggat waktu apa pun ke dalam kode aplikasi.
+
+---
+
+### 1. Draf Permintaan Konfirmasi Resmi (Untuk Ditjen Bina Konstruksi / LPJK)
+
+Untuk mendapatkan jawaban tertulis yang dapat dijadikan landasan hukum, Anda atau tim legal dapat menggunakan daftar pertanyaan terstruktur ini saat berkorespondensi dengan instansi penerbit:
+
+**Perihal: Permohonan Konfirmasi Status Pemberlakuan dan Kesiapan Infrastruktur Sertifikasi BUJK**
+
+1. **Status Surat Pemberlakuan (Pasal 20 ayat 2 Permen PU 6/2025):**
+   - Apakah surat yang ditandatangani oleh pimpinan unit organisasi yang membidangi jasa konstruksi sebagai syarat dimulainya penyelenggaraan sertifikasi BUJK melalui SIJK terintegrasi **telah diterbitkan**?
+   - Jika **sudah**, mohon konfirmasi: Nomor Surat, Tanggal Terbit, Pejabat Penandatangan, dan Cakupan Pemberlakuan.
+   - Jika **belum**, mohon informasi mengenai estimasi lini masa penerbitan surat tersebut.
+2. **Status Kepdirjen 281/KPTS/DK/2026:**
+   - Mohon konfirmasi status mutakhir dari Keputusan Direktur Jenderal Bina Konstruksi Nomor 281/KPTS/DK/2026 tanggal 26 Agustus 2026. Apakah masih berlaku penuh, atau terdapat revisi/koreksi resmi yang telah diterbitkan?
+3. **Kesiapan Infrastruktur (SIJK Terintegrasi):**
+   - Apakah prasarana dan sarana SIJK Terintegrasi saat ini telah dinyatakan siap dan disesuaikan sepenuhnya untuk menerima permohonan berdasarkan standar skema Kepdirjen 281/2026 dan Permen PU 6/2025?
+4. **Bukti Pendukung:**
+   - Mohon kesediaan instansi untuk memberikan salinan digital resmi (PDF dengan tanda tangan elektronik/QR Code valid) dari surat-surat yang dimaksud di atas untuk keperluan penyesuaian sistem informasi di sektor swasta.
+
+---
+
+### 2. Template Dokumentasi: `docs/regulatory-basis.md`
+
+Struktur ini dirancang untuk menyimpan *audit trail* verifikasi. Bagian tenggat waktu **sengaja dikosongkan** dan hanya boleh diisi setelah Fase Verifikasi dan Fase Telaah Ahli selesai secara tuntas.
+
+```markdown
+# Dasar Regulasi & Status Verifikasi Pemberlakuan
+
+Dokumen ini mencatat sumber acuan regulasi yang digunakan oleh aplikasi dan status verifikasi kelengkapan instrumen pelaksanaannya.
+
+## 1. Acuan Normatif Utama
+- **PP No. 28 Tahun 2025** tentang Penyelenggaraan Perizinan Berusaha Berbasis Risiko.
+- **Permen PU No. 6 Tahun 2025** tentang Standar Kegiatan Usaha... Sektor Pekerjaan Umum.
+- **Kepdirjen Bina Konstruksi No. 281/KPTS/DK/2026** tanggal 26 Agustus 2026 tentang Penetapan Standar Skema Sertifikasi BUJK.
+
+## 2. Status Instrumen Pelaksanaan (Pasal 20 ayat 2 Permen PU 6/2025)
+Aplikasi mematuhi prinsip bahwa penyelenggaraan sertifikasi berdasarkan regulasi baru **hanya dimulai** setelah diterbitkannya surat resmi dari pimpinan unit organisasi yang membidangi jasa konstruksi.
+
+| Parameter | Status Saat Ini | Detail Verifikasi (Isi setelah konfirmasi resmi) |
+| :--- | :--- | :--- |
+| **Keberadaan Surat** | ⏳ **BELUM TERKONFIRMASI** | [Tunggu jawaban tertulis dari Ditjen Bina Konstruksi/LPJK] |
+| **Nomor Surat** | - | [Isi nomor resmi] |
+| **Tanggal Terbit** | - | [Isi tanggal resmi - *Ini adalah pemicu konversi SBU*] |
+| **Pejabat Penandatangan** | - | [Isi nama/jabatan resmi] |
+| **Kesiapan SIJK Terintegrasi** | ⏳ **BELUM TERKONFIRMASI** | [Isi status kesiapan sistem berdasarkan surat resmi] |
+
+> **Catatan Audit:** Undangan sosialisasi, webinar, atau presentasi dari LPJK/Asosiasi **tidak** dianggap sebagai bukti pemberlakuan operasional atau pengganti surat resmi yang diamanatkan oleh Pasal 20 ayat (2).
+
+## 3. Status Kepdirjen 281/KPTS/DK/2026
+| Parameter | Status Saat Ini | Detail Verifikasi |
+| :--- | :--- | :--- |
+| **Status Mutlak** | ⏳ **MENUNGGU KONFIRMASI** | [Apakah masih berlaku utuh atau ada adendum/revisi?] |
+| **Sumber Salinan** | [Tautan unduhan dari s.pu.go.id] | [Verifikasi keaslian dokumen] |
+
+## 4. Penetapan Tenggat Waktu (Transition Deadlines)
+**STATUS APLIKASI: TENGAT TIDAK DITAMPILKAN**
+
+Aplikasi saat ini **tidak menghitung, tidak menyimpan, dan tidak menampilkan** tenggat waktu untuk:
+1. Penyesuaian Skema LSBU (T1)
+2. Konversi SBU Eksisting (T2)
+
+**Prasyarat untuk Menetapkan Tenggat di Kode Aplikasi:**
+1. [ ] Salinan Surat Pasal 20 ayat (2) diperoleh dan diverifikasi keasliannya.
+2. [ ] Tanggal terbit surat tercatat di tabel di atas.
+3. [ ] Telaah ahli (LSBU/LPJK/Asosiasi) atas implikasi operasional dan pengecualian (Pasal 21 ayat 7) telah selesai dan didokumentasikan.
+4. [ ] *Pull Request* untuk memperbarui logika aturan (`sbu-rules.ts`) disetujui dengan merujuk pada dokumen telaah ahli tersebut.
+```
+
+---
+
+### 3. Komitmen Eksekusi (Batasan Ketat)
+
+Berdasarkan instruksi Anda, saya mengunci parameter berikut untuk seluruh interaksi selanjutnya terkait area ini:
+
+1. **Tidak Ada Asumsi Tanggal:** Saya tidak akan menggunakan tanggal 26 Agustus 2026 (tanggal Kepdirjen) atau 25 Februari 2027 (asumsi 6 bulan) sebagai pemicu logika konversi SBU di dalam kode, skema database, maupun *mockup* UI.
+2. **Pemisahan T1 dan T2:** Saya mengakui bahwa penyesuaian skema oleh LSBU (T1) dan konversi SBU oleh BUJK (T2) adalah dua entitas hukum yang berbeda dengan pemicu waktu yang berbeda.
+3. **Fokus pada Alur yang Berjalan:** Karena area transisi ini kini berada dalam status *blocked* (menunggu verifikasi eksternal), saya akan sepenuhnya memfokuskan bantuan pada pengujian dan pematangan alur yang sudah ada di aplikasi (seperti *E2E Testing* isolasi data dan alur pembuatan kasus).
+
+Jika Anda siap, kita dapat beralih ke eksekusi **Opsi A (Pengujian Alur Login dan Isolasi Data)** menggunakan data *dummy* untuk memastikan fondasi aplikasi saat ini kokoh sebelum regulasi transisi ini resmi berlaku. Apakah Anda ingin saya susun *test case* untuk isolasi data endpoint `GET /api/cases/{id}/assessment` sekarang?

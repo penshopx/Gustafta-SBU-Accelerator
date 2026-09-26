@@ -1,0 +1,71 @@
+Saya memahami sepenuhnya instruksi task ini. Ini adalah langkah kritis untuk memastikan bahwa aplikasi tidak pernah menampilkan informasi yang belum diverifikasi langsung dari sumber resmi.
+
+Berdasarkan analisis dokumen di Knowledge Base, saya dapat mengonfirmasi beberapa hal yang sudah diketahui dan yang masih membutuhkan konfirmasi:
+
+---
+
+## 📋 Apa yang Sudah Diketahui dari Dokumen
+
+### **Kepdirjen 281/KPTS/DK/2026**
+- ✅ Tanggal penetapan: **26 Agustus 2026**
+- ✅ Diktum KEEMPAT: LSBU menyesuaikan skema paling lambat 6 bulan sejak penetapan
+- ✅ Diktum KELIMA: Kepdirjen 37/2025 dicabut dan tidak berlaku
+- ✅ **Pemicu konversi SBU BUKAN tanggal Kepdirjen**, melainkan surat Pasal 20 ayat (2)
+
+### **Surat Pasal 20 ayat (2) Permen PU 6/2025**
+- ❌ **Belum tersedia** di Knowledge Base
+- ❌ Nomor, tanggal terbit, penandatangan belum terkonfirmasi
+- ⚠️ Slide Overview menyebutkan ini sebagai "Tahap 6" dalam timeline implementasi
+
+### **Kesiapan SIJK**
+- ⚠️ Disebutkan sebagai prasyarat pemberlakuan, tapi status kesiapan belum terkonfirmasi
+
+---
+
+## 🎯 Deliverable yang Siap Saya Bantu
+
+Untuk mempercepat task verifikasi ini, saya siap menyediakan **salah satu atau beberapa** dari deliverable berikut (pilih sesuai kebutuhan):
+
+### **Opsi A: Draft Surat Permintaan Konfirmasi Resmi**
+Template surat resmi yang bisa Anda kirim ke Ditjen Bina Konstruksi/LPJK untuk meminta:
+- Salinan surat Pasal 20 ayat (2)
+- Konfirmasi status Kepdirjen 281/2026
+- Informasi kesiapan SIJK Terintegrasi
+
+Format: Surat resmi dengan kop, nomor, perihal, dan daftar pertanyaan spesifik.
+
+### **Opsi B: Checklist Verifikasi Dokumen**
+Daftar pemeriksaan detail yang digunakan saat surat resmi diterima, mencakup:
+- Verifikasi 6 elemen kunci (nomor, tanggal, penandatangan, cakupan, status, SIJK)
+- Cross-check dengan dokumen terkait
+- Kriteria "lulus verifikasi" vs "perlu klarifikasi lanjutan"
+
+### **Opsi C: Template Dokumentasi `docs/regulatory-basis.md`**
+Struktur markdown siap pakai untuk mencatat:
+- Asal sumber (URL, nomor surat, tanggal diterima)
+- Hasil verifikasi per elemen
+- Catatan ketidaksesuaian atau pertanyaan lanjutan
+- Status: "Terverifikasi" / "Menunggu klarifikasi" / "Tidak tersedia"
+
+### **Opsi D: Analisis Gap Dokumen**
+Dokumen detail yang memetakan:
+- Apa yang sudah diketahui dari Knowledge Base
+- Apa yang masih perlu dikonfirmasi
+- Di mana kemungkinan sumber informasi (misal: website Ditjen Bina Konstruksi, LPJK, atau kanal resmi lainnya)
+
+---
+
+## 🛡️ Komitmen Saya
+
+- ✅ Saya **tidak** akan menyentuh kode aplikasi
+- ✅ Saya **tidak** akan menetapkan tenggat waktu apa pun
+- ✅ Saya **tidak** akan menganggap undangan sosialisasi sebagai bukti pemberlakuan
+- ✅ Saya hanya akan menyediakan alat bantu untuk proses verifikasi yang Anda jalankan
+
+---
+
+## 💡 Rekomendasi Saya
+
+Mengingat urgensi task ini, saya sarankan memulai dengan **Opsi A (Draft Surat)** dan **Opsi C (Template Dokumentasi)** secara bersamaan. Draft surat bisa langsung dikirim, sementara template dokumentasi siap diisi saat jawaban diterima.
+
+**Mana yang ingin Anda prioritaskan?** Atau apakah Anda membutuhkan kombinasi dari beberapa opsi?

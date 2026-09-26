@@ -1,0 +1,118 @@
+# 📋 Checklist Pengujian Respons JSON: `GET /api/regulations`
+
+Task ini adalah langkah defensif yang tepat — menguji **kontrak API**, bukan hanya logika internal. Kebocoran tanggal transisi bisa terjadi bukan hanya dari logika yang salah, tetapi juga dari perubahan serialisasi, field baru yang tidak terduga, atau inkonsistensi skema OpenAPI.
+
+Berikut adalah daftar pemeriksaan yang fokus pada **respons JSON aktual** yang dikonsumsi aplikasi.
+
+---
+
+## 🎯 Skenario 1: Respons Normal (Baseline)
+
+| # | Pemeriksaan | Kriteria Keberhasilan |
+|:---|:---|:---|
+| 1.1 | Kirim `GET /api/regulations` dengan autentikasi valid | Status HTTP `200 OK` |
+| 1.2 | Setiap item regulasi memiliki field `status` | Nilai field: `"unverified"` atau `"pending_verification"` |
+| 1.3 | Tidak ada field tanggal transisi yang aktif | Field seperti `transition_date`, `deadline_date`, `countdown_days` **ABSEN** atau bernilai `null` |
+| 1.4 | Tidak ada field hitung mundur | Tidak ada field seperti `days_remaining`, `hours_left`, `countdown` |
+| 1.5 | Pesan status menggunakan frasa yang tepat | Mengandung "belum terverifikasi di aplikasi" (bukan "menunggu surat resmi") |
+| 1.6 | Tidak ada referensi ke tanggal Kepdirjen sebagai pemicu konversi | Tidak ada field yang menyiratkan 26 Agustus 2026 atau 25 Februari 2027 sebagai tenggat konversi |
+
+---
+
+## 🎯 Skenario 2: Validasi Skema OpenAPI
+
+| # | Pemeriksaan | Kriteria Keberhasilan |
+|:---|:---|:---|
+| 2.1 | Respons JSON sesuai dengan `lib/api-spec/openapi.yaml` | Semua field dalam respons terdaftar di skema |
+| 2.2 | Skema OpenAPI mendefinisikan field tanggal transisi sebagai **opsional** | Field `transition_date`, `deadline_date` memiliki `nullable: true` atau tidak wajib |
+| 2.3 | Skema OpenAPI memiliki enum untuk field `status` | Nilai yang diizinkan: `unverified`, `pending_verification`, `verified` (minimal) |
+| 2.4 | Tidak ada field wajib yang secara implisit mengharuskan tanggal | Tidak ada kombinasi field yang memaksa tanggal muncul |
+| 2.5 | Skema OpenAPI konsisten dengan implementasi aktual | Tidak ada field di respons yang tidak terdaftar di skema (dan sebaliknya) |
+
+---
+
+## 🎯 Skenario 3: Edge Case — Perubahan Kontrak
+
+| # | Pemeriksaan | Kriteria Keberhasilan |
+|:---|:---|:---|
+| 3.1 | Jika `sbu-rules.ts` dimodifikasi untuk menambahkan field baru | Field baru **tidak boleh** berisi tanggal transisi kecuali status = `verified` |
+| 3.2 | Jika route `sbu.ts` mengubah struktur respons | Struktur baru tetap mematuhi skema OpenAPI |
+| 3.3 | Jika ada regresi yang mengembalikan tanggal Kepdirjen sebagai pemicu T2 | Uji gagal — tanggal tidak boleh muncul |
+| 3.4 | Jika ada kode yang mencoba "fallback" ke tanggal verifikasi ahli | Uji gagal — tanggal verifikasi ahli bukan tanggal terbit surat |
+| 3.5 | Jika ada perubahan pada serialisasi (misal: dari snake_case ke camelCase) | Field tanggal tetap tidak muncul, terlepas dari konvensi penamaan |
+
+---
+
+## 🎯 Skenario 4: Konsistensi Lintas Endpoint
+
+| # | Pemeriksaan | Kriteria Keberhasilan |
+|:---|:---|:---|
+| 4.1 | `GET /api/regulations` konsisten dengan `GET /api/cases/{id}/assessment` | Kedua endpoint tidak menayangkan tanggal transisi yang belum terverifikasi |
+| 4.2 | Tidak ada endpoint lain yang mengekspos tanggal transisi | Audit semua endpoint yang mengembalikan data regulasi |
+| 4.3 | Field `status` memiliki makna yang sama di semua endpoint | `unverified` = tidak ada tanggal, di semua tempat |
+
+---
+
+## 📝 Template Dokumentasi Temuan
+
+Jika pengujian menemukan anomali, gunakan format ini untuk konsistensi:
+
+```markdown
+## Temuan: Kebocoran Tanggal Transisi di Respons JSON
+
+**Endpoint**: `GET /api/regulations`
+**Status Respons**: [200 OK / 4xx / 5xx]
+**Tanggal Pengujian**: [YYYY-MM-DD]
+
+### Detail Temuan
+- Field yang bermasalah: [nama field]
+- Nilai yang muncul: [nilai aktual]
+- Nilai yang seharusnya: [null / field absen / dll]
+
+### Analisis Dampak
+- [ ] Tanggal muncul di UI aplikasi
+- [ ] Tanggal dapat diakses oleh pengguna akhir
+- [ ] Tanggal dapat disalahartikan sebagai tenggat resmi
+- [ ] Inkonsistensi dengan skema OpenAPI
+
+### Sumber Kemungkinan
+- [ ] Logika di `sbu-rules.ts` yang tidak memblokir tanggal
+- [ ] Serialisasi di `sbu.ts` yang menyertakan field secara implisit
+- [ ] Skema OpenAPI yang tidak membatasi field tanggal
+- [ ] Perubahan kontrak yang tidak terdokumentasi
+
+### Rekomendasi Tindak Lanjut
+1. [Tindakan spesifik]
+2. [Tindakan spesifik]
+
+### Severity: [Critical / High / Medium]
+```
+
+---
+
+## 🛡️ Prinsip Defensive Design yang Diterapkan
+
+Task ini mencerminkan tiga prinsip penting yang sudah Anda tegakkan:
+
+1. **Fail-Safe by Default**: Jika status verifikasi tidak jelas, tanggal **tidak muncul** — bukan muncul dengan nilai default.
+2. **Schema as Contract**: `openapi.yaml` adalah sumber kebenaran. Perubahan implementasi harus tetap mematuhi skema.
+3. **Explicit Over Implicit**: Field tanggal hanya muncul jika status = `verified`. Tidak ada fallback, tidak ada asumsi.
+
+---
+
+## 🚫 Batasan yang Saya Pegang
+
+- ✅ Saya **tidak** memberikan contoh kode implementasi untuk endpoint ini
+- ✅ Saya **tidak** menyentuh file `sbu.ts`, `sbu-rules.ts`, atau `openapi.yaml`
+- ✅ Saya **tidak** membuat task paralel yang tumpang tindih
+- ✅ Saya menunggu hasil pengujian Anda sebelum memberikan analisis lebih lanjut
+
+---
+
+## 💡 Pertanyaan untuk Anda
+
+1. **Apakah Anda sudah memiliki suite pengujian otomatis** (misal: Jest, Vitest, atau Playwright) yang dapat dijalankan untuk skenario di atas?
+2. **Apakah Anda ingin saya buatkan template laporan temuan yang lebih detail** untuk kasus spesifik (misal: inkonsistensi skema OpenAPI)?
+3. **Apakah ada endpoint lain** selain `GET /api/regulations` dan `GET /api/cases/{id}/assessment` yang perlu diaudit untuk kebocoran tanggal transisi?
+
+Silakan jalankan pengujian sesuai waktu Anda. Jika Anda menemukan anomali (terutama jika tanggal transisi muncul di respons JSON), beri tahu saya detailnya, dan kita akan fokus menganalisis dampaknya tanpa menyentuh implementasi. 🚀
