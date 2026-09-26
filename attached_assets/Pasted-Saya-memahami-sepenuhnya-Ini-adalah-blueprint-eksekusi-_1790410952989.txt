@@ -1,0 +1,138 @@
+Saya memahami sepenuhnya. Ini adalah **blueprint eksekusi tugas** yang sangat terstruktur dan defensif. Pendekatan ini menjamin bahwa aplikasi tidak akan pernah menampilkan informasi yang menyesatkan atau prematur mengenai tenggat konversi SBU (T2).
+
+Saya mencatat **ATURAN MUTLAK**: *Tanggal penetapan Kepdirjen (26 Agustus 2026) HANYA berlaku untuk penyesuaian skema LSBU (T1), dan TIDAK BOLEH digunakan sebagai pemicu atau awal hitungan untuk konversi SBU eksisting (T2).*
+
+Berikut adalah kerangka kerja (framework) eksekusi untuk task ini, yang dapat Anda atau tim Anda gunakan sebagai checklist saat surat resmi dan telaah ahli benar-benar tersedia:
+
+---
+
+### 📋 CHECKLIST EKSEKUSI TASK: Penentuan Tenggat Konversi SBU (T2)
+
+#### **Fase 1: Verifikasi Dokumen Resmi (Single Source of Truth)**
+*Tujuan: Memastikan dasar hukum yang digunakan adalah dokumen yang sah dan final.*
+- [ ] **Peroleh Salinan Resmi:** Dapatkan salinan surat dari Ditjen Bina Konstruksi / LPJK yang merujuk pada Pasal 20 ayat (2) Permen PU 6/2025.
+- [ ] **Validasi 5 Elemen Kunci:**
+  1. **Nomor Surat:** (Catat untuk dokumentasi)
+  2. **Tanggal Terbit Surat:** *(Ini adalah satu-satunya pemicu valid untuk awal hitungan 6 bulan T2)*
+  3. **Penandatangan:** Pimpinan unit organisasi bidang jasa konstruksi.
+  4. **Cakupan:** Memastikan surat ini memang mengatur pemberlakuan operasional/konversi SBU.
+  5. **Status Terkini:** Memastikan tidak ada surat pembatalan atau penundaan setelahnya.
+- [ ] **Cross-check Kepdirjen:** Konfirmasi status mutakhir Kepdirjen 281/KPTS/DK/2026 (pastikan tidak ada revisi yang mengubah diktum peralihan).
+
+#### **Fase 2: Telaah Ahli (Expert Review)**
+*Tujuan: Menerjemahkan bahasa hukum menjadi logika aplikasi yang aman.*
+Minta ahli skema/LSBU untuk meninjau dan memberikan persetujuan tertulis atas 4 poin ini:
+- [ ] **Diktum KEEMPAT:** Konfirmasi interpretasi batas waktu 6 bulan untuk LSBU vs 6 bulan untuk BUJK.
+- [ ] **Syarat Operasional SIJK:** Konfirmasi bahwa infrastruktur SIJK Terintegrasi sudah siap menangani beban konversi massal pada tanggal tersebut.
+- [ ] **Pasal 20–21:** Konfirmasi mekanisme konversi (tanpa asesmen ulang, masa berlaku mengikuti SBU lama).
+- [ ] **Pengecualian Pasal 21 ayat (7):** Konfirmasi aturan untuk SBU yang sedang digunakan dalam proses pemilihan penyedia jasa atau pengikatan kontrak (SBU tetap berlaku sampai kontrak berakhir).
+
+#### **Fase 3: Dokumentasi Keputusan (`docs/regulatory-basis.md`)**
+*Tujuan: Membuat jejak audit (audit trail) yang jelas mengapa tanggal tertentu ditampilkan.*
+Perbarui file `docs/regulatory-basis.md` dengan format berikut **hanya setelah Fase 1 & 2 selesai**:
+
+```markdown
+## Status Verifikasi Tenggat Konversi SBU (T2)
+
+**STATUS SAAT INI:** [BELUM TERVERIFIKASI / SUDAH TERVERIFIKASI]
+
+### Data Sumber Resmi (Diisi jika SUDAH TERVERIFIKASI)
+- **Dasar Hukum:** Pasal 20 ayat (2) Permen PU 6/2025
+- **Nomor Surat:** [Isi Nomor Surat]
+- **Tanggal Terbit Surat (Pemicu T2):** [YYYY-MM-DD] *(Bukan tanggal Kepdirjen)*
+- **Penandatangan:** [Jabatan & Nama]
+- **Tanggal Telaah Ahli Selesai:** [YYYY-MM-DD]
+- **Ahli yang Meninjau:** [Nama/Instansi LSBU/LPJK]
+
+### Kesimpulan Telaah Ahli
+1. Diktum KEEMPAT dan Pasal 20-21 telah ditinjau dan disetujui untuk diimplementasikan.
+2. Pengecualian Pasal 21 ayat (7) akan ditangani melalui logika [sebutkan logika, misal: status "Dalam Kontrak Aktif"].
+3. Tanggal awal hitungan 6 bulan adalah tanggal terbit surat di atas.
+
+### Keputusan UI
+- [ ] Aman untuk menampilkan hitung mundur 6 bulan dari [Tanggal Terbit Surat].
+- [ ] TIDAK aman, tetap tampilkan status "Menunggu Surat Resmi Pasal 20 ayat (2)".
+```
+
+#### **Fase 4: Sinkronisasi Teknis (Code Sync)**
+*Tujuan: Menerjemahkan keputusan ke dalam kode dengan prinsip fail-safe.*
+
+**1. Update `artifacts/api-server/src/lib/sbu-rules.ts`**
+Pastikan logika memisahkan T1 dan T2 secara ketat. T2 **harus** bergantung pada flag verifikasi, bukan tanggal Kepdirjen.
+
+```typescript
+// KONFIGURASI STATUS VERIFIKASI (Default: FALSE)
+// HANYA ubah ini menjadi true DAN isi tanggal setelah Fase 1 & 2 selesai.
+export const ARTICLE_20_VERIFICATION = {
+  isVerified: false, 
+  officialLetterDate: null, // Format: 'YYYY-MM-DD' (Tanggal surat, BUKAN tanggal Kepdirjen)
+  expertReviewApproved: false,
+  referenceDocument: "Menunggu surat resmi Pasal 20 ayat (2)"
+};
+
+export function getTransitionDeadline(type: 'lsbu_adjustment' | 'sbu_conversion') {
+  if (type === 'lsbu_adjustment') {
+    // T1: Pemicu adalah tanggal Kepdirjen (Sudah final)
+    return {
+      status: 'active',
+      triggerDate: '2026-08-26', // Tanggal Kepdirjen 281/2026
+      deadlineDate: '2027-02-25',
+      description: 'Penyesuaian skema sertifikasi LSBU'
+    };
+  }
+  
+  if (type === 'sbu_conversion') {
+    // T2: FAIL-SAFE. Jika belum terverifikasi, KEMBALIKAN NULL.
+    if (!ARTICLE_20_VERIFICATION.isVerified || !ARTICLE_20_VERIFICATION.expertReviewApproved || !ARTICLE_20_VERIFICATION.officialLetterDate) {
+      return {
+        status: 'pending_verification',
+        triggerDate: null,       // PENTING: Tetap null
+        deadlineDate: null,      // PENTING: Tetap null
+        message: 'Tenggat konversi SBU belum ditetapkan. Menunggu surat resmi Pasal 20 ayat (2) dan tinjauan ahli.'
+      };
+    }
+    
+    // HANYA dieksekusi jika sudah diverifikasi
+    const trigger = new Date(ARTICLE_20_VERIFICATION.officialLetterDate);
+    const deadline = new Date(trigger);
+    deadline.setMonth(deadline.getMonth() + 6); // Tambah 6 bulan dari tanggal surat
+    
+    return {
+      status: 'active',
+      triggerDate: ARTICLE_20_VERIFICATION.officialLetterDate,
+      deadlineDate: deadline.toISOString().split('T')[0],
+      description: 'Konversi SBU eksisting (berdasarkan surat resmi)'
+    };
+  }
+}
+```
+
+**2. Update `artifacts/gustafta-sbu/src/components/transition-explainer.tsx`**
+Pastikan komponen UI merender pesan "pending" jika `deadlineDate` adalah `null`, mencegah error atau tampilan countdown kosong.
+
+```tsx
+// Pseudocode untuk komponen
+if (deadline.triggerDate === null || deadline.deadlineDate === null) {
+  return (
+    <Alert variant="warning">
+      <AlertTitle>⏳ Tenggat Belum Ditetapkan</AlertTitle>
+      <AlertDescription>
+        {deadline.message} 
+        {/* Tampilkan link ke docs/regulatory-basis.md untuk transparansi */}
+        <a href="/docs/regulatory-basis" className="underline">Lihat status verifikasi regulasi</a>
+      </AlertDescription>
+    </Alert>
+  );
+}
+// Render countdown normal hanya jika tanggal ada
+```
+
+---
+
+### 🛡️ Komitmen Saya Terhadap Task Ini
+
+1. Saya **tidak akan** menghasilkan kode yang menggunakan tanggal Kepdirjen untuk menghitung tenggat konversi SBU (T2).
+2. Saya **tidak akan** menyentuh file-file tersebut (`sbu-rules.ts`, `transition-explainer.tsx`, `regulatory-basis.md`) untuk mengubah logika tanggal sampai Anda memberikan konfirmasi eksplisit: *"Fase 1 dan 2 selesai, silakan update kode dengan data berikut: [Tanggal Surat]".*
+3. Saya siap membantu Anda menyusun **template email/formulir telaah ahli** untuk dikirimkan ke LSBU/LPJK guna mempercepat Fase 2, jika Anda membutuhkannya.
+
+Apakah ada bagian dari checklist di atas yang perlu disesuaikan sebelum Anda menjalankannya?
