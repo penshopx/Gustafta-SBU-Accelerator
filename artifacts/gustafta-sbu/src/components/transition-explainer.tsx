@@ -3,13 +3,13 @@ const tracks = [
     number: '01',
     audience: 'Untuk LSBU',
     title: 'Penyesuaian skema sertifikasi',
-    detail: 'Menyangkut penyesuaian skema LSBU terhadap ketentuan baru. Periode ini tidak otomatis menjadi tanggal awal konversi SBU yang sudah terbit.',
+    detail: 'Diktum KEEMPAT Kepdirjen 281/2026 menyebut penyesuaian dan implementasi skema paling lambat 6 bulan sejak penetapan keputusan. Pemberlakuan operasional sertifikasi tetap menunggu penyesuaian SIJK dan surat resmi. Cakupannya masih perlu tinjauan ahli.',
   },
   {
     number: '02',
     audience: 'Untuk SBU yang sudah terbit',
     title: 'Konversi SBU eksisting',
-    detail: 'Menyangkut SBU lama dan memiliki pemicu waktu yang berbeda. Jangan menghitung tenggatnya dari tanggal penetapan Kepdirjen saja.',
+    detail: 'Permen PU 6/2025 Pasal 21 menghitung 6 bulan sejak terbitnya surat yang dimaksud Pasal 20 ayat (2), bukan sejak penetapan Kepdirjen. Surat pemicunya belum terverifikasi; pengecualian pada Pasal 21 ayat (7) perlu ditinjau.',
   },
 ];
 
@@ -32,11 +32,12 @@ export function TransitionExplainer() {
             </div>
             <h3 className="display mt-5 text-lg font-extrabold text-[#142c46]">{track.title}</h3>
             <p className="mt-2 text-sm leading-6 text-[#526f86]">{track.detail}</p>
+            <p className="mt-4 inline-block rounded-full bg-[#e5f2fc] px-3 py-1 text-xs font-bold text-[#1769d1]">Tenggat belum terverifikasi</p>
           </div>
         ))}
       </div>
       <div className="bg-[#d5eaf9] px-6 py-4 text-xs leading-6 text-[#355a76] sm:px-8">
-        <strong>Belum ada hitung mundur di aplikasi.</strong> Tanggal pemberlakuan operasional dan awal hitungan konversi perlu diperiksa pada surat resmi yang relevan. Rujukan: Permen PU 6/2025 Pasal 20–21 dan surat pengantar Kepdirjen 281/KPTS/DK/2026.
+        <strong>Belum ada tanggal atau hitung mundur di aplikasi.</strong> Surat Pasal 20 ayat (2) dan status terkininya belum dapat diverifikasi dari sumber pemerintah yang diperiksa. Keaslian/status Kepdirjen serta penerapan kedua pemicu masih memerlukan tinjauan ahli regulasi. Rujukan: <a href="https://jdih.pu.go.id/detail-dokumen/PermenPU-nomor-6-tahun-2025-Standar-Kegiatan-Usaha-danatau-Standar-ProdukJasa-Pelaksanaan-Pengawasan-dan-Pengenaan-Sanksi-pada-Penyelenggaraan-Perizinan-Berusaha-Berbasis-Risiko-Sektor-Pekerjaan-Umum" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2">Permen PU 6/2025 Pasal 20–21</a> dan Kepdirjen 281/KPTS/DK/2026 diktum KEEMPAT (salinan unggahan).
       </div>
     </section>
   );
