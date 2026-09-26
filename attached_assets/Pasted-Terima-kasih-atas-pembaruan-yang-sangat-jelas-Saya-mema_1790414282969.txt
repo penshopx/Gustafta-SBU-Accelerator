@@ -1,0 +1,68 @@
+Terima kasih atas pembaruan yang sangat jelas. Saya memahami sepenuhnya bahwa:
+1. Status task telah berubah, dan saya tidak akan lagi menggunakan penomoran task dari dokumen sebelumnya sebagai acuan.
+2. Tidak ada perubahan kode yang dilakukan terkait tenggat waktu, sesuai prinsip defensif yang telah kita sepakati.
+3. **Opsi A (E2E Testing)** hanya akan dijalankan jika saya memberikan instruksi langsung, dan **wajib menggunakan data dummy/samaran** (tanpa NIB atau identitas nyata).
+
+Karena Anda meminta instruksi langsung untuk menjalankan Opsi A, berikut adalah panduan eksekusi yang siap Anda ikuti. 
+
+---
+
+### 📋 INSTRUKSI LANGSUNG: E2E Testing & Isolasi Data (Menggunakan Data Dummy)
+
+Silakan jalankan langkah-langkah berikut secara berurutan. **Pastikan semua data yang diinput adalah data fiktif/samaran.**
+
+#### **TAHAP 1: Pembuatan Akun Uji (Data Dummy)**
+Buat 3 akun baru di aplikasi Anda dengan data berikut:
+*   **Akun A (Kontraktor)**: 
+    *   Nama: "PT Konstruksi Maju Dummy"
+    *   NIB: `9999999999999` (13 digit angka 9)
+    *   Peran: Kontraktor (Kualifikasi: Menengah)
+*   **Akun B (Konsultan)**: 
+    *   Nama: "CV Konsultan Desain Dummy"
+    *   NIB: `8888888888888` (13 digit angka 8)
+    *   Peran: Konsultan (Kualifikasi: Kecil)
+*   **Akun C (Profesional)**: 
+    *   Nama: "Budi Santoso Dummy"
+    *   Peran: Profesional (PJKBU)
+
+#### **TAHAP 2: Uji Alur Utama (Happy Path) - Gunakan Akun A**
+1. **Login**: Masuk menggunakan kredensial **Akun A**.
+2. **Buat Kasus**: Navigasi ke fitur pembuatan kasus SBU baru. 
+   * Input data dummy (misal: Subklasifikasi `BG001`, Jenis Permohonan: `Perpanjangan`).
+   * Klik Simpan/Submit.
+   * *Ekspektasi*: Kasus berhasil dibuat dan muncul di dashboard Akun A.
+3. **Catat ID Kasus**: Salin atau catat `ID Kasus` (atau lihat URL, misal: `/cases/123e4567...`) dari kasus yang baru dibuat.
+4. **Tambah Bukti**: Buka detail kasus tersebut, tambahkan catatan bukti dummy (misal: unggah file teks kosong bernama `dummy_bukti.pdf` atau isi teks "Dokumen uji coba").
+   * *Ekspektasi*: Bukti tersimpan tanpa error 500.
+5. **Lihat Temuan**: Buka tab/halaman "Temuan" untuk kasus ini.
+   * *Ekspektasi*: Rujukan regulasi muncul sesuai dengan data dummy yang diinput.
+6. **Logout**: Keluar dari aplikasi.
+
+#### **TAHAP 3: Uji Isolasi Data (Kritis: Ekspektasi 404)**
+1. **Login sebagai Pihak Lain**: Masuk menggunakan kredensial **Akun B**.
+2. **Akses Paksa URL**: Tempel (paste) URL detail kasus milik Akun A yang Anda catat di Tahap 2 (misal: `/cases/[ID_KASUS_A]`) ke browser Anda.
+   * *Ekspektasi Wajib*: Aplikasi harus menampilkan halaman **"404 Not Found"** atau pesan "Kasus tidak ditemukan". 
+   * *Catatan*: Pastikan **TIDAK** menampilkan error "403 Forbidden" atau "Unauthorized", karena hal tersebut membocorkan informasi bahwa kasus tersebut sebenarnya ada.
+3. **Uji API Langsung (Opsional tapi disarankan)**: Jika Anda memiliki akses ke Postman atau Network Tab di browser, coba kirim request `GET` atau `PUT` ke endpoint API kasus tersebut menggunakan token Akun B.
+   * *Ekspektasi Wajib*: Response HTTP `404 Not Found`.
+
+#### **TAHAP 4: Uji Batasan Peran - Gunakan Akun C**
+1. **Login**: Masuk menggunakan kredensial **Akun C** (Profesional).
+2. **Verifikasi Akses**: Pastikan Akun C dapat membaca rujukan regulasi.
+3. **Verifikasi Pembatasan**: Pastikan **TIDAK ADA** tombol, menu, atau alur yang memungkinkan Akun C untuk "Membuat Kasus SBU" atau mengakses fitur khusus BUJK.
+
+#### **TAHAP 5: Pelaporan Hasil**
+Catat hasil eksekusi Anda dalam format sederhana:
+*   [ ] Tahap 1: 3 Akun dummy berhasil dibuat.
+*   [ ] Tahap 2: Alur Kontraktor (Buat -> Bukti -> Temuan) berjalan lancar / [Sebutkan error jika ada].
+*   [ ] Tahap 3: Isolasi data berhasil (Mengembalikan 404, bukan 403) / [Sebutkan jika bocor].
+*   [ ] Tahap 4: Peran Profesional terbatas dengan benar.
+
+---
+
+### 🛑 Batasan yang Saya Pegang Teguh
+*   Saya **tidak** akan meminta Anda mengubah logika tenggat waktu (T1/T2).
+*   Saya **tidak** akan memberikan contoh kode yang berasumsi tentang tanggal verifikasi atau surat resmi.
+*   Saya menunggu laporan hasil eksekusi instruksi di atas sebelum memberikan langkah selanjutnya.
+
+Silakan jalankan instruksi ini sesuai waktu Anda. Jika Anda menemukan anomali (terutama di Tahap 3), beri tahu saya detailnya, dan kita akan fokus memperbaikinya.
