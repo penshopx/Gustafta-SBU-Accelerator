@@ -33,7 +33,7 @@ test("konversi SBU tetap belum terverifikasi tanpa surat Pasal 20 ayat (2), mesk
   assert.ok(transition, "perpanjangan harus memuat panduan transisi");
   assert.equal(transition.status, "perlu_tinjauan");
   assert.match(transition.detail, /Konversi SBU eksisting memakai 6 bulan sejak terbitnya surat Pasal 20 ayat \(2\), bukan tanggal Kepdirjen/);
-  assert.match(transition.detail, /surat Pasal 20 ayat \(2\).*belum terverifikasi/);
+  assert.match(transition.detail, /surat Pasal 20 ayat \(2\).*belum terkonfirmasi/);
   assert.match(transition.detail, /LSBU.*6 bulan sejak penetapan Kepdirjen/);
   assert.equal(assessment.status, "perlu_bukti");
   assert.equal("conversionDeadline" in assessment, false);
