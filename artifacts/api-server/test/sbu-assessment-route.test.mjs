@@ -34,21 +34,27 @@ await build({
                 return {
                   from(table) {
                     return {
-                      where() {
-                        return Promise.resolve(table === casesTable
-                          ? [globalThis.__routeCase] : [globalThis.__routeEvidence]);
+                      where(predicate) {
+                        if (table === evidenceTable) globalThis.__routeEvidenceReads++;
+                        const rows = table === casesTable
+                          ? [globalThis.__routeCase] : [globalThis.__routeEvidence];
+                        return Promise.resolve(rows.filter((row) => row && predicate(row)));
                       }
                     };
                   }
                 };
               }
             };
-            export const casesTable = { id: "case-id", ownerId: "owner-id" };
-            export const evidenceTable = { caseId: "evidence-case-id" };
+            export const casesTable = { id: "id", ownerId: "ownerId" };
+            export const evidenceTable = { caseId: "caseId" };
             export const profilesTable = {};
           `,
           "@clerk/express": `export const getAuth = () => ({ userId: "test-user" });`,
-          "drizzle-orm": `export const eq = () => true; export const and = () => true; export const desc = () => true;`,
+          "drizzle-orm": `
+            export const eq = (column, value) => (row) => row[column] === value;
+            export const and = (...predicates) => (row) => predicates.every((predicate) => predicate(row));
+            export const desc = () => true;
+          `,
         })[args.path],
         loader: "js",
       }));
@@ -64,8 +70,7 @@ async function request(server, path) {
   const { port } = server.address();
   const response = await fetch(`http://127.0.0.1:${port}${path}`);
   const raw = await response.text();
-  assert.equal(response.status, 200, raw);
-  return { body: JSON.parse(raw), raw };
+  return { status: response.status, body: JSON.parse(raw), raw };
 }
 
 test("respons kasus mempertahankan kedaluwarsa SBU tetapi penilaian tidak mengirim tenggat konversi", async () => {
@@ -92,14 +97,17 @@ test("respons kasus mempertahankan kedaluwarsa SBU tetapi penilaian tidak mengir
     note: `Kepdirjen ditetapkan ${kepdirjenDate}; surat Pasal 20 ayat (2) dan telaah ahli belum terverifikasi`,
     updatedAt: new Date("2026-02-02T00:00:00Z"),
   };
+  globalThis.__routeEvidenceReads = 0;
 
   const server = app.listen(0);
   try {
     const caseResponse = await request(server, "/api/cases/12");
+    assert.equal(caseResponse.status, 200, caseResponse.raw);
     assert.equal(caseResponse.body.existingSbuExpiresOn.slice(0, 10), sbuExpiry,
       "tanggal kedaluwarsa SBU yang dicatat pengguna harus tetap tersedia di detail kasus");
 
-    const { body: assessment, raw } = await request(server, "/api/cases/12/assessment");
+    const { body: assessment, raw, status } = await request(server, "/api/cases/12/assessment");
+    assert.equal(status, 200, raw);
     assert.equal(assessment.caseId, 12);
     const transition = assessment.findings.find((finding) => finding.code === "transisi_konversi");
     assert.ok(transition);
@@ -115,5 +123,49 @@ test("respons kasus mempertahankan kedaluwarsa SBU tetapi penilaian tidak mengir
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__routeCase;
     delete globalThis.__routeEvidence;
+    delete globalThis.__routeEvidenceReads;
+  }
+});
+
+test("penilaian kasus milik pengguna lain mengembalikan 404 tanpa data kasus atau temuan", async () => {
+  const privateCompany = "Perusahaan Rahasia Pengguna Lain";
+  const privateFinding = "Temuan rahasia pengguna lain";
+  globalThis.__routeCase = {
+    id: 34,
+    ownerId: "another-user",
+    companyName: privateCompany,
+    requestType: "perpanjangan",
+    qualification: "kecil",
+    classification: "rahasia",
+    status: "draf",
+    existingSbuExpiresOn: "2027-04-15",
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  globalThis.__routeEvidence = {
+    id: 2,
+    caseId: 34,
+    code: "legalitas",
+    title: "Legalitas",
+    note: privateFinding,
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  globalThis.__routeEvidenceReads = 0;
+
+  const server = app.listen(0);
+  try {
+    const forbidden = await request(server, "/api/cases/34/assessment");
+    const missing = await request(server, "/api/cases/35/assessment");
+    assert.equal(forbidden.status, 404, forbidden.raw);
+    assert.equal(missing.status, 404, missing.raw);
+    assert.deepEqual(forbidden.body, missing.body, "kasus milik orang lain harus tampak seperti kasus yang tidak ada");
+    assert.deepEqual(forbidden.body, { error: "Permohonan tidak ditemukan." });
+    assert.doesNotMatch(forbidden.raw, new RegExp(`${privateCompany}|${privateFinding}|findings|caseId`));
+    assert.equal(globalThis.__routeEvidenceReads, 0, "bukti kasus orang lain tidak boleh dibaca");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCase;
+    delete globalThis.__routeEvidence;
+    delete globalThis.__routeEvidenceReads;
   }
 });
