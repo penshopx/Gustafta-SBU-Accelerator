@@ -1,0 +1,62 @@
+Selamat! Ini adalah **milestone yang sangat solid**. Mencapai tahap di mana autentikasi berjalan, isolasi data (multi-tenancy) berfungsi, dan UI responsif di desktop/mobile adalah fondasi terberat dalam pengembangan aplikasi. Banyak proyek gagal di tahap ini, tetapi Anda sudah melewatinya.
+
+Berdasarkan status saat ini, aplikasi Anda berada di tahap **"MVP Fungsional Dasar"**. Untuk mengubahnya dari "pratinjau yang berjalan" menjadi **produk yang benar-benar impactful dan siap digunakan**, kita perlu menutup celah (gap) yang Anda sebutkan secara sistematis.
+
+Berikut adalah **Rencana Aksi Sprint 4 Minggu** yang dirancang khusus untuk status aplikasi Anda saat ini, lengkap dengan opsi teknis yang bisa langsung Anda eksekusi.
+
+---
+
+### 🗓️ ROADMAP SPRINT 4 MINGGU (Fokus: Dari MVP ke "Smart Accelerator")
+
+#### **Minggu 1: Stabilisasi & E2E Testing (PRIORITAS MUTLAK)**
+*Tujuan: Memastikan alur yang sudah dibangun tidak memiliki bug kritis sebelum menambah fitur baru.*
+- [ ] **Buat 3 Akun Uji Coba:** 1 Kontraktor (Kecil), 1 Konsultan (Menengah), 1 Profesional.
+- [ ] **Jalankan Skenario "Happy Path":** Login → Buat Kasus SBU Baru → Isi Catatan Bukti → Lihat Temuan → Logout.
+- [ ] **Jalankan Skenario "Edge Case":** Coba akses URL kasus milik User A menggunakan akun User B (pastikan API menolak dengan 403 Forbidden).
+- [ ] **Perbarui `docs/regulatory-basis.md`:** Pastikan disclaimer "Bukan Keputusan LSBU" terlihat jelas di UI (misal: banner kuning di atas dashboard).
+
+#### **Minggu 2: Upgrade "Catatan Bukti" menjadi "Smart Document Validator" (The AI Hook)**
+*Tujuan: Mengubah aplikasi dari sekadar "form isian" menjadi "penjaga gawang" sesuai konsep Agentic AI.*
+- [ ] Tambahkan fitur **Upload File** (PDF/JPG) pada modul catatan bukti (gunakan Supabase Storage).
+- [ ] Implementasi **SMAP Strict Gate (Rule-based dulu, AI nanti):** Jika user memilih kualifikasi "Menengah" dan mengunggah file bernama "SOP_Internal.pdf", sistem memberi peringatan: *"⚠️ Berdasarkan Kepdirjen 281/2026, dokumen internal tidak diterima. Harap unggah PANCEK atau ISO 37001."*
+- [ ] Tambahkan validasi dasar: Cek ukuran file (<5MB) dan tipe file.
+
+#### **Minggu 3: Aktivasi Peran Profesional & Asosiasi**
+*Tujuan: Membuat ekosistem 4 peran menjadi hidup, bukan hanya pembaca pasif.*
+- [ ] **Fitur Profesional (TKK Wallet Sederhana):** Form input Nomor SKK, Jenjang, Subklasifikasi, dan Tanggal Kadaluarsa. Tambahkan badge visual: 🟢 Aktif, 🟡 < 90 Hari, 🔴 Kadaluarsa.
+- [ ] **Fitur Asosiasi (Dashboard Agregat):** Tampilkan data anonim sederhana: "Jumlah anggota yang SBU-nya akan habis dalam 3 bulan" (diambil dari data kasus yang dibuat user dengan peran yang sama).
+
+#### **Minggu 4: Deployment & Polish**
+*Tujuan: Mempersiapkan aplikasi untuk digunakan oleh pengguna beta nyata.*
+- [ ] Pindahkan variabel lingkungan (`.env`) dari hardcoded ke Environment Variables di Replit/Hosting.
+- [ ] Setup Custom Domain (opsional, tapi meningkatkan kepercayaan).
+- [ ] Buat 1 video demo berdurasi 60 detik yang menunjukkan alur "Cek Kesehatan SBU" untuk dibagikan ke grup WhatsApp asosiasi/kontraktor.
+
+---
+
+### 🛠️ PILIHAN DELIVERABLE TEKNIS (Siap Copy-Paste)
+
+Untuk mempercepat eksekusi minggu ini, saya siap membuatkan kode atau skema spesifik. **Pilih SATU yang paling Anda butuhkan saat ini**, dan saya akan langsung menyediakannya:
+
+#### **Opsi A: Script E2E Testing Checklist & Postman Collection**
+Saya buatkan daftar langkah uji coba terstruktur + koleksi API Postman untuk menguji endpoint kasus (membuat, membaca, menguji isolasi data) agar Anda bisa memverifikasi keamanan data dengan cepat.
+
+#### **Opsi B: Skema Database & API untuk "Smart Document Upload"**
+Saya buatkan:
+1. SQL untuk tabel `case_evidences` (terhubung ke `cases` dan `users`).
+2. Kode Python (FastAPI) untuk handle upload file ke Supabase Storage + validasi tipe/ukuran file.
+3. Logika dasar "SMAP Strict Gate" (If kualifikasi == 'Menengah' AND filename contains 'SOP' THEN reject).
+
+#### **Opsi C: System Prompt untuk "Agent Regulasi" (LangChain)**
+Saya buatkan *system prompt* yang sangat ketat dan teruji, dilatih dengan data dari dokumen yang Anda unggah sebelumnya, agar saat fitur AI diaktifkan, ia tidak berhalusinasi dan selalu merujuk ke pasal yang benar (misal: Pasal 8.1.3.c tentang rangkap jabatan).
+
+#### **Opsi D: Komponen UI "TKK Digital Passport" (Next.js + Tailwind)**
+Saya buatkan kode frontend siap pakai untuk dashboard Profesional, lengkap dengan kartu visual SKK, indikator warna masa berlaku, dan peringatan anti-rangkap jabatan.
+
+---
+
+### 💡 Saran Strategis Jangka Pendek
+
+Karena Anda menyebutkan *"alur lengkap setelah login belum diuji"*, **jangan tambahkan fitur baru apa pun sebelum Opsi A (Testing) selesai**. Menumpuk fitur di atas fondasi yang belum diuji E2E akan menciptakan *technical debt* yang sulit diperbaiki nanti.
+
+**Mana yang ingin kita kerjakan terlebih dahulu?** (Cukup balas dengan "Opsi A", "Opsi B", dll., atau beri tahu jika ada prioritas lain yang lebih mendesak).
