@@ -73,6 +73,31 @@ async function request(server, path) {
   return { status: response.status, body: JSON.parse(raw), raw };
 }
 
+test("respons daftar regulasi menahan tenggat dan hitung mundur transisi yang belum terverifikasi", async () => {
+  const server = app.listen(0);
+  try {
+    const { status, body, raw } = await request(server, "/api/regulations");
+    assert.equal(status, 200, raw);
+    assert.ok(Array.isArray(body), "respons harus berupa daftar regulasi");
+    assert.deepEqual(body.map((regulation) => regulation.id).sort(),
+      ["kepdirjen-281-2026", "permen-6-2025"]);
+
+    for (const regulation of body) {
+      assert.equal(regulation.effectiveStatus, "Tenggat belum terverifikasi",
+        `${regulation.id} tidak boleh menayangkan tenggat resmi sebelum verifikasi`);
+      assert.deepEqual(Object.keys(regulation).sort(),
+        ["detail", "effectiveStatus", "id", "source", "title"].sort(),
+        `${regulation.id} tidak boleh memiliki kolom tanggal/hitung mundur tambahan`);
+    }
+    assert.doesNotMatch(raw, /\b20\d{2}-\d{2}-\d{2}\b/,
+      "tanggal transisi tidak boleh muncul di JSON, termasuk dalam teks rujukan");
+    assert.doesNotMatch(raw, /"(?:[^"]*(?:deadline|countdown|dueDate|conversionDate|remainingDays|daysLeft|transitionDate|effectiveDate|tenggatKonversi|hitungMundur)[^"]*)"\s*:/i,
+      "JSON tidak boleh memuat kolom tanggal transisi atau hitung mundur");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
 test("respons kasus mempertahankan kedaluwarsa SBU tetapi penilaian tidak mengirim tenggat konversi", async () => {
   const sbuExpiry = "2027-04-15";
   const kepdirjenDate = "2026-03-01";
