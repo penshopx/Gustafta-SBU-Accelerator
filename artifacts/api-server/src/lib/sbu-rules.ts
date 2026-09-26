@@ -2,20 +2,26 @@ import type { EvidenceRow, SbuCaseRow } from "@workspace/db";
 
 export const RULESET = "Permen PU 6/2025 + Kepdirjen 281/KPTS/DK/2026 (persiapan)";
 
+// Tidak ada tanggal transisi di respons API sampai surat resmi dan telaah ahli
+// untuk masing-masing pemicu terverifikasi. Jangan menurunkan tanggal dari Kepdirjen.
+const TRANSITION_STATUS = "Tenggat belum terverifikasi";
+const TRANSITION_VERIFICATION =
+  "Tanggal/hitung mundur tidak tersedia: surat Pasal 20 ayat (2) dan status terbaru Kepdirjen 281/KPTS/DK/2026 belum terverifikasi dari instansi resmi; penerapan kedua alur belum ditinjau ahli skema/LSBU.";
+
 export const REGULATIONS = [
   {
     id: "permen-6-2025",
     title: "Permen PU Nomor 6 Tahun 2025",
     detail: "Rujukan standar kegiatan usaha jasa konstruksi. Lampiran I memuat alternatif bukti SMAP, termasuk surat komitmen khusus permohonan SBU pertama kali, serta ketentuan pemenuhannya menurut kualifikasi.",
     source: "Permen PU 6/2025, Lampiran I (PDF unggahan hlm. 266); Pasal 20–21 (PDF hlm. 12–13)",
-    effectiveStatus: "Tenggat transisi belum terverifikasi; penyesuaian skema LSBU dan konversi SBU memakai pemicu berbeda.",
+    effectiveStatus: TRANSITION_STATUS,
   },
   {
     id: "kepdirjen-281-2026",
     title: "Kepdirjen Bina Konstruksi 281/KPTS/DK/2026",
     detail: "Standar skema sertifikasi badan usaha jasa konstruksi. Menggantikan Kepdirjen 37/2025; pilihan bukti SMAP tidak boleh direduksi menjadi satu jalur saja.",
     source: "Kepdirjen 281/KPTS/DK/2026, diktum KELIMA (PDF unggahan hlm. 4) dan skema SMAP (PDF hlm. 27–32)",
-    effectiveStatus: "Tenggat belum terverifikasi. Penyesuaian LSBU mengacu pada penetapan Kepdirjen; pemberlakuan operasional menunggu SIJK dan surat Pasal 20 ayat (2).",
+    effectiveStatus: TRANSITION_STATUS,
   },
 ];
 
@@ -78,7 +84,7 @@ export function assessCase(sbuCase: SbuCaseRow, evidence: EvidenceRow[]) {
       code: "transisi",
       title: "Masa transisi skema dan konversi",
       status: "perlu_tinjauan",
-      detail: "Tenggat transisi belum terverifikasi. LSBU menyesuaikan dan mengimplementasikan skema paling lambat 6 bulan sejak penetapan Kepdirjen (diktum KEEMPAT), sedangkan konversi SBU eksisting dihitung 6 bulan sejak terbitnya surat Pasal 20 ayat (2). Surat dan status terkininya belum terverifikasi; kedua alur memerlukan tinjauan ahli sebelum tanggal ditampilkan.",
+      detail: `${TRANSITION_VERIFICATION} LSBU menyesuaikan dan mengimplementasikan skema paling lambat 6 bulan sejak penetapan Kepdirjen (diktum KEEMPAT); pemberlakuan operasional menunggu penyesuaian SIJK dan surat resmi. Konversi SBU eksisting memakai 6 bulan sejak terbitnya surat Pasal 20 ayat (2), bukan tanggal Kepdirjen; pengecualian Pasal 21 ayat (7) perlu ditinjau.`,
       source: "Kepdirjen 281/KPTS/DK/2026 diktum KEEMPAT dan surat pengantar (PDF hlm. 1, 4); Permen PU 6/2025 Pasal 20–21.",
     });
   }

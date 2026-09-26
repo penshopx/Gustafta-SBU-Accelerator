@@ -29,6 +29,15 @@ Dokumen ini mencatat aturan yang sudah dijadikan **panduan persiapan** aplikasi,
 
 Tidak ada kalkulasi tanggal maupun hitung mundur dalam aplikasi sampai **sumber primer surat**, statusnya, dan interpretasi kedua alur ditinjau oleh ahli regulasi. Penelusuran daring ini bukan tinjauan ahli. Jika surat ditemukan, jangan otomatis menyalakan tenggat: cocokkan isi surat dengan Pasal 20–21 dan diktum KEEMPAT, periksa perubahan aturan, dokumentasikan hasil tinjauan, lalu perbarui aturan dan UI secara bersamaan.
 
+### Gerbang verifikasi sebelum penayangan
+
+Per 26 September 2026, **kedua prasyarat di bawah belum dipenuhi**. Pencarian tambahan di situs Ditjen Bina Konstruksi dan JDIH PU menemukan [halaman resmi Permen PU 6/2025](https://binakonstruksi.pu.go.id/pengumuman/peraturan-menteri-pekerjaan-umum-republik-indonesia-nomor-6-tahun-2025/), tetapi bukan surat Pasal 20 ayat (2) atau konfirmasi resmi status Kepdirjen 281/KPTS/DK/2026. Ketiadaan hasil pencarian **tidak membuktikan surat belum terbit**.
+
+1. **Sumber pemerintah:** simpan salinan surat Pasal 20 ayat (2) dari Ditjen Bina Konstruksi/LPJK beserta tautan atau konfirmasi asalnya; catat nomor, tanggal terbit, penandatangan dan kewenangannya, isi/cakupan, serta apakah surat masih berlaku atau telah diganti. Konfirmasi ke instansi yang sama keaslian dan status mutakhir Kepdirjen 281/KPTS/DK/2026. Status saat ini: **belum terverifikasi**.
+2. **Tinjauan ahli skema/LSBU:** dokumentasikan nama/peran penelaah, tanggal, sumber yang ditelaah, dan kesimpulan tertulis mengenai diktum KEEMPAT (6 bulan sejak penetapan), syarat pemberlakuan operasional setelah penyesuaian SIJK, Pasal 20–21 (6 bulan sejak surat), cakupan SBU lama, serta pengecualian penggunaan SBU pada Pasal 21 ayat (7). Status saat ini: **belum ditinjau ahli**.
+
+Baru setelah **keduanya** terpenuhi, putuskan untuk masing-masing alur apakah tanggal dapat dihitung dan ditampilkan. Sampai itu terjadi, API dan UI hanya memberi panduan persiapan tanpa tanggal tenggat atau hitung mundur. Perubahan keputusan harus dicatat di sini dan diselaraskan dengan aturan API serta UI dalam satu pembaruan.
+
 ## Pekerjaan regulasi berikutnya
 
 Sebelum checklist otomatis dipakai sebagai prasyarat sertifikasi, validasi semua pasal/lampiran primer yang relevan untuk masing-masing jenis BUJK, kualifikasi dan subklasifikasi; tentukan versi/tanggal mulai aturan berdasarkan surat resmi; tinjau hasil dengan ahli skema/LSBU; dan tandai tiap aturan dengan sumber, cakupan, serta versi. Bila surat pemberlakuan atau amandemen diterbitkan, aturan aplikasi perlu diperbarui sebelum tenggat dihitung.
