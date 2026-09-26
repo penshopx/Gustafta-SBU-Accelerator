@@ -1,0 +1,1 @@
+- [Workspace package installation](workspace-package-installation.md) — package-install callback targets the workspace root; scoped dependencies need a separate lockfile and link refresh.
