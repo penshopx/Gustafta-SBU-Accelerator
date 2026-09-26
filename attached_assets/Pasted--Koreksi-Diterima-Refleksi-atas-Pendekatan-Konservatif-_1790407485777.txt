@@ -1,0 +1,167 @@
+# ✅ Koreksi Diterima & Refleksi atas Pendekatan Konservatif Anda
+
+Terima kasih atas koreksi yang sangat tajam dan pendekatan yang berhati-hati. Ini adalah **pelajaran berharga** yang menunjukkan bahwa Anda memahami domain regulasi konstruksi jauh lebih dalam daripada asumsi awal saya. Mari saya rangkum refleksi saya atas 4 koreksi kritis Anda:
+
+---
+
+## 🎯 4 Koreksi yang Mengubah Pemahaman Saya
+
+### 1. **404 vs 403 untuk Kasus Orang Lain** ✅
+**Koreksi Anda:** Kasus milik akun lain harus menampilkan "Tidak Ditemukan" (404), bukan "Dilarang" (403).
+
+**Mengapa ini benar:** 
+- 403 mengonfirmasi bahwa *resource itu ada* → attacker tahu NIB/kasus ID valid dan bisa mencoba brute force
+- 404 menyembunyikan keberadaan resource → prinsip *security through obscurity* yang tepat untuk multi-tenant system
+- Ini adalah standar OWASP untuk authorization failures pada resource privat
+
+**Implikasi untuk testing:** Saat menguji isolasi data, pastikan respons API mengembalikan 404 dengan body `{ "error": "Not Found" }`, bukan 403 yang membocorkan informasi.
+
+---
+
+### 2. **Validasi SMAP Tidak Bisa Hanya dari Nama File** ✅
+**Koreksi Anda:** `SOP_Internal.pdf` bukan otomatis "dokumen internal yang ditolak". Dokumen internal bisa menjadi **pendukung** untuk PANCEK (misalnya: SOP internal yang menjadi bukti implementasi indikator PANCEK).
+
+**Mengapa ini benar (berdasarkan lampiran FSMAP-02):**
+- PANCEK adalah *lembar konfirmasi* yang memuat indikator-indikator implementasi SMAP
+- Indikator tersebut (seperti D.6 tentang sistem pelaporan, D.7 tentang pencatatan keuangan) **membutuhkan dokumen pendukung internal** (SOP, risk register, audit charter)
+- Jadi dokumen internal adalah *evidence*, bukan *substitute* dari PANCEK
+
+**Implikasi untuk aplikasi:** 
+- ❌ Jangan tolak upload hanya berdasarkan nama file
+- ✅ Validasi harus berbasis **konteks dokumen**: apakah ini diunggah sebagai "Bukti PANCEK" (sah) atau sebagai "Pemenuhan SMAP Utama" (tidak sah untuk Menengah/Besar)?
+- ✅ Perlu field metadata saat upload: `jenis_dokumen_smap` ∈ {`PANCEK_Konfirmasi`, `ISO_Sertifikat`, `Bimtek_Sertifikat`, `Komitmen_Surat`, `Pendukung_Internal`}
+
+---
+
+### 3. **Dashboard Asosiasi Butuh Relasi Keanggotaan Eksplisit** ✅
+**Koreksi Anda:** Tidak cukup hanya memilih role "asosiasi" untuk melihat data. Harus ada hubungan keanggotaan yang terverifikasi.
+
+**Mengapa ini benar:**
+- Asosiasi A tidak boleh melihat data anggota Asosiasi B
+- Bahkan dalam satu asosiasi, pengurus harian mungkin hanya melihat data yang mereka bina
+- Ini adalah prinsip *data minimization* dan *purpose limitation* (PDPL)
+
+**Implikasi untuk aplikasi:**
+- Perlu tabel `association_memberships` yang menghubungkan `users` ↔ `associations` dengan status keanggotaan
+- Dashboard asosiasi hanya query data dari anggota yang terverifikasi di asosiasinya
+- Untuk MVP, lebih baik **tunda fitur dashboard asosiasi** sampai mekanisme keanggotaan matang
+
+---
+
+### 4. **Secrets Sudah Aman di Replit Environment** ✅
+**Koreksi Anda:** Tidak perlu "memindahkan dari hardcoded" karena sudah pakai mekanisme environment Replit.
+
+**Mengapa ini benar:** Saya membuat asumsi yang tidak berdasar. Terima kasih atas koreksinya.
+
+---
+
+## 🏆 Apresiasi Khusus: Task #1 "Tenggat Transisi"
+
+Keputusan Anda untuk **menunda tampilan countdown transisi** sampai ada surat resmi yang terverifikasi adalah **sangat bijaksana** dan menunjukkan integritas profesional yang tinggi.
+
+**Mengapa ini keputusan yang tepat:**
+
+1. **Risiko Hukum:** Menampilkan tenggat berdasarkan asumsi bisa dianggap sebagai "nasihat regulasi" yang mengikat. Jika surat resmi ternyata berbeda (misalnya tenggat diperpanjang), aplikasi Anda bisa dituntut atas kerugian yang diderita BUJK.
+
+2. **Kredibilitas:** Lebih baik menampilkan "Tenggat belum ditetapkan - menunggu surat resmi" daripada menampilkan countdown yang salah dan merusak kepercayaan pengguna.
+
+3. **Defensive Design:** Syarat verifikasi 2 lapis (surat resmi + tinjauan ahli LSBU) adalah *gold standard* untuk aplikasi regulasi. Ini membedakan Gustafta dari "aplikasi abal-abal" yang asal menampilkan angka.
+
+**Definisi "Selesai" yang Anda tetapkan sangat solid:**
+- ✅ Salinan surat dari Ditjen Bina Konstruksi/LPJK
+- ✅ Verifikasi nomor, penandatangan, tanggal, cakupan
+- ✅ Tinjauan ahli skema/LSBU atas diktum KEEMPAT dan Pasal 20-21
+- ✅ Baru kemudian update `docs/regulatory-basis.md`, `sbu-rules.ts`, dan `transition-explainer.tsx` secara sinkron
+
+**Saran kecil:** Pertimbangkan menambahkan status "⏳ Menunggu Surat Resmi" di UI dengan link ke sumber resmi (laman LPJK/Ditjen Bina Konstruksi) agar pengguna tahu bahwa aplikasi sedang menunggu verifikasi, bukan error.
+
+---
+
+## 🧪 Panduan Testing yang Sudah Disesuaikan (Opsi A)
+
+Berdasarkan koreksi Anda, berikut adalah test plan yang lebih akurat untuk sprint ini:
+
+### **Test Suite 1: Autentikasi & Otorisasi**
+
+| # | Skenario | Ekspektasi | Status |
+|---|---|---|---|
+| 1.1 | Login dengan kredensial valid | Redirect ke dashboard sesuai role | ⏳ |
+| 1.2 | Akses `/cases` tanpa token | 401 Unauthorized | ⏳ |
+| 1.3 | User A akses `/cases/{id}` milik User A | 200 OK + data kasus | ⏳ |
+| 1.4 | User A akses `/cases/{id}` milik User B | **404 Not Found** (bukan 403!) | ⏳ |
+| 1.5 | User A coba PUT `/cases/{id}` milik User B | **404 Not Found** | ⏳ |
+| 1.6 | User A coba DELETE `/cases/{id}` milik User B | **404 Not Found** | ⏳ |
+
+### **Test Suite 2: Alur Bisnis Kontraktor (Happy Path)**
+
+| # | Skenario | Ekspektasi | Status |
+|---|---|---|---|
+| 2.1 | Kontraktor login → klik "Buat Kasus Baru" | Form kasus terbuka | ⏳ |
+| 2.2 | Isi data kasus (NIB, kualifikasi, subklasifikasi) → submit | Kasus tersimpan, redirect ke detail kasus | ⏳ |
+| 2.3 | Di halaman detail kasus → klik "Catat Bukti" | Form bukti terbuka | ⏳ |
+| 2.4 | Upload bukti dengan metadata `jenis_dokumen_smap: "PANCEK_Konfirmasi"` | Bukti tersimpan, muncul di daftar bukti | ⏳ |
+| 2.5 | Klik "Lihat Temuan" | Temuan persiapan + rujukan regulasi muncul | ⏳ |
+| 2.6 | Logout → login kembali → akses kasus yang sama | Kasus masih ada dan data utuh | ⏳ |
+
+### **Test Suite 3: Edge Cases Kritis**
+
+| # | Skenario | Ekspektasi | Status |
+|---|---|---|---|
+| 3.1 | Buat kasus dengan NIB yang sudah punya kasus aktif | Validasi: tolak atau izinkan? (perlu keputusan produk) | ⏳ |
+| 3.2 | Upload file > 5MB | Tolak dengan pesan jelas | ⏳ |
+| 3.3 | Upload file dengan ekstensi `.exe` | Tolak dengan pesan jelas | ⏳ |
+| 3.4 | Akses URL kasus yang tidak ada (ID acak) | 404 Not Found | ⏳ |
+| 3.5 | Submit form bukti tanpa upload file | Validasi client-side + server-side | ⏳ |
+
+### **Test Suite 4: Responsivitas**
+
+| # | Skenario | Ekspektasi | Status |
+|---|---|---|---|
+| 4.1 | Buka di mobile (375px width) | Layout tidak rusak, tombol bisa diklik | ⏳ |
+| 4.2 | Buka di tablet (768px width) | Layout adaptif | ⏳ |
+| 4.3 | Buka di desktop (1440px width) | Layout optimal | ⏳ |
+
+---
+
+## 📋 Checklist Eksekusi Minggu Ini
+
+Berdasarkan prioritas yang Anda tetapkan, berikut urutan eksekusi yang saya rekomendasikan:
+
+### **Hari 1-2: Testing E2E (Prioritas Tertinggi)**
+- [ ] Setup 3 akun test (Kontraktor Kecil, Konsultan Menengah, Profesional)
+- [ ] Jalankan Test Suite 1 (Autentikasi & Otorisasi) → **fokus pada 404 vs 403**
+- [ ] Jalankan Test Suite 2 (Happy Path)
+- [ ] Catat semua bug di issue tracker
+
+### **Hari 3: Perbaikan Bug Kritis**
+- [ ] Fix bug yang ditemukan di Test Suite 1 (authorization leak)
+- [ ] Fix bug yang menghambat happy path
+- [ ] Re-test untuk memastikan fix berhasil
+
+### **Hari 4: Refinemen Validasi SMAP**
+- [ ] Tambahkan field `jenis_dokumen_smap` pada model bukti
+- [ ] Update UI form upload bukti dengan dropdown jenis dokumen
+- [ ] Update logika validasi agar tidak menolak berdasarkan nama file
+
+### **Hari 5: Dokumentasi & Retrospektif**
+- [ ] Update `docs/regulatory-basis.md` dengan temuan testing
+- [ ] Tulis changelog untuk versi berikutnya
+- [ ] Retrospektif: apa yang berjalan baik, apa yang perlu diperbaiki
+
+---
+
+## 🤝 Pertanyaan untuk Anda
+
+Untuk memastikan saya memberikan dukungan yang tepat, mohon konfirmasi:
+
+1. **Apakah Anda sudah memiliki 3 akun test yang siap dipakai?** Jika belum, saya bisa buatkan script seed untuk membuat akun test dengan data realistis.
+
+2. **Untuk Test Suite 3.1 (NIB duplikat):** Apakah aplikasi saat ini mengizinkan 1 NIB memiliki banyak kasus aktif, atau harus 1 NIB = 1 kasus aktif? Ini penting untuk logika validasi.
+
+3. **Apakah Anda ingin saya buatkan:**
+   - **(A)** Script testing otomatis (Playwright/Cypress) untuk Test Suite 1-4?
+   - **(B)** Schema database untuk field `jenis_dokumen_smap` + migration script?
+   - **(C)** Template bug report yang terstruktur untuk dokumentasi testing?
+   - **(D)** Mock data untuk 3 akun test (dengan NIB, kualifikasi, subklasifikasi realistis)?
+
+Silakan pilih yang paling membantu untuk sprint minggu ini, atau beri tahu jika ada prioritas lain yang lebih mendesak. 🚀
