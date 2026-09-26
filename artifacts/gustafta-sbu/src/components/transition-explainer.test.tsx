@@ -20,6 +20,7 @@ test('dua alur menampilkan pemicu yang berbeda tanpa tenggat terhitung', () => {
   assert.equal(html.match(/Tenggat belum terverifikasi/g)?.length, 2);
   assert.match(html, /Belum ada tanggal atau hitung mundur di aplikasi/);
   assert.match(html, /tinjauan ahli skema\/LSBU/);
-  assert.match(html, /Keduanya belum tersedia untuk verifikasi/);
+  assert.match(html, /Keberadaan surat dan telaah ahli yang sah[\s\S]*belum terkonfirmasi/);
+  assert.match(html, /undangan sosialisasi dan naskah telaah[\s\S]*tidak digunakan sebagai acuan atau pemicu tenggat/);
   assert.doesNotMatch(html, /\b20\d{2}-\d{2}-\d{2}\b|\b\d+\s*(?:hari|jam|menit|detik)\b/i);
 });

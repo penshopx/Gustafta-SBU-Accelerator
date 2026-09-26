@@ -6,7 +6,7 @@ export const RULESET = "Permen PU 6/2025 + Kepdirjen 281/KPTS/DK/2026 (persiapan
 // untuk masing-masing pemicu terverifikasi. Jangan menurunkan tanggal dari Kepdirjen.
 const TRANSITION_STATUS = "Tenggat belum terverifikasi";
 const TRANSITION_VERIFICATION =
-  "Tanggal/hitung mundur tidak tersedia: surat Pasal 20 ayat (2) dan status terbaru Kepdirjen 281/KPTS/DK/2026 belum terverifikasi dari instansi resmi; penerapan kedua alur belum ditinjau ahli skema/LSBU.";
+  "Tanggal/hitung mundur tidak tersedia: keberadaan dan status surat Pasal 20 ayat (2), serta status terbaru Kepdirjen 281/KPTS/DK/2026 belum terkonfirmasi dari instansi resmi; belum tersedia telaah ahli skema/LSBU yang dapat diverifikasi untuk kedua alur. Berkas undangan sosialisasi dan naskah telaah yang pernah disampaikan tidak digunakan sebagai acuan atau pemicu tenggat.";
 
 export const REGULATIONS = [
   {
