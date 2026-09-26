@@ -1,0 +1,52 @@
+Sebelum masuk ke ide produk, satu koreksi kecil agar konten Anda tidak keliru saat dipublikasikan: yang berubah adalah **PP 5/2021 → PP 28/2025**, dan **Permen PUPR 6/2021 → Permen PU 6/2025** (bukan 2026), lalu **Kepdirjen 37/2025 → Kepdirjen 281/2026**. Kesalahan penomoran di materi sosialisasi bisa langsung merusak kredibilitas produk Anda.
+
+Dari dokumen yang Anda unggah, ada beberapa "titik nyeri" yang paling banyak ditanyakan pemangku kepentingan — di situlah produk digital Anda akan paling bernilai:
+
+## 1. Peta konten: apa yang paling dibutuhkan
+
+| Audiens | Kebutuhan utama (berdasarkan materi) |
+|---|---|
+| Kontraktor (BUJK) | Konversi KBLI 2020→2025, perubahan kualifikasi (K1/K2/K3/M/B), syarat PJTBU/PJKBU, SMAP, simulasi perpanjangan SBU |
+| Konsultan | Batas penjualan & ekuitas baru, larangan silang usaha konsultansi vs pekerjaan konstruksi, jenjang TKK |
+| Asosiasi & LSBU | Timeline transisi (dua "jam 6 bulan": penyesuaian skema LSBU dan konversi SBU), format skema per klasifikasi, kewenangan vs sanksi |
+| Semua | Tata cara perubahan data tanpa asesmen, status SIMPK, BO/pelaporan tahunan/PUB |
+
+## 2. Format produk digital yang efektif (dari termurah ke terstruktur)
+
+**Tahap 1 — Kesadaran (murah, cepat, viral-friendly):**
+- **Carousel/infografis seri** "281 dalam 1 Menit" — 1 slide = 1 perubahan (misalnya: "PJSKBU hilang, kenalan sama PJKBU").
+- **Short video/podcast** dengan narasumber dari paparan Pak Panani/Bu Indri/Pak Joko — potong menjadi 60–90 detik per topik.
+- **Poster alur visual** dua jalur transisi (T1: LSBU menyesuaikan skema; T2: konversi SBU) — ini paling sering disalahpahami.
+
+**Tahap 2 — Pemahaman (intangible, interaktif):**
+- **Microsite/web interaktif** dengan navigasi per peran: "Saya Kontraktor / Saya Konsultan / Saya Asosiasi" — masing-masing melihat hanya aturan yang relevan.
+- **Peta perubahan 37 → 281** (before/after interaktif) berdasarkan slide paparan DJBK — ini konten yang sudah jadi tinggal diubah ke HTML.
+- **Timeline visual** September 2026 → Februari 2027 (surat LPJK, pengajuan skema, verifikasi, persetujuan).
+
+**Tahap 3 — Alat bantu kerja (yang membuat orang balik lagi):**
+- **Kalkulator kualifikasi**: input penjualan tahunan → output K1/K2/K3/M/B beserta syaratnya. Sangat shareable.
+- **Simulasi perpanjangan SBU**: interaktif dari 6 simulasi di Lampiran Kepdirjen 281 — pengguna klik skenario (BG001 punya pengalaman, BG002 tidak) dan melihat hasilnya.
+- **Cek konversi KBLI**: tabel 67 KBLI (54 minor, 1 pecah, 7 gabung, 5 kasus khusus) diubah jadi pencarian satu kode → hasil konversi + catatan.
+- **Checklist dokumen SBU** yang bisa diunduh (PDF interaktif) per jenis permohonan: baru, perpanjangan, perubahan kualifikasi, perubahan data.
+- **Chatbot WhatsApp/Telegram** berbasis FAQ — kunci di Indonesia: orang tidak mau buka website, tapi buka WA.
+
+**Tahap 4 — Untuk asosiasi/LSBU (B2B):**
+- **Toolkit sosialisasi** siap pakai: deck, naskah webinar, FAQ, template surat pernyataan (format sudah ada di Kepdirjen 281 Lampiran 21) — tinggal branding.
+- **Kuis/uji pemahaman daring** dengan sertifikat keikutsertaan — berguna buat bukti PUB dan pembinaan.
+
+## 3. Prinsip agar benar-benar "mudah diakses dan dipahami"
+
+1. **Bahasa ganda**: istilah resmi + penjelasan kolokial. Contoh: "re-sertifikasi" → "perpanjangan SBU".
+2. **Desain untuk HP dan koneksi lemah**: PDF ringan, gambar <200KB (seperti standar upload peralatan di SIMPK), hindari video panjang tanpa transkrip.
+3. **Satu halaman satu pertanyaan**: jangan buat "pedoman lengkap" dulu; pecah per pertanyaan nyata ("SBU saya habis 2027, harus konversi kapan?").
+4. **Rujukan selalu ke sumber resmi**: tautkan ke Kepdirjen 281 (ada link s.pu.go.id di surat pengantar) agar dipercaya.
+5. **Versi cetak-friendly**: banyak kontraktor kecil masih kerja dengan print-out.
+
+## 4. Saran urutan eksekusi (MVP 90 hari)
+
+1. **Minggu 1–3**: 10 infografis + 1 timeline transisi visual (basis semua konten berikutnya).
+2. **Minggu 4–8**: microsite 3 halaman (peran + kalkulator kualifikasi + simulasi perpanjangan SBU).
+3. **Minggu 9–12**: chatbot FAQ + toolkit untuk asosiasi/LSBU.
+4. **Berkesinambungan**: kuis bulanan, sesi tanya-jawab daring, update jika terbit SE Dirjen tentang konversi.
+
+Kalau mau, saya bisa langsung membuatkan **contoh prototipe interaktif** salah satu di antaranya — misalnya kalkulator kualifikasi K1–B atau simulasi perpanjangan SBU berdasarkan Lampiran Kepdirjen 281 — supaya Anda punya gambaran nyata sebelum produksi penuh. Mau saya buatkan yang mana?

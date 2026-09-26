@@ -1,0 +1,123 @@
+Berikut adalah **BLUEPRINT PRODUK DIGITAL FINAL** yang komprehensif, terstruktur, dan siap dieksekusi. Blueprint ini mensinergikan seluruh regulasi terbaru (PP 28/2025, Permen PU 6/2025, Kepdirjen 281/2026, Konversi KBLI) dengan pendekatan **Agentic AI (Multiclaw-Openclaw-Hermes)** dan diintegrasikan secara strategis ke dalam ekosistem **Gustafta.my.id**.
+
+---
+
+# 📘 BLUEPRINT PRODUK DIGITAL: JASKON PRO 
+### *(Powered by Gustafta Ecosystem)*
+**Visi:** Menjadi "Compliance Co-Pilot & Business Accelerator" yang mengubah bahasa regulasi yang kompleks menjadi langkah operasional yang pasti, mencegah penolakan, dan mempercepat pertumbuhan bisnis jasa konstruksi.
+**Tagline:** *"Diagnosa Tepat, Dokumen Valid, Submit Sekali Langsung Terbit."*
+
+---
+
+## I. ARSITEKTUR TEKNOLOGI: AGENTIC AI ENGINE
+Aplikasi ini tidak menggunakan AI generik, melainkan arsitektur **Multiclaw-Openclaw-Hermes** yang tertanam di dalam modul-modul Gustafta:
+
+1. **Hermes (The Orchestrator & Reasoning):** Otak pusat yang memahami nuansa regulasi. Ia menerjemahkan pertanyaan pengguna (misal: "Alat saya ditolak") menjadi diagnosa spesifik berdasarkan Kepdirjen 281/2026, lalu mendelegasikan tugas ke agen khusus.
+2. **Multiclaw (The Specialist Agents):** Tim agen AI yang bekerja paralel:
+   - *Agent SIMPK:* Spesialis validasi peralatan dan metadata.
+3. **Openclaw (The Tools & Integrations):** "Tangan" AI yang berinteraksi dengan dunia nyata:
+   - *Image Metadata Analyzer:* Memindai EXIF data foto.
+   - *IAPI QR Validator:* Mengecek keaslian LAI via website IAPI.
+   - *WhatsApp API Blast:* Mengirim pengingat otomatis ke pemilik alat sewa.
+   - *PDF Parser:* Membaca neraca keuangan untuk mendeteksi pos "Revaluasi Aset".
+
+---
+
+## II. FITUR BLUEPRINT PER SEGMENTASI TARGET MARKET
+
+### 🏗️ A. Modul Kontraktor (BUJK Pekerjaan Konstruksi)
+*Integrasi ke Gustafta: "Cek Kesiapan SBU" & "Compliance Hub"*
+
+| Nama Fitur | Logika Agentic AI (Openclaw Tools) | Dampak Regulasi yang Diselesaikan |
+| :--- | :--- | :--- |
+| **SIMPK Pre-Flight Validator** | AI memindai foto alat. Jika terdeteksi *screenshot* atau tanpa EXIF, AI memblokir: *"Foto tidak valid. LSBU akan menolak. Silakan ambil foto ulang via kamera aplikasi."* | Mencegah penolakan massal akibat foto alat dari internet/brosur. |
+| **Rental Savior (5-Hari Blast)** | Saat status "Menunggu Klarifikasi", AI otomatis mengirim template WhatsApp ke pemilik alat berisi *deep-link* SIMPK dan instruksi visual klik "Diterima". | Mencegah penolakan otomatis karena pemilik alat gagal klarifikasi dalam 5 hari kerja (Dok. Pak Andias). |
+| **70-Alat Exemption Generator** | Database otomatis mendeteksi alat ringan (drone, welding set). AI langsung men-generate *Surat Pernyataan Laik Operasi* (Format FALT) tanpa perlu Sertifikat K3. | Menghemat biaya dan waktu inspeksi K3 untuk alat yang dikecualikan. |
+| **KBLI 2020→2025 Experience Mapper** | User input No. Reg Pengalaman lama. AI memetakan ke KBLI 2025. Jika masuk 4 KBLI "Zona Merah" (dipecah/digabung), AI memberi alert: *"Deskripsi BA Anda perlu penyesuaian manual agar diakui."* | Menyelamatkan pengalaman bertahun-tahun agar tidak hangus saat konversi otomatis. |
+| **SMAP Strict Navigator** | **Kecil:** Direktori lembaga pelatihan anti-korupsi + tracker upload sertifikat bimtek.<br>**Menengah/Besar:** AI memblokir upload dokumen internal. Hanya menerima validasi format PANCEK KPK atau Sertifikat ISO 37001 (cek akreditasi KAN). | Mencegah BUJK membuang biaya membuat dokumen SMAP internal yang **pasti ditolak** LSBU. |
+| **Financial Pre-Checker (INKINDO Std)** | AI memindai PDF LAI. Jika ada pos "Selisih Revaluasi Aset", AI memunculkan *mandatory checklist*: *"Wajib unggah bukti penilaian kembali, atau FKK akan ditolak."* + Validasi QR Code ke IAPI. | Mencegah penolakan di tahap verifikasi kemampuan keuangan akibat ketidaksesuaian SAK. |
+| **OSS Sanction Emergency Tracker** | User input tanggal surat peringatan OSS. AI menghitung mundur dan mengirim notifikasi darurat ke Direksi: *"Sisa 7 hari untuk tindak lanjut PB UMKU sebelum risiko pembekuan."* | Mengamankan SBU dari pencabutan akibat kelalaian administrasi (PP 28/2025). |
+
+### 📐 B. Modul Konsultan (BUJK Jasa Konsultansi)
+*Integrasi ke Gustafta: "Ruang Proyek" & "Bedah Dokumen"*
+
+| Nama Fitur | Logika Agentic AI | Dampak Regulasi yang Diselesaikan |
+| :--- | :--- | :--- |
+| **TKK Sub-Class Exact Matcher** | User pilih subklasifikasi (misal: AT001). AI menampilkan syarat mutlak: *"Wajib SKK yang secara eksplisit menyebut 'Pengujian Geoteknik'. SKK umum 'Ahli Geoteknik' berisiko ditolak."* | Mencegah penolakan karena ketidaksesuaian kode subklasifikasi antara SBU dan SKK tenaga ahli. |
+| **Dual-Business Firewall** | Validasi NIB real-time. Jika NIB terdeteksi memiliki kode KBLI Konstruksi, AI memblokir pengajuan SBU Konsultansi (dan sebaliknya) dengan alert merah. | Mencegah penolakan otomatis di LSBU akibat pelanggaran larangan rangkap usaha (Permen PU 6/2025 Pasal 5). |
+| **Experience Survival Dashboard** | AI memantau riwayat SIMPAN. Alert: *"Subklasifikasi ini tidak ada pengalaman dalam 2 periode (6 tahun). SBU akan hangus. Ajukan subklasifikasi baru sekarang untuk menjaga kualifikasi."* | Mencegah kehilangan kualifikasi perusahaan secara tiba-tiba. |
+
+### 👷 C. Modul Tenaga Profesional (PJBU, PJTBU, PJKBU)
+*Integrasi ke Gustafta: "Kompetensi SKK"*
+
+| Nama Fitur | Logika Agentic AI | Dampak Regulasi yang Diselesaikan |
+| :--- | :--- | :--- |
+| **TKK Digital Passport & Radar** | Scan QR SKK → simpan digital. Notifikasi *push* H-90 dan H-60: *"SKK Anda habis dalam 60 hari. Segera perpanjang agar SBU perusahaan tidak terancam dicabut."* | Melindungi karir profesional dan mencegah SBU perusahaan gugur karena TKK kadaluarsa. |
+| **Anti-Rangkap Jabatan Guardian** | Saat di-onboarding di perusahaan baru, AI memperingatkan: *"Anda tercatat aktif di NIB [X]. Merangkap di NIB [Y] akan memicu pencabutan SBU kedua perusahaan (Pasal 8.1.3.c)."* | Mencegah pelanggaran fatal yang berakibat pada sanksi pencabutan SBU. |
+
+### 🏛️ D. Modul Asosiasi (GAPENSI, INKINDO, AKI, dll.)
+*Integrasi ke Gustafta: "Association Governance Hub" (B2B SaaS)*
+
+| Nama Fitur | Logika Agentic AI | Dampak Regulasi yang Diselesaikan |
+| :--- | :--- | :--- |
+| **Command Center Dashboard** | AI mengolah data anonim pengguna: *"30% anggota di Jawa Barat SBU-nya habis dalam 3 bulan, 40% belum punya SMAP valid."* | Mengubah pembinaan asosiasi dari tebakan menjadi berbasis data nyata (Data-Driven PUB). |
+| **Bulk Training & PUB Tracker** | Asosiasi bisa kirim *one-click broadcast* ke segmen spesifik: *"Pelatihan SMAP Massal khusus anggota, diskon 50%."* AI otomatis melacak partisipasi untuk laporan PUB ke LPJK. | Memenuhi kewajiban PUB dengan cara yang terukur, memberdayakan anggota, dan membuka *revenue stream* bagi asosiasi. |
+
+---
+
+## III. USER JOURNEY: "THE ZERO-REJECTION SCENARIO"
+*(Contoh nyata bagaimana aplikasi bekerja untuk Kontraktor Menengah)*
+
+1. **Diagnosa:** Admin Kontraktor membuka Gustafta → "Cek Kesiapan SBU". AI (Hermes) memindasi data: *"SBU Anda aman, tetapi 1 Excavator berstatus 'Tercatat-1' dan dokumennya akan kadaluarsa dalam 10 hari."*
+2. **Validasi Proaktif:** Admin mengunggah foto alat baru. Agent SIMPK (Openclaw) memindai: *"⚠️ Foto terdeteksi sebagai screenshot. Silakan ambil foto asli via kamera aplikasi ini agar lolos validasi LSBU."* Admin mengambil foto ulang → ✅ *Valid!*
+3. **Navigasi SMAP:** AI mendeteksi kualifikasi Menengah. *"Untuk perpanjangan, dokumen internal tidak lagi diterima. Anda wajib mengunggah Lembar Konfirmasi PANCEK atau ISO 37001. Butuh bantuan mengisi kuesioner PANCEK? Buka AI Specialist."*
+4. **Aksi Penyelamatan:** Setelah alat diunggah ke SIMPK, AI (Rental Savior) otomatis mengirim WhatsApp ke pemilik rental: *"Halo, mohon klik 'Diterima' di email SIMPK dalam 5 hari kerja agar tidak ditolak otomatis. Berikut link-nya."*
+5. **Hasil:** Dokumen yang masuk ke LSBU sudah 100% valid, mempercepat proses asesmen, dan menghilangkan revisi berulang.
+
+---
+
+## IV. STRATEGI GO-TO-MARKET (Berbasis "Mindset Iklan Berbayar")
+Tujuan awal bukan langsung menjual mahal, melainkan membangun **Buyer List, Social Proof, dan Branding**.
+
+*   **Fase 1: Lead Magnet (Bulan 1-3)**
+    *   *Offer:* "Cek Kesehatan SBU & SIMPK dalam 3 Menit - GRATIS".
+    *   *Channel:* Grup WhatsApp kontraktor, Instagram, Webinar bareng Asosiasi.
+    *   *Goal:* Mendapatkan 10.000+ pengguna gratis. Fitur SIMPK Pre-Flight dan KBLI Mapper adalah "hook" terbaik karena paling sering dicari.
+*   **Fase 2: Nurture & Partnership (Bulan 4-6)**
+    *   Arahkan pengguna gratis ke WhatsApp Bot "Tanya Asesor" untuk edukasi regulasi.
+    *   Tawarkan aplikasi sebagai *Pre-Screening Tool* resmi ke LSBU (mengurangi beban kerja asesor mereka hingga 40%, sehingga mereka akan merekomendasikan aplikasi ini).
+    *   Gandeng Asosiasi untuk fitur Bulk Training (Revenue Sharing).
+*   **Fase 3: Monetisasi B2B SaaS (Bulan 7+)**
+    *   Konversi ke paket berbayar: "Ebook + Toolkit + Tutor AI 30 Hari (Rp249.000)" atau lisensi "Corporate Compliance Suite" untuk Kontraktor Menengah/Besar.
+    *   Jual "Association Governance Hub" ke pengurus asosiasi.
+
+---
+
+## V. ROADMAP PENGEMBANGAN (Agile & Phased)
+
+| Kuartal | Fokus Pengembangan | Fitur Utama yang Dirilis |
+| :--- | :--- | :--- |
+| **Q1 2026** | **MVP & Social Proof** | SKK Wallet, SIMPK Pre-Flight Checker (Metadata), KBLI 2020→2025 Mapper, Chatbot AI Regulasi Dasar. |
+| **Q2 2026** | **Core Compliance** | SMAP Strict Navigator (3 Jalur Valid), Generator Dokumen (FPT, FKK, FALT, FSMAP), TKK Sub-Class Matcher, Rental Savior WhatsApp Blast. |
+| **Q3 2026** | **Advanced & B2B** | Financial Pre-Checker (IAPI QR + Revaluasi), OSS Sanction Tracker, KSO Matchmaker, Association Command Center (Dashboard Agregat). |
+| **Q4 2026** | **Ecosystem Scale** | Marketplace Lowongan TKK, Micro-Learning Platform, PUB Auto-Tracker, Integrasi API (jika diizinkan LPJK). |
+
+---
+
+## VI. KEY SUCCESS METRICS (KPI)
+
+1. **Adopsi Pengguna:** 15.000 pengguna terdaftar dalam 6 bulan pertama (fokus pada Kontraktor Kecil & Profesional).
+2. **Tingkat Keberhasilan (Success Rate):** 85% dokumen yang digenerate/divalidasi aplikasi lolos tahap administrasi awal LSBU tanpa revisi (Zero-Rejection Guarantee).
+3. **Kemitraan:** Minimal 3 Asosiasi Besar (GAPENSI, INKINDO, AKI) dan 5 LSBU mengadopsi aplikasi sebagai *recommended pre-screening tool*.
+4. **Dampak Bisnis:** Pengurangan waktu pemrosesan SBU pengguna sebesar 40% dibandingkan metode manual.
+
+---
+
+## VII. LANGKAH EKSEKUSI SELANJUTNYA (Actionable Next Steps)
+
+Blueprint ini siap diserahkan kepada tim *Product Manager* dan *Lead Developer*. Untuk memulai eksekusi teknis, saya merekomendasikan kita segera mendetailkan salah satu dari dua dokumen teknis berikut:
+
+1. **📊 Database Schema & API Logic Design** untuk fitur **"SIMPK Pre-Flight Validator"** (termasuk daftar 70 alat pengecualian, logika validasi EXIF, dan alur WhatsApp Blast).
+2. **🔄 Flowchart Logika Bisnis (If-Else)** untuk fitur **"SMAP Strict Navigator"** (memetakan secara detail validasi Sertifikat Bimtek vs PANCEK vs ISO berdasarkan input kualifikasi pengguna).
+
+Manakah yang ingin kita bedah lebih dalam terlebih dahulu agar tim pengembang dapat langsung memulai *sprint* pertama?

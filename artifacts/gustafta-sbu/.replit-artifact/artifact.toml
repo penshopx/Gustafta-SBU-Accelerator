@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Gustafta SBU Accelerator"
+description = "Ruang kerja multi-peran jasa konstruksi untuk menyiapkan permohonan SBU baru dan perpanjangan, memeriksa kelengkapan bukti menurut aturan berversi, dan menandai hal yang memerlukan tinjauan manusia."
+version = "1.0.0"
+id = "artifacts/gustafta-sbu"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26110
+
+[services.development]
+run = "pnpm --filter @workspace/gustafta-sbu run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/gustafta-sbu", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/gustafta-sbu/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26110"
+BASE_PATH = "/"

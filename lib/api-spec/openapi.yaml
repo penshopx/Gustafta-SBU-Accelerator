@@ -1,22 +1,19 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: workspace
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
-      summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +21,330 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /me:
+    get:
+      operationId: getMe
+      tags: [workspace]
+      responses:
+        "200":
+          description: Current profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+    patch:
+      operationId: updateMe
+      tags: [workspace]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileInput"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [workspace]
+      responses:
+        "200":
+          description: Current user's case summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /cases:
+    get:
+      operationId: listCases
+      tags: [workspace]
+      responses:
+        "200":
+          description: Cases owned by current user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SbuCase"
+    post:
+      operationId: createCase
+      tags: [workspace]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseInput"
+      responses:
+        "201":
+          description: Created case
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SbuCase"
+  /cases/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    get:
+      operationId: getCase
+      tags: [workspace]
+      responses:
+        "200":
+          description: Case detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SbuCase"
+    patch:
+      operationId: updateCase
+      tags: [workspace]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaseUpdate"
+      responses:
+        "200":
+          description: Updated case
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SbuCase"
+    delete:
+      operationId: deleteCase
+      tags: [workspace]
+      responses:
+        "204":
+          description: Deleted
+  /cases/{id}/evidence:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    get:
+      operationId: listEvidence
+      tags: [workspace]
+      responses:
+        "200":
+          description: Evidence declarations for case
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Evidence"
+    post:
+      operationId: addEvidence
+      tags: [workspace]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidenceInput"
+      responses:
+        "201":
+          description: Evidence declaration created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Evidence"
+  /cases/{id}/evidence/{evidenceId}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      - in: path
+        name: evidenceId
+        required: true
+        schema:
+          type: integer
+    patch:
+      operationId: updateEvidence
+      tags: [workspace]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvidenceUpdate"
+      responses:
+        "200":
+          description: Updated evidence declaration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Evidence"
+    delete:
+      operationId: deleteEvidence
+      tags: [workspace]
+      responses:
+        "204":
+          description: Deleted
+  /cases/{id}/assessment:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+    get:
+      operationId: getAssessment
+      tags: [workspace]
+      responses:
+        "200":
+          description: Preliminary checklist, not a certification decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assessment"
+  /regulations:
+    get:
+      operationId: listRegulations
+      tags: [workspace]
+      responses:
+        "200":
+          description: Regulatory references and transition caveats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Regulation"
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
-        status:
+        status: { type: string }
+    Profile:
+      type: object
+      required: [role, displayName, organizationName]
+      properties:
+        role:
           type: string
-      required:
-        - status
-
+          enum: [belum_dipilih, kontraktor, konsultan, profesional, asosiasi]
+        displayName: { type: string }
+        organizationName: { type: string }
+    ProfileInput:
+      type: object
+      required: [role, displayName, organizationName]
+      properties:
+        role:
+          type: string
+          enum: [kontraktor, konsultan, profesional, asosiasi]
+        displayName: { type: string, minLength: 1, maxLength: 120 }
+        organizationName: { type: string, maxLength: 160 }
+    SbuCase:
+      type: object
+      required: [id, companyName, requestType, qualification, classification, status, createdAt, updatedAt, existingSbuExpiresOn]
+      properties:
+        id: { type: integer }
+        companyName: { type: string }
+        requestType: { type: string, enum: [baru, perpanjangan] }
+        qualification: { type: string, enum: [kecil, menengah, besar] }
+        classification: { type: string }
+        status: { type: string, enum: [draf, ditinjau, selesai_persiapan] }
+        existingSbuExpiresOn: { type: ["string", "null"], format: date }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CaseInput:
+      type: object
+      required: [companyName, requestType, qualification, classification]
+      properties:
+        companyName: { type: string, minLength: 2, maxLength: 160 }
+        requestType: { type: string, enum: [baru, perpanjangan] }
+        qualification: { type: string, enum: [kecil, menengah, besar] }
+        classification: { type: string, minLength: 1, maxLength: 160 }
+        existingSbuExpiresOn: { type: ["string", "null"], format: date }
+    CaseUpdate:
+      type: object
+      properties:
+        companyName: { type: string, minLength: 2, maxLength: 160 }
+        requestType: { type: string, enum: [baru, perpanjangan] }
+        qualification: { type: string, enum: [kecil, menengah, besar] }
+        classification: { type: string, minLength: 1, maxLength: 160 }
+        status: { type: string, enum: [draf, ditinjau, selesai_persiapan] }
+        existingSbuExpiresOn: { type: ["string", "null"], format: date }
+    Evidence:
+      type: object
+      required: [id, caseId, code, title, note, updatedAt]
+      properties:
+        id: { type: integer }
+        caseId: { type: integer }
+        code: { type: string }
+        title: { type: string }
+        note: { type: string }
+        updatedAt: { type: string, format: date-time }
+    EvidenceInput:
+      type: object
+      required: [code, title, note]
+      properties:
+        code: { type: string, minLength: 1, maxLength: 80 }
+        title: { type: string, minLength: 1, maxLength: 160 }
+        note: { type: string, maxLength: 1000 }
+    EvidenceUpdate:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 160 }
+        note: { type: string, maxLength: 1000 }
+    Finding:
+      type: object
+      required: [code, title, status, detail, source]
+      properties:
+        code: { type: string }
+        title: { type: string }
+        status: { type: string, enum: [tercatat, perlu_bukti, perlu_tinjauan] }
+        detail: { type: string }
+        source: { type: string }
+    Assessment:
+      type: object
+      required: [caseId, ruleset, status, recordedCount, requiredCount, disclaimer, findings]
+      properties:
+        caseId: { type: integer }
+        ruleset: { type: string }
+        status: { type: string, enum: [perlu_bukti, perlu_tinjauan] }
+        recordedCount: { type: integer }
+        requiredCount: { type: integer }
+        disclaimer: { type: string }
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Finding"
+    Dashboard:
+      type: object
+      required: [total, draft, reviewing, prepared, recent]
+      properties:
+        total: { type: integer }
+        draft: { type: integer }
+        reviewing: { type: integer }
+        prepared: { type: integer }
+        recent:
+          type: array
+          items:
+            $ref: "#/components/schemas/SbuCase"
+    Regulation:
+      type: object
+      required: [id, title, detail, source, effectiveStatus]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        detail: { type: string }
+        source: { type: string }
+        effectiveStatus: { type: string }

@@ -1,0 +1,233 @@
+# **JASKON PRO: Ekosistem Digital Terintegrasi Jasa Konstruksi Indonesia**
+### *"Dari Kepatuhan Menuju Pertumbuhan Bisnis"*
+
+---
+
+## **I. VISI & POSISIONING PRODUK**
+
+**JasKon Pro** bukan sekadar aplikasi informasi regulasi, melainkan **Ekosistem Kolaborasi Bisnis & Kepatuhan** yang menghubungkan 4 pemangku kepentingan utama dalam satu platform terintegrasi. Produk ini memposisikan diri sebagai **"Compliance Co-Pilot & Business Accelerator"** yang menjembatani bahasa regulasi (PP 28/2025, Permen PU 6/2025, Kepdirjen 281/2026) dengan operasional harian pelaku usaha.
+
+**Tagline:** *"Submit Sekali, Langsung Terbit. Kolaborasi Tanpa Batas."*
+
+---
+
+## **II. TARGET MARKET SPESIFIK & PERSONA PENGGUNA**
+
+### **Segmen 1: KONTRAKTOR (BUJK Pekerjaan Konstruksi)**
+**Persona:**
+- **Kontraktor Kecil (K1/K2/K3):** Omzet <Rp15 Miliar, admin merangkap pemilik, pusing dengan SIMPK & SMAP
+- **Kontraktor Menengah (M):** Omzet Rp15-50 Miliar, punya tim admin khusus, butuh efisiensi
+- **Kontraktor Besar (B):** Omzet >Rp50 Miliar, butuh compliance management system terintegrasi
+
+**Pain Point Utama:** Penolakan alat di SIMPK, dokumen SMAP mahal, KBLI 2020→2025 membingungkan, ancaman sanksi OSS 30 hari.
+
+### **Segmen 2: KONSULTAN (BUJK Jasa Konsultansi Konstruksi)**
+**Persona:**
+- **Konsultan Kecil (K):** Omzet <Rp1 Miliar, fokus pada tenaga ahli
+- **Konsultan Menengah (M):** Omzet Rp1-2.5 Miliar, butuh presisi subklasifikasi TKK
+- **Konsultan Besar (B):** Omzet >Rp2.5 Miliar, perlu larangan rangkap usaha terverifikasi
+
+**Pain Point Utama:** Kesesuaian subklasifikasi TKK (AR001, RK001, AT001 dll), larangan rangkap usaha, pengalaman 2 periode.
+
+### **Segmen 3: TENAGA PROFESIONAL JASA KONSTRUKSI (PJBU, PJTBU, PJKBU)**
+**Persona:**
+- **PJBU:** Penanggung jawab badan usaha, pemilik/direktur
+- **PJTBU:** Penanggung jawab teknis (Ahli Madya, Jenjang 8)
+- **PJKBU:** Penanggung jawab klasifikasi (Ahli Muda, Jenjang 7) - *pengganti PJSKBU*
+- **Asesor ABUJK:** Profesional independen yang melakukan penilaian kesesuaian
+
+**Pain Point Utama:** SKK kadaluarsa, rangkap jabatan terdeteksi, nilai tawar kompetensi tidak terdokumentasi.
+
+### **Segmen 4: ASOSIASI JASA KONSTRUKSI (GAPENSI, INKINDO, AKI, ASEKI, dll.)**
+**Persona:**
+- **Pengurus Asosiasi:** Ketua, Sekretaris, Bidang Pembinaan
+- **Staff Admin Asosiasi:** Mengelola data anggota dan pelaporan PUB
+
+**Pain Point Utama:** Kewajiban PUB (Pengembangan Usaha Berkelanjutan) sulit diukur, data anggota tidak real-time, kesulitan menyelenggarakan pelatihan massal.
+
+---
+
+## **III. FITUR SPESIFIK PER SEGMENTASI**
+
+### **🏗️ A. MODUL KONTRAKTOR: "Contractor Command Center"**
+
+| No | Fitur | Fungsi Spesifik | Pain Point yang Diselesaikan |
+|---|---|---|---|
+| 1 | **SIMPK Pre-Flight Checker** | Validasi metadata foto alat (EXIF), cek kelengkapan 4 sudut (Depan/Samping/Back/Nameplate), auto-detect 70+ alat pengecualian K3 | Penolakan alat karena foto dari internet |
+| 2 | **Rental Savior 5-Hari** | Auto-blast WhatsApp ke pemilik alat sewa berisi deep-link SIMPK + tutorial klik "Setuju" | Gagal klarifikasi sewa dalam 5 hari kerja |
+| 3 | **Optimizer 5-in-1 Alat** | Dashboard tracking penggunaan 1 alat untuk maks 5 subklasifikasi dalam 1 klasifikasi | Sewa alat ganda yang boros |
+| 4 | **KBLI 2020→2025 Experience Mapper** | Auto-mapping pengalaman SIMPAN lama ke KBLI 2025, alert merah untuk 4 KBLI "zona merah" (pemecahan/penggabungan) | Pengalaman lama tidak diakui |
+| 5 | **SMAP Navigator (3 Jalur Valid)** | **Kecil:** Direktori lembaga pelatihan anti-korupsi + tracker sertifikat bimtek<br>**Menengah/Besar:** Pre-checker PANCEK KPK & ISO 37001:2016 + validasi akreditasi KAN | Dokumen SMAP internal ditolak LSBU |
+| 6 | **Financial Pre-Checker (Standar INKINDO)** | Validasi QR Code LAI di IAPI, cek pos revaluasi aset, auto-hitung ekuitas tanpa tanah/bangunan | Penolakan FKK karena neraca tidak sesuai SAK |
+| 7 | **OSS Sanction Emergency Tracker** | Countdown 30 hari peringatan tertulis, 3 bulan pembekuan, notifikasi WhatsApp ke direksi | SBU dicabut karena telat respon OSS |
+| 8 | **Generator Dokumen Zero-Rejection** | Auto-generate FPT-01, FKK-01, FALT-01, FSMAP-01 s/d 05 sesuai format Kepdirjen 281/2026 | Human error pengisian formulir |
+
+**Batasan Kualifikasi Otomatis:**
+- K1: <Rp2M | K2: Rp2-7.5M | K3: Rp7.5-15M
+- M: Rp15-50M | B: >Rp50M
+- Ekuitas minimum: K(≥300jt), K2(≥1M), K3(≥2.5M), M(≥5M), B(≥10M)
+
+---
+
+### **📐 B. MODUL KONSULTAN: "Consultant Precision Suite"**
+
+| No | Fitur | Fungsi Spesifik | Pain Point yang Diselesaikan |
+|---|---|---|---|
+| 1 | **TKK Sub-Class Exact Matcher** | Database silang presisi: AR001 butuh SKK "Arsitektural", AT001 butuh SKK "Pengujian Geoteknik" eksplisit | SKK terlalu umum ditolak asesor |
+| 2 | **Dual-Business Firewall** | Validasi NIB real-time, blokir otomatis jika NIB terdeteksi rangkap Konsultansi-Konstruksi (Permen PU 6/2025 Pasal 5) | Penolakan otomatis di LSBU |
+| 3 | **Experience Survival Dashboard** | Monitoring pengalaman SIMPAN 2 periode (6 tahun), alert jika subklasifikasi terancam hangus | SBU tidak bisa diperpanjang, tunggu 3 tahun |
+| 4 | **KSO Matchmaker (PKT)** | Pencarian mitra BUJK Konsultansi untuk KSO Pekerjaan Konstruksi Terintegrasi, validasi NIB otomatis | Kesulitan mencari mitra KSO yang compliant |
+| 5 | **Matrix Jenjang TKK Dinamis** | Auto-recommend: K butuh 1 PJBU(J7)+1 PJTBU(J6)+1 PJKBU(J5), M butuh jenjang lebih tinggi | Kebingungan jumlah & jenjang TKK |
+| 6 | **PJKBU Empowerment Module** | Edukasi hak baru: 1 PJKBU boleh mengampu >1 subklasifikasi asal SKK sesuai | Profesional tidak tahu nilai tawarnya |
+
+**Batasan Kualifikasi Konsultansi:**
+- K: <Rp1M (Ekuitas ≥100jt)
+- M: Rp1-2.5M (Ekuitas ≥250jt)
+- B: >Rp2.5M (Ekuitas ≥500jt BUJKN/PMA, ≥2M BUJKA)
+
+---
+
+### **👷 C. MODUL TENAGA PROFESIONAL: "TKK Digital Passport"**
+
+| No | Fitur | Fungsi Spesifik | Pain Point yang Diselesaikan |
+|---|---|---|---|
+| 1 | **Digital SKK Wallet** | Scan QR SKK → simpan data digital (Jenjang, Subklasifikasi, Masa Berlaku) | SKK fisik hilang/rusak |
+| 2 | **Expiry Radar H-90/H-60** | Notifikasi push perpanjangan SKK ke LSP sebelum kadaluarsa | SKK mati → SBU perusahaan ikut dicabut |
+| 3 | **Anti-Rangkap Jabatan Guardian** | Cross-check NIB perusahaan, alert jika terdeteksi rangkap PJTBU/PJKBU di BUJK lain (Pasal 8.1.3.c) | Pencabutan SBU perusahaan |
+| 4 | **Portfolio Karir Terverifikasi** | Riwayat proyek, subklasifikasi yang diampu, rating dari perusahaan | Nilai tawar profesional tidak terdokumentasi |
+| 5 | **Marketplace Lowongan Proyek** | BUJK mencari PJKBU/PJTBU berdasarkan subklasifikasi & jenjang spesifik | Kesulitan mencari tenaga ahli yang "exact match" |
+| 6 | **Micro-Learning & Sertifikasi** | Kursus singkat SMAP, K3, Update Regulasi dengan sertifikat digital | Biaya pelatihan mahal & tidak fleksibel |
+
+---
+
+### **🏛️ D. MODUL ASOSIASI: "Association Governance Hub"**
+
+| No | Fitur | Fungsi Spesifik | Pain Point yang Diselesaikan |
+|---|---|---|---|
+| 1 | **Command Center Dashboard** | Data agregat anonim: %SBU akan habis, %alat tersangkut SIMPK, %belum punya SMAP | Pembinaan tidak berbasis data |
+| 2 | **PUB Auto-Tracker** | Pelacakan otomatis partisipasi anggota dalam kegiatan PUB, generate laporan ke LPJK | Kewajiban PUB sulit dilaporkan |
+| 3 | **Bulk Training Portal** | Pendaftaran massal anggota ke pelatihan SMAP/K3 dengan harga diskon via partnership | Anggota enggan ikut pelatihan mahal |
+| 4 | **Early Warning System** | Notifikasi ke pengurus jika ada anggota terima surat peringatan OSS | Anggota kehilangan SBU tanpa pendampingan |
+| 5 | **Ethics & Compliance Monitor** | Deteksi dini anggota yang melanggar larangan rangkap usaha atau etika | Asosiasi sulit mengawasi anggota |
+| 6 | **Revenue Sharing Program** | Komisi dari setiap pelatihan, sertifikasi, atau partnership yang difasilitasi via aplikasi | Asosiasi kekurangan dana operasional |
+
+---
+
+## **IV. MODEL BISNIS & MONETISASI**
+
+### **Struktur Pricing Tiered:**
+
+| Segmen | Paket | Harga | Fitur Utama |
+|---|---|---|---|
+| **Profesional** | **Free** | Rp0 | SKK Wallet, Expiry Radar, Chatbot Regulasi |
+| | **Pro** | Rp99rb/thn | Portfolio, Marketplace Lowongan, Micro-Learning |
+| **Kontraktor Kecil** | **Starter** | Rp499rb/thn | Pre-Flight SIMPK, KBLI Mapper, SMAP Navigator |
+| | **Business** | Rp1.5jt/thn | + Generator Dokumen + OSS Tracker |
+| **Kontraktor M/B** | **Enterprise** | Rp5-15jt/thn | + Dashboard Multi-SBU, API Integration |
+| **Konsultan** | **Precision** | Rp750rb-3jt/thn | TKK Matcher, Dual-Business Firewall, KSO Matchmaker |
+| **Asosiasi** | **Governance** | Rp25-100jt/thn | Command Center, PUB Tracker, Bulk Training |
+
+### **Revenue Streams Tambahan:**
+1. **Revenue Sharing Pelatihan SMAP** (10-20% dari setiap peserta via asosiasi)
+2. **Listing Fee Marketplace TKK** (dari BUJK yang mencari PJKBU spesifik)
+3. **White-Label LSBU** (aplikasi di-branding LSBU sebagai pre-screening tool)
+4. **Partnership Perbankan** (scoring SBU untuk KUR Konstruksi)
+5. **Sertifikasi Micro-Learning** (biaya ujian kompetensi online)
+
+---
+
+## **V. STRATEGI GO-TO-MARKET**
+
+### **Fase 1: Lead Magnet & Social Proof (Bulan 1-3)**
+- **Campaign:** *"Cek Kesehatan SBU Anda dalam 3 Menit - GRATIS"*
+- **Channel:** Grup WhatsApp kontraktor, Instagram @jasakon_pro, webinar bareng asosiasi
+- **Target:** 10.000 pengguna gratis dalam 3 bulan
+- **Hook:** Fitur SIMPK Pre-Flight & KBLI Mapper (paling banyak dicari)
+
+### **Fase 2: Partnership & B2B (Bulan 4-6)**
+- **LSBU Partnership:** Tawarkan sebagai pre-screening tool resmi → LSBU rekomendasikan ke klien
+- **Asosiasi Partnership:** GAPENSI, INKINDO, AKI, ASEKI → benefit keanggotaan
+- **LSP Partnership:** Integrasi pengingat perpanjangan SKK dengan jadwal uji kompetensi
+
+### **Fase 3: Monetisasi & Scale (Bulan 7-12)**
+- Konversi pengguna gratis ke berbayar via fitur premium
+- Launch Enterprise & Governance tier
+- Ekspansi ke marketplace TKK & micro-learning
+
+### **Fase 4: Ekosistem Penuh (Tahun 2+)**
+- Integrasi API dengan SIJK/SIMPAN/SIMPK (jika diizinkan LPJK)
+- Partnership perbankan untuk KUR Konstruksi
+- Ekspansi regional (ASEAN)
+
+---
+
+## **VI. ROADMAP PENGEMBANGAN**
+
+### **Q1 2026 - MVP Launch**
+- ✅ SKK Wallet & Expiry Radar (Profesional)
+- ✅ SIMPK Pre-Flight Checker (Kontraktor)
+- ✅ KBLI 2020→2025 Mapper
+- ✅ Chatbot AI Regulasi (WhatsApp + Web)
+
+### **Q2 2026 - Core Features**
+- ✅ SMAP Navigator (3 Jalur Valid: Bimtek/PANCEK/ISO)
+- ✅ Generator Dokumen FPT/FKK/FALT/FSMAP
+- ✅ TKK Sub-Class Matcher (Konsultan)
+- ✅ Rental Savior 5-Hari
+
+### **Q3 2026 - Advanced Features**
+- ✅ Financial Pre-Checker (Standar INKINDO)
+- ✅ OSS Sanction Tracker
+- ✅ KSO Matchmaker
+- ✅ Association Command Center
+
+### **Q4 2026 - Ecosystem**
+- ✅ Marketplace TKK
+- ✅ Micro-Learning Platform
+- ✅ PUB Auto-Tracker
+- ✅ API Integration (jika memungkinkan)
+
+---
+
+## **VII. KEY SUCCESS METRICS**
+
+| KPI | Target 6 Bulan | Target 12 Bulan |
+|---|---|---|
+| Total Pengguna Terdaftar | 15.000 | 50.000 |
+| Kontraktor Aktif Berbayar | 500 | 2.500 |
+| Konsultan Aktif Berbayar | 200 | 1.000 |
+| Profesional Free | 10.000 | 35.000 |
+| Asosiasi Partner | 5 | 15 |
+| LSBU Partner | 3 | 10 |
+| Monthly Recurring Revenue | Rp250jt | Rp1.5M |
+| Tingkat Kepatuhan Dokumen User | 85% | 95% |
+
+---
+
+## **VIII. KESIMPULAN EKSEKUTIF**
+
+**JasKon Pro** adalah **infrastruktur digital wajib** bagi ekosistem jasa konstruksi Indonesia pasca-reformasi regulasi 2025-2026. Produk ini unik karena:
+
+1. **Hyper-Specific:** Setiap fitur menjawab pain point nyata berdasarkan dokumen regulasi granular
+2. **Zero-Rejection Guarantee:** Mencegah penolakan berkas di LSBU melalui validasi otomatis
+3. **Ecosystem Play:** Menghubungkan 4 pemangku kepentingan dalam satu platform
+4. **Compliance-First, Growth-Second:** Dari kepatuhan menuju pertumbuhan bisnis
+5. **Regulatory-Adaptive:** Siap menghadapi perubahan regulasi berikutnya via update cloud
+
+**Value Proposition Utama:**
+- **Kontraktor:** Hemat biaya sewa alat, hindari penolakan SMAP mahal, selamatkan SBU dari sanksi OSS
+- **Konsultan:** Presisi pemetaan TKK, hindari larangan rangkap usaha, temukan mitra KSO compliant
+- **Profesional:** Lindungi karir, tingkatkan nilai tawar, temukan proyek yang sesuai kompetensi
+- **Asosiasi:** Data-driven pembinaan, monetisasi PUB, revenue sharing dari pelatihan massal
+
+---
+
+**Langkah Selanjutnya yang Direkomendasikan:**
+
+Untuk memulai eksekusi, saya sarankan kita fokus pada salah satu dari tiga deliverable berikut agar tim developer bisa langsung bekerja:
+
+1. **📊 Database Schema & API Design** untuk *SIMPK Pre-Flight Checker* (termasuk 70 alat pengecualian & logika validasi metadata)
+2. **🔄 User Journey Flowchart** untuk *SMAP Navigator* (3 jalur valid: Bimtek/PANCEK/ISO dengan logika if-else berdasarkan kualifikasi)
+3. **🎨 Wireframe & UI Mockup** untuk *Association Command Center* (dashboard agregat dengan metrik PUB)
+
+Manakah yang ingin kita bedah lebih dalam terlebih dahulu?
