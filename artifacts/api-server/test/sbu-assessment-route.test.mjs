@@ -195,13 +195,27 @@ test("respons kasus mempertahankan kedaluwarsa SBU tetapi penilaian tidak mengir
     const { body: assessment, raw, status } = await request(server, "/api/cases/12/assessment");
     assert.equal(status, 200, raw);
     assert.equal(assessment.caseId, 12);
+    const lsbu = assessment.findings.find((finding) => finding.code === "transisi");
+    const operational = assessment.findings.find((finding) => finding.code === "transisi_operasional");
     const transition = assessment.findings.find((finding) => finding.code === "transisi_konversi");
-    assert.ok(transition);
-    assert.equal(transition.status, "perlu_tinjauan");
+    assert.ok(lsbu && operational && transition, "ketiga alur harus tetap dipisahkan");
+    for (const finding of [lsbu, operational, transition]) {
+      assert.equal(finding.status, "perlu_tinjauan", `${finding.code} belum layak ditayangkan`);
+      assert.deepEqual(Object.keys(finding).sort(), ["code", "detail", "source", "status", "title"],
+        `${finding.code} tidak boleh menambah kolom tanggal atau hitung mundur`);
+      assert.match(finding.detail, /belum (?:layak|terkonfirmasi|ditelaah)/,
+        `${finding.code} harus menjelaskan bahwa verifikasi belum cukup`);
+      assert.doesNotMatch(finding.detail, /\b20\d{2}-\d{2}-\d{2}\b|\b\d{1,2}\s+(?:Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+20\d{2}\b|\b\d+\s*(?:hari|jam|menit|detik)\s+(?:lagi|tersisa)\b/i,
+        `${finding.code} tidak boleh menayangkan tanggal tenggat atau hitung mundur`);
+    }
+    assert.match(lsbu.detail, /6 bulan sejak penetapan/);
+    assert.match(lsbu.detail, /Tanggal penetapan Kepdirjen bukan pemicu konversi SBU/);
+    assert.match(operational.detail, /kesiapan SIJK.*surat Pasal 20 ayat \(2\).*belum terkonfirmasi/);
+    assert.match(operational.detail, /belum ditelaah ahli/);
+    assert.match(transition.detail, /6 bulan sejak terbitnya surat Pasal 20 ayat \(2\), bukan tanggal Kepdirjen/);
     assert.match(transition.detail, /surat Pasal 20 ayat \(2\).*belum terkonfirmasi/);
     assert.match(transition.detail, /belum ditelaah ahli/);
-    assert.match(transition.detail, /bukan tanggal Kepdirjen/);
-    assert.doesNotMatch(raw, /\b20\d{2}-\d{2}-\d{2}\b/,
+    assert.doesNotMatch(raw, /\b20\d{2}-\d{2}-\d{2}\b|\b\d{1,2}[/.]\d{1,2}[/.]20\d{2}\b|\b\d{1,2}\s+(?:Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+20\d{2}\b/i,
       "tanggal dari input kasus atau Kepdirjen tidak boleh menjadi tanggal konversi di penilaian");
     assert.doesNotMatch(raw, /"(?:[^"]*(?:deadline|countdown|dueDate|conversionDate|remainingDays|daysLeft|tenggatKonversi|hitungMundur)[^"]*)"\s*:/i);
     assert.doesNotMatch(raw, new RegExp(`${wrongConversionDate}|${sbuExpiry}|${kepdirjenDate}`));
