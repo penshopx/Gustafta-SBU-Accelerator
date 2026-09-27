@@ -23,6 +23,8 @@ test('setiap alur menampilkan keputusan terpisah tanpa tanggal terhitung', () =>
   assert.equal(html.match(/Tenggat belum terverifikasi/g)?.length, 2);
   assert.match(operational, /Tanggal mulai belum terverifikasi/);
   assert.match(html, /Belum ada tanggal atau hitung mundur di aplikasi/);
+  assert.match(html, /tidak terafiliasi dengan atau mewakili Ditjen Bina Konstruksi, LPJK/);
+  assert.match(html, /tidak terhubung ke SIJK dan tidak dapat meminta atau mengesahkan jawaban instansi/);
   assert.match(html, /tinjauan tertulis ahli skema\/LSBU/);
   assert.match(html, /Keberadaan surat dan telaah ahli yang sah[\s\S]*belum terkonfirmasi/);
   assert.match(html, /undangan sosialisasi dan naskah telaah[\s\S]*tidak digunakan sebagai acuan atau pemicu tenggat/);
