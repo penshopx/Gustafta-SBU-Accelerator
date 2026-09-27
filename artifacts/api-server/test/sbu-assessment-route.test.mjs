@@ -381,6 +381,39 @@ test("dashboard hanya menghitung status dan menampilkan permohonan milik penggun
   }
 });
 
+test("pengunjung tanpa sesi tidak dapat membaca ringkasan permohonan", async () => {
+  globalThis.__routeUserId = null;
+  globalThis.__routeCaseRows = [{
+    id: 99,
+    ownerId: "pemilik-rahasia",
+    companyName: "Perusahaan Rahasia Dashboard",
+    requestType: "perpanjangan",
+    qualification: "kecil",
+    classification: "gedung-privat",
+    status: "draf",
+    existingSbuExpiresOn: "2027-04-15",
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  }];
+  globalThis.__routeCaseReads = 0;
+
+  const server = app.listen(0);
+  try {
+    const response = await request(server, "/api/dashboard");
+    assert.equal(response.status, 401, response.raw);
+    assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." });
+    assert.doesNotMatch(response.raw,
+      /total|draft|reviewing|prepared|recent|Perusahaan Rahasia Dashboard|pemilik-rahasia|gedung-privat|2027-04-15|"id":99|ownerId|companyName/i,
+      "ringkasan tidak boleh memuat jumlah atau data permohonan privat");
+    assert.equal(globalThis.__routeCaseReads, 0, "tabel kasus tidak boleh dibaca sebelum masuk");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeCaseReads;
+  }
+});
+
 test("pengunjung tanpa sesi tidak dapat membaca daftar atau detail permohonan", async () => {
   const privateCompany = "Perusahaan Rahasia Tanpa Sesi";
   globalThis.__routeUserId = null;
