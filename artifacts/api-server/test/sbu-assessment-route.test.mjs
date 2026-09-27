@@ -327,6 +327,69 @@ test("penilaian kasus milik pengguna lain mengembalikan 404 tanpa data kasus ata
   }
 });
 
+test("penilaian dua permohonan milik pengguna yang sama hanya memakai bukti masing-masing", async () => {
+  globalThis.__routeUserId = "same-owner";
+  globalThis.__routeCaseRows = [81, 82].map((id) => ({
+    id,
+    ownerId: "same-owner",
+    companyName: `Perusahaan ${id}`,
+    requestType: "baru",
+    qualification: "kecil",
+    classification: "gedung",
+    status: "draf",
+    existingSbuExpiresOn: null,
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  }));
+  globalThis.__routeEvidenceRows = [
+    { id: 21, caseId: 81, code: "legalitas", title: "Legalitas",
+      note: "Bukti permohonan pertama", updatedAt: new Date("2026-02-02T00:00:00Z") },
+    { id: 22, caseId: 81, code: "smap_cert", title: "Sertifikat SMAP",
+      note: "Sertifikat permohonan pertama", updatedAt: new Date("2026-02-02T00:00:00Z") },
+    { id: 23, caseId: 82, code: "penjualan", title: "Penjualan",
+      note: "Bukti permohonan kedua", updatedAt: new Date("2026-02-02T00:00:00Z") },
+    { id: 24, caseId: 82, code: "smap_commitment", title: "Komitmen SMAP",
+      note: "Komitmen permohonan kedua", updatedAt: new Date("2026-02-02T00:00:00Z") },
+  ];
+  globalThis.__routeEvidenceReads = 0;
+  const server = app.listen(0);
+  try {
+    for (const { id, expected, recordedCount, smapDetail } of [
+      {
+        id: 81,
+        expected: { legalitas: "tercatat", penjualan: "perlu_bukti", smap: "tercatat" },
+        recordedCount: 2,
+        smapDetail: /Jalur sertifikat\/PANCEK telah dicatat/,
+      },
+      {
+        id: 82,
+        expected: { legalitas: "perlu_bukti", penjualan: "tercatat", smap: "perlu_tinjauan" },
+        recordedCount: 1,
+        smapDetail: /Surat komitmen hanya dapat dipertimbangkan/,
+      },
+    ]) {
+      const { status, body, raw } = await request(server, `/api/cases/${id}/assessment`);
+      assert.equal(status, 200, raw);
+      assert.equal(body.caseId, id);
+      assert.equal(body.recordedCount, recordedCount, `jumlah bukti tercatat permohonan ${id}`);
+      assert.equal(body.requiredCount, 6);
+      for (const [code, expectedStatus] of Object.entries(expected)) {
+        const finding = body.findings.find((item) => item.code === code);
+        assert.ok(finding, `temuan ${code} harus ada pada permohonan ${id}`);
+        assert.equal(finding.status, expectedStatus, `temuan ${code} permohonan ${id} tidak boleh memakai bukti permohonan lain`);
+      }
+      assert.match(body.findings.find((item) => item.code === "smap").detail, smapDetail);
+    }
+    assert.equal(globalThis.__routeEvidenceReads, 2, "bukti harus dibaca untuk kedua penilaian");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeEvidenceRows;
+    delete globalThis.__routeEvidenceReads;
+    delete globalThis.__routeUserId;
+  }
+});
+
 test("pengguna lain tidak dapat mengubah atau menghapus kasus, tetapi pemilik dapat melakukannya", async () => {
   globalThis.__routeCaseRows = [{
     id: 54,
