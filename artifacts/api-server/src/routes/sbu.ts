@@ -159,12 +159,15 @@ router.get("/cases/:id/evidence", async (req, res): Promise<void> => {
 
 router.post("/cases/:id/evidence", async (req, res): Promise<void> => {
   const params = AddEvidenceParams.safeParse(req.params);
-  const input = AddEvidenceBody.safeParse(req.body);
-  if (!params.success || !input.success) {
+  if (!params.success) {
     res.status(400).json({ error: "Keterangan bukti tidak valid." }); return;
   }
   if (!await ownedCase(params.data.id, owner(req))) {
     res.status(404).json({ error: "Permohonan tidak ditemukan." }); return;
+  }
+  const input = AddEvidenceBody.safeParse(req.body);
+  if (!input.success) {
+    res.status(400).json({ error: "Keterangan bukti tidak valid." }); return;
   }
   const [item] = await db.insert(evidenceTable)
     .values({ caseId: params.data.id, ...input.data })
@@ -175,12 +178,15 @@ router.post("/cases/:id/evidence", async (req, res): Promise<void> => {
 
 router.patch("/cases/:id/evidence/:evidenceId", async (req, res): Promise<void> => {
   const params = UpdateEvidenceParams.safeParse(req.params);
-  const input = UpdateEvidenceBody.safeParse(req.body);
-  if (!params.success || !input.success || Object.keys(input.data).length === 0) {
+  if (!params.success) {
     res.status(400).json({ error: "Perubahan bukti tidak valid." }); return;
   }
   if (!await ownedCase(params.data.id, owner(req))) {
     res.status(404).json({ error: "Permohonan tidak ditemukan." }); return;
+  }
+  const input = UpdateEvidenceBody.safeParse(req.body);
+  if (!input.success || Object.keys(input.data).length === 0) {
+    res.status(400).json({ error: "Perubahan bukti tidak valid." }); return;
   }
   const [item] = await db.update(evidenceTable).set({ ...input.data, updatedAt: new Date() })
     .where(and(eq(evidenceTable.id, params.data.evidenceId), eq(evidenceTable.caseId, params.data.id)))

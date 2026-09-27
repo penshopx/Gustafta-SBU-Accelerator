@@ -29,6 +29,8 @@ await build({
       build.onLoad({ filter: /.*/, namespace: "test-data" }, (args) => ({
         contents: ({
           "@workspace/db": `
+             const evidenceRows = () => globalThis.__routeEvidenceRows ??
+               (globalThis.__routeEvidence ? [globalThis.__routeEvidence] : []);
             export const db = {
               select() {
                 return {
@@ -37,19 +39,76 @@ await build({
                       where(predicate) {
                         if (table === evidenceTable) globalThis.__routeEvidenceReads++;
                         const rows = table === casesTable
-                          ? [globalThis.__routeCase] : [globalThis.__routeEvidence];
-                        return Promise.resolve(rows.filter((row) => row && predicate(row)));
+                           ? [globalThis.__routeCase] : evidenceRows();
+                         const result = rows.filter((row) => row && predicate(row));
+                         return Object.assign(Promise.resolve(result), {
+                           orderBy: () => Promise.resolve(result),
+                         });
                       }
                     };
                   }
                 };
+               },
+               insert(table) {
+                 return {
+                   values(input) {
+                     return {
+                       onConflictDoNothing() {
+                         return {
+                           returning() {
+                             globalThis.__routeEvidenceWrites++;
+                             const rows = evidenceRows();
+                             if (rows.some((row) => row.caseId === input.caseId && row.code === input.code))
+                               return Promise.resolve([]);
+                             const item = { id: Math.max(0, ...rows.map((row) => row.id)) + 1,
+                               ...input, updatedAt: new Date("2026-02-03T00:00:00Z") };
+                             rows.push(item);
+                             return Promise.resolve([item]);
+                           }
+                         };
+                       }
+                     };
+                   }
+                 };
+               },
+               update(table) {
+                 return {
+                   set(changes) {
+                     return {
+                       where(predicate) {
+                         return {
+                           returning() {
+                             globalThis.__routeEvidenceWrites++;
+                             const item = evidenceRows().find(predicate);
+                             if (item) Object.assign(item, changes);
+                             return Promise.resolve(item ? [item] : []);
+                           }
+                         };
+                       }
+                     };
+                   }
+                 };
+               },
+               delete(table) {
+                 return {
+                   where(predicate) {
+                     return {
+                       returning() {
+                         globalThis.__routeEvidenceWrites++;
+                         const rows = evidenceRows();
+                         const index = rows.findIndex(predicate);
+                         return Promise.resolve(index < 0 ? [] : rows.splice(index, 1));
+                       }
+                     };
+                   }
+                 };
               }
             };
             export const casesTable = { id: "id", ownerId: "ownerId" };
-            export const evidenceTable = { caseId: "caseId" };
+             export const evidenceTable = { id: "id", caseId: "caseId" };
             export const profilesTable = {};
           `,
-          "@clerk/express": `export const getAuth = () => ({ userId: "test-user" });`,
+           "@clerk/express": `export const getAuth = () => ({ userId: globalThis.__routeUserId ?? "test-user" });`,
           "drizzle-orm": `
             export const eq = (column, value) => (row) => row[column] === value;
             export const and = (...predicates) => (row) => predicates.every((predicate) => predicate(row));
@@ -64,13 +123,14 @@ await build({
 
 const { default: router } = await import(join(temporaryDir, "route.mjs"));
 const app = express();
+app.use(express.json());
 app.use("/api", router);
 
-async function request(server, path) {
+async function request(server, path, options) {
   const { port } = server.address();
-  const response = await fetch(`http://127.0.0.1:${port}${path}`);
+  const response = await fetch(`http://127.0.0.1:${port}${path}`, options);
   const raw = await response.text();
-  return { status: response.status, body: JSON.parse(raw), raw };
+  return { status: response.status, body: raw ? JSON.parse(raw) : null, raw };
 }
 
 test("respons daftar regulasi menahan tenggat dan hitung mundur transisi yang belum terverifikasi", async () => {
@@ -192,5 +252,80 @@ test("penilaian kasus milik pengguna lain mengembalikan 404 tanpa data kasus ata
     delete globalThis.__routeCase;
     delete globalThis.__routeEvidence;
     delete globalThis.__routeEvidenceReads;
+  }
+});
+
+test("bukti kasus pengguna lain tidak dapat dibaca atau diubah, sementara pemilik dapat mengelolanya", async () => {
+  const privateNote = "Isi bukti privat";
+  globalThis.__routeCase = {
+    id: 44, ownerId: "case-owner", companyName: "Perusahaan Privat",
+  };
+  globalThis.__routeEvidenceRows = [{
+    id: 7, caseId: 44, code: "legalitas", title: "Bukti privat",
+    note: privateNote, updatedAt: new Date("2026-02-02T00:00:00Z"),
+  }];
+  globalThis.__routeEvidenceReads = 0;
+  globalThis.__routeEvidenceWrites = 0;
+  globalThis.__routeUserId = "case-owner";
+  const server = app.listen(0);
+  const evidencePath = "/api/cases/44/evidence";
+  const missingPath = "/api/cases/45/evidence";
+  const json = (method, data) => ({
+    method, headers: { "content-type": "application/json" }, body: JSON.stringify(data),
+  });
+  try {
+    const initial = await request(server, evidencePath);
+    assert.equal(initial.status, 200, initial.raw);
+    assert.equal(initial.body[0].note, privateNote);
+
+    globalThis.__routeUserId = "different-user";
+    const operations = [
+      { method: "GET", path: "", options: undefined },
+      { method: "POST", path: "", options: json("POST", { code: "pajak", title: "Pajak", note: "Catatan baru" }) },
+      { method: "POST (isi tidak valid)", path: "", options: json("POST", {}) },
+      { method: "PATCH", path: "/7", options: json("PATCH", { note: "Diganti pihak lain" }) },
+      { method: "PATCH (isi tidak valid)", path: "/7", options: json("PATCH", {}) },
+      { method: "DELETE", path: "/7", options: { method: "DELETE" } },
+    ];
+    const snapshot = structuredClone(globalThis.__routeEvidenceRows);
+    const readsBefore = globalThis.__routeEvidenceReads;
+    const writesBefore = globalThis.__routeEvidenceWrites;
+    for (const { method, path, options } of operations) {
+      const forbidden = await request(server, evidencePath + path, options);
+      const missing = await request(server, missingPath + path, options);
+      assert.equal(forbidden.status, 404, `${method}: ${forbidden.raw}`);
+      assert.equal(missing.status, 404, `${method}: ${missing.raw}`);
+      assert.deepEqual(forbidden.body, missing.body, `${method}: kasus orang lain harus tampak tidak ada`);
+      assert.deepEqual(forbidden.body, { error: "Permohonan tidak ditemukan." });
+      assert.doesNotMatch(forbidden.raw, /Isi bukti privat|Bukti privat|legalitas|caseId|updatedAt/);
+    }
+    assert.equal(globalThis.__routeEvidenceReads, readsBefore, "kasus orang lain tidak boleh membaca bukti");
+    assert.equal(globalThis.__routeEvidenceWrites, writesBefore, "kasus orang lain tidak boleh menulis bukti");
+    assert.deepEqual(globalThis.__routeEvidenceRows, snapshot, "bukti yang tersimpan tidak berubah");
+
+    globalThis.__routeUserId = "case-owner";
+    const added = await request(server, evidencePath, json("POST", {
+      code: "pajak", title: "Pajak", note: "Catatan pemilik",
+    }));
+    assert.equal(added.status, 201, added.raw);
+    assert.equal(added.body.note, "Catatan pemilik");
+    const updated = await request(server, `${evidencePath}/${added.body.id}`,
+      json("PATCH", { note: "Catatan diperbarui pemilik" }));
+    assert.equal(updated.status, 200, updated.raw);
+    assert.equal(updated.body.note, "Catatan diperbarui pemilik");
+    const removed = await request(server, `${evidencePath}/${added.body.id}`, { method: "DELETE" });
+    assert.equal(removed.status, 204, removed.raw);
+    const finalList = await request(server, evidencePath);
+    assert.equal(finalList.status, 200, finalList.raw);
+    assert.deepEqual(finalList.body.map((item) => item.id), [7]);
+    assert.equal(finalList.body[0].note, privateNote);
+    assert.equal(globalThis.__routeEvidenceWrites, writesBefore + 3);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCase;
+    delete globalThis.__routeEvidenceRows;
+    delete globalThis.__routeEvidenceReads;
+    delete globalThis.__routeEvidenceWrites;
+    delete globalThis.__routeUserId;
   }
 });
