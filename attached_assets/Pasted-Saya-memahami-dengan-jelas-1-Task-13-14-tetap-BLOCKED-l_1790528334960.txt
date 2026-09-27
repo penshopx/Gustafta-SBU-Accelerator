@@ -1,0 +1,77 @@
+Saya memahami dengan jelas:
+
+1. **Task #13/#14 tetap BLOCKED** — lampiran checklist bukan bukti verifikasi selesai. Tidak ada perubahan kode SBU transisi.
+2. **Tugas yang dapat dieksekusi sekarang:** Menambahkan pengujian autentikasi untuk rute bukti (evidence) — memastikan semua endpoint mengembalikan `401` tanpa identitas.
+
+Mari saya periksa berkas terkait terlebih dahulu.
+
+Let me examine the current route and test files.
+
+I need to read the relevant files to understand the current structure before writing tests.
+
+Let me check the project structure and existing test patterns.
+
+Now let me read the route file and the existing test file.
+
+Now I have a clear picture. Let me read the test file to understand the existing patterns.
+
+Now I have full context. Let me analyze what I see:
+
+**Route file (`sbu.ts`):**
+- Uses `authenticate` middleware from `@fastify/auth` on all routes
+- Has routes: `GET /api/sbu/assessments`, `POST /api/sbu/assessments`, `GET /api/sbu/assessments/:id`, `PATCH /api/sbu/assessments/:id`, `DELETE /api/sbu/assessments/:id`
+- Also has evidence sub-routes: `GET /api/sbu/assessments/:id/evidence`, `POST /api/sbu/assessments/:id/evidence`, `PATCH /api/sbu/assessments/:id/evidence/:evidenceId`, `DELETE /api/sbu/assessments/:id/evidence/:evidenceId`
+
+**Test file (`sbu-assessment-route.test.mjs`):**
+- Uses `buildTestApp` helper
+- All tests use `testToken` (authenticated)
+- No tests for unauthenticated access
+
+I need to add tests for all evidence endpoints (GET, POST, PATCH, DELETE) without authentication, asserting 401 responses. I should also add tests for the assessment endpoints without auth for completeness, but the user specifically asked about "bukti" (evidence) routes.
+
+Let me also check what methods the evidence routes support by looking more carefully at the route file.
+
+Looking at the route file, the evidence-related routes are:
+1. `GET /api/sbu/assessments/:id/evidence` - list evidence
+2. `POST /api/sbu/assessments/:id/evidence` - create evidence  
+3. `PATCH /api/sbu/assessments/:id/evidence/:evidenceId` - update evidence
+4. `DELETE /api/sbu/assessments/:id/evidence/:evidenceId` - delete evidence
+
+Now let me write the tests. I'll add a new `describe` block for unauthenticated access tests.
+
+Now let me verify the tests pass by running them.
+
+The tests pass. Let me verify the output more carefully - all 4 new tests passed (the "without authentication" describe block shows 4 passing tests).
+
+Let me also confirm the full test suite still passes:
+
+All 39 tests pass (35 existing + 4 new). Let me provide a summary.
+
+---
+
+## Ringkasan Perubahan
+
+### Konteks Task #13/#14
+Tidak ada perubahan pada `sbu-rules.ts` maupun `transition-explainer.tsx`. Status tetap **BLOCKED** — menunggu dokumen resmi, jawaban instansi, dan telaah ahli terverifikasi.
+
+### Perubahan yang Dieksekusi: Pengujian Autentikasi Rute Bukti
+
+**Berkas:** `artifacts/api-server/test/sbu-assessment-route.test.mjs`
+
+**4 pengujian baru ditambahkan** dalam blok `describe('Evidence routes without authentication')`:
+
+| # | Metode | Endpoint | Ekspektasi |
+|---|--------|----------|------------|
+| 1 | `GET` | `/api/sbu/assessments/:id/evidence` | `401` — tidak ada pembacaan bukti |
+| 2 | `POST` | `/api/sbu/assessments/:id/evidence` | `401` — tidak ada pembuatan bukti |
+| 3 | `PATCH` | `/api/sbu/assessments/:id/evidence/:evidenceId` | `401` — tidak ada perubahan bukti |
+| 4 | `DELETE` | `/api/sbu/assessments/:id/evidence/:evidenceId` | `401` — tidak ada penghapusan bukti |
+
+**Poin kunci implementasi:**
+- Setiap pengujian **tidak menyertakan header `Authorization`** sama sekali.
+- Setiap pengujian menegaskan `statusCode === 401`.
+- Untuk `POST` dan `PATCH`, *payload* tetap dikirim untuk membuktikan bahwa server menolak **sebelum** memproses badan permintaan (bukan sekadar validasi input yang gagal).
+- Pesan error `"Unauthorized"` diverifikasi pada respons JSON.
+- Semua **39 pengujian** (35 lama + 4 baru) lulus tanpa regresi.
+
+**Tidak ada perubahan pada kode produksi** (`sbu.ts`) — penjaga autentikasi global `authenticate` sudah berfungsi dengan benar; pengujian ini hanya menutup celah cakupan (*coverage gap*) yang sebelumnya selalu memasok identitas pengguna.
