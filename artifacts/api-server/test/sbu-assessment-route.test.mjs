@@ -285,6 +285,60 @@ test("daftar dan detail permohonan hanya memperlihatkan data milik pengguna yang
   }
 });
 
+test("dashboard hanya menghitung status dan menampilkan permohonan milik pengguna yang masuk", async () => {
+  const caseData = (id, ownerId, status, companyName) => ({
+    id,
+    ownerId,
+    companyName,
+    requestType: "perpanjangan",
+    qualification: "kecil",
+    classification: "gedung",
+    status,
+    existingSbuExpiresOn: null,
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  });
+  globalThis.__routeCaseRows = [
+    caseData(91, "first-owner", "draf", "Pertama 91"),
+    caseData(92, "second-owner", "draf", "Rahasia Kedua 92"),
+    caseData(93, "first-owner", "ditinjau", "Pertama 93"),
+    caseData(94, "second-owner", "selesai_persiapan", "Rahasia Kedua 94"),
+    caseData(95, "first-owner", "selesai_persiapan", "Pertama 95"),
+    caseData(96, "first-owner", "draf", "Pertama 96"),
+    caseData(97, "first-owner", "ditinjau", "Pertama 97"),
+    caseData(98, "first-owner", "draf", "Pertama 98"),
+  ];
+  globalThis.__routeUserId = "first-owner";
+  const server = app.listen(0);
+  try {
+    const first = await request(server, "/api/dashboard");
+    assert.equal(first.status, 200, first.raw);
+    assert.deepEqual(
+      { total: first.body.total, draft: first.body.draft, reviewing: first.body.reviewing, prepared: first.body.prepared },
+      { total: 6, draft: 3, reviewing: 2, prepared: 1 },
+    );
+    assert.deepEqual(first.body.recent.map((item) => item.id), [91, 93, 95, 96, 97],
+      "recent hanya memuat lima permohonan pemilik yang masuk");
+    assert.doesNotMatch(first.raw, /Rahasia Kedua|second-owner|"id":92|"id":94/,
+      "dashboard tidak boleh memuat data pemilik lain");
+
+    globalThis.__routeUserId = "second-owner";
+    const second = await request(server, "/api/dashboard");
+    assert.equal(second.status, 200, second.raw);
+    assert.deepEqual(
+      { total: second.body.total, draft: second.body.draft, reviewing: second.body.reviewing, prepared: second.body.prepared },
+      { total: 2, draft: 1, reviewing: 0, prepared: 1 },
+    );
+    assert.deepEqual(second.body.recent.map((item) => item.id), [92, 94]);
+    assert.doesNotMatch(second.raw, /Pertama 9|first-owner|"id":91|"id":93|"id":95|"id":96|"id":97|"id":98/,
+      "dashboard pemilik kedua tidak boleh memuat data pemilik pertama");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeUserId;
+  }
+});
+
 test("pengunjung tanpa sesi tidak dapat membaca daftar atau detail permohonan", async () => {
   const privateCompany = "Perusahaan Rahasia Tanpa Sesi";
   globalThis.__routeUserId = null;
