@@ -109,7 +109,7 @@ await build({
              export const evidenceTable = { id: "id", caseId: "caseId" };
             export const profilesTable = {};
           `,
-           "@clerk/express": `export const getAuth = () => ({ userId: globalThis.__routeUserId ?? "test-user" });`,
+           "@clerk/express": `export const getAuth = () => ({ userId: globalThis.__routeUserId === undefined ? "test-user" : globalThis.__routeUserId });`,
           "drizzle-orm": `
             export const eq = (column, value) => (row) => row[column] === value;
             export const and = (...predicates) => (row) => predicates.every((predicate) => predicate(row));
@@ -377,6 +377,48 @@ test("bukti kasus pengguna lain tidak dapat dibaca atau diubah, sementara pemili
     delete globalThis.__routeEvidenceReads;
     delete globalThis.__routeEvidenceWrites;
     delete globalThis.__routeUserId;
+  }
+});
+
+test("pengunjung tanpa sesi tidak dapat membaca atau mengubah bukti", async () => {
+  const privateNote = "Isi bukti hanya untuk pemilik";
+  globalThis.__routeUserId = null;
+  globalThis.__routeCaseRows = [{ id: 55, ownerId: "case-owner" }];
+  globalThis.__routeEvidenceRows = [{
+    id: 8, caseId: 55, code: "legalitas", title: "Bukti privat",
+    note: privateNote, updatedAt: new Date("2026-02-02T00:00:00Z"),
+  }];
+  globalThis.__routeEvidenceReads = 0;
+  globalThis.__routeEvidenceWrites = 0;
+  const server = app.listen(0);
+  const evidencePath = "/api/cases/55/evidence";
+  const json = (method, data) => ({
+    method, headers: { "content-type": "application/json" }, body: JSON.stringify(data),
+  });
+  try {
+    const snapshot = structuredClone(globalThis.__routeEvidenceRows);
+    const operations = [
+      { method: "GET", path: "", options: undefined },
+      { method: "POST", path: "", options: json("POST", { code: "pajak", title: "Pajak", note: "Catatan baru" }) },
+      { method: "PATCH", path: "/8", options: json("PATCH", { note: "Diganti pengunjung" }) },
+      { method: "DELETE", path: "/8", options: { method: "DELETE" } },
+    ];
+    for (const { method, path, options } of operations) {
+      const response = await request(server, evidencePath + path, options);
+      assert.equal(response.status, 401, `${method}: ${response.raw}`);
+      assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." }, method);
+      assert.doesNotMatch(response.raw, /Isi bukti hanya untuk pemilik|Bukti privat|legalitas|caseId|updatedAt/, method);
+      assert.equal(globalThis.__routeEvidenceReads, 0, `${method}: bukti tidak boleh dibaca`);
+      assert.equal(globalThis.__routeEvidenceWrites, 0, `${method}: bukti tidak boleh ditulis`);
+      assert.deepEqual(globalThis.__routeEvidenceRows, snapshot, `${method}: bukti tidak boleh berubah`);
+    }
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeEvidenceRows;
+    delete globalThis.__routeEvidenceReads;
+    delete globalThis.__routeEvidenceWrites;
   }
 });
 
