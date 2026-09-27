@@ -362,6 +362,57 @@ test("pengguna lain tidak dapat mengubah atau menghapus kasus, tetapi pemilik da
   }
 });
 
+test("pengunjung tanpa sesi tidak dapat mengubah atau menghapus kasus, tetapi pemilik dapat melakukannya", async () => {
+  globalThis.__routeCaseRows = [{
+    id: 56,
+    ownerId: "case-owner",
+    companyName: "Perusahaan Privat",
+    requestType: "perpanjangan",
+    qualification: "kecil",
+    classification: "gedung",
+    status: "draf",
+    existingSbuExpiresOn: null,
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  }];
+  globalThis.__routeUserId = null;
+  const server = app.listen(0);
+  const casePath = "/api/cases/56";
+  const patch = (companyName) => ({
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ companyName }),
+  });
+  try {
+    const original = structuredClone(globalThis.__routeCaseRows);
+    for (const { method, options } of [
+      { method: "PATCH", options: patch("Diubah Pengunjung") },
+      { method: "DELETE", options: { method: "DELETE" } },
+    ]) {
+      const response = await request(server, casePath, options);
+      assert.equal(response.status, 401, `${method}: ${response.raw}`);
+      assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." }, method);
+      assert.doesNotMatch(response.raw, /Perusahaan Privat|case-owner|gedung/,
+        `${method}: respons tidak boleh membocorkan data kasus`);
+      assert.deepEqual(globalThis.__routeCaseRows, original, `${method}: kasus harus tetap utuh`);
+    }
+
+    globalThis.__routeUserId = "case-owner";
+    const updated = await request(server, casePath, patch("Diubah Pemilik"));
+    assert.equal(updated.status, 200, updated.raw);
+    assert.equal(updated.body.companyName, "Diubah Pemilik");
+    assert.equal(globalThis.__routeCaseRows[0].companyName, "Diubah Pemilik");
+
+    const removed = await request(server, casePath, { method: "DELETE" });
+    assert.equal(removed.status, 204, removed.raw);
+    assert.deepEqual(globalThis.__routeCaseRows, []);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeUserId;
+  }
+});
+
 test("bukti kasus pengguna lain tidak dapat dibaca atau diubah, sementara pemilik dapat mengelolanya", async () => {
   const privateNote = "Isi bukti privat";
   globalThis.__routeCase = {
