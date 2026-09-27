@@ -1,2 +1,3 @@
 - [Workspace package installation](workspace-package-installation.md) — package-install callback targets the workspace root; scoped dependencies need a separate lockfile and link refresh.
 - [Regulatory transition gating](regulatory-transition-gating.md) — user endorsed withholding SBU transition dates when publisher evidence cannot yet be verified.
+- [PostgreSQL isolation tests](postgres-isolation-tests.md) — cloned tables inherit unique indexes under new names; validate live indexes separately before sandbox writes.
