@@ -387,6 +387,39 @@ test("dashboard hanya menghitung status dan menampilkan permohonan milik penggun
   }
 });
 
+test("dashboard pengguna baru tetap kosong meski ada permohonan milik pengguna lain", async () => {
+  globalThis.__routeUserId = "new-owner";
+  globalThis.__routeCaseRows = [
+    { id: 111, ownerId: "other-owner", companyName: "Rahasia Draf", status: "draf" },
+    { id: 112, ownerId: "another-owner", companyName: "Rahasia Tinjau", status: "ditinjau" },
+    { id: 113, ownerId: "other-owner", companyName: "Rahasia Siap", status: "selesai_persiapan" },
+  ].map((item) => ({
+    requestType: "baru",
+    qualification: "kecil",
+    classification: "gedung",
+    existingSbuExpiresOn: null,
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+    ...item,
+  }));
+  const server = app.listen(0);
+  try {
+    const { status, body, raw } = await request(server, "/api/dashboard");
+    assert.equal(status, 200, raw);
+    assert.deepEqual(
+      { total: body.total, draft: body.draft, reviewing: body.reviewing, prepared: body.prepared },
+      { total: 0, draft: 0, reviewing: 0, prepared: 0 },
+    );
+    assert.deepEqual(body.recent, []);
+    assert.doesNotMatch(raw, /Rahasia|other-owner|another-owner|"id":11[123]/,
+      "dashboard pengguna baru tidak boleh membocorkan data pemilik lain");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeUserId;
+  }
+});
+
 test("dashboard menampilkan lima permohonan terbaru menurut updatedAt, bukan urutan input", async () => {
   const caseData = (id, day) => ({
     id,
