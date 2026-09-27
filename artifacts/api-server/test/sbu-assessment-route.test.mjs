@@ -33,6 +33,7 @@ await build({
                (globalThis.__routeEvidence ? [globalThis.__routeEvidence] : []);
               const caseRows = () => globalThis.__routeCaseRows ??
                 (globalThis.__routeCase ? [globalThis.__routeCase] : []);
+              const profileRows = () => globalThis.__routeProfileRows ?? [];
             export const db = {
               select() {
                 return {
@@ -41,7 +42,8 @@ await build({
                       where(predicate) {
                          if (table === casesTable) globalThis.__routeCaseReads = (globalThis.__routeCaseReads ?? 0) + 1;
                         if (table === evidenceTable) globalThis.__routeEvidenceReads++;
-                         const rows = table === casesTable ? caseRows() : evidenceRows();
+                         const rows = table === casesTable ? caseRows() :
+                            table === profilesTable ? profileRows() : evidenceRows();
                          const result = rows.filter((row) => row && predicate(row));
                          return Object.assign(Promise.resolve(result), {
                            orderBy: () => Promise.resolve(result),
@@ -54,6 +56,31 @@ await build({
                insert(table) {
                  return {
                    values(input) {
+                      if (table === profilesTable) {
+                        globalThis.__routeProfileWrites = (globalThis.__routeProfileWrites ?? 0) + 1;
+                        return {
+                          onConflictDoNothing() {
+                            if (!profileRows().some((row) => row.userId === input.userId))
+                              profileRows().push({ role: "belum_dipilih", ...input });
+                            return Promise.resolve();
+                          }
+                        };
+                      }
+                      if (table === casesTable) {
+                        globalThis.__routeCaseWrites = (globalThis.__routeCaseWrites ?? 0) + 1;
+                        return {
+                          returning() {
+                            const item = {
+                              id: Math.max(0, ...caseRows().map((row) => row.id)) + 1,
+                              ...input, status: "draf",
+                              createdAt: new Date("2026-02-01T00:00:00Z"),
+                              updatedAt: new Date("2026-02-01T00:00:00Z"),
+                            };
+                            caseRows().push(item);
+                            return Promise.resolve([item]);
+                          }
+                        };
+                      }
                      return {
                        onConflictDoNothing() {
                          return {
@@ -108,7 +135,7 @@ await build({
             };
             export const casesTable = { id: "id", ownerId: "ownerId" };
              export const evidenceTable = { id: "id", caseId: "caseId" };
-            export const profilesTable = {};
+             export const profilesTable = { userId: "userId" };
           `,
            "@clerk/express": `export const getAuth = () => ({ userId: globalThis.__routeUserId === undefined ? "test-user" : globalThis.__routeUserId });`,
           "drizzle-orm": `
@@ -372,6 +399,57 @@ test("pengunjung tanpa sesi tidak dapat membaca daftar atau detail permohonan", 
     delete globalThis.__routeUserId;
     delete globalThis.__routeCaseRows;
     delete globalThis.__routeCaseReads;
+  }
+});
+
+test("pengunjung tanpa sesi tidak dapat membuat permohonan atau profil, tetapi peran yang diizinkan dapat membuatnya", async () => {
+  globalThis.__routeUserId = null;
+  globalThis.__routeCaseRows = [];
+  globalThis.__routeProfileRows = [];
+  globalThis.__routeCaseWrites = 0;
+  globalThis.__routeProfileWrites = 0;
+  const server = app.listen(0);
+  const create = (companyName) => request(server, "/api/cases", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      companyName, requestType: "baru", qualification: "kecil",
+      classification: "gedung", existingSbuExpiresOn: null,
+    }),
+  });
+  try {
+    const denied = await create("Permohonan Tanpa Sesi");
+    assert.equal(denied.status, 401, denied.raw);
+    assert.deepEqual(denied.body, { error: "Silakan masuk untuk melanjutkan." });
+    assert.equal(globalThis.__routeCaseWrites, 0, "tidak boleh mencoba menulis permohonan");
+    assert.equal(globalThis.__routeProfileWrites, 0, "tidak boleh mencoba menulis profil");
+    assert.deepEqual(globalThis.__routeCaseRows, [], "tidak ada permohonan yang dibuat");
+    assert.deepEqual(globalThis.__routeProfileRows, [], "tidak ada profil yang dibuat");
+
+    globalThis.__routeProfileRows.push(
+      { userId: "owner-kontraktor", role: "kontraktor" },
+      { userId: "owner-konsultan", role: "konsultan" },
+    );
+    for (const [role, userId] of [
+      ["kontraktor", "owner-kontraktor"],
+      ["konsultan", "owner-konsultan"],
+    ]) {
+      globalThis.__routeUserId = userId;
+      const created = await create(`Permohonan ${role}`);
+      assert.equal(created.status, 201, created.raw);
+      assert.equal(created.body.companyName, `Permohonan ${role}`);
+      assert.equal(created.body.status, "draf");
+      assert.equal(globalThis.__routeCaseRows.at(-1).ownerId, userId);
+    }
+    assert.equal(globalThis.__routeCaseRows.length, 2);
+    assert.equal(globalThis.__routeProfileRows.length, 2, "profil pengguna yang sudah ada tidak digandakan");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeProfileRows;
+    delete globalThis.__routeCaseWrites;
+    delete globalThis.__routeProfileWrites;
   }
 });
 
