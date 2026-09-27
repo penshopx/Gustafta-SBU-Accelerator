@@ -285,6 +285,42 @@ test("daftar dan detail permohonan hanya memperlihatkan data milik pengguna yang
   }
 });
 
+test("pengunjung tanpa sesi tidak dapat membaca daftar atau detail permohonan", async () => {
+  const privateCompany = "Perusahaan Rahasia Tanpa Sesi";
+  globalThis.__routeUserId = null;
+  globalThis.__routeCaseRows = [{
+    id: 74,
+    ownerId: "case-owner",
+    companyName: privateCompany,
+    requestType: "perpanjangan",
+    qualification: "kecil",
+    classification: "gedung-privat",
+    status: "draf",
+    existingSbuExpiresOn: "2027-04-15",
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  }];
+  globalThis.__routeCaseReads = 0;
+
+  const server = app.listen(0);
+  try {
+    for (const path of ["/api/cases", "/api/cases/74"]) {
+      const response = await request(server, path);
+      assert.equal(response.status, 401, `${path}: ${response.raw}`);
+      assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." }, path);
+      assert.doesNotMatch(response.raw,
+        /Perusahaan Rahasia Tanpa Sesi|case-owner|gedung-privat|2027-04-15|"id":74|ownerId|companyName|existingSbuExpiresOn/,
+        `${path}: respons tidak boleh membocorkan data permohonan`);
+      assert.equal(globalThis.__routeCaseReads, 0, `${path}: permohonan tidak boleh dibaca sebelum masuk`);
+    }
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeCaseReads;
+  }
+});
+
 test("penilaian kasus milik pengguna lain mengembalikan 404 tanpa data kasus atau temuan", async () => {
   const privateCompany = "Perusahaan Rahasia Pengguna Lain";
   const privateFinding = "Temuan rahasia pengguna lain";
