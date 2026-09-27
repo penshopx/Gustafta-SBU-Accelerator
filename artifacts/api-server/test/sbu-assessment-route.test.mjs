@@ -46,9 +46,14 @@ await build({
                          const rows = table === casesTable ? caseRows() :
                             table === profilesTable ? profileRows() : evidenceRows();
                          const result = rows.filter((row) => row && predicate(row));
-                         return Object.assign(Promise.resolve(result), {
-                           orderBy: () => Promise.resolve(result),
-                         });
+                          return Object.assign(Promise.resolve(result), {
+                            orderBy: ({ column, direction }) => {
+                              if (direction !== "desc" || column !== "updatedAt")
+                                throw new Error("unexpected orderBy");
+                              return Promise.resolve([...result].sort((a, b) =>
+                                new Date(b[column]).getTime() - new Date(a[column]).getTime()));
+                            },
+                          });
                       }
                     };
                   }
@@ -149,15 +154,15 @@ await build({
                  };
               }
             };
-            export const casesTable = { id: "id", ownerId: "ownerId" };
-             export const evidenceTable = { id: "id", caseId: "caseId" };
+             export const casesTable = { id: "id", ownerId: "ownerId", updatedAt: "updatedAt" };
+              export const evidenceTable = { id: "id", caseId: "caseId", updatedAt: "updatedAt" };
              export const profilesTable = { userId: "userId" };
           `,
            "@clerk/express": `export const getAuth = () => ({ userId: globalThis.__routeUserId === undefined ? "test-user" : globalThis.__routeUserId });`,
           "drizzle-orm": `
             export const eq = (column, value) => (row) => row[column] === value;
             export const and = (...predicates) => (row) => predicates.every((predicate) => predicate(row));
-            export const desc = () => true;
+             export const desc = (column) => ({ column, direction: "desc" });
           `,
         })[args.path],
         loader: "js",
@@ -379,6 +384,36 @@ test("dashboard hanya menghitung status dan menampilkan permohonan milik penggun
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__routeCaseRows;
     delete globalThis.__routeUserId;
+  }
+});
+
+test("dashboard menampilkan lima permohonan terbaru menurut updatedAt, bukan urutan input", async () => {
+  const caseData = (id, day) => ({
+    id,
+    ownerId: "test-user",
+    companyName: `Perusahaan ${id}`,
+    requestType: "baru",
+    qualification: "kecil",
+    classification: "gedung",
+    status: "draf",
+    existingSbuExpiresOn: null,
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date(`2026-03-${String(day).padStart(2, "0")}T00:00:00Z`),
+  });
+  globalThis.__routeCaseRows = [
+    caseData(201, 2), caseData(202, 7), caseData(203, 1),
+    caseData(204, 5), caseData(205, 3), caseData(206, 6), caseData(207, 4),
+  ];
+  const server = app.listen(0);
+  try {
+    const { status, body, raw } = await request(server, "/api/dashboard");
+    assert.equal(status, 200, raw);
+    assert.equal(body.total, 7);
+    assert.deepEqual(body.recent.map((item) => item.id), [202, 206, 204, 207, 205],
+      "recent harus memuat lima updatedAt terbesar dalam urutan menurun");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
   }
 });
 
