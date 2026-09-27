@@ -1,0 +1,66 @@
+Terima kasih atas konteksnya. Mari saya sesuaikan dengan realitas proyek Gustafta.
+
+## Penyesuaian untuk Gustafta
+
+Berdasarkan informasi yang Anda berikan, pengujian isolasi bukti di Gustafta memiliki batasan berikut:
+
+| Aspek | Kondisi Aktual |
+|---|---|
+| Rute bukti | Hanya **list** (`GET`) dan **tambah** (`POST`) — tidak ada rute detail per bukti |
+| Status kode isolasi | Konsisten **404** (bukan 403/404) — untuk menyembunyikan keberadaan kasus orang lain |
+| Helper akun | Belum tersedia helper `createUser`/`loginUser` generik |
+| Cakupan tugas ini | Hanya isolasi bukti — isolasi update/delete kasus dikerjakan di tugas terpisah |
+
+## Template Pengujian yang Sesuai
+
+Berikut template yang bisa Anda sesuaikan dengan struktur data bukti dan helper akun yang **benar-benar ada** di Gustafta:
+
+```javascript
+describe('Isolasi Rute Bukti', () => {
+  let pemilikToken, pelakuToken;
+  let kasusMilikPemilikId;
+
+  beforeAll(async () => {
+    // Gunakan helper/factory yang sudah ada di Gustafta.
+    // Sesuaikan nama dan parameter dengan kode Anda.
+    pemilikToken = await buatTokenUntukPenggunaSudahAda('pemilik');
+    pelakuToken  = await buatTokenUntukPenggunaSudahAda('pelaku');
+
+    const kasus = await request(app)
+      .post('/api/cases')
+      .set('Authorization', `Bearer ${pemilikToken}`)
+      .send({ /* field kasus sesuai skema Gustafta */ });
+
+    kasusMilikPemilikId = kasus.body.id;
+  });
+
+  it('GET /cases/:caseId/evidence — pelaku tidak dapat membaca daftar bukti kasus pemilik', async () => {
+    const res = await request(app)
+      .get(`/api/cases/${kasusMilikPemilikId}/evidence`)
+      .set('Authorization', `Bearer ${pelakuToken}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('POST /cases/:caseId/evidence — pelaku tidak dapat menambah bukti ke kasus pemilik', async () => {
+    const res = await request(app)
+      .post(`/api/cases/${kasusMilikPemilikId}/evidence`)
+      .set('Authorization', `Bearer ${pelakuToken}`)
+      .send({ /* payload bukti sesuai skema Gustafta */ });
+
+    expect(res.status).toBe(404);
+  });
+});
+```
+
+## Hal yang Perlu Anda Sesuaikan
+
+1. **Helper pembuatan token** — ganti `buatTokenUntukPenggunaSudahAda` dengan fungsi yang sudah ada di suite pengujian Gustafta (misalnya seed fixture, factory, atau login endpoint yang sudah di-mock).
+2. **Payload kasus dan bukti** — sesuaikan field `send(...)` dengan skema validasi yang diterapkan di rute Gustafta.
+3. **Path rute** — pastikan `/api/cases/:caseId/evidence` sesuai dengan prefix rute yang Anda gunakan (apakah ada `/api`, versi, dll).
+
+## Catatan tentang Cakupan
+
+Karena Anda menyebutkan bahwa pengujian perubahan dan penghapusan kasus masih dikerjakan di tugas terpisah, template di atas **sengaja hanya mencakup GET list dan POST** — sesuai dengan rute bukti yang memang ada saat ini. Ketika tugas isolasi update/delete kasus selesai dan ada rute bukti tambahan (misalnya detail, edit, hapus), blok `it(...)` baru bisa ditambahkan dengan pola yang sama: kirim permintaan dengan `pelakuToken` ke sumber daya milik `pemilik`, dan pastikan statusnya `404`.
+
+Apakah Anda ingin saya bantu menyesuaikan template ini lebih lanjut jika Anda bisa membagikan nama helper akun dan skema data bukti yang sudah ada di Gustafta?
