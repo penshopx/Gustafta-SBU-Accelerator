@@ -213,6 +213,63 @@ test("respons kasus mempertahankan kedaluwarsa SBU tetapi penilaian tidak mengir
   }
 });
 
+test("daftar dan detail permohonan hanya memperlihatkan data milik pengguna yang masuk", async () => {
+  const caseData = (id, ownerId, companyName) => ({
+    id,
+    ownerId,
+    companyName,
+    requestType: "perpanjangan",
+    qualification: "kecil",
+    classification: "gedung",
+    status: "draf",
+    existingSbuExpiresOn: null,
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  });
+  const privateCompany = "Perusahaan Rahasia Pemilik Kedua";
+  globalThis.__routeCaseRows = [
+    caseData(71, "first-owner", "Perusahaan Pertama"),
+    caseData(72, "second-owner", privateCompany),
+    caseData(73, "first-owner", "Perusahaan Ketiga"),
+  ];
+  globalThis.__routeUserId = "first-owner";
+  const server = app.listen(0);
+  try {
+    const firstList = await request(server, "/api/cases");
+    assert.equal(firstList.status, 200, firstList.raw);
+    assert.deepEqual(firstList.body.map((item) => item.id), [71, 73]);
+    assert.doesNotMatch(firstList.raw, /Perusahaan Rahasia Pemilik Kedua|"id":72|"ownerId":"second-owner"/,
+      "daftar tidak boleh memuat data pemilik lain");
+
+    const ownDetail = await request(server, "/api/cases/71");
+    assert.equal(ownDetail.status, 200, ownDetail.raw);
+    assert.equal(ownDetail.body.companyName, "Perusahaan Pertama");
+
+    const otherDetail = await request(server, "/api/cases/72");
+    const missingDetail = await request(server, "/api/cases/999");
+    assert.equal(otherDetail.status, 404, otherDetail.raw);
+    assert.equal(missingDetail.status, 404, missingDetail.raw);
+    assert.deepEqual(otherDetail.body, missingDetail.body,
+      "ID milik orang lain harus tampak seperti ID yang tidak ada");
+    assert.deepEqual(otherDetail.body, { error: "Permohonan tidak ditemukan." });
+    assert.equal(otherDetail.raw, missingDetail.raw, "respons mentah tidak boleh membedakan pemilik lain");
+    assert.doesNotMatch(otherDetail.raw, /Perusahaan Rahasia Pemilik Kedua|second-owner|72|gedung/);
+
+    globalThis.__routeUserId = "second-owner";
+    const secondList = await request(server, "/api/cases");
+    assert.equal(secondList.status, 200, secondList.raw);
+    assert.deepEqual(secondList.body.map((item) => item.id), [72]);
+    assert.doesNotMatch(secondList.raw, /Perusahaan Pertama|Perusahaan Ketiga|"id":71|"id":73/);
+    const secondDetail = await request(server, "/api/cases/72");
+    assert.equal(secondDetail.status, 200, secondDetail.raw);
+    assert.equal(secondDetail.body.companyName, privateCompany);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeUserId;
+  }
+});
+
 test("penilaian kasus milik pengguna lain mengembalikan 404 tanpa data kasus atau temuan", async () => {
   const privateCompany = "Perusahaan Rahasia Pengguna Lain";
   const privateFinding = "Temuan rahasia pengguna lain";
