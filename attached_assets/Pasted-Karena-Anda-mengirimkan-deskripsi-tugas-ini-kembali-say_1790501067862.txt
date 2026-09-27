@@ -1,0 +1,93 @@
+Karena Anda mengirimkan deskripsi tugas ini kembali, saya asumsikan Anda membutuhkan **contoh implementasi kode pengujian (test cases)** yang konkret untuk memenuhi kriteria *Selesai bila* (GET, POST, PATCH/PAT).
+
+Berikut adalah contoh implementasi pengujian API (menggunakan **Node.js dengan Jest & Supertest**) untuk memastikan isolasi data antar pengguna (*multi-tenant isolation*) pada rute bukti (*evidence*).
+
+### 1. Persiapan Data (Setup)
+Sebelum menjalankan test, kita perlu menyiapkan skenario:
+- **User A** membuat **Kasus A** dan menambahkan **Bukti A**.
+- **User B** login dan mencoba mengakses/memanipulasi **Kasus A** dan **Bukti A**.
+
+### 2. Implementasi Kode Test (Jest & Supertest)
+
+```javascript
+describe('Authorization: Isolasi Rute Bukti (Evidence)', () => {
+  let userAToken, userBToken;
+  let caseAId, evidenceAId;
+
+  beforeAll(async () => {
+    // 1. Setup User A, Kasus A, dan Bukti A
+    const userA = await createUser({ email: 'userA@test.com', password: 'password123' });
+    userAToken = await loginUser(userA.email, 'password123');
+    
+    const caseA = await createCase(userAToken, { title: 'Kasus Milik User A' });
+    caseAId = caseA.id;
+    
+    const evidenceA = await createEvidence(userAToken, caseAId, { description: 'Bukti Asli' });
+    evidenceAId = evidenceA.id;
+
+    // 2. Setup User B
+    const userB = await createUser({ email: 'userB@test.com', password: 'password123' });
+    userBToken = await loginUser(userB.email, 'password123');
+  });
+
+  // ==========================================
+  // GET: Membaca Bukti
+  // ==========================================
+  it('GET /cases/:caseId/evidence - User B tidak bisa membaca daftar bukti Kasus A', async () => {
+    const res = await request(app)
+      .get(`/api/cases/${caseAId}/evidence`)
+      .set('Authorization', `Bearer ${userBToken}`);
+      
+    // Harus ditolak (403 Forbidden atau 404 Not Found)
+    expect([403, 404]).toContain(res.status); 
+  });
+
+  it('GET /cases/:caseId/evidence/:id - User B tidak bisa membaca detail Bukti A', async () => {
+    const res = await request(app)
+      .get(`/api/cases/${caseAId}/evidence/${evidenceAId}`)
+      .set('Authorization', `Bearer ${userBToken}`);
+      
+    expect([403, 404]).toContain(res.status);
+  });
+
+  // ==========================================
+  // POST: Menambah Bukti
+  // ==========================================
+  it('POST /cases/:caseId/evidence - User B tidak bisa menambah bukti ke Kasus A', async () => {
+    const res = await request(app)
+      .post(`/api/cases/${caseAId}/evidence`)
+      .set('Authorization', `Bearer ${userBToken}`)
+      .send({ description: 'Bukti Palsu dari User B' }); // Sesuaikan dengan payload API Anda
+      
+    expect([403, 404]).toContain(res.status);
+  });
+
+  // ==========================================
+  // PATCH (PAT): Mengubah Bukti
+  // ==========================================
+  it('PATCH /cases/:caseId/evidence/:id - User B tidak bisa mengubah Bukti A', async () => {
+    const res = await request(app)
+      .patch(`/api/cases/${caseAId}/evidence/${evidenceAId}`)
+      .set('Authorization', `Bearer ${userBToken}`)
+      .send({ description: 'Deskripsi yang diubah secara ilegal' });
+      
+    expect([403, 404]).toContain(res.status);
+  });
+  
+  // (Opsional) Jika ada rute DELETE
+  it('DELETE /cases/:caseId/evidence/:id - User B tidak bisa menghapus Bukti A', async () => {
+    const res = await request(app)
+      .delete(`/api/cases/${caseAId}/evidence/${evidenceAId}`)
+      .set('Authorization', `Bearer ${userBToken}`);
+      
+    expect([403, 404]).toContain(res.status);
+  });
+});
+```
+
+### Catatan Penting untuk Implementasi:
+1. **Status Code (403 vs 404)**: 
+   - Gunakan **403 Forbidden** jika Anda ingin memberi tahu bahwa pengguna tidak memiliki hak akses.
+   - Gunakan **404 Not Found** jika Anda ingin menyembunyikan keberadaan kasus/bukti tersebut dari pengguna lain (lebih aman untuk mencegah *ID enumeration*). Pilih salah satu sesuai standar keamanan API Anda.
+2. **PATCH vs PUT**: Pada kriteria *Selesai bila* tertulis `PAT`. Ini kemungkinan besar merujuk pada **PATCH** (atau **PUT**). Sesuaikan method di atas jika API Anda menggunakan PUT.
+3. **Validasi Backend**: Pastikan di level backend (controller atau middleware), ada validasi yang membandingkan `req.user.id` dengan `case.owner_id` **sebelum** melakukan operasi *database* apa pun pada tabel `evidence`.
