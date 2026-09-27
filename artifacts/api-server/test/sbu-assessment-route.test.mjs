@@ -379,3 +379,59 @@ test("bukti kasus pengguna lain tidak dapat dibaca atau diubah, sementara pemili
     delete globalThis.__routeUserId;
   }
 });
+
+test("ID bukti dari permohonan lain milik pengguna yang sama tidak dapat diubah atau dihapus", async () => {
+  globalThis.__routeUserId = "same-owner";
+  globalThis.__routeCaseRows = [
+    { id: 61, ownerId: "same-owner" },
+    { id: 62, ownerId: "same-owner" },
+  ];
+  globalThis.__routeEvidenceRows = [
+    { id: 11, caseId: 61, code: "legalitas", title: "Bukti pertama",
+      note: "Catatan pertama", updatedAt: new Date("2026-02-02T00:00:00Z") },
+    { id: 12, caseId: 62, code: "pajak", title: "Bukti kedua",
+      note: "Catatan kedua", updatedAt: new Date("2026-02-03T00:00:00Z") },
+  ];
+  globalThis.__routeEvidenceReads = 0;
+  globalThis.__routeEvidenceWrites = 0;
+  const server = app.listen(0);
+  const json = (method, data) => ({
+    method, headers: { "content-type": "application/json" }, body: JSON.stringify(data),
+  });
+  try {
+    const original = structuredClone(globalThis.__routeEvidenceRows);
+    for (const path of ["/api/cases/61/evidence/12", "/api/cases/62/evidence/11"]) {
+      const patch = await request(server, path, json("PATCH", { note: "Catatan salah" }));
+      assert.equal(patch.status, 404, patch.raw);
+      assert.deepEqual(patch.body, { error: "Catatan bukti tidak ditemukan." });
+      assert.deepEqual(globalThis.__routeEvidenceRows, original, "PATCH lintas permohonan tidak mengubah bukti");
+
+      const deletion = await request(server, path, { method: "DELETE" });
+      assert.equal(deletion.status, 404, deletion.raw);
+      assert.deepEqual(deletion.body, { error: "Catatan bukti tidak ditemukan." });
+      assert.deepEqual(globalThis.__routeEvidenceRows, original, "DELETE lintas permohonan tidak menghapus bukti");
+    }
+
+    const updated = await request(server, "/api/cases/61/evidence/11",
+      json("PATCH", { note: "Catatan pertama diperbarui" }));
+    assert.equal(updated.status, 200, updated.raw);
+    assert.equal(updated.body.note, "Catatan pertama diperbarui");
+    assert.equal(globalThis.__routeEvidenceRows[0].note, "Catatan pertama diperbarui");
+    assert.deepEqual(globalThis.__routeEvidenceRows[1], original[1], "bukti permohonan kedua tetap utuh");
+
+    const removed = await request(server, "/api/cases/62/evidence/12", { method: "DELETE" });
+    assert.equal(removed.status, 204, removed.raw);
+    assert.deepEqual(globalThis.__routeEvidenceRows.map((item) => item.id), [11]);
+    const remaining = await request(server, "/api/cases/61/evidence");
+    assert.equal(remaining.status, 200, remaining.raw);
+    assert.deepEqual(remaining.body.map((item) => item.id), [11]);
+    assert.equal(remaining.body[0].note, "Catatan pertama diperbarui");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeEvidenceRows;
+    delete globalThis.__routeEvidenceReads;
+    delete globalThis.__routeEvidenceWrites;
+    delete globalThis.__routeUserId;
+  }
+});
