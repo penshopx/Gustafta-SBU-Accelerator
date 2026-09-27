@@ -63,6 +63,21 @@ await build({
                             if (!profileRows().some((row) => row.userId === input.userId))
                               profileRows().push({ role: "belum_dipilih", ...input });
                             return Promise.resolve();
+                           },
+                           onConflictDoUpdate({ target, set }) {
+                             if (target !== profilesTable.userId) throw new Error("unexpected profile conflict target");
+                             return {
+                               returning() {
+                                 let profile = profileRows().find((row) => row.userId === input.userId);
+                                 if (profile) {
+                                   Object.assign(profile, set);
+                                 } else {
+                                   profile = { role: "belum_dipilih", displayName: "", organizationName: "", ...input };
+                                   profileRows().push(profile);
+                                 }
+                                 return Promise.resolve([profile]);
+                               }
+                             };
                           }
                         };
                       }
@@ -449,6 +464,49 @@ test("pengunjung tanpa sesi tidak dapat membuat permohonan atau profil, tetapi p
     delete globalThis.__routeCaseRows;
     delete globalThis.__routeProfileRows;
     delete globalThis.__routeCaseWrites;
+    delete globalThis.__routeProfileWrites;
+  }
+});
+
+test("PATCH /api/me menolak pengunjung tanpa sesi tanpa mengubah atau membuat profil, tetapi pengguna masuk dapat memperbarui profil", async () => {
+  const original = { userId: "profile-owner", role: "kontraktor", displayName: "Nama Asli", organizationName: "Perusahaan Asli" };
+  globalThis.__routeProfileRows = [structuredClone(original)];
+  globalThis.__routeProfileWrites = 0;
+  globalThis.__routeUserId = null;
+  const server = app.listen(0);
+  const update = (displayName) => request(server, "/api/me", {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ role: "konsultan", displayName, organizationName: "Perusahaan Baru" }),
+  });
+  try {
+    const denied = await update("Pengubah Tanpa Sesi");
+    assert.equal(denied.status, 401, denied.raw);
+    assert.deepEqual(denied.body, { error: "Silakan masuk untuk melanjutkan." });
+    assert.equal(globalThis.__routeProfileWrites, 0, "tanpa sesi tidak boleh mencoba menulis profil");
+    assert.deepEqual(globalThis.__routeProfileRows, [original], "profil yang ada tidak boleh berubah");
+
+    globalThis.__routeProfileRows = [];
+    const deniedCreate = await update("Profil Baru Tanpa Sesi");
+    assert.equal(deniedCreate.status, 401, deniedCreate.raw);
+    assert.equal(globalThis.__routeProfileWrites, 0, "tanpa sesi tidak boleh mencoba membuat profil");
+    assert.deepEqual(globalThis.__routeProfileRows, [], "profil baru tidak boleh dibuat");
+
+    globalThis.__routeProfileRows = [structuredClone(original)];
+    globalThis.__routeUserId = "profile-owner";
+    const allowed = await update("Nama Diperbarui");
+    assert.equal(allowed.status, 200, allowed.raw);
+    assert.deepEqual(allowed.body, {
+      role: "konsultan", displayName: "Nama Diperbarui", organizationName: "Perusahaan Baru",
+    });
+    assert.deepEqual(globalThis.__routeProfileRows, [{
+      userId: "profile-owner", ...allowed.body,
+    }], "pengguna masuk hanya memperbarui profilnya sendiri");
+    assert.equal(globalThis.__routeProfileWrites, 1);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeProfileRows;
     delete globalThis.__routeProfileWrites;
   }
 });
