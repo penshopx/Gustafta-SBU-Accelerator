@@ -31,6 +31,8 @@ await build({
           "@workspace/db": `
              const evidenceRows = () => globalThis.__routeEvidenceRows ??
                (globalThis.__routeEvidence ? [globalThis.__routeEvidence] : []);
+              const caseRows = () => globalThis.__routeCaseRows ??
+                (globalThis.__routeCase ? [globalThis.__routeCase] : []);
             export const db = {
               select() {
                 return {
@@ -38,8 +40,7 @@ await build({
                     return {
                       where(predicate) {
                         if (table === evidenceTable) globalThis.__routeEvidenceReads++;
-                        const rows = table === casesTable
-                           ? [globalThis.__routeCase] : evidenceRows();
+                         const rows = table === casesTable ? caseRows() : evidenceRows();
                          const result = rows.filter((row) => row && predicate(row));
                          return Object.assign(Promise.resolve(result), {
                            orderBy: () => Promise.resolve(result),
@@ -78,8 +79,8 @@ await build({
                        where(predicate) {
                          return {
                            returning() {
-                             globalThis.__routeEvidenceWrites++;
-                             const item = evidenceRows().find(predicate);
+                              if (table === evidenceTable) globalThis.__routeEvidenceWrites++;
+                              const item = (table === casesTable ? caseRows() : evidenceRows()).find(predicate);
                              if (item) Object.assign(item, changes);
                              return Promise.resolve(item ? [item] : []);
                            }
@@ -94,8 +95,8 @@ await build({
                    where(predicate) {
                      return {
                        returning() {
-                         globalThis.__routeEvidenceWrites++;
-                         const rows = evidenceRows();
+                          if (table === evidenceTable) globalThis.__routeEvidenceWrites++;
+                          const rows = table === casesTable ? caseRows() : evidenceRows();
                          const index = rows.findIndex(predicate);
                          return Promise.resolve(index < 0 ? [] : rows.splice(index, 1));
                        }
@@ -252,6 +253,55 @@ test("penilaian kasus milik pengguna lain mengembalikan 404 tanpa data kasus ata
     delete globalThis.__routeCase;
     delete globalThis.__routeEvidence;
     delete globalThis.__routeEvidenceReads;
+  }
+});
+
+test("pengguna lain tidak dapat mengubah atau menghapus kasus, tetapi pemilik dapat melakukannya", async () => {
+  globalThis.__routeCaseRows = [{
+    id: 54,
+    ownerId: "case-owner",
+    companyName: "Perusahaan Privat",
+    requestType: "perpanjangan",
+    qualification: "kecil",
+    classification: "gedung",
+    status: "draf",
+    existingSbuExpiresOn: null,
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  }];
+  globalThis.__routeUserId = "different-user";
+  const server = app.listen(0);
+  const casePath = "/api/cases/54";
+  const patch = (companyName) => ({
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ companyName }),
+  });
+  try {
+    const original = structuredClone(globalThis.__routeCaseRows);
+    const forbiddenPatch = await request(server, casePath, patch("Diubah Pihak Lain"));
+    assert.equal(forbiddenPatch.status, 404, forbiddenPatch.raw);
+    assert.deepEqual(forbiddenPatch.body, { error: "Permohonan tidak ditemukan." });
+    assert.deepEqual(globalThis.__routeCaseRows, original, "PATCH pihak lain tidak boleh mengubah kasus");
+
+    const forbiddenDelete = await request(server, casePath, { method: "DELETE" });
+    assert.equal(forbiddenDelete.status, 404, forbiddenDelete.raw);
+    assert.deepEqual(forbiddenDelete.body, { error: "Permohonan tidak ditemukan." });
+    assert.deepEqual(globalThis.__routeCaseRows, original, "DELETE pihak lain tidak boleh menghapus kasus");
+
+    globalThis.__routeUserId = "case-owner";
+    const updated = await request(server, casePath, patch("Diubah Pemilik"));
+    assert.equal(updated.status, 200, updated.raw);
+    assert.equal(updated.body.companyName, "Diubah Pemilik");
+    assert.equal(globalThis.__routeCaseRows[0].companyName, "Diubah Pemilik");
+
+    const removed = await request(server, casePath, { method: "DELETE" });
+    assert.equal(removed.status, 204, removed.raw);
+    assert.deepEqual(globalThis.__routeCaseRows, []);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeUserId;
   }
 });
 
