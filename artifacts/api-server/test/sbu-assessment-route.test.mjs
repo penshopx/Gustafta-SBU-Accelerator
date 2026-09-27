@@ -42,6 +42,7 @@ await build({
                       where(predicate) {
                          if (table === casesTable) globalThis.__routeCaseReads = (globalThis.__routeCaseReads ?? 0) + 1;
                         if (table === evidenceTable) globalThis.__routeEvidenceReads++;
+                        if (table === profilesTable) globalThis.__routeProfileReads = (globalThis.__routeProfileReads ?? 0) + 1;
                          const rows = table === casesTable ? caseRows() :
                             table === profilesTable ? profileRows() : evidenceRows();
                          const result = rows.filter((row) => row && predicate(row));
@@ -447,6 +448,38 @@ test("pengunjung tanpa sesi tidak dapat membaca daftar atau detail permohonan", 
     delete globalThis.__routeUserId;
     delete globalThis.__routeCaseRows;
     delete globalThis.__routeCaseReads;
+  }
+});
+
+test("GET /api/me tanpa sesi menolak akses tanpa membaca atau membuat profil", async () => {
+  const privateProfile = {
+    userId: "pemilik-profil-rahasia",
+    role: "kontraktor",
+    displayName: "Nama Profil Rahasia",
+    organizationName: "Organisasi Privat",
+  };
+  globalThis.__routeUserId = null;
+  globalThis.__routeProfileRows = [structuredClone(privateProfile)];
+  globalThis.__routeProfileReads = 0;
+  globalThis.__routeProfileWrites = 0;
+
+  const server = app.listen(0);
+  try {
+    const response = await request(server, "/api/me");
+    assert.equal(response.status, 401, response.raw);
+    assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." });
+    assert.doesNotMatch(response.raw,
+      /pemilik-profil-rahasia|Nama Profil Rahasia|Organisasi Privat|userId|role|displayName|organizationName/,
+      "respons tidak boleh memuat data profil");
+    assert.equal(globalThis.__routeProfileReads, 0, "profil tidak boleh dibaca sebelum masuk");
+    assert.equal(globalThis.__routeProfileWrites, 0, "profil tidak boleh dibuat sebelum masuk");
+    assert.deepEqual(globalThis.__routeProfileRows, [privateProfile], "profil yang ada tidak boleh berubah");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeProfileRows;
+    delete globalThis.__routeProfileReads;
+    delete globalThis.__routeProfileWrites;
   }
 });
 
