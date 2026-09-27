@@ -39,6 +39,7 @@ await build({
                   from(table) {
                     return {
                       where(predicate) {
+                         if (table === casesTable) globalThis.__routeCaseReads = (globalThis.__routeCaseReads ?? 0) + 1;
                         if (table === evidenceTable) globalThis.__routeEvidenceReads++;
                          const rows = table === casesTable ? caseRows() : evidenceRows();
                          const result = rows.filter((row) => row && predicate(row));
@@ -323,6 +324,51 @@ test("penilaian kasus milik pengguna lain mengembalikan 404 tanpa data kasus ata
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__routeCase;
     delete globalThis.__routeEvidence;
+    delete globalThis.__routeEvidenceReads;
+  }
+});
+
+test("penilaian tanpa identitas mengembalikan 401 sebelum membaca kasus atau bukti", async () => {
+  const privateCompany = "Perusahaan Rahasia Tanpa Sesi";
+  const privateFinding = "Temuan rahasia tanpa sesi";
+  globalThis.__routeUserId = null;
+  globalThis.__routeCase = {
+    id: 34,
+    ownerId: "case-owner",
+    companyName: privateCompany,
+    requestType: "perpanjangan",
+    qualification: "kecil",
+    classification: "rahasia",
+    status: "draf",
+    existingSbuExpiresOn: "2027-04-15",
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  globalThis.__routeEvidence = {
+    id: 2,
+    caseId: 34,
+    code: "legalitas",
+    title: "Bukti rahasia",
+    note: privateFinding,
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  globalThis.__routeCaseReads = 0;
+  globalThis.__routeEvidenceReads = 0;
+
+  const server = app.listen(0);
+  try {
+    const response = await request(server, "/api/cases/34/assessment");
+    assert.equal(response.status, 401, response.raw);
+    assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." });
+    assert.doesNotMatch(response.raw, /Perusahaan Rahasia Tanpa Sesi|Temuan rahasia tanpa sesi|Bukti rahasia|findings|caseId|ownerId|recordedCount/);
+    assert.equal(globalThis.__routeCaseReads, 0, "permohonan tidak boleh dibaca sebelum masuk");
+    assert.equal(globalThis.__routeEvidenceReads, 0, "bukti tidak boleh dibaca sebelum masuk");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeCase;
+    delete globalThis.__routeEvidence;
+    delete globalThis.__routeCaseReads;
     delete globalThis.__routeEvidenceReads;
   }
 });
