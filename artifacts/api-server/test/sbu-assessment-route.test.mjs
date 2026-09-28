@@ -715,6 +715,62 @@ test("PATCH /api/me menolak pengunjung tanpa sesi tanpa mengubah atau membuat pr
   }
 });
 
+test("PATCH /api/me mengabaikan userId pihak lain dalam isi permintaan saat upsert profil", async () => {
+  const ownId = "pengguna-masuk";
+  const otherId = "pengguna-lain";
+  const otherProfile = {
+    userId: otherId, role: "profesional", displayName: "Nama Pengguna Lain",
+    organizationName: "Organisasi Pengguna Lain",
+  };
+  const changes = {
+    role: "konsultan", displayName: "Nama Pengguna Masuk",
+    organizationName: "Organisasi Pengguna Masuk",
+  };
+  globalThis.__routeUserId = ownId;
+  globalThis.__routeProfileRows = [];
+  globalThis.__routeProfileWrites = 0;
+  const server = app.listen(0);
+  try {
+    for (const { description, initialRows, targetId } of [
+      {
+        description: "memperbarui profil sendiri tanpa mengubah profil pihak lain",
+        initialRows: [
+          { userId: ownId, role: "kontraktor", displayName: "Nama Lama", organizationName: "Organisasi Lama" },
+          structuredClone(otherProfile),
+        ],
+        targetId: otherId,
+      },
+      {
+        description: "membuat profil sendiri tanpa membuat profil untuk ID pihak lain",
+        initialRows: [],
+        targetId: "pengguna-lain-belum-ada",
+      },
+    ]) {
+      globalThis.__routeProfileRows = initialRows;
+      const response = await request(server, "/api/me", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: targetId, ...changes }),
+      });
+      assert.equal(response.status, 200, `${description}: ${response.raw}`);
+      assert.deepEqual(response.body, changes, description);
+      assert.deepEqual(globalThis.__routeProfileRows, [
+        { userId: ownId, ...changes },
+        ...initialRows.filter((row) => row.userId === otherId),
+      ], description);
+      assert.equal(globalThis.__routeProfileRows.some((row) => row.userId === targetId),
+        targetId === otherId, description);
+      if (targetId === otherId) assert.deepEqual(globalThis.__routeProfileRows[1], otherProfile);
+    }
+    assert.equal(globalThis.__routeProfileWrites, 2, "kedua upsert hanya menulis profil pemilik sesi");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeProfileRows;
+    delete globalThis.__routeProfileWrites;
+  }
+});
+
 test("penilaian kasus milik pengguna lain mengembalikan 404 tanpa data kasus atau temuan", async () => {
   const privateCompany = "Perusahaan Rahasia Pengguna Lain";
   const privateFinding = "Temuan rahasia pengguna lain";
