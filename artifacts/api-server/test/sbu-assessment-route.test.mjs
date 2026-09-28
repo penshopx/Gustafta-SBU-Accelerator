@@ -208,7 +208,7 @@ test("respons daftar regulasi menahan tenggat dan hitung mundur transisi yang be
   }
 });
 
-test("respons kasus mempertahankan kedaluwarsa SBU tetapi penilaian tidak mengirim tenggat konversi", async () => {
+test("respons penilaian perpanjangan tidak menghitung tenggat dari tanggal kedaluwarsa SBU", async () => {
   const sbuExpiry = "2027-04-15";
   const kepdirjenDate = "2026-03-01";
   const wrongConversionDate = "2026-09-01";
@@ -268,6 +268,18 @@ test("respons kasus mempertahankan kedaluwarsa SBU tetapi penilaian tidak mengir
       "tanggal dari input kasus atau Kepdirjen tidak boleh menjadi tanggal konversi di penilaian");
     assert.doesNotMatch(raw, /"(?:[^"]*(?:deadline|countdown|dueDate|conversionDate|remainingDays|daysLeft|tenggatKonversi|hitungMundur)[^"]*)"\s*:/i);
     assert.doesNotMatch(raw, new RegExp(`${wrongConversionDate}|${sbuExpiry}|${kepdirjenDate}`));
+
+    // Tanggal SBU lama berubah, tetapi pemicu tiga alur transisi tetap belum terverifikasi.
+    const otherExpiry = "2028-11-30";
+    globalThis.__routeCase.existingSbuExpiresOn = otherExpiry;
+    const otherCaseResponse = await request(server, "/api/cases/12");
+    assert.equal(otherCaseResponse.status, 200, otherCaseResponse.raw);
+    assert.equal(otherCaseResponse.body.existingSbuExpiresOn.slice(0, 10), otherExpiry);
+    const otherAssessment = await request(server, "/api/cases/12/assessment");
+    assert.equal(otherAssessment.status, 200, otherAssessment.raw);
+    assert.deepEqual(otherAssessment.body, assessment,
+      "mengubah tanggal SBU lama tidak boleh mengubah tiga temuan transisi atau menghitung tenggat");
+    assert.doesNotMatch(otherAssessment.raw, /2028-11-30|30[/.]11[/.]2028|30 November 2028/i);
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__routeCase;
