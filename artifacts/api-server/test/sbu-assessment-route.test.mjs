@@ -1148,6 +1148,38 @@ test("pengunjung tanpa sesi tidak dapat mengubah atau menghapus kasus, tetapi pe
   }
 });
 
+test("daftar bukti menampilkan catatan paling baru diperbarui lebih dulu", async () => {
+  globalThis.__routeUserId = "case-owner";
+  globalThis.__routeCaseRows = [{ id: 43, ownerId: "case-owner" }];
+  globalThis.__routeEvidenceRows = [
+    { id: 1, caseId: 43, code: "legalitas", title: "Bukti tengah",
+      note: "Diperbarui kedua", updatedAt: new Date("2026-02-02T00:00:00Z") },
+    { id: 2, caseId: 43, code: "pajak", title: "Bukti lama",
+      note: "Diperbarui pertama", updatedAt: new Date("2026-02-01T00:00:00Z") },
+    { id: 3, caseId: 43, code: "personel", title: "Bukti terbaru",
+      note: "Diperbarui terakhir", updatedAt: new Date("2026-02-03T00:00:00Z") },
+  ];
+  globalThis.__routeEvidenceReads = 0;
+  const server = app.listen(0);
+  try {
+    const { status, body, raw } = await request(server, "/api/cases/43/evidence");
+    assert.equal(status, 200, raw);
+    assert.deepEqual(body.map((item) => item.id), [3, 1, 2],
+      "urutan respons mengikuti updatedAt menurun, bukan urutan penyimpanan");
+    assert.deepEqual(body.map((item) => item.updatedAt), [
+      "2026-02-03T00:00:00.000Z",
+      "2026-02-02T00:00:00.000Z",
+      "2026-02-01T00:00:00.000Z",
+    ]);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeEvidenceRows;
+    delete globalThis.__routeEvidenceReads;
+  }
+});
+
 test("bukti kasus pengguna lain tidak dapat dibaca atau diubah, sementara pemilik dapat mengelolanya", async () => {
   const privateNote = "Isi bukti privat";
   globalThis.__routeCase = {
