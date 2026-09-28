@@ -15,6 +15,7 @@ import {
 import { ErrorBoundary } from '@/components/error-boundary';
 import { RegulationsPage } from '@/components/regulations-page';
 import { AssessmentResults, CaseSummary } from '@/components/case-detail-display';
+import { formatTimestampDate } from '@/lib/display-date';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 25000 } } });
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -48,7 +49,7 @@ const evidenceOptions = [
   { code: 'smap_training', title: 'Pelatihan/bimtek SMAP (BUJK kecil)' },
 ];
 const canCreate = (profile?: Profile) => profile?.role === 'kontraktor' || profile?.role === 'konsultan';
-const date = (value?: string | null) => value ? new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value)) : '—';
+const date = formatTimestampDate;
 const errText = (error: unknown) => error instanceof Error ? error.message : 'Terjadi kendala. Silakan coba lagi.';
 const refreshCases = (qc: ReturnType<typeof useQueryClient>, id?: number) => {
   qc.invalidateQueries({ queryKey: getListCasesQueryKey() });

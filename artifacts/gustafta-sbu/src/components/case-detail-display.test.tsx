@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Assessment, SbuCase } from '@workspace/api-client-react';
+import { formatCalendarDate } from '../lib/display-date';
 import { AssessmentResults, CaseSummary } from './case-detail-display';
 
 const sbuCase: SbuCase = {
@@ -54,7 +57,7 @@ const assessment: Assessment = {
 test('detail perpanjangan menampilkan kedaluwarsa hanya sebagai masa berlaku SBU, bukan tenggat konversi', () => {
   const summary = renderToStaticMarkup(createElement(CaseSummary, { sbuCase }));
   const findings = renderToStaticMarkup(createElement(AssessmentResults, { assessment }));
-  const formattedExpiry = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(sbuCase.existingSbuExpiresOn!));
+  const formattedExpiry = '15 Apr 2027';
 
   assert.match(summary, new RegExp(`Berlaku hingga[\\s\\S]*${formattedExpiry}`));
   assert.equal(summary.split(formattedExpiry).length - 1, 1);
@@ -64,4 +67,29 @@ test('detail perpanjangan menampilkan kedaluwarsa hanya sebagai masa berlaku SBU
   assert.doesNotMatch(findings, /15 Apr 2027|2027-04-15|15[/.]0?4[/.]2027/);
   assert.doesNotMatch(findings, /\b\d+\s*(?:hari|jam|menit|detik)\s*(?:lagi|tersisa)\b/i);
   assert.doesNotMatch(findings, /(?:tenggat|batas|konversi)\s*(?:hingga|pada|jatuh tempo)\s*\d/i);
+});
+
+test('tanggal berlaku tetap tanggal kalender yang sama saat ditampilkan di berbagai zona waktu', () => {
+  if (!process.env.CALENDAR_TZ_CHILD) {
+    for (const tz of ['UTC', 'America/Los_Angeles', 'Asia/Jakarta']) {
+      const result = spawnSync(process.execPath, ['--import', 'tsx', '--test', fileURLToPath(import.meta.url)], {
+        env: { ...process.env, TZ: tz, CALENDAR_TZ_CHILD: '1' },
+        encoding: 'utf8',
+      });
+      assert.equal(result.status, 0, `${tz}: ${result.stdout}\n${result.stderr}`);
+    }
+    return;
+  }
+
+  assert.equal(formatCalendarDate(sbuCase.existingSbuExpiresOn), '15 Apr 2027');
+  assert.equal(formatCalendarDate('2027-04-15T00:00:00.000Z'), '15 Apr 2027');
+  assert.equal(formatCalendarDate('2027-01-01'), '1 Jan 2027');
+  assert.equal(formatCalendarDate(null), '—');
+  for (const expiry of ['2027-04-15', '2027-04-15T00:00:00.000Z']) {
+    const summary = renderToStaticMarkup(createElement(CaseSummary, {
+      sbuCase: { ...sbuCase, existingSbuExpiresOn: expiry },
+    }));
+    assert.match(summary, /Berlaku hingga[\s\S]*15 Apr 2027/);
+    assert.doesNotMatch(summary, /14 Apr 2027/);
+  }
 });
