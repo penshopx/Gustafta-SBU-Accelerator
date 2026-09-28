@@ -602,6 +602,38 @@ test("pengunjung tanpa sesi tidak dapat membuat permohonan atau profil, tetapi p
   }
 });
 
+test("POST /api/cases dengan sesi sah menolak data tidak valid sebelum membuat profil atau permohonan", async () => {
+  globalThis.__routeUserId = "owner-baru";
+  globalThis.__routeProfileRows = [];
+  globalThis.__routeCaseRows = [];
+  globalThis.__routeProfileWrites = 0;
+  globalThis.__routeCaseWrites = 0;
+  const server = app.listen(0);
+  try {
+    const response = await request(server, "/api/cases", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        companyName: "", requestType: "baru", qualification: "kecil",
+        classification: "gedung", existingSbuExpiresOn: null,
+      }),
+    });
+    assert.equal(response.status, 400, response.raw);
+    assert.equal(response.body.error, "Data permohonan tidak valid.");
+    assert.equal(globalThis.__routeProfileWrites, 0, "validasi harus mendahului pembuatan profil");
+    assert.equal(globalThis.__routeCaseWrites, 0, "permohonan tidak boleh ditulis");
+    assert.deepEqual(globalThis.__routeProfileRows, [], "profil baru tidak boleh dibuat");
+    assert.deepEqual(globalThis.__routeCaseRows, [], "permohonan baru tidak boleh dibuat");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeProfileRows;
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeProfileWrites;
+    delete globalThis.__routeCaseWrites;
+  }
+});
+
 test("POST /api/cases menolak peran selain kontraktor dan konsultan tanpa menulis permohonan", async () => {
   globalThis.__routeCaseRows = [];
   globalThis.__routeProfileRows = [
