@@ -563,6 +563,44 @@ test("GET /api/me tanpa sesi menolak akses tanpa membaca atau membuat profil", a
   }
 });
 
+test("GET /api/me hanya menampilkan profil pengguna yang masuk", async () => {
+  const firstProfile = {
+    userId: "pemilik-profil-pertama",
+    role: "kontraktor",
+    displayName: "Nama Pertama Privat",
+    organizationName: "Organisasi Pertama Privat",
+  };
+  const secondProfile = {
+    userId: "pemilik-profil-kedua",
+    role: "konsultan",
+    displayName: "Nama Kedua Rahasia",
+    organizationName: "Organisasi Kedua Rahasia",
+  };
+  globalThis.__routeProfileRows = [structuredClone(firstProfile), structuredClone(secondProfile)];
+  const server = app.listen(0);
+  try {
+    for (const [current, other] of [[firstProfile, secondProfile], [secondProfile, firstProfile]]) {
+      globalThis.__routeUserId = current.userId;
+      const response = await request(server, "/api/me");
+      assert.equal(response.status, 200, response.raw);
+      assert.deepEqual(response.body, {
+        role: current.role,
+        displayName: current.displayName,
+        organizationName: current.organizationName,
+      }, `respons harus berisi profil ${current.userId} saja`);
+      for (const value of [other.userId, other.displayName, other.organizationName]) {
+        assert.ok(!response.raw.includes(value), `respons ${current.userId} tidak boleh memuat ${value}`);
+      }
+    }
+    assert.deepEqual(globalThis.__routeProfileRows, [firstProfile, secondProfile],
+      "membaca profil tidak boleh mengubah data pengguna lain");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeProfileRows;
+  }
+});
+
 test("pengunjung tanpa sesi tidak dapat membuat permohonan atau profil, tetapi peran yang diizinkan dapat membuatnya", async () => {
   globalThis.__routeUserId = null;
   globalThis.__routeCaseRows = [];
