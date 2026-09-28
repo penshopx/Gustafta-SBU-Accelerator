@@ -345,6 +345,40 @@ test("daftar dan detail permohonan hanya memperlihatkan data milik pengguna yang
   }
 });
 
+test("GET /api/cases menampilkan pembaruan terbaru lebih dulu, bukan urutan penyimpanan", async () => {
+  const caseData = (id, day) => ({
+    id,
+    ownerId: "test-user",
+    companyName: `Perusahaan ${id}`,
+    requestType: "baru",
+    qualification: "kecil",
+    classification: "gedung",
+    status: "draf",
+    existingSbuExpiresOn: null,
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date(`2026-03-${String(day).padStart(2, "0")}T00:00:00Z`),
+  });
+  globalThis.__routeCaseRows = [
+    caseData(81, 3), caseData(82, 1), caseData(83, 5), caseData(84, 2),
+  ];
+  const server = app.listen(0);
+  try {
+    const { status, body, raw } = await request(server, "/api/cases");
+    assert.equal(status, 200, raw);
+    assert.deepEqual(body.map((item) => item.id), [83, 81, 84, 82],
+      "semua permohonan harus diurutkan menurun menurut updatedAt");
+    assert.deepEqual(body.map((item) => item.updatedAt), [
+      "2026-03-05T00:00:00.000Z",
+      "2026-03-03T00:00:00.000Z",
+      "2026-03-02T00:00:00.000Z",
+      "2026-03-01T00:00:00.000Z",
+    ]);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+  }
+});
+
 test("dashboard hanya menghitung status dan menampilkan permohonan milik pengguna yang masuk", async () => {
   const caseData = (id, ownerId, status, companyName) => ({
     id,
