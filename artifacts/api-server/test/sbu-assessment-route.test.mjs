@@ -602,6 +602,44 @@ test("pengunjung tanpa sesi tidak dapat membuat permohonan atau profil, tetapi p
   }
 });
 
+test("POST /api/cases menolak peran selain kontraktor dan konsultan tanpa menulis permohonan", async () => {
+  globalThis.__routeCaseRows = [];
+  globalThis.__routeProfileRows = [
+    { userId: "owner-profesional", role: "profesional" },
+    { userId: "owner-asosiasi", role: "asosiasi" },
+    { userId: "owner-belum_dipilih", role: "belum_dipilih" },
+  ];
+  globalThis.__routeCaseWrites = 0;
+  const server = app.listen(0);
+  try {
+    for (const role of ["profesional", "asosiasi", "belum_dipilih"]) {
+      globalThis.__routeUserId = `owner-${role}`;
+      const response = await request(server, "/api/cases", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          companyName: `Permohonan ${role}`,
+          requestType: "baru",
+          qualification: "kecil",
+          classification: "gedung",
+          existingSbuExpiresOn: null,
+        }),
+      });
+      assert.equal(response.status, 403, `${role}: ${response.raw}`);
+      assert.deepEqual(response.body,
+        { error: "Ruang kerja SBU saat ini tersedia untuk peran kontraktor dan konsultan." });
+      assert.equal(globalThis.__routeCaseWrites, 0, `${role} tidak boleh mencoba menulis permohonan`);
+      assert.deepEqual(globalThis.__routeCaseRows, [], `${role} tidak boleh membuat permohonan`);
+    }
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeProfileRows;
+    delete globalThis.__routeCaseWrites;
+  }
+});
+
 test("PATCH /api/me menolak pengunjung tanpa sesi tanpa mengubah atau membuat profil, tetapi pengguna masuk dapat memperbarui profil", async () => {
   const original = { userId: "profile-owner", role: "kontraktor", displayName: "Nama Asli", organizationName: "Perusahaan Asli" };
   globalThis.__routeProfileRows = [structuredClone(original)];
