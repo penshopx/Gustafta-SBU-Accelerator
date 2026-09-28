@@ -67,7 +67,7 @@ await build({
                         return {
                           onConflictDoNothing() {
                             if (!profileRows().some((row) => row.userId === input.userId))
-                              profileRows().push({ role: "belum_dipilih", ...input });
+                               profileRows().push({ role: "belum_dipilih", displayName: "", organizationName: "", ...input });
                             return Promise.resolve();
                            },
                            onConflictDoUpdate({ target, set }) {
@@ -560,6 +560,48 @@ test("GET /api/me tanpa sesi menolak akses tanpa membaca atau membuat profil", a
     delete globalThis.__routeProfileRows;
     delete globalThis.__routeProfileReads;
     delete globalThis.__routeProfileWrites;
+  }
+});
+
+test("GET /api/me membuat satu profil awal hanya untuk pemilik sesi baru", async () => {
+  const otherProfile = {
+    userId: "pemilik-profil-lain",
+    role: "konsultan",
+    displayName: "Nama Privat",
+    organizationName: "Organisasi Privat",
+  };
+  const userId = "pengguna-baru";
+  const initialProfile = {
+    userId,
+    role: "belum_dipilih",
+    displayName: "",
+    organizationName: "",
+  };
+  const expectedResponse = {
+    role: initialProfile.role,
+    displayName: initialProfile.displayName,
+    organizationName: initialProfile.organizationName,
+  };
+  globalThis.__routeUserId = userId;
+  globalThis.__routeProfileRows = [structuredClone(otherProfile)];
+
+  const server = app.listen(0);
+  try {
+    const first = await request(server, "/api/me");
+    assert.equal(first.status, 200, first.raw);
+    assert.deepEqual(first.body, expectedResponse, "respons hanya memuat nilai baku sesuai kontrak");
+    assert.deepEqual(globalThis.__routeProfileRows, [otherProfile, initialProfile],
+      "hanya profil ID sesi yang dibuat, tanpa mengubah profil orang lain");
+
+    const second = await request(server, "/api/me");
+    assert.equal(second.status, 200, second.raw);
+    assert.deepEqual(second.body, expectedResponse, "respons tetap sama pada permintaan kedua");
+    assert.deepEqual(globalThis.__routeProfileRows, [otherProfile, initialProfile],
+      "permintaan kedua tidak boleh menggandakan atau mengubah profil");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeProfileRows;
   }
 });
 
