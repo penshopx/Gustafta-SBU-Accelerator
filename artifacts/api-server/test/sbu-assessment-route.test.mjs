@@ -798,6 +798,38 @@ test("POST /api/cases menolak peran selain kontraktor dan konsultan tanpa menuli
   }
 });
 
+test("PATCH /api/me dengan sesi sah menolak profil tidak valid tanpa menulis atau mengubah profil awal", async () => {
+  const original = {
+    userId: "profile-owner", role: "kontraktor",
+    displayName: "Nama Asli", organizationName: "Perusahaan Asli",
+  };
+  globalThis.__routeUserId = original.userId;
+  globalThis.__routeProfileRows = [structuredClone(original)];
+  globalThis.__routeProfileWrites = 0;
+  const server = app.listen(0);
+  try {
+    for (const body of [
+      { role: "peran-tidak-dikenal", displayName: "Nama Baru", organizationName: "Perusahaan Baru" },
+      { role: "konsultan", displayName: "", organizationName: "Perusahaan Baru" },
+    ]) {
+      const response = await request(server, "/api/me", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      assert.equal(response.status, 400, response.raw);
+      assert.equal(response.body.error, "Profil tidak valid.");
+      assert.equal(globalThis.__routeProfileWrites, 0, "isi tidak valid tidak boleh mencoba menulis profil");
+      assert.deepEqual(globalThis.__routeProfileRows, [original], "profil awal harus tetap utuh");
+    }
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeProfileRows;
+    delete globalThis.__routeProfileWrites;
+  }
+});
+
 test("PATCH /api/me menolak pengunjung tanpa sesi tanpa mengubah atau membuat profil, tetapi pengguna masuk dapat memperbarui profil", async () => {
   const original = { userId: "profile-owner", role: "kontraktor", displayName: "Nama Asli", organizationName: "Perusahaan Asli" };
   globalThis.__routeProfileRows = [structuredClone(original)];
