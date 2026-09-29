@@ -1528,6 +1528,57 @@ test("daftar bukti menampilkan catatan paling baru diperbarui lebih dulu", async
   }
 });
 
+test("bukti yang diedit lewat PATCH naik ke urutan teratas pada GET berikutnya", async () => {
+  globalThis.__routeUserId = "case-owner";
+  globalThis.__routeCaseRows = [{ id: 46, ownerId: "case-owner" }];
+  globalThis.__routeEvidenceRows = [
+    { id: 1, caseId: 46, code: "legalitas", title: "Bukti tertua",
+      note: "Sebelum edit", updatedAt: new Date("2020-01-01T00:00:00Z") },
+    { id: 2, caseId: 46, code: "pajak", title: "Bukti terbaru",
+      note: "Tetap", updatedAt: new Date("2020-03-01T00:00:00Z") },
+    { id: 3, caseId: 46, code: "personel", title: "Bukti tengah",
+      note: "Tetap", updatedAt: new Date("2020-02-01T00:00:00Z") },
+  ];
+  globalThis.__routeEvidenceReads = 0;
+  globalThis.__routeEvidenceWrites = 0;
+  const server = app.listen(0);
+  const evidencePath = "/api/cases/46/evidence";
+  try {
+    const before = await request(server, evidencePath);
+    assert.equal(before.status, 200, before.raw);
+    assert.deepEqual(before.body.map((item) => item.id), [2, 3, 1]);
+    const oldUpdatedAt = before.body[2].updatedAt;
+
+    const patched = await request(server, `${evidencePath}/1`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ note: "Sesudah edit" }),
+    });
+    assert.equal(patched.status, 200, patched.raw);
+    assert.equal(patched.body.id, 1);
+    assert.equal(patched.body.note, "Sesudah edit");
+    assert.ok(new Date(patched.body.updatedAt).getTime() > new Date(oldUpdatedAt).getTime(),
+      "PATCH harus memperbarui waktu catatan bukti");
+
+    const after = await request(server, evidencePath);
+    assert.equal(after.status, 200, after.raw);
+    assert.deepEqual(after.body.map((item) => item.id), [1, 2, 3],
+      "catatan yang diedit harus naik dari posisi terakhir ke teratas");
+    assert.equal(after.body[0].note, "Sesudah edit");
+    assert.equal(after.body[0].updatedAt, patched.body.updatedAt);
+    assert.ok(new Date(after.body[0].updatedAt).getTime() >
+      new Date(after.body[1].updatedAt).getTime());
+    assert.equal(globalThis.__routeEvidenceWrites, 1);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeEvidenceRows;
+    delete globalThis.__routeEvidenceReads;
+    delete globalThis.__routeEvidenceWrites;
+  }
+});
+
 test("bukti kasus pengguna lain tidak dapat dibaca atau diubah, sementara pemilik dapat mengelolanya", async () => {
   const privateNote = "Isi bukti privat";
   globalThis.__routeCase = {
