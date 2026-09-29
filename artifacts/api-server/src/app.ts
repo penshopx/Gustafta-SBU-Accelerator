@@ -1,8 +1,8 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
-import { clerkMiddleware } from "@clerk/express";
-import { publishableKeyFromHost } from "@clerk/shared/keys";
+import { clerkMiddleware, getAuth } from "@clerk/express";
+import { parsePublishableKey, publishableKeyFromHost } from "@clerk/shared/keys";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import {
@@ -12,6 +12,10 @@ import {
 } from "./middlewares/clerkProxyMiddleware";
 
 const app: Express = express();
+const clerkPublishableKey = (req: Request) => publishableKeyFromHost(
+  getClerkProxyHost(req) ?? "",
+  process.env.CLERK_PUBLISHABLE_KEY,
+);
 
 app.use(
   pinoHttp({
@@ -38,12 +42,22 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   clerkMiddleware((req) => ({
-    publishableKey: publishableKeyFromHost(
-      getClerkProxyHost(req) ?? "",
-      process.env.CLERK_PUBLISHABLE_KEY,
-    ),
+    publishableKey: clerkPublishableKey(req),
   })),
 );
+// Clerk verifies the signature and lifetime, but a locally supplied JWT key can
+// also verify a token whose issuer belongs to a different Clerk instance.
+app.use((req, res, next) => {
+  const auth = getAuth(req);
+  if (auth.userId) {
+    const frontendApi = parsePublishableKey(clerkPublishableKey(req))?.frontendApi;
+    if (!frontendApi || auth.sessionClaims?.iss !== `https://${frontendApi}`) {
+      res.status(401).json({ error: "Silakan masuk untuk melanjutkan." });
+      return;
+    }
+  }
+  next();
+});
 
 app.use("/api", router);
 

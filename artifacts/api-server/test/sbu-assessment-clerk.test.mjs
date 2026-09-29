@@ -162,6 +162,52 @@ test("sesi bertanda tangan yang kedaluwarsa atau belum aktif ditolak sebelum mem
   }
 });
 
+test("sesi bertanda tangan dengan penerbit berbeda ditolak sebelum membaca data", async () => {
+  globalThis.__clerkTestCases = [
+    { id: 34, ownerId: "owner-a", companyName: "Perusahaan Rahasia" },
+  ];
+  globalThis.__clerkTestEvidence = [
+    { id: 1, caseId: 34, title: "Bukti rahasia" },
+  ];
+  globalThis.__clerkTestCaseReads = 0;
+  globalThis.__clerkTestEvidenceReads = 0;
+
+  const now = Math.floor(Date.now() / 1000);
+  const wrongIssuerToken = sessionToken("owner-a", { iss: "https://other.clerk.accounts.dev" });
+  const [, encodedPayload] = wrongIssuerToken.split(".");
+  const claims = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8"));
+  assert.equal(claims.iss, "https://other.clerk.accounts.dev");
+  assert.ok(claims.nbf <= now && claims.exp > now, "token masih berlaku");
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (input, init) => {
+    const url = new URL(typeof input === "string" ? input : input.url);
+    if (url.hostname !== "127.0.0.1") throw new Error(`Unexpected outbound request: ${url.hostname}`);
+    return originalFetch(input, init);
+  };
+  const server = app.listen(0);
+  try {
+    for (const headers of [
+      { authorization: `Bearer ${wrongIssuerToken}` },
+      { cookie: `__session=${wrongIssuerToken}; __client_uat=${now - 1}; __clerk_db_jwt=local-dev-browser` },
+    ]) {
+      const response = await request(server, 34, headers);
+      assert.equal(response.status, 401, response.raw);
+      assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." });
+      assert.doesNotMatch(response.raw, /Perusahaan Rahasia|Bukti rahasia|owner-a|caseId|evidence|findings/i);
+      assert.equal(globalThis.__clerkTestCaseReads, 0, "permohonan tidak boleh dibaca");
+      assert.equal(globalThis.__clerkTestEvidenceReads, 0, "bukti tidak boleh dibaca");
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__clerkTestCases;
+    delete globalThis.__clerkTestEvidence;
+    delete globalThis.__clerkTestCaseReads;
+    delete globalThis.__clerkTestEvidenceReads;
+  }
+});
+
 test("payload pemilik yang diubah setelah ditandatangani ditolak sebelum membaca data", async () => {
   globalThis.__clerkTestCases = [
     { id: 34, ownerId: "owner-a", companyName: "Perusahaan Rahasia" },
