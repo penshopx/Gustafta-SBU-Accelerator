@@ -19,12 +19,12 @@ process.env.CLERK_TELEMETRY_DISABLED = "1";
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 process.env.CLERK_JWT_KEY = publicKey.export({ type: "spki", format: "pem" });
 
-function sessionToken(userId) {
+function sessionToken(userId, times = {}) {
   const now = Math.floor(Date.now() / 1000);
   const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT", kid: "local-test" })).toString("base64url");
   const payload = Buffer.from(JSON.stringify({
     sub: userId, sid: `session-${userId}`, iss: "https://example.clerk.accounts.dev",
-    iat: now, nbf: now - 1, exp: now + 300,
+    iat: now, nbf: now - 1, exp: now + 300, ...times,
   })).toString("base64url");
   const input = `${header}.${payload}`;
   const signature = createSign("RSA-SHA256").update(input).end().sign(privateKey).toString("base64url");
@@ -113,6 +113,51 @@ test("cookie dan bearer sesi palsu tidak membuka penilaian melalui middleware Cl
     }
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test("sesi bertanda tangan yang kedaluwarsa atau belum aktif ditolak sebelum membaca data", async () => {
+  globalThis.__clerkTestCases = [
+    { id: 34, ownerId: "owner-a", companyName: "Perusahaan Rahasia" },
+  ];
+  globalThis.__clerkTestEvidence = [
+    { id: 1, caseId: 34, title: "Bukti rahasia" },
+  ];
+  globalThis.__clerkTestCaseReads = 0;
+  globalThis.__clerkTestEvidenceReads = 0;
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (input, init) => {
+    const url = new URL(typeof input === "string" ? input : input.url);
+    if (url.hostname !== "127.0.0.1") throw new Error(`Unexpected outbound request: ${url.hostname}`);
+    return originalFetch(input, init);
+  };
+  const server = app.listen(0);
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    for (const [label, token] of [
+      ["kedaluwarsa", sessionToken("owner-a", { iat: now - 1200, nbf: now - 1200, exp: now - 600 })],
+      ["belum aktif", sessionToken("owner-a", { nbf: now + 600, exp: now + 1200 })],
+    ]) {
+      for (const headers of [
+        { authorization: `Bearer ${token}` },
+        { cookie: `__session=${token}; __client_uat=${now - 1}; __clerk_db_jwt=local-dev-browser` },
+      ]) {
+        const response = await request(server, 34, headers);
+        assert.equal(response.status, 401, `${label}: ${response.raw}`);
+        assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." }, label);
+        assert.doesNotMatch(response.raw, /Perusahaan Rahasia|Bukti rahasia|owner-a|caseId|evidence|findings/i, label);
+        assert.equal(globalThis.__clerkTestCaseReads, 0, `${label}: permohonan tidak boleh dibaca`);
+        assert.equal(globalThis.__clerkTestEvidenceReads, 0, `${label}: bukti tidak boleh dibaca`);
+      }
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__clerkTestCases;
+    delete globalThis.__clerkTestEvidence;
+    delete globalThis.__clerkTestCaseReads;
+    delete globalThis.__clerkTestEvidenceReads;
   }
 });
 
