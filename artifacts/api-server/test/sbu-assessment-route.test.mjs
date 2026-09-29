@@ -47,11 +47,16 @@ await build({
                             table === profilesTable ? profileRows() : evidenceRows();
                          const result = rows.filter((row) => row && predicate(row));
                           return Object.assign(Promise.resolve(result), {
-                            orderBy: ({ column, direction }) => {
-                              if (direction !== "desc" || column !== "updatedAt")
+                             orderBy: (...orders) => {
+                               if (orders.length < 1 || orders.length > 2 ||
+                                   orders[0].direction !== "desc" || orders[0].column !== "updatedAt" ||
+                                   (orders[1] && (table !== casesTable ||
+                                    orders[1].direction !== "desc" || orders[1].column !== "id")))
                                 throw new Error("unexpected orderBy");
-                              return Promise.resolve([...result].sort((a, b) =>
-                                new Date(b[column]).getTime() - new Date(a[column]).getTime()));
+                               return Promise.resolve([...result].sort((a, b) => {
+                                 const byTime = new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+                                 return byTime || (orders[1] ? b.id - a.id : 0);
+                               }));
                             },
                           });
                       }
@@ -434,7 +439,7 @@ test("daftar dan detail permohonan hanya memperlihatkan data milik pengguna yang
   try {
     const firstList = await request(server, "/api/cases");
     assert.equal(firstList.status, 200, firstList.raw);
-    assert.deepEqual(firstList.body.map((item) => item.id), [71, 73]);
+    assert.deepEqual(firstList.body.map((item) => item.id), [73, 71]);
     assert.doesNotMatch(firstList.raw, /Perusahaan Rahasia Pemilik Kedua|"id":72|"ownerId":"second-owner"/,
       "daftar tidak boleh memuat data pemilik lain");
 
@@ -495,6 +500,38 @@ test("GET /api/cases menampilkan pembaruan terbaru lebih dulu, bukan urutan peny
       "2026-03-02T00:00:00.000Z",
       "2026-03-01T00:00:00.000Z",
     ]);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+  }
+});
+
+test("GET /api/cases mempertahankan urutan ID untuk waktu pembaruan yang sama", async () => {
+  const caseData = (id, day) => ({
+    id,
+    ownerId: "test-user",
+    companyName: `Perusahaan ${id}`,
+    requestType: "baru",
+    qualification: "kecil",
+    classification: "gedung",
+    status: "draf",
+    existingSbuExpiresOn: null,
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date(`2026-03-0${day}T00:00:00Z`),
+  });
+  globalThis.__routeCaseRows = [
+    caseData(92, 2), caseData(95, 3), caseData(91, 2),
+    caseData(94, 2), caseData(93, 1),
+  ];
+  const server = app.listen(0);
+  try {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { status, body, raw } = await request(server, "/api/cases");
+      assert.equal(status, 200, raw);
+      assert.deepEqual(body.map((item) => item.id), [95, 94, 92, 91, 93],
+        "tanggal terbaru lebih dulu; pada tanggal sama ID terbesar lebih dulu");
+      globalThis.__routeCaseRows.reverse();
+    }
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__routeCaseRows;
