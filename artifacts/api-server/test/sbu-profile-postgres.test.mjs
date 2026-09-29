@@ -22,7 +22,7 @@ async function request(server, userId) {
   return { status: response.status, body: JSON.parse(raw), raw };
 }
 
-test("GET /api/me menolak pengunjung tanpa sesi dan memisahkan dua profil di PostgreSQL", async (t) => {
+test("GET /api/me menolak pengunjung tanpa sesi dan mengisolasi profil di PostgreSQL", async (t) => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk pengujian integrasi PostgreSQL");
   assert.notEqual(process.env.NODE_ENV, "production", "Pengujian tidak boleh dijalankan dalam mode produksi");
 
@@ -51,6 +51,24 @@ test("GET /api/me menolak pengunjung tanpa sesi dan memisahkan dua profil di Pos
     `);
     assert.deepEqual(target, { current_schema: schema, table_schema: schema },
       "Koneksi route harus memilih tabel sementara, bukan tabel aplikasi");
+
+    const { rows: [keys] } = await admin.query(`
+      SELECT
+        EXISTS (SELECT 1 FROM pg_constraint
+                WHERE conrelid = 'public.sbu_profiles'::regclass
+                  AND contype = 'p' AND conkey = ARRAY[
+                    (SELECT attnum FROM pg_attribute
+                     WHERE attrelid = 'public.sbu_profiles'::regclass AND attname = 'user_id')
+                  ]::smallint[]) AS application_key,
+        EXISTS (SELECT 1 FROM pg_constraint
+                WHERE conrelid = '"${schema}".sbu_profiles'::regclass
+                  AND contype = 'p' AND conkey = ARRAY[
+                    (SELECT attnum FROM pg_attribute
+                     WHERE attrelid = '"${schema}".sbu_profiles'::regclass AND attname = 'user_id')
+                  ]::smallint[]) AS cloned_key
+    `);
+    assert.deepEqual(keys, { application_key: true, cloned_key: true },
+      "ON CONFLICT harus diuji dengan kunci utama user_id pada kedua tabel");
 
     const readProfiles = async () => (await isolated.query(
       "SELECT user_id, role, display_name, organization_name FROM sbu_profiles ORDER BY user_id",
@@ -97,6 +115,32 @@ test("GET /api/me menolak pengunjung tanpa sesi dan memisahkan dua profil di Pos
       const response = await request(server);
       assert.equal(response.status, 401, response.raw);
       assert.deepEqual(await readProfiles(), [], "Permintaan tanpa sesi tidak boleh menyisipkan profil");
+    });
+
+    await t.test("dua permintaan pertama bersamaan membuat tepat satu profil awal di tabel salinan", async () => {
+      const userId = `test-new-${randomUUID()}`;
+      const applicationCount = async () => (await admin.query(
+        "SELECT count(*)::int AS count FROM public.sbu_profiles WHERE user_id = $1", [userId],
+      )).rows[0].count;
+      assert.equal(await applicationCount(), 0, "Pengguna uji tidak boleh ada di tabel aplikasi");
+      assert.deepEqual(await readProfiles(), [], "Pengguna baru belum memiliki profil di tabel salinan");
+
+      const responses = await Promise.all([request(server, userId), request(server, userId)]);
+      for (const response of responses) {
+        assert.equal(response.status, 200, response.raw);
+        assert.deepEqual(response.body, {
+          role: "belum_dipilih",
+          displayName: "",
+          organizationName: "",
+        });
+      }
+      assert.deepEqual(await readProfiles(), [{
+        user_id: userId,
+        role: "belum_dipilih",
+        display_name: "",
+        organization_name: "",
+      }], "Dua GET paralel harus menghasilkan satu baris profil saja");
+      assert.equal(await applicationCount(), 0, "Tabel aplikasi tidak boleh menerima profil pengguna uji");
     });
 
     const profiles = [
