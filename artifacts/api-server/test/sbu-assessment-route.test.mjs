@@ -289,6 +289,67 @@ test("respons penilaian perpanjangan tidak menghitung tenggat dari tanggal kedal
   }
 });
 
+test("klaim terbit dan tanggal surat dalam catatan bukti tidak membuka tenggat transisi", async () => {
+  globalThis.__routeCase = {
+    id: 13,
+    ownerId: "test-user",
+    companyName: "Perpanjangan Contoh",
+    requestType: "perpanjangan",
+    qualification: "kecil",
+    classification: "gedung",
+    status: "draf",
+    existingSbuExpiresOn: "2027-04-15",
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  globalThis.__routeEvidence = {
+    id: 2,
+    caseId: 13,
+    code: "legalitas",
+    title: "Legalitas",
+    note: "Catatan dokumen legalitas",
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  globalThis.__routeEvidenceReads = 0;
+  const server = app.listen(0);
+  try {
+    const path = "/api/cases/13/assessment";
+    const baseline = await request(server, path);
+    assert.equal(baseline.status, 200, baseline.raw);
+    assert.equal(baseline.body.caseId, 13);
+
+    const transitionCodes = ["transisi", "transisi_operasional", "transisi_konversi"];
+    const notes = [
+      "Surat Pasal 20 ayat (2) sudah terbit dan berlaku; konversi SBU bisa dimulai.",
+      "Surat Pasal 20 ayat (2) terbit 2026-04-10, tenggat konversi 2026-10-10.",
+      "Surat Pasal 20 ayat (2) tertanggal 10 April 2026, batas konversi 10 Oktober 2026; 180 hari tersisa.",
+    ];
+    for (const note of notes) {
+      globalThis.__routeEvidence.note = note;
+      const { status, body, raw } = await request(server, path);
+      assert.equal(status, 200, raw);
+      assert.deepEqual(body, baseline.body,
+        `catatan bebas tidak boleh mengubah penilaian transisi: ${note}`);
+      for (const code of transitionCodes) {
+        const finding = body.findings.find((item) => item.code === code);
+        assert.ok(finding, `${code} harus ada pada permohonan perpanjangan`);
+        assert.equal(finding.status, "perlu_tinjauan", `${code} belum diverifikasi resmi`);
+      }
+      assert.doesNotMatch(raw, /2026-04-10|2026-10-10|10 April 2026|10 Oktober 2026|180 hari tersisa/i,
+        "tanggal dan hitung mundur dari catatan tidak boleh muncul pada penilaian");
+      assert.doesNotMatch(raw, /"(?:[^"]*(?:deadline|countdown|dueDate|conversionDate|remainingDays|daysLeft|transitionDate|effectiveDate|tenggatKonversi|hitungMundur)[^"]*)"\s*:/i,
+        "penilaian tidak boleh menambah kolom tenggat atau hitung mundur");
+    }
+    assert.equal(globalThis.__routeEvidenceReads, notes.length + 1,
+      "setiap penilaian harus membaca catatan bukti yang sedang diuji");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCase;
+    delete globalThis.__routeEvidence;
+    delete globalThis.__routeEvidenceReads;
+  }
+});
+
 test("tanggal kalender SBU tersimpan utuh setelah buat, ubah, dan muat ulang kasus di kedua sisi UTC", async () => {
   const previousTZ = process.env.TZ;
   const server = app.listen(0);
