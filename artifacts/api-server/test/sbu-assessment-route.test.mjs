@@ -1047,6 +1047,58 @@ test("PATCH /api/me menolak pengunjung tanpa sesi tanpa mengubah atau membuat pr
   }
 });
 
+test("GET /api/me menampilkan seluruh perubahan profil dari PATCH berikutnya tanpa mengubah profil pengguna lain", async () => {
+  const ownId = "pemilik-profil-diperbarui";
+  const otherProfile = {
+    userId: "pemilik-profil-lain",
+    role: "profesional",
+    displayName: "Nama Pengguna Lain",
+    organizationName: "Organisasi Pengguna Lain",
+  };
+  const changes = {
+    role: "konsultan",
+    displayName: "Nama Baru",
+    organizationName: "Organisasi Baru",
+  };
+  globalThis.__routeUserId = ownId;
+  globalThis.__routeProfileRows = [
+    { userId: ownId, role: "kontraktor", displayName: "Nama Lama", organizationName: "Organisasi Lama" },
+    structuredClone(otherProfile),
+  ];
+  const server = app.listen(0);
+  try {
+    const patched = await request(server, "/api/me", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(changes),
+    });
+    assert.equal(patched.status, 200, patched.raw);
+    assert.deepEqual(patched.body, changes);
+
+    const reopened = await request(server, "/api/me");
+    assert.equal(reopened.status, 200, reopened.raw);
+    assert.deepEqual(reopened.body, changes, "GET berikutnya harus membaca semua nilai profil yang tersimpan");
+    assert.deepEqual(globalThis.__routeProfileRows, [
+      { userId: ownId, ...changes },
+      otherProfile,
+    ], "membaca kembali tidak boleh mengubah profil pengguna lain");
+
+    globalThis.__routeUserId = otherProfile.userId;
+    const other = await request(server, "/api/me");
+    assert.equal(other.status, 200, other.raw);
+    assert.deepEqual(other.body, {
+      role: otherProfile.role,
+      displayName: otherProfile.displayName,
+      organizationName: otherProfile.organizationName,
+    }, "pengguna lain tetap membaca profil aslinya");
+    assert.deepEqual(globalThis.__routeProfileRows[1], otherProfile);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeProfileRows;
+  }
+});
+
 test("PATCH /api/me mengabaikan userId pihak lain dalam isi permintaan saat upsert profil", async () => {
   const ownId = "pengguna-masuk";
   const otherId = "pengguna-lain";
