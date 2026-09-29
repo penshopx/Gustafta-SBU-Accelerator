@@ -31,7 +31,9 @@ import type {
   Profile,
   ProfileInput,
   Regulation,
-  SbuCase
+  SbuCase,
+  TransitionVerification,
+  TransitionVerificationInput
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1181,4 +1183,164 @@ export function useListRegulations<TData = Awaited<ReturnType<typeof listRegulat
 
 
 
+
+export const getListTransitionVerificationsUrl = () => {
+
+
+
+
+  return `/api/transition-verifications`
+}
+
+/**
+ * Restricted to configured official-source reviewers.
+ */
+export const listTransitionVerifications = async ( options?: Parameters<typeof customFetch>[1]): Promise<TransitionVerification[]> => {
+
+  return customFetch<TransitionVerification[]>(getListTransitionVerificationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTransitionVerificationsQueryKey = () => {
+    return [
+    `/api/transition-verifications`
+    ] as const;
+    }
+
+
+export const getListTransitionVerificationsQueryOptions = <TData = Awaited<ReturnType<typeof listTransitionVerifications>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTransitionVerifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTransitionVerificationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTransitionVerifications>>> = ({ signal }) => listTransitionVerifications({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTransitionVerifications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTransitionVerificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listTransitionVerifications>>>
+export type ListTransitionVerificationsQueryError = ErrorType<unknown>
+
+
+
+export function useListTransitionVerifications<TData = Awaited<ReturnType<typeof listTransitionVerifications>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTransitionVerifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTransitionVerificationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPutTransitionVerificationUrl = (track: 'transisi' | 'transisi_operasional' | 'transisi_konversi',) => {
+
+
+
+
+  return `/api/transition-verifications/${track}`
+}
+
+/**
+ * Restricted to configured official-source reviewers; replaces the entire record, including any revoked approval.
+ */
+export const putTransitionVerification = async (track: 'transisi' | 'transisi_operasional' | 'transisi_konversi',
+    transitionVerificationInput: TransitionVerificationInput, options?: Parameters<typeof customFetch>[1]): Promise<TransitionVerification> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<TransitionVerification>(getPutTransitionVerificationUrl(track),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(transitionVerificationInput)
+  }
+);}
+
+
+
+
+
+export const getPutTransitionVerificationMutationKey = () => ['putTransitionVerification'] as const;
+
+export const getPutTransitionVerificationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putTransitionVerification>>, TError,PutTransitionVerificationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof putTransitionVerification>>, TError,PutTransitionVerificationMutationVariables, TContext> => {
+
+const mutationKey = getPutTransitionVerificationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof putTransitionVerification>>, PutTransitionVerificationMutationVariables> = (props) => {
+          const {track,data} = props ?? {};
+
+          return  putTransitionVerification(track,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PutTransitionVerificationMutationResult = NonNullable<Awaited<ReturnType<typeof putTransitionVerification>>>
+    export type PutTransitionVerificationMutationBody = BodyType<TransitionVerificationInput>
+    export type PutTransitionVerificationMutationError = ErrorType<unknown>
+    export type PutTransitionVerificationMutationVariables = {track: 'transisi' | 'transisi_operasional' | 'transisi_konversi';data: BodyType<TransitionVerificationInput>}
+
+    export const usePutTransitionVerification = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putTransitionVerification>>, TError,PutTransitionVerificationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof putTransitionVerification>>,
+        TError,
+        PutTransitionVerificationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPutTransitionVerificationMutationOptions(options));
+    }
 

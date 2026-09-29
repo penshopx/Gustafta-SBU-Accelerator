@@ -56,12 +56,13 @@ await build({
         ` : `
           export const casesTable = { id: "id", ownerId: "ownerId" };
           export const evidenceTable = { caseId: "caseId" };
+          export const transitionVerificationsTable = { track: "track" };
           export const profilesTable = { userId: "userId" };
           export const db = {
             select() {
               return {
                 from(table) {
-                  return {
+                  return Object.assign(Promise.resolve(table === transitionVerificationsTable ? [] : []), {
                     where(predicate) {
                       if (table === casesTable) globalThis.__clerkTestCaseReads++;
                       if (table === evidenceTable) globalThis.__clerkTestEvidenceReads++;
@@ -69,7 +70,7 @@ await build({
                         table === evidenceTable ? globalThis.__clerkTestEvidence : [];
                       return Promise.resolve(rows.filter(predicate));
                     }
-                  };
+                  });
                 }
               };
             }

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, timestamp, date, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, date, uniqueIndex, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -30,6 +30,27 @@ export const evidenceTable = pgTable("sbu_evidence", {
   note: text("note").notNull().default(""),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [uniqueIndex("sbu_evidence_case_code_unique").on(table.caseId, table.code)]);
+
+// Catatan penerbit resmi bersifat global, tidak dimiliki atau ditulis oleh pemohon.
+export const transitionVerificationsTable = pgTable("sbu_transition_verifications", {
+  track: text("track").primaryKey(),
+  publisher: text("publisher").notNull(),
+  sourceUrl: text("source_url").notNull(),
+  documentNumber: text("document_number").notNull(),
+  signatory: text("signatory").notNull(),
+  issuedOn: date("issued_on", { mode: "string" }).notNull(),
+  scope: text("scope").notNull(),
+  documentStatus: text("document_status").notNull(),
+  sourceVerified: boolean("source_verified").notNull(),
+  expertName: text("expert_name").notNull(),
+  expertOrganization: text("expert_organization").notNull(),
+  expertReview: text("expert_review").notNull(),
+  expertReviewedOn: date("expert_reviewed_on", { mode: "string" }).notNull(),
+  expertApproved: boolean("expert_approved").notNull(),
+  verifiedBy: text("verified_by").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+export type TransitionVerificationRow = typeof transitionVerificationsTable.$inferSelect;
 
 export const insertProfileSchema = createInsertSchema(profilesTable);
 export type ProfileRow = typeof profilesTable.$inferSelect;

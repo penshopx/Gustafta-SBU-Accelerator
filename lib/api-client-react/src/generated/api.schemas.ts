@@ -214,7 +214,85 @@ export interface Finding {
   status: FindingStatus;
   detail: string;
   source: string;
+  /** Only present after official source and expert review for this track are approved. */
+  transitionDate?: string;
 }
+
+export type TransitionVerificationInputDocumentStatus = typeof TransitionVerificationInputDocumentStatus[keyof typeof TransitionVerificationInputDocumentStatus];
+
+
+export const TransitionVerificationInputDocumentStatus = {
+  berlaku: 'berlaku',
+  dicabut: 'dicabut',
+  belum_terkonfirmasi: 'belum_terkonfirmasi',
+} as const;
+
+export interface TransitionVerificationInput {
+  /**
+     * @minLength 2
+     * @maxLength 160
+     * @pattern .*\S.*
+     */
+  publisher: string;
+  /** @pattern ^https:// */
+  sourceUrl: string;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     * @pattern .*\S.*
+     */
+  documentNumber: string;
+  /**
+     * @minLength 2
+     * @maxLength 160
+     * @pattern .*\S.*
+     */
+  signatory: string;
+  issuedOn: string;
+  /**
+     * @minLength 2
+     * @maxLength 2000
+     * @pattern .*\S.*
+     */
+  scope: string;
+  documentStatus: TransitionVerificationInputDocumentStatus;
+  sourceVerified: boolean;
+  /**
+     * @minLength 2
+     * @maxLength 160
+     * @pattern .*\S.*
+     */
+  expertName: string;
+  /**
+     * @minLength 2
+     * @maxLength 160
+     * @pattern .*\S.*
+     */
+  expertOrganization: string;
+  /**
+     * @minLength 2
+     * @maxLength 2000
+     * @pattern .*\S.*
+     */
+  expertReview: string;
+  expertReviewedOn: string;
+  expertApproved: boolean;
+}
+
+export type TransitionVerificationTrack = typeof TransitionVerificationTrack[keyof typeof TransitionVerificationTrack];
+
+
+export const TransitionVerificationTrack = {
+  transisi: 'transisi',
+  transisi_operasional: 'transisi_operasional',
+  transisi_konversi: 'transisi_konversi',
+} as const;
+
+export type TransitionVerification = TransitionVerificationInput & {
+  track: TransitionVerificationTrack;
+  verifiedBy: string;
+  updatedAt: string;
+};
 
 export type AssessmentStatus = typeof AssessmentStatus[keyof typeof AssessmentStatus];
 

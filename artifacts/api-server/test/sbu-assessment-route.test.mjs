@@ -33,12 +33,13 @@ await build({
                (globalThis.__routeEvidence ? [globalThis.__routeEvidence] : []);
               const caseRows = () => globalThis.__routeCaseRows ??
                 (globalThis.__routeCase ? [globalThis.__routeCase] : []);
-              const profileRows = () => globalThis.__routeProfileRows ?? [];
+               const profileRows = () => globalThis.__routeProfileRows ?? [];
+               const verificationRows = () => globalThis.__routeVerificationRows ?? [];
             export const db = {
               select() {
                 return {
                   from(table) {
-                    return {
+                     return Object.assign(Promise.resolve(table === transitionVerificationsTable ? verificationRows() : []), {
                       where(predicate) {
                          if (table === casesTable) globalThis.__routeCaseReads = (globalThis.__routeCaseReads ?? 0) + 1;
                         if (table === evidenceTable) globalThis.__routeEvidenceReads++;
@@ -60,7 +61,7 @@ await build({
                             },
                           });
                       }
-                    };
+                     });
                   }
                 };
                },
@@ -107,6 +108,24 @@ await build({
                           }
                         };
                       }
+                       if (table === transitionVerificationsTable) {
+                         return {
+                           onConflictDoUpdate({ target, set }) {
+                             if (target !== transitionVerificationsTable.track) throw new Error("unexpected verification conflict target");
+                             return {
+                               returning() {
+                                 let item = verificationRows().find((row) => row.track === input.track);
+                                 if (item) Object.assign(item, set);
+                                 else {
+                                   item = { ...input };
+                                   verificationRows().push(item);
+                                 }
+                                 return Promise.resolve([item]);
+                               }
+                             };
+                           }
+                         };
+                       }
                      return {
                        onConflictDoNothing() {
                          return {
@@ -122,7 +141,7 @@ await build({
                            }
                          };
                        }
-                     };
+                      };
                    }
                  };
                },
@@ -162,6 +181,7 @@ await build({
             };
              export const casesTable = { id: "id", ownerId: "ownerId", updatedAt: "updatedAt" };
               export const evidenceTable = { id: "id", caseId: "caseId", updatedAt: "updatedAt" };
+               export const transitionVerificationsTable = { track: "track" };
              export const profilesTable = { userId: "userId" };
           `,
            "@clerk/express": `export const getAuth = () => ({ userId: globalThis.__routeUserId === undefined ? "test-user" : globalThis.__routeUserId });`,
@@ -349,6 +369,117 @@ test("klaim terbit dan tanggal surat dalam catatan bukti tidak membuka tenggat t
       "setiap penilaian harus membaca catatan bukti yang sedang diuji");
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCase;
+    delete globalThis.__routeEvidence;
+    delete globalThis.__routeEvidenceReads;
+  }
+});
+
+test("hanya verifikasi resmi per alur dengan telaah ahli membuka tanggal; penarikan persetujuan menutupnya lagi", async () => {
+  const oldAllowlist = process.env.SBU_VERIFIER_USER_IDS;
+  globalThis.__routeVerificationRows = [];
+  globalThis.__routeCase = {
+    id: 66, ownerId: "test-user", companyName: "Perpanjangan",
+    requestType: "perpanjangan", qualification: "kecil", classification: "gedung",
+    status: "draf", existingSbuExpiresOn: "2029-01-01",
+    createdAt: new Date("2026-02-01T00:00:00Z"), updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  globalThis.__routeEvidence = {
+    id: 66, caseId: 66, code: "legalitas", title: "Surat klaim",
+    note: "Surat Pasal 20 ayat (2) berlaku 2026-04-30; tenggat 2026-10-30",
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  globalThis.__routeEvidenceReads = 0;
+  const server = app.listen(0);
+  const assessmentPath = "/api/cases/66/assessment";
+  const verificationPath = "/api/transition-verifications/transisi_konversi";
+  const input = {
+    publisher: "Ditjen Bina Konstruksi", sourceUrl: "https://pu.go.id/surat/contoh",
+    documentNumber: "Surat 20/2", signatory: "Direktur Jenderal",
+    issuedOn: "2026-04-30", scope: "Pemberlakuan skema dan konversi SBU eksisting",
+    documentStatus: "berlaku", sourceVerified: false,
+    expertName: "Penelaah Skema", expertOrganization: "LSBU Teridentifikasi",
+    expertReview: "Pasal 21 ayat (7) dan cakupan konversi telah ditelaah.",
+    expertReviewedOn: "2026-05-01", expertApproved: true,
+  };
+  const put = (data, track = "transisi_konversi") => request(server,
+    `/api/transition-verifications/${track}`, {
+      method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(data),
+    });
+  try {
+    let assessment = await request(server, assessmentPath);
+    assert.equal(assessment.status, 200, assessment.raw);
+    assert.ok(assessment.body.findings.filter((f) => f.code.startsWith("transisi"))
+      .every((f) => f.status === "perlu_tinjauan" && !("transitionDate" in f)));
+    assert.doesNotMatch(assessment.raw, /2026-04-30|2026-10-30/);
+    assert.equal((await put({ ...input, sourceVerified: true })).status, 403,
+      "pemohon tidak boleh menaikkan catatannya menjadi verifikasi");
+    assert.equal((await request(server, "/api/transition-verifications")).status, 403);
+    process.env.SBU_VERIFIER_USER_IDS = "trusted-reviewer";
+    globalThis.__routeUserId = "trusted-reviewer";
+    assert.equal((await put({ ...input, sourceVerified: true, issuedOn: "2026-02-30" })).status, 400);
+    assert.equal((await put({ ...input, sourceVerified: true, sourceUrl: "http://example.com" })).status, 400);
+    assert.equal((await put(input, "other")).status, 400);
+    let saved = await put(input);
+    assert.equal(saved.status, 200, saved.raw);
+    globalThis.__routeUserId = "test-user";
+    assessment = await request(server, assessmentPath);
+    assert.equal(assessment.body.findings.find((f) => f.code === "transisi_konversi").status, "perlu_tinjauan");
+    assert.doesNotMatch(assessment.raw, /2026-04-30|2026-10-30/);
+
+    globalThis.__routeUserId = "trusted-reviewer";
+    saved = await put({ ...input, sourceVerified: true, expertApproved: false });
+    assert.equal(saved.status, 200, saved.raw);
+    globalThis.__routeUserId = "test-user";
+    assessment = await request(server, assessmentPath);
+    assert.doesNotMatch(assessment.raw, /2026-10-30/);
+
+    globalThis.__routeUserId = "trusted-reviewer";
+    saved = await put({ ...input, sourceVerified: true });
+    assert.equal(saved.status, 200, saved.raw);
+    assert.equal(saved.body.verifiedBy, "trusted-reviewer");
+    assert.equal((await request(server, "/api/transition-verifications")).body.length, 1);
+    globalThis.__routeUserId = "test-user";
+    assessment = await request(server, assessmentPath);
+    const findings = assessment.body.findings.filter((f) => f.code.startsWith("transisi"));
+    assert.equal(findings.find((f) => f.code === "transisi_konversi").transitionDate.slice(0, 10), "2026-10-30");
+    assert.equal(findings.find((f) => f.code === "transisi_konversi").status, "tercatat");
+    assert.ok(findings.filter((f) => f.code !== "transisi_konversi")
+      .every((f) => f.status === "perlu_tinjauan" && !("transitionDate" in f)));
+
+    globalThis.__routeUserId = "trusted-reviewer";
+    assert.equal((await put({ ...input, issuedOn: "2026-03-31", sourceVerified: true }, "transisi")).status, 200);
+    assert.equal((await put({ ...input, sourceVerified: true }, "transisi_operasional")).status, 200);
+    globalThis.__routeUserId = "test-user";
+    assessment = await request(server, assessmentPath);
+    assert.equal(assessment.body.findings.find((f) => f.code === "transisi").transitionDate.slice(0, 10), "2026-09-30",
+      "enam bulan dari tanggal penetapan memakai batas akhir bulan kalender");
+    assert.equal(assessment.body.findings.find((f) => f.code === "transisi_operasional").transitionDate.slice(0, 10), "2026-04-30");
+    assert.equal(assessment.body.findings.find((f) => f.code === "transisi_konversi").transitionDate.slice(0, 10), "2026-10-30");
+
+    globalThis.__routeUserId = "trusted-reviewer";
+    assert.equal((await put({ ...input, sourceVerified: true, documentStatus: "dicabut" })).status, 400);
+    assert.equal((await put({ ...input, documentStatus: "dicabut" })).status, 200);
+    globalThis.__routeUserId = "test-user";
+    assessment = await request(server, assessmentPath);
+    assert.equal(assessment.body.findings.find((f) => f.code === "transisi").status, "tercatat",
+      "pencabutan satu alur tidak membatalkan verifikasi alur lain");
+    assert.equal(assessment.body.findings.find((f) => f.code === "transisi_konversi").status, "perlu_tinjauan");
+    assert.doesNotMatch(assessment.raw, /2026-10-30/);
+    globalThis.__routeUserId = "trusted-reviewer";
+    assert.equal((await put({ ...input, issuedOn: "2026-03-31", documentStatus: "dicabut" }, "transisi")).status, 200);
+    assert.equal((await put({ ...input, documentStatus: "dicabut" }, "transisi_operasional")).status, 200);
+    globalThis.__routeUserId = "test-user";
+    assessment = await request(server, assessmentPath);
+    assert.ok(assessment.body.findings.filter((f) => f.code.startsWith("transisi"))
+      .every((f) => f.status === "perlu_tinjauan" && !("transitionDate" in f)));
+    assert.doesNotMatch(assessment.raw, /2026-04-30|2026-10-30/);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    if (oldAllowlist === undefined) delete process.env.SBU_VERIFIER_USER_IDS;
+    else process.env.SBU_VERIFIER_USER_IDS = oldAllowlist;
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeVerificationRows;
     delete globalThis.__routeCase;
     delete globalThis.__routeEvidence;
     delete globalThis.__routeEvidenceReads;

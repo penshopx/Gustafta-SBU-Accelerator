@@ -70,6 +70,21 @@ test('detail perpanjangan menampilkan kedaluwarsa hanya sebagai masa berlaku SBU
   assert.doesNotMatch(findings, /(?:tenggat|batas|konversi)\s*(?:hingga|pada|jatuh tempo)\s*\d/i);
 });
 
+test('tanggal transisi hanya tampil bila temuan terverifikasi oleh server', () => {
+  const pending = renderToStaticMarkup(createElement(AssessmentResults, { assessment }));
+  assert.doesNotMatch(pending, /Tanggal transisi terverifikasi/);
+  const approved = renderToStaticMarkup(createElement(AssessmentResults, {
+    assessment: {
+      ...assessment,
+      findings: assessment.findings.map((finding) => finding.code === 'transisi_konversi'
+        ? { ...finding, status: 'tercatat' as const, transitionDate: '2026-10-30T00:00:00.000Z' }
+        : finding),
+    },
+  }));
+  assert.match(approved, /Tanggal transisi terverifikasi: 30 Okt 2026/);
+  assert.doesNotMatch(approved, /Tanggal transisi terverifikasi: 15 Apr 2027/);
+});
+
 test('tanggal berlaku tetap tanggal kalender yang sama saat ditampilkan di berbagai zona waktu', () => {
   if (!process.env.CALENDAR_TZ_CHILD) {
     for (const tz of ['UTC', 'America/Los_Angeles', 'Asia/Tokyo']) {

@@ -1,4 +1,4 @@
-import type { EvidenceRow, SbuCaseRow } from "@workspace/db";
+import type { EvidenceRow, SbuCaseRow, TransitionVerificationRow } from "@workspace/db";
 
 export const RULESET = "Permen PU 6/2025 + Kepdirjen 281/KPTS/DK/2026 (persiapan)";
 
@@ -49,7 +49,47 @@ type Finding = {
   status: "tercatat" | "perlu_bukti" | "perlu_tinjauan";
   detail: string;
   source: string;
+  transitionDate?: string;
 };
+
+export const TRANSITION_TRACKS = ["transisi", "transisi_operasional", "transisi_konversi"] as const;
+
+function sixMonthsAfter(day: string): string {
+  const [year, month, date] = day.split("-").map(Number);
+  const target = new Date(Date.UTC(year, month - 1 + 6, 1));
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(date, lastDay));
+  return target.toISOString().slice(0, 10);
+}
+
+function transitionFinding(
+  track: typeof TRANSITION_FINDINGS[number],
+  verification: TransitionVerificationRow | undefined,
+): Finding {
+  // A stored assertion alone cannot authorize a date: require a reviewer-authorized,
+  // active publisher source AND an affirmative identified expert review for this track.
+  if (verification?.track !== track.code ||
+      verification.documentStatus !== "berlaku" ||
+      verification.sourceVerified !== true ||
+      verification.expertApproved !== true ||
+      !verification.verifiedBy ||
+      !verification.publisher.trim() || !verification.sourceUrl.startsWith("https://") ||
+      !verification.documentNumber.trim() || !verification.signatory.trim() ||
+      !verification.issuedOn || !verification.scope.trim() ||
+      !verification.expertName.trim() || !verification.expertOrganization.trim() ||
+      !verification.expertReview.trim() || !verification.expertReviewedOn) {
+    return { ...track, status: "perlu_tinjauan" };
+  }
+  return {
+    code: track.code,
+    title: track.title,
+    status: "tercatat",
+    detail: `Sumber penerbit ${verification.publisher}, surat ${verification.documentNumber} berstatus berlaku dan telaah ${verification.expertName} (${verification.expertOrganization}) telah diverifikasi untuk alur ini. Tetap periksa penerapan pada permohonan Anda dengan LSBU.`,
+    source: `${verification.publisher}: ${verification.sourceUrl}; ${track.source}`,
+    transitionDate: track.code === "transisi_operasional"
+      ? verification.issuedOn : sixMonthsAfter(verification.issuedOn),
+  };
+}
 
 const initialChecks = [
   ["legalitas", "Legalitas dan identitas badan usaha"],
@@ -59,7 +99,7 @@ const initialChecks = [
   ["peralatan", "Peralatan konstruksi"],
 ] as const;
 
-export function assessCase(sbuCase: SbuCaseRow, evidence: EvidenceRow[]) {
+export function assessCase(sbuCase: SbuCaseRow, evidence: EvidenceRow[], verifications: TransitionVerificationRow[] = []) {
   const recorded = new Set(evidence.map((item) => item.code));
   const findings: Finding[] = initialChecks.map(([code, title]) => ({
     code,
@@ -98,10 +138,8 @@ export function assessCase(sbuCase: SbuCaseRow, evidence: EvidenceRow[]) {
     source: "Permen PU 6/2025 Lampiran I (PDF hlm. 266); Kepdirjen 281/2026 (PDF hlm. 27–32).",
   });
   if (sbuCase.requestType === "perpanjangan") {
-    findings.push(...TRANSITION_FINDINGS.map((track) => ({
-      ...track,
-      status: "perlu_tinjauan" as const,
-    })));
+    findings.push(...TRANSITION_FINDINGS.map((track) =>
+      transitionFinding(track, verifications.find((item) => item.track === track.code))));
   }
   return {
     caseId: sbuCase.id,

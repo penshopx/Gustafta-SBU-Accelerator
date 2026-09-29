@@ -105,7 +105,7 @@ test("POST bukti menyimpan caseId dari URL di PostgreSQL tanpa mengubah bukti pe
           builder.onLoad({ filter: /.*/, namespace: "evidence-test" }, (args) => ({
             contents: args.path === "auth"
               ? `export const getAuth = (req) => ({ userId: req.get("x-test-user-id") });`
-              : `export { profilesTable, casesTable, evidenceTable } from ${
+               : `export { profilesTable, casesTable, evidenceTable, transitionVerificationsTable } from ${
                 JSON.stringify(join(testDir, "../../../lib/db/src/schema/sbu.ts"))
               }; export const db = globalThis.__evidenceTestDb;`,
             loader: "js",

@@ -252,7 +252,8 @@ export const GetAssessmentResponse = zod.object({
   "title": zod.string(),
   "status": zod.enum(['tercatat', 'perlu_bukti', 'perlu_tinjauan']),
   "detail": zod.string(),
-  "source": zod.string()
+  "source": zod.string(),
+  "transitionDate": zod.coerce.date().optional().describe('Only present after official source and expert review for this track are approved.')
 }))
 })
 
@@ -265,5 +266,185 @@ export const ListRegulationsResponseItem = zod.object({
   "effectiveStatus": zod.string()
 })
 export const ListRegulationsResponse = zod.array(ListRegulationsResponseItem)
+
+
+/**
+ * Restricted to configured official-source reviewers.
+ */
+export const listTransitionVerificationsResponseOnePublisherMin = 2;
+export const listTransitionVerificationsResponseOnePublisherMax = 160;
+
+
+export const listTransitionVerificationsResponseOnePublisherRegExp = new RegExp('.*\\S.*');
+export const listTransitionVerificationsResponseOneSourceUrlRegExp = new RegExp('^https:/');
+export const listTransitionVerificationsResponseOneDocumentNumberMax = 160;
+
+
+export const listTransitionVerificationsResponseOneDocumentNumberRegExp = new RegExp('.*\\S.*');
+export const listTransitionVerificationsResponseOneSignatoryMin = 2;
+export const listTransitionVerificationsResponseOneSignatoryMax = 160;
+
+
+export const listTransitionVerificationsResponseOneSignatoryRegExp = new RegExp('.*\\S.*');
+export const listTransitionVerificationsResponseOneScopeMin = 2;
+export const listTransitionVerificationsResponseOneScopeMax = 2000;
+
+
+export const listTransitionVerificationsResponseOneScopeRegExp = new RegExp('.*\\S.*');
+export const listTransitionVerificationsResponseOneExpertNameMin = 2;
+export const listTransitionVerificationsResponseOneExpertNameMax = 160;
+
+
+export const listTransitionVerificationsResponseOneExpertNameRegExp = new RegExp('.*\\S.*');
+export const listTransitionVerificationsResponseOneExpertOrganizationMin = 2;
+export const listTransitionVerificationsResponseOneExpertOrganizationMax = 160;
+
+
+export const listTransitionVerificationsResponseOneExpertOrganizationRegExp = new RegExp('.*\\S.*');
+export const listTransitionVerificationsResponseOneExpertReviewMin = 2;
+export const listTransitionVerificationsResponseOneExpertReviewMax = 2000;
+
+
+export const listTransitionVerificationsResponseOneExpertReviewRegExp = new RegExp('.*\\S.*');
+
+
+export const ListTransitionVerificationsResponseItem = zod.object({
+  "publisher": zod.string().min(listTransitionVerificationsResponseOnePublisherMin).max(listTransitionVerificationsResponseOnePublisherMax).regex(listTransitionVerificationsResponseOnePublisherRegExp),
+  "sourceUrl": zod.string().url().regex(listTransitionVerificationsResponseOneSourceUrlRegExp),
+  "documentNumber": zod.string().min(1).max(listTransitionVerificationsResponseOneDocumentNumberMax).regex(listTransitionVerificationsResponseOneDocumentNumberRegExp),
+  "signatory": zod.string().min(listTransitionVerificationsResponseOneSignatoryMin).max(listTransitionVerificationsResponseOneSignatoryMax).regex(listTransitionVerificationsResponseOneSignatoryRegExp),
+  "issuedOn": zod.coerce.date(),
+  "scope": zod.string().min(listTransitionVerificationsResponseOneScopeMin).max(listTransitionVerificationsResponseOneScopeMax).regex(listTransitionVerificationsResponseOneScopeRegExp),
+  "documentStatus": zod.enum(['berlaku', 'dicabut', 'belum_terkonfirmasi']),
+  "sourceVerified": zod.boolean(),
+  "expertName": zod.string().min(listTransitionVerificationsResponseOneExpertNameMin).max(listTransitionVerificationsResponseOneExpertNameMax).regex(listTransitionVerificationsResponseOneExpertNameRegExp),
+  "expertOrganization": zod.string().min(listTransitionVerificationsResponseOneExpertOrganizationMin).max(listTransitionVerificationsResponseOneExpertOrganizationMax).regex(listTransitionVerificationsResponseOneExpertOrganizationRegExp),
+  "expertReview": zod.string().min(listTransitionVerificationsResponseOneExpertReviewMin).max(listTransitionVerificationsResponseOneExpertReviewMax).regex(listTransitionVerificationsResponseOneExpertReviewRegExp),
+  "expertReviewedOn": zod.coerce.date(),
+  "expertApproved": zod.boolean()
+}).and(zod.object({
+  "track": zod.enum(['transisi', 'transisi_operasional', 'transisi_konversi']),
+  "verifiedBy": zod.string(),
+  "updatedAt": zod.coerce.date()
+}))
+export const ListTransitionVerificationsResponse = zod.array(ListTransitionVerificationsResponseItem)
+
+
+/**
+ * Restricted to configured official-source reviewers; replaces the entire record, including any revoked approval.
+ */
+export const PutTransitionVerificationParams = zod.object({
+  "track": zod.enum(['transisi', 'transisi_operasional', 'transisi_konversi'])
+})
+
+export const putTransitionVerificationBodyPublisherMin = 2;
+export const putTransitionVerificationBodyPublisherMax = 160;
+
+
+export const putTransitionVerificationBodyPublisherRegExp = new RegExp('.*\\S.*');
+export const putTransitionVerificationBodySourceUrlRegExp = new RegExp('^https:/');
+export const putTransitionVerificationBodyDocumentNumberMax = 160;
+
+
+export const putTransitionVerificationBodyDocumentNumberRegExp = new RegExp('.*\\S.*');
+export const putTransitionVerificationBodySignatoryMin = 2;
+export const putTransitionVerificationBodySignatoryMax = 160;
+
+
+export const putTransitionVerificationBodySignatoryRegExp = new RegExp('.*\\S.*');
+export const putTransitionVerificationBodyScopeMin = 2;
+export const putTransitionVerificationBodyScopeMax = 2000;
+
+
+export const putTransitionVerificationBodyScopeRegExp = new RegExp('.*\\S.*');
+export const putTransitionVerificationBodyExpertNameMin = 2;
+export const putTransitionVerificationBodyExpertNameMax = 160;
+
+
+export const putTransitionVerificationBodyExpertNameRegExp = new RegExp('.*\\S.*');
+export const putTransitionVerificationBodyExpertOrganizationMin = 2;
+export const putTransitionVerificationBodyExpertOrganizationMax = 160;
+
+
+export const putTransitionVerificationBodyExpertOrganizationRegExp = new RegExp('.*\\S.*');
+export const putTransitionVerificationBodyExpertReviewMin = 2;
+export const putTransitionVerificationBodyExpertReviewMax = 2000;
+
+
+export const putTransitionVerificationBodyExpertReviewRegExp = new RegExp('.*\\S.*');
+
+
+export const PutTransitionVerificationBody = zod.object({
+  "publisher": zod.string().min(putTransitionVerificationBodyPublisherMin).max(putTransitionVerificationBodyPublisherMax).regex(putTransitionVerificationBodyPublisherRegExp),
+  "sourceUrl": zod.string().url().regex(putTransitionVerificationBodySourceUrlRegExp),
+  "documentNumber": zod.string().min(1).max(putTransitionVerificationBodyDocumentNumberMax).regex(putTransitionVerificationBodyDocumentNumberRegExp),
+  "signatory": zod.string().min(putTransitionVerificationBodySignatoryMin).max(putTransitionVerificationBodySignatoryMax).regex(putTransitionVerificationBodySignatoryRegExp),
+  "issuedOn": zod.coerce.date(),
+  "scope": zod.string().min(putTransitionVerificationBodyScopeMin).max(putTransitionVerificationBodyScopeMax).regex(putTransitionVerificationBodyScopeRegExp),
+  "documentStatus": zod.enum(['berlaku', 'dicabut', 'belum_terkonfirmasi']),
+  "sourceVerified": zod.boolean(),
+  "expertName": zod.string().min(putTransitionVerificationBodyExpertNameMin).max(putTransitionVerificationBodyExpertNameMax).regex(putTransitionVerificationBodyExpertNameRegExp),
+  "expertOrganization": zod.string().min(putTransitionVerificationBodyExpertOrganizationMin).max(putTransitionVerificationBodyExpertOrganizationMax).regex(putTransitionVerificationBodyExpertOrganizationRegExp),
+  "expertReview": zod.string().min(putTransitionVerificationBodyExpertReviewMin).max(putTransitionVerificationBodyExpertReviewMax).regex(putTransitionVerificationBodyExpertReviewRegExp),
+  "expertReviewedOn": zod.coerce.date(),
+  "expertApproved": zod.boolean()
+})
+
+export const putTransitionVerificationResponseOnePublisherMin = 2;
+export const putTransitionVerificationResponseOnePublisherMax = 160;
+
+
+export const putTransitionVerificationResponseOnePublisherRegExp = new RegExp('.*\\S.*');
+export const putTransitionVerificationResponseOneSourceUrlRegExp = new RegExp('^https:/');
+export const putTransitionVerificationResponseOneDocumentNumberMax = 160;
+
+
+export const putTransitionVerificationResponseOneDocumentNumberRegExp = new RegExp('.*\\S.*');
+export const putTransitionVerificationResponseOneSignatoryMin = 2;
+export const putTransitionVerificationResponseOneSignatoryMax = 160;
+
+
+export const putTransitionVerificationResponseOneSignatoryRegExp = new RegExp('.*\\S.*');
+export const putTransitionVerificationResponseOneScopeMin = 2;
+export const putTransitionVerificationResponseOneScopeMax = 2000;
+
+
+export const putTransitionVerificationResponseOneScopeRegExp = new RegExp('.*\\S.*');
+export const putTransitionVerificationResponseOneExpertNameMin = 2;
+export const putTransitionVerificationResponseOneExpertNameMax = 160;
+
+
+export const putTransitionVerificationResponseOneExpertNameRegExp = new RegExp('.*\\S.*');
+export const putTransitionVerificationResponseOneExpertOrganizationMin = 2;
+export const putTransitionVerificationResponseOneExpertOrganizationMax = 160;
+
+
+export const putTransitionVerificationResponseOneExpertOrganizationRegExp = new RegExp('.*\\S.*');
+export const putTransitionVerificationResponseOneExpertReviewMin = 2;
+export const putTransitionVerificationResponseOneExpertReviewMax = 2000;
+
+
+export const putTransitionVerificationResponseOneExpertReviewRegExp = new RegExp('.*\\S.*');
+
+
+export const PutTransitionVerificationResponse = zod.object({
+  "publisher": zod.string().min(putTransitionVerificationResponseOnePublisherMin).max(putTransitionVerificationResponseOnePublisherMax).regex(putTransitionVerificationResponseOnePublisherRegExp),
+  "sourceUrl": zod.string().url().regex(putTransitionVerificationResponseOneSourceUrlRegExp),
+  "documentNumber": zod.string().min(1).max(putTransitionVerificationResponseOneDocumentNumberMax).regex(putTransitionVerificationResponseOneDocumentNumberRegExp),
+  "signatory": zod.string().min(putTransitionVerificationResponseOneSignatoryMin).max(putTransitionVerificationResponseOneSignatoryMax).regex(putTransitionVerificationResponseOneSignatoryRegExp),
+  "issuedOn": zod.coerce.date(),
+  "scope": zod.string().min(putTransitionVerificationResponseOneScopeMin).max(putTransitionVerificationResponseOneScopeMax).regex(putTransitionVerificationResponseOneScopeRegExp),
+  "documentStatus": zod.enum(['berlaku', 'dicabut', 'belum_terkonfirmasi']),
+  "sourceVerified": zod.boolean(),
+  "expertName": zod.string().min(putTransitionVerificationResponseOneExpertNameMin).max(putTransitionVerificationResponseOneExpertNameMax).regex(putTransitionVerificationResponseOneExpertNameRegExp),
+  "expertOrganization": zod.string().min(putTransitionVerificationResponseOneExpertOrganizationMin).max(putTransitionVerificationResponseOneExpertOrganizationMax).regex(putTransitionVerificationResponseOneExpertOrganizationRegExp),
+  "expertReview": zod.string().min(putTransitionVerificationResponseOneExpertReviewMin).max(putTransitionVerificationResponseOneExpertReviewMax).regex(putTransitionVerificationResponseOneExpertReviewRegExp),
+  "expertReviewedOn": zod.coerce.date(),
+  "expertApproved": zod.boolean()
+}).and(zod.object({
+  "track": zod.enum(['transisi', 'transisi_operasional', 'transisi_konversi']),
+  "verifiedBy": zod.string(),
+  "updatedAt": zod.coerce.date()
+}))
 
 

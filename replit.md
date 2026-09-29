@@ -31,8 +31,14 @@ Ruang kerja persiapan permohonan SBU baru dan perpanjangan untuk ekosistem jasa 
 
 - Profil peran tidak membuktikan keanggotaan organisasi; data kasus dibatasi ke identitas akun pemilik, tanpa akses lintas akun. Jangan mengklaim fitur kolaborasi asosiasi hingga otorisasi organisasi dibangun.
 - Bukti yang dicatat saat ini berupa deklarasi teks, bukan unggahan atau dokumen terverifikasi. Pemeriksaan adalah panduan persiapan; keputusan tetap pada penyelenggara sertifikasi.
-- Perhitungan tenggat konversi tidak aktif karena surat pemberlakuan skema/SIJK belum tersedia dalam rujukan yang diunggah.
+- Perhitungan tenggat konversi nonaktif secara bawaan. Tanggal hanya muncul pada temuan perpanjangan untuk alur yang punya sumber penerbit resmi berstatus berlaku, disahkan penelaah yang diizinkan, dan ditelaah ahli skema/LSBU yang teridentifikasi. Catatan bukti pemohon tidak dapat melakukan verifikasi ini.
 - Produk independen, tidak terafiliasi atau mewakili Ditjen Bina Konstruksi, LPJK, Kementerian PU maupun LSBU; jangan membangun alur komunikasi dengan instansi atau mengklaim verifikasi SIJK/status regulasi dari mereka. Rujukan resmi hanya dicatat bila tersedia secara independen dan dapat diperiksa.
+
+## Penelaahan sumber transisi
+
+- Tetapkan `SBU_VERIFIER_USER_IDS` (daftar ID akun Clerk yang dipercaya, dipisahkan koma) pada lingkungan server sebelum penelaah dapat menggunakan API. Bila kosong, seluruh akses catatan verifikasi ditolak. Jangan memberikan akses hanya berdasarkan peran profil yang dapat dipilih sendiri.
+- Penelaah masuk dengan akun yang diizinkan lalu menggunakan `GET /api/transition-verifications` untuk melihat catatan, dan `PUT /api/transition-verifications/{track}` untuk mengganti catatan lengkap satu alur (`transisi`, `transisi_operasional`, atau `transisi_konversi`). Kontrak isian ada di `lib/api-spec/openapi.yaml`: penerbit, URL HTTPS sumber resmi, nomor, penandatangan, tanggal terbit, cakupan, status surat, hasil pemeriksaan sumber, serta identitas, organisasi, tanggal dan isi telaah ahli. Penelaah harus memeriksa dokumen dari penerbit dan kesesuaian cakupannya secara independen; alamat URL atau klaim pengguna sendiri bukan bukti.
+- Set `sourceVerified: true` hanya setelah pemeriksaan penerbit dan `expertApproved: true` hanya setelah telaah ahli yang teridentifikasi mendukung alur itu. Status `dicabut` / `belum_terkonfirmasi` atau salah satu persetujuan `false` segera menyembunyikan tanggal pada penilaian berikutnya. Data verifikasi belum memuat dokumen aktual dan tidak mewakili konfirmasi langsung dari instansi.
 
 ## Product
 

@@ -13,4 +13,6 @@ export interface Finding {
   status: FindingStatus;
   detail: string;
   source: string;
+  /** Only present after official source and expert review for this track are approved. */
+  transitionDate?: Date;
 }

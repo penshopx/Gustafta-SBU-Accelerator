@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type RequestHandler } from "express";
 import { getAuth } from "@clerk/express";
 import { and, desc, eq } from "drizzle-orm";
-import { db, casesTable, evidenceTable, profilesTable } from "@workspace/db";
+import { db, casesTable, evidenceTable, profilesTable, transitionVerificationsTable } from "@workspace/db";
 import {
   GetMeResponse, UpdateMeBody, UpdateMeResponse,
   GetDashboardResponse, ListCasesResponse, CreateCaseBody, CreateCaseResponse,
@@ -10,9 +10,10 @@ import {
   AddEvidenceParams, AddEvidenceBody, AddEvidenceResponse,
   UpdateEvidenceParams, UpdateEvidenceBody, UpdateEvidenceResponse,
   DeleteEvidenceParams, GetAssessmentParams, GetAssessmentResponse,
-  ListRegulationsResponse,
+   ListRegulationsResponse, ListTransitionVerificationsResponse,
+   PutTransitionVerificationParams, PutTransitionVerificationBody, PutTransitionVerificationResponse,
 } from "@workspace/api-zod";
-import { assessCase, REGULATIONS } from "../lib/sbu-rules";
+import { assessCase, REGULATIONS, TRANSITION_TRACKS } from "../lib/sbu-rules";
 
 const router: IRouter = Router();
 const requireAuth: RequestHandler = (req, res, next) => {
@@ -29,6 +30,17 @@ function owner(req: Request): string {
   if (!id) throw new Error("Authentication middleware was not applied");
   return id;
 }
+
+// No applicant profile or self-selected role grants regulatory verification rights.
+// Configure trusted Clerk user IDs on the server; without the allowlist, all writes fail closed.
+const requireVerifier: RequestHandler = (req, res, next) => {
+  const approved = (process.env.SBU_VERIFIER_USER_IDS ?? "").split(",").map((id) => id.trim()).filter(Boolean);
+  if (!approved.includes(owner(req))) {
+    res.status(403).json({ error: "Hanya penelaah sumber resmi yang diizinkan." });
+    return;
+  }
+  next();
+};
 
 async function profileFor(userId: string) {
   await db.insert(profilesTable).values({ userId }).onConflictDoNothing();
@@ -224,7 +236,50 @@ router.get("/cases/:id/assessment", async (req, res): Promise<void> => {
   const item = await ownedCase(params.data.id, owner(req));
   if (!item) { res.status(404).json({ error: "Permohonan tidak ditemukan." }); return; }
   const evidence = await db.select().from(evidenceTable).where(eq(evidenceTable.caseId, item.id));
-  res.json(GetAssessmentResponse.parse(assessCase(item, evidence)));
+  const verifications = item.requestType === "perpanjangan"
+    ? await db.select().from(transitionVerificationsTable) : [];
+  res.json(GetAssessmentResponse.parse(assessCase(item, evidence, verifications)));
+});
+
+router.get("/transition-verifications", requireVerifier, async (_req, res): Promise<void> => {
+  const records = await db.select().from(transitionVerificationsTable);
+  res.json(ListTransitionVerificationsResponse.parse(records));
+});
+
+router.put("/transition-verifications/:track", requireVerifier, async (req, res): Promise<void> => {
+  const params = PutTransitionVerificationParams.safeParse(req.params);
+  const input = PutTransitionVerificationBody.safeParse(req.body);
+  if (!params.success || !TRANSITION_TRACKS.includes(params.data.track as typeof TRANSITION_TRACKS[number]) || !input.success) {
+    res.status(400).json({ error: "Verifikasi alur tidak valid." });
+    return;
+  }
+  const data = input.data;
+  // Check the exact calendar representation; do not accept rollover dates or inferred timestamps.
+  const issuedOn = dateOnly(data.issuedOn);
+  const expertReviewedOn = dateOnly(data.expertReviewedOn);
+  if (!issuedOn || !expertReviewedOn || req.body.issuedOn !== issuedOn ||
+      req.body.expertReviewedOn !== expertReviewedOn ||
+      Object.values({
+        publisher: data.publisher, documentNumber: data.documentNumber, signatory: data.signatory,
+        scope: data.scope, expertName: data.expertName, expertOrganization: data.expertOrganization,
+        expertReview: data.expertReview,
+      }).some((value) => !value.trim()) ||
+      (data.sourceVerified && (!data.sourceUrl.startsWith("https://") || data.documentStatus !== "berlaku"))) {
+    res.status(400).json({ error: "Sumber resmi atau tanggal verifikasi tidak valid." });
+    return;
+  }
+  const values = {
+    ...data,
+    issuedOn,
+    expertReviewedOn,
+    verifiedBy: owner(req),
+    updatedAt: new Date(),
+  };
+  const [row] = await db.insert(transitionVerificationsTable)
+    .values({ track: params.data.track, ...values })
+    .onConflictDoUpdate({ target: transitionVerificationsTable.track, set: values })
+    .returning();
+  res.json(PutTransitionVerificationResponse.parse(row));
 });
 
 router.get("/regulations", async (_req, res): Promise<void> => {
