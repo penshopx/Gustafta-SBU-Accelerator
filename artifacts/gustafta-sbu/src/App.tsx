@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
-import { ClerkProvider, SignIn, SignUp, Show, useClerk } from '@clerk/react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { idID } from '@clerk/localizations';
@@ -15,11 +15,11 @@ import {
 import { ErrorBoundary } from '@/components/error-boundary';
 import { RegulationsPage } from '@/components/regulations-page';
 import { AssessmentResults, CaseSummary } from '@/components/case-detail-display';
+import { AccountQueries } from '@/components/account-queries';
 import { CaseRows, DashboardOverview, Empty, Status, statusLabels } from '@/components/dashboard-overview';
 import { formatTimestampDate } from '@/lib/display-date';
 import { expiryInputValue, expiryPayload } from '@/lib/case-expiry';
 
-const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 25000 } } });
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
@@ -181,11 +181,15 @@ function CaseDetailPage({ profile }: { profile: Profile }) {
 function SettingsPage({ profile }: { profile: Profile }) { return <><PageHead kicker="AKUN / PENGATURAN" title="Profil ruang kerja" description="Perbarui identitas dan peran Anda. Perubahan peran memengaruhi fitur yang tersedia, bukan memberikan akses ke data pengguna lain."/><div className="grid gap-6 lg:grid-cols-[1.3fr_.7fr]"><section className="surface p-6 sm:p-8"><h2 className="display mb-6 text-xl font-extrabold">Informasi profil</h2><ProfileForm key={`${profile.role}-${profile.displayName}-${profile.organizationName}`} profile={profile}/></section><aside className="rounded-2xl bg-[#dceefa] p-6"><ShieldCheck className="text-[#1769d1]" size={27}/><h3 className="display mt-8 text-xl font-extrabold">Peran, bukan izin lintas akun.</h3><p className="mt-3 text-sm leading-7 text-[#486a82]">Kasus SBU hanya tersedia untuk peran kontraktor dan konsultan. Profesional dan asosiasi dapat membaca regulasi, tanpa akses bersama atau fitur yang belum tersedia.</p></aside></div></>; }
 function NotFoundPage() { return <div className="grid min-h-[100dvh] place-items-center bg-[#eaf3fa] px-5"><div className="max-w-md text-center"><div className="mono text-sm text-[#1769d1]">404 / HALAMAN TIDAK DITEMUKAN</div><h1 className="display mt-5 text-4xl font-extrabold">Jalurnya tidak ada di sini.</h1><p className="mt-4 text-sm leading-7 text-[#60798e]">Alamat yang Anda tuju mungkin berubah. Kembali ke awal untuk melanjutkan.</p><Link href="/" data-testid="link-home-404" className="btn btn-primary mt-6">Ke beranda <ArrowRight size={16}/></Link></div></div>; }
 
-function CacheInvalidator() { const { addListener } = useClerk(); const qc = useQueryClient(); const previous = useRef<string | null | undefined>(undefined); useEffect(() => { const unsubscribe = addListener(({ user }) => { const next = user?.id ?? null; if (previous.current !== undefined && previous.current !== next) qc.clear(); previous.current = next; }); return unsubscribe; }, [addListener, qc]); return null; }
+function AccountRoutes() {
+  const { isLoaded, user } = useUser();
+  if (!isLoaded) return <div className="mx-auto max-w-3xl p-10"><Loading /></div>;
+  return <AccountQueries key={user?.id ?? 'signed-out'}><AppRoutes /></AccountQueries>;
+}
 function HomeRoute() { return <><Show when="signed-in"><Redirect to="/dashboard"/></Show><Show when="signed-out"><PublicHome/></Show></>; }
 function Guard({ children }: { children: ReactNode }) { return <><Show when="signed-in">{children}</Show><Show when="signed-out"><Redirect to="/"/></Show></>; }
 function RoutedErrorBoundary({ children }: { children: ReactNode }) { const [location] = useLocation(); return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>; }
 function AppRoutes() { return <RoutedErrorBoundary><Switch><Route path="/" component={HomeRoute}/><Route path="/sign-in/*?">{<AuthPage mode="in"/>}</Route><Route path="/sign-up/*?">{<AuthPage mode="up"/>}</Route><Route path="/onboarding"><Guard><Onboarding/></Guard></Route><Route path="/dashboard"><Guard><Protected>{profile => <DashboardPage profile={profile}/>}</Protected></Guard></Route><Route path="/cases"><Guard><Protected>{profile => <CasesPage profile={profile}/>}</Protected></Guard></Route><Route path="/cases/:id"><Guard><Protected>{profile => <CaseDetailPage profile={profile}/>}</Protected></Guard></Route><Route path="/regulations"><Guard><Protected>{() => <RegulationsPage/>}</Protected></Guard></Route><Route path="/settings"><Guard><Protected>{profile => <SettingsPage profile={profile}/>}</Protected></Guard></Route><Route component={NotFoundPage}/></Switch></RoutedErrorBoundary>; }
-function ClerkProviderWithRoutes() { const [, setLocation] = useLocation(); return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={appearance} signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} localization={{ ...idID, formFieldInputPlaceholder__emailAddress: 'Masukkan alamat email', signIn: { ...idID.signIn, start: { ...idID.signIn?.start, title: 'Masuk ke Gustafta', subtitle: 'Lanjutkan persiapan SBU Anda' } }, signUp: { ...idID.signUp, start: { ...idID.signUp?.start, title: 'Buat akun Gustafta', subtitle: 'Mulai ruang kerja persiapan Anda' } } }} routerPush={(to) => setLocation(stripBase(to))} routerReplace={(to) => setLocation(stripBase(to), { replace: true })}><QueryClientProvider client={queryClient}><CacheInvalidator/><AppRoutes/></QueryClientProvider></ClerkProvider>; }
+function ClerkProviderWithRoutes() { const [, setLocation] = useLocation(); return <ClerkProvider publishableKey={clerkPubKey} proxyUrl={clerkProxyUrl} appearance={appearance} signInUrl={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} localization={{ ...idID, formFieldInputPlaceholder__emailAddress: 'Masukkan alamat email', signIn: { ...idID.signIn, start: { ...idID.signIn?.start, title: 'Masuk ke Gustafta', subtitle: 'Lanjutkan persiapan SBU Anda' } }, signUp: { ...idID.signUp, start: { ...idID.signUp?.start, title: 'Buat akun Gustafta', subtitle: 'Mulai ruang kerja persiapan Anda' } } }} routerPush={(to) => setLocation(stripBase(to))} routerReplace={(to) => setLocation(stripBase(to), { replace: true })}><AccountRoutes /></ClerkProvider>; }
 function App() { return <WouterRouter base={basePath}><ClerkProviderWithRoutes/></WouterRouter>; }
 export default App;
