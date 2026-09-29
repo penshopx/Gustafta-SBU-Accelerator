@@ -1394,6 +1394,68 @@ test("pengguna lain tidak dapat mengubah atau menghapus kasus, tetapi pemilik da
   }
 });
 
+test("PATCH /api/cases/:id mengabaikan ownerId orang lain dan menjaga pemilik dari sesi", async () => {
+  const sessionOwner = "owner-sesi";
+  const forgedOwner = "owner-orang-lain";
+  const original = {
+    id: 59,
+    ownerId: sessionOwner,
+    companyName: "Perusahaan Awal",
+    requestType: "baru",
+    qualification: "kecil",
+    classification: "gedung",
+    status: "draf",
+    existingSbuExpiresOn: null,
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  globalThis.__routeCaseRows = [structuredClone(original)];
+  globalThis.__routeUserId = sessionOwner;
+  globalThis.__routeCaseWrites = 0;
+  const server = app.listen(0);
+  const casePath = "/api/cases/59";
+  try {
+    const before = await request(server, casePath);
+    assert.equal(before.status, 200, before.raw);
+
+    const updated = await request(server, casePath, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ownerId: forgedOwner, companyName: "Perusahaan Baru" }),
+    });
+    assert.equal(updated.status, 200, updated.raw);
+    assert.equal(globalThis.__routeCaseWrites, 1, "perubahan data yang sah harus disimpan");
+    const saved = globalThis.__routeCaseRows[0];
+    assert.equal(saved.ownerId, sessionOwner, "ownerId dari body tidak boleh mengganti pemilik");
+    assert.deepEqual(saved, {
+      ...original,
+      companyName: "Perusahaan Baru",
+      updatedAt: saved.updatedAt,
+    });
+    assert.ok(saved.updatedAt > original.updatedAt);
+    assert.deepEqual(updated.body, {
+      ...before.body,
+      companyName: "Perusahaan Baru",
+      updatedAt: saved.updatedAt.toISOString(),
+    }, "respons PATCH harus mengikuti kontrak tanpa ownerId dan memuat perubahan sah");
+    assert.equal(updated.body.ownerId, undefined);
+    assert.doesNotMatch(updated.raw, /owner-orang-lain/);
+
+    const ownDetail = await request(server, casePath);
+    assert.equal(ownDetail.status, 200, ownDetail.raw);
+    assert.deepEqual(ownDetail.body, updated.body);
+    globalThis.__routeUserId = forgedOwner;
+    const otherDetail = await request(server, casePath);
+    assert.equal(otherDetail.status, 404, otherDetail.raw);
+    assert.deepEqual(otherDetail.body, { error: "Permohonan tidak ditemukan." });
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeCaseWrites;
+  }
+});
+
 test("PATCH satu kolom oleh pemilik mempertahankan semua isian permohonan yang tidak dikirim", async () => {
   const original = {
     id: 58,
