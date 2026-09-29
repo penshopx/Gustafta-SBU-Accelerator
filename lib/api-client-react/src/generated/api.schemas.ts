@@ -41,6 +41,7 @@ export interface ProfileInput {
   /**
      * @minLength 1
      * @maxLength 120
+     * @pattern .*\S.*
      */
   displayName: string;
   /** @maxLength 160 */

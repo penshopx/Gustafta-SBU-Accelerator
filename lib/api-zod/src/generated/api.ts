@@ -22,13 +22,15 @@ export const GetMeResponse = zod.object({
 
 export const updateMeBodyDisplayNameMax = 120;
 
+
+export const updateMeBodyDisplayNameRegExp = new RegExp('.*\\S.*');
 export const updateMeBodyOrganizationNameMax = 160;
 
 
 
 export const UpdateMeBody = zod.object({
   "role": zod.enum(['kontraktor', 'konsultan', 'profesional', 'asosiasi']),
-  "displayName": zod.string().min(1).max(updateMeBodyDisplayNameMax),
+  "displayName": zod.string().min(1).max(updateMeBodyDisplayNameMax).regex(updateMeBodyDisplayNameRegExp),
   "organizationName": zod.string().max(updateMeBodyOrganizationNameMax)
 })
 

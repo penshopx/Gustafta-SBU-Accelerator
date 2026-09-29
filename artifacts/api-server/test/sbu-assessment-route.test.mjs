@@ -1022,6 +1022,8 @@ test("PATCH /api/me dengan sesi sah menolak profil tidak valid tanpa menulis ata
     for (const body of [
       { role: "peran-tidak-dikenal", displayName: "Nama Baru", organizationName: "Perusahaan Baru" },
       { role: "konsultan", displayName: "", organizationName: "Perusahaan Baru" },
+      { role: "konsultan", displayName: "   ", organizationName: "Perusahaan Baru" },
+      { role: "konsultan", displayName: "\t \n\u00a0", organizationName: "Perusahaan Baru" },
     ]) {
       const response = await request(server, "/api/me", {
         method: "PATCH",

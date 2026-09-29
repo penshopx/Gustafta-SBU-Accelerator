@@ -249,7 +249,7 @@ components:
         role:
           type: string
           enum: [kontraktor, konsultan, profesional, asosiasi]
-        displayName: { type: string, minLength: 1, maxLength: 120 }
+        displayName: { type: string, minLength: 1, maxLength: 120, pattern: '.*\S.*' }
         organizationName: { type: string, maxLength: 160 }
     SbuCase:
       type: object
