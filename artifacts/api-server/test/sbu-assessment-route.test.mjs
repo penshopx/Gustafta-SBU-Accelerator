@@ -729,6 +729,58 @@ test("pengunjung tanpa sesi tidak dapat membuat permohonan atau profil, tetapi p
   }
 });
 
+test("POST /api/cases mengabaikan ownerId orang lain dalam body dan menyimpan pemilik dari sesi", async () => {
+  const sessionOwner = "owner-sesi";
+  const forgedOwner = "owner-orang-lain";
+  globalThis.__routeUserId = sessionOwner;
+  globalThis.__routeProfileRows = [
+    { userId: sessionOwner, role: "kontraktor" },
+    { userId: forgedOwner, role: "konsultan" },
+  ];
+  globalThis.__routeCaseRows = [];
+  globalThis.__routeCaseWrites = 0;
+  const server = app.listen(0);
+  try {
+    const created = await request(server, "/api/cases", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ownerId: forgedOwner,
+        companyName: "Permohonan Pemilik Sesi",
+        requestType: "baru",
+        qualification: "kecil",
+        classification: "gedung",
+        existingSbuExpiresOn: null,
+      }),
+    });
+    assert.equal(created.status, 201, created.raw);
+    assert.equal(created.body.companyName, "Permohonan Pemilik Sesi");
+    assert.equal(created.body.status, "draf");
+    assert.equal(created.body.ownerId, undefined, "respons tidak mengungkap ownerId di luar kontrak");
+    assert.doesNotMatch(created.raw, /owner-orang-lain/, "respons tidak boleh memakai identitas palsu");
+    assert.equal(globalThis.__routeCaseWrites, 1, "hanya satu permohonan dibuat");
+    assert.equal(globalThis.__routeCaseRows.length, 1);
+    assert.equal(globalThis.__routeCaseRows[0].id, created.body.id);
+    assert.equal(globalThis.__routeCaseRows[0].ownerId, sessionOwner,
+      "baris tersimpan harus dimiliki pengguna dari sesi, bukan dari body");
+    assert.ok(!globalThis.__routeCaseRows.some((item) => item.ownerId === forgedOwner));
+
+    const ownDetail = await request(server, `/api/cases/${created.body.id}`);
+    assert.equal(ownDetail.status, 200, ownDetail.raw);
+    assert.equal(ownDetail.body.companyName, created.body.companyName);
+    globalThis.__routeUserId = forgedOwner;
+    const otherDetail = await request(server, `/api/cases/${created.body.id}`);
+    assert.equal(otherDetail.status, 404, otherDetail.raw);
+    assert.deepEqual(otherDetail.body, { error: "Permohonan tidak ditemukan." });
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeProfileRows;
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeCaseWrites;
+  }
+});
+
 test("POST /api/cases dengan sesi sah menolak data tidak valid sebelum membuat profil atau permohonan", async () => {
   globalThis.__routeUserId = "owner-baru";
   globalThis.__routeProfileRows = [];
