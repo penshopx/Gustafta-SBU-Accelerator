@@ -16,13 +16,13 @@ const { Pool } = requireDb("pg");
 async function request(server, userId) {
   const { port } = server.address();
   const response = await fetch(`http://127.0.0.1:${port}/api/me`, {
-    headers: { "x-test-user-id": userId },
+    headers: userId === undefined ? {} : { "x-test-user-id": userId },
   });
   const raw = await response.text();
   return { status: response.status, body: JSON.parse(raw), raw };
 }
 
-test("GET /api/me memisahkan dua profil saat query dijalankan di PostgreSQL", async () => {
+test("GET /api/me menolak pengunjung tanpa sesi dan memisahkan dua profil di PostgreSQL", async (t) => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk pengujian integrasi PostgreSQL");
   assert.notEqual(process.env.NODE_ENV, "production", "Pengujian tidak boleh dijalankan dalam mode produksi");
 
@@ -52,22 +52,9 @@ test("GET /api/me memisahkan dua profil saat query dijalankan di PostgreSQL", as
     assert.deepEqual(target, { current_schema: schema, table_schema: schema },
       "Koneksi route harus memilih tabel sementara, bukan tabel aplikasi");
 
-    const profiles = [
-      { userId: `test-a-${randomUUID()}`, role: "kontraktor",
-        displayName: "Nama Pertama Privat", organizationName: "Organisasi Pertama Privat" },
-      { userId: `test-b-${randomUUID()}`, role: "konsultan",
-        displayName: "Nama Kedua Rahasia", organizationName: "Organisasi Kedua Rahasia" },
-    ];
-    for (const profile of profiles) {
-      await isolated.query(
-        "INSERT INTO sbu_profiles (user_id, role, display_name, organization_name) VALUES ($1, $2, $3, $4)",
-        [profile.userId, profile.role, profile.displayName, profile.organizationName],
-      );
-    }
     const readProfiles = async () => (await isolated.query(
       "SELECT user_id, role, display_name, organization_name FROM sbu_profiles ORDER BY user_id",
     )).rows;
-    const before = await readProfiles();
 
     // Only auth is replaced. The route uses the actual Drizzle query builder,
     // PostgreSQL pool and application's real profile table definition.
@@ -104,6 +91,27 @@ test("GET /api/me memisahkan dua profil saat query dijalankan di PostgreSQL", as
     const app = express();
     app.use("/api", router);
     server = app.listen(0);
+
+    await t.test("tanpa identitas, middleware mengembalikan 401 dan tidak membuat profil", async () => {
+      assert.deepEqual(await readProfiles(), [], "Tabel profil salinan harus mulai kosong");
+      const response = await request(server);
+      assert.equal(response.status, 401, response.raw);
+      assert.deepEqual(await readProfiles(), [], "Permintaan tanpa sesi tidak boleh menyisipkan profil");
+    });
+
+    const profiles = [
+      { userId: `test-a-${randomUUID()}`, role: "kontraktor",
+        displayName: "Nama Pertama Privat", organizationName: "Organisasi Pertama Privat" },
+      { userId: `test-b-${randomUUID()}`, role: "konsultan",
+        displayName: "Nama Kedua Rahasia", organizationName: "Organisasi Kedua Rahasia" },
+    ];
+    for (const profile of profiles) {
+      await isolated.query(
+        "INSERT INTO sbu_profiles (user_id, role, display_name, organization_name) VALUES ($1, $2, $3, $4)",
+        [profile.userId, profile.role, profile.displayName, profile.organizationName],
+      );
+    }
+    const before = await readProfiles();
 
     for (const current of [profiles[0], profiles[1], profiles[0]]) {
       const other = profiles.find((profile) => profile !== current);
