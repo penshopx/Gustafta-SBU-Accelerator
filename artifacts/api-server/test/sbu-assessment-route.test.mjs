@@ -127,8 +127,9 @@ await build({
                      return {
                        where(predicate) {
                          return {
-                           returning() {
+                            returning() {
                               if (table === evidenceTable) globalThis.__routeEvidenceWrites++;
+                              if (table === casesTable) globalThis.__routeCaseWrites = (globalThis.__routeCaseWrites ?? 0) + 1;
                               const item = (table === casesTable ? caseRows() : evidenceRows()).find(predicate);
                              if (item) Object.assign(item, changes);
                              return Promise.resolve(item ? [item] : []);
@@ -1126,6 +1127,59 @@ test("pengguna lain tidak dapat mengubah atau menghapus kasus, tetapi pemilik da
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__routeCaseRows;
     delete globalThis.__routeUserId;
+  }
+});
+
+test("PATCH /api/cases/:id menolak perubahan tidak valid atau kosong dari pemilik tanpa mengubah kasus", async () => {
+  const original = {
+    id: 57,
+    ownerId: "case-owner",
+    companyName: "Perusahaan Asli",
+    requestType: "perpanjangan",
+    qualification: "kecil",
+    classification: "gedung",
+    status: "draf",
+    existingSbuExpiresOn: "2027-04-15",
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  globalThis.__routeCaseRows = [structuredClone(original)];
+  globalThis.__routeUserId = "case-owner";
+  globalThis.__routeCaseWrites = 0;
+  const server = app.listen(0);
+  const casePath = "/api/cases/57";
+  try {
+    const before = await request(server, casePath);
+    assert.equal(before.status, 200, before.raw);
+
+    for (const { label, options } of [
+      { label: "jenis permohonan tidak valid", options: {
+        method: "PATCH", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ companyName: "Perusahaan Baru", requestType: "tidak-dikenal" }),
+      } },
+      { label: "nama perusahaan terlalu pendek", options: {
+        method: "PATCH", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ companyName: "X" }),
+      } },
+      { label: "objek kosong", options: {
+        method: "PATCH", headers: { "content-type": "application/json" }, body: "{}",
+      } },
+      { label: "tanpa isi", options: { method: "PATCH" } },
+    ]) {
+      const response = await request(server, casePath, options);
+      assert.equal(response.status, 400, `${label}: ${response.raw}`);
+      assert.deepEqual(response.body, { error: "Perubahan tidak valid." }, label);
+      assert.equal(globalThis.__routeCaseWrites, 0, `${label}: tidak boleh mencoba menulis kasus`);
+      assert.deepEqual(globalThis.__routeCaseRows, [original], `${label}: kasus tersimpan harus tetap utuh`);
+      const after = await request(server, casePath);
+      assert.equal(after.status, 200, `${label}: ${after.raw}`);
+      assert.deepEqual(after.body, before.body, `${label}: detail kasus tidak boleh berubah`);
+    }
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeCaseWrites;
   }
 });
 
