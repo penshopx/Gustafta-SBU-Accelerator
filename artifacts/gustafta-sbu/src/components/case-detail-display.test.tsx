@@ -6,6 +6,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Assessment, SbuCase } from '@workspace/api-client-react';
 import { formatCalendarDate } from '../lib/display-date';
+import { expiryInputValue, expiryPayload } from '../lib/case-expiry';
 import { AssessmentResults, CaseSummary } from './case-detail-display';
 
 const sbuCase: SbuCase = {
@@ -71,7 +72,7 @@ test('detail perpanjangan menampilkan kedaluwarsa hanya sebagai masa berlaku SBU
 
 test('tanggal berlaku tetap tanggal kalender yang sama saat ditampilkan di berbagai zona waktu', () => {
   if (!process.env.CALENDAR_TZ_CHILD) {
-    for (const tz of ['UTC', 'America/Los_Angeles', 'Asia/Jakarta']) {
+    for (const tz of ['UTC', 'America/Los_Angeles', 'Asia/Tokyo']) {
       const result = spawnSync(process.execPath, ['--import', 'tsx', '--test', fileURLToPath(import.meta.url)], {
         env: { ...process.env, TZ: tz, CALENDAR_TZ_CHILD: '1' },
         encoding: 'utf8',
@@ -83,13 +84,18 @@ test('tanggal berlaku tetap tanggal kalender yang sama saat ditampilkan di berba
 
   assert.equal(formatCalendarDate(sbuCase.existingSbuExpiresOn), '15 Apr 2027');
   assert.equal(formatCalendarDate('2027-04-15T00:00:00.000Z'), '15 Apr 2027');
-  assert.equal(formatCalendarDate('2027-01-01'), '1 Jan 2027');
   assert.equal(formatCalendarDate(null), '—');
-  for (const expiry of ['2027-04-15', '2027-04-15T00:00:00.000Z']) {
-    const summary = renderToStaticMarkup(createElement(CaseSummary, {
-      sbuCase: { ...sbuCase, existingSbuExpiresOn: expiry },
-    }));
-    assert.match(summary, /Berlaku hingga[\s\S]*15 Apr 2027/);
-    assert.doesNotMatch(summary, /14 Apr 2027/);
+  for (const [calendarDay, formattedDay] of [['2027-01-01', '1 Jan 2027'], ['2027-04-15', '15 Apr 2027']]) {
+    for (const expiry of [calendarDay, `${calendarDay}T00:00:00.000Z`]) {
+      assert.equal(expiryInputValue(expiry), calendarDay, 'input edit mengikuti tanggal dari API');
+      assert.equal(expiryPayload('perpanjangan', expiryInputValue(expiry)), calendarDay);
+      const summary = renderToStaticMarkup(createElement(CaseSummary, {
+        sbuCase: { ...sbuCase, existingSbuExpiresOn: expiry },
+      }));
+      assert.match(summary, new RegExp(`Berlaku hingga[\\s\\S]*${formattedDay}`));
+      assert.doesNotMatch(summary, /14 Apr 2027|31 Des 2026/);
+    }
   }
+  assert.equal(expiryPayload('baru', '2027-04-15'), null);
+  assert.equal(expiryPayload('perpanjangan', ''), null);
 });

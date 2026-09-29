@@ -289,6 +289,66 @@ test("respons penilaian perpanjangan tidak menghitung tenggat dari tanggal kedal
   }
 });
 
+test("tanggal kalender SBU tersimpan utuh setelah buat, ubah, dan muat ulang kasus di kedua sisi UTC", async () => {
+  const previousTZ = process.env.TZ;
+  const server = app.listen(0);
+  globalThis.__routeUserId = "test-user";
+  globalThis.__routeProfileRows = [{
+    userId: "test-user", role: "kontraktor", displayName: "Penguji", organizationName: "",
+  }];
+  try {
+    for (const tz of ["America/Los_Angeles", "Asia/Tokyo"]) {
+      process.env.TZ = tz;
+      globalThis.__routeCaseRows = [];
+      const input = {
+        companyName: "Perpanjangan Contoh",
+        requestType: "perpanjangan",
+        qualification: "kecil",
+        classification: "gedung",
+        existingSbuExpiresOn: "2027-01-01",
+      };
+      const created = await request(server, "/api/cases", {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input),
+      });
+      assert.equal(created.status, 201, `${tz}: ${created.raw}`);
+      const id = created.body.id;
+      const checkDate = (response, expected) => {
+        assert.equal(response.status, 200, `${tz}: ${response.raw}`);
+        assert.equal(response.body.existingSbuExpiresOn, `${expected}T00:00:00.000Z`,
+          `${tz}: tanggal API harus tetap hari kalender yang dipilih`);
+      };
+      assert.equal(globalThis.__routeCaseRows[0].existingSbuExpiresOn, input.existingSbuExpiresOn,
+        `${tz}: penyimpanan harus menggunakan tanggal saja, bukan timestamp`);
+      // Rehydrate the persistence stub between requests, rather than returning the
+      // same in-memory object from the write as if it were a fresh database read.
+      globalThis.__routeCaseRows = structuredClone(globalThis.__routeCaseRows);
+      checkDate(await request(server, `/api/cases/${id}`), input.existingSbuExpiresOn);
+
+      const changedDate = "2027-04-15";
+      const updated = await request(server, `/api/cases/${id}`, {
+        method: "PATCH", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...input, existingSbuExpiresOn: changedDate }),
+      });
+      checkDate(updated, changedDate);
+      assert.equal(globalThis.__routeCaseRows[0].existingSbuExpiresOn, changedDate,
+        `${tz}: perubahan disimpan sebagai tanggal saja`);
+      globalThis.__routeCaseRows = structuredClone(globalThis.__routeCaseRows);
+      checkDate(await request(server, `/api/cases/${id}`), changedDate);
+      const list = await request(server, "/api/cases");
+      assert.equal(list.status, 200, `${tz}: ${list.raw}`);
+      assert.equal(list.body.find((item) => item.id === id)?.existingSbuExpiresOn,
+        `${changedDate}T00:00:00.000Z`, `${tz}: daftar kasus juga harus memuat tanggal yang sama`);
+    }
+  } finally {
+    if (previousTZ === undefined) delete process.env.TZ;
+    else process.env.TZ = previousTZ;
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeProfileRows;
+    delete globalThis.__routeUserId;
+  }
+});
+
 test("daftar dan detail permohonan hanya memperlihatkan data milik pengguna yang masuk", async () => {
   const caseData = (id, ownerId, companyName) => ({
     id,
