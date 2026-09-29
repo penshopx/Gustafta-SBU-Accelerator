@@ -51,7 +51,7 @@ await build({
                              orderBy: (...orders) => {
                                if (orders.length < 1 || orders.length > 2 ||
                                    orders[0].direction !== "desc" || orders[0].column !== "updatedAt" ||
-                                   (orders[1] && (table !== casesTable ||
+                                    (orders[1] && (table !== casesTable && table !== evidenceTable ||
                                     orders[1].direction !== "desc" || orders[1].column !== "id")))
                                 throw new Error("unexpected orderBy");
                                return Promise.resolve([...result].sort((a, b) => {
@@ -1808,6 +1808,41 @@ test("daftar bukti menampilkan catatan paling baru diperbarui lebih dulu", async
       "2026-02-02T00:00:00.000Z",
       "2026-02-01T00:00:00.000Z",
     ]);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeEvidenceRows;
+    delete globalThis.__routeEvidenceReads;
+  }
+});
+
+test("daftar bukti memakai ID menurun saat waktu pembaruan sama, tanpa bergantung urutan penyimpanan", async () => {
+  globalThis.__routeUserId = "case-owner";
+  globalThis.__routeCaseRows = [{ id: 43, ownerId: "case-owner" }];
+  globalThis.__routeEvidenceRows = [
+    { id: 2, caseId: 43, code: "legalitas", title: "Bukti dua",
+      note: "Waktu terbaru sama", updatedAt: new Date("2026-02-03T00:00:00Z") },
+    { id: 4, caseId: 43, code: "pajak", title: "Bukti empat",
+      note: "Waktu lama sama", updatedAt: new Date("2026-02-01T00:00:00Z") },
+    { id: 1, caseId: 43, code: "personel", title: "Bukti satu",
+      note: "Waktu lama sama", updatedAt: new Date("2026-02-01T00:00:00Z") },
+    { id: 7, caseId: 43, code: "pengalaman", title: "Bukti tujuh",
+      note: "Waktu terbaru sama", updatedAt: new Date("2026-02-03T00:00:00Z") },
+  ];
+  globalThis.__routeEvidenceReads = 0;
+  const server = app.listen(0);
+  try {
+    for (const rows of [
+      globalThis.__routeEvidenceRows,
+      [...globalThis.__routeEvidenceRows].reverse(),
+    ]) {
+      globalThis.__routeEvidenceRows = rows;
+      const { status, body, raw } = await request(server, "/api/cases/43/evidence");
+      assert.equal(status, 200, raw);
+      assert.deepEqual(body.map((item) => item.id), [7, 2, 4, 1],
+        "updatedAt tetap utama; ID menurun memutus seri tanpa bergantung urutan baris asal");
+    }
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__routeUserId;

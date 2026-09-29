@@ -167,7 +167,7 @@ router.get("/cases/:id/evidence", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Permohonan tidak ditemukan." }); return;
   }
   const items = await db.select().from(evidenceTable).where(eq(evidenceTable.caseId, params.data.id))
-    .orderBy(desc(evidenceTable.updatedAt));
+    .orderBy(desc(evidenceTable.updatedAt), desc(evidenceTable.id));
   res.json(ListEvidenceResponse.parse(items));
 });
 
