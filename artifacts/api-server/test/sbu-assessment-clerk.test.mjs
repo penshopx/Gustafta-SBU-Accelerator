@@ -162,6 +162,54 @@ test("sesi bertanda tangan yang kedaluwarsa atau belum aktif ditolak sebelum mem
   }
 });
 
+test("payload pemilik yang diubah setelah ditandatangani ditolak sebelum membaca data", async () => {
+  globalThis.__clerkTestCases = [
+    { id: 34, ownerId: "owner-a", companyName: "Perusahaan Rahasia" },
+  ];
+  globalThis.__clerkTestEvidence = [
+    { id: 1, caseId: 34, title: "Bukti rahasia" },
+  ];
+  globalThis.__clerkTestCaseReads = 0;
+  globalThis.__clerkTestEvidenceReads = 0;
+
+  // The signature is valid for owner-b, but the unchanged signature must not
+  // authenticate a payload rewritten to match the owner of case 34.
+  const [header, encodedPayload, signature] = sessionToken("owner-b").split(".");
+  const payload = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8"));
+  assert.equal(payload.sub, "owner-b");
+  const alteredPayload = Buffer.from(JSON.stringify({ ...payload, sub: "owner-a" })).toString("base64url");
+  assert.notEqual(alteredPayload, encodedPayload);
+  const tamperedToken = `${header}.${alteredPayload}.${signature}`;
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (input, init) => {
+    const url = new URL(typeof input === "string" ? input : input.url);
+    if (url.hostname !== "127.0.0.1") throw new Error(`Unexpected outbound request: ${url.hostname}`);
+    return originalFetch(input, init);
+  };
+  const server = app.listen(0);
+  try {
+    for (const headers of [
+      { authorization: `Bearer ${tamperedToken}` },
+      { cookie: `__session=${tamperedToken}; __client_uat=${Math.floor(Date.now() / 1000) - 1}; __clerk_db_jwt=local-dev-browser` },
+    ]) {
+      const response = await request(server, 34, headers);
+      assert.equal(response.status, 401, response.raw);
+      assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." });
+      assert.doesNotMatch(response.raw, /Perusahaan Rahasia|Bukti rahasia|owner-a|caseId|evidence|findings/i);
+      assert.equal(globalThis.__clerkTestCaseReads, 0, "permohonan tidak boleh dibaca");
+      assert.equal(globalThis.__clerkTestEvidenceReads, 0, "bukti tidak boleh dibaca");
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__clerkTestCases;
+    delete globalThis.__clerkTestEvidence;
+    delete globalThis.__clerkTestCaseReads;
+    delete globalThis.__clerkTestEvidenceReads;
+  }
+});
+
 test("sesi yang diverifikasi Clerk hanya membaca penilaian dan bukti milik pemegang sesi", async () => {
   globalThis.__clerkTestCases = [
     { id: 34, ownerId: "owner-a", companyName: "Perusahaan Sendiri", requestType: "baru",
