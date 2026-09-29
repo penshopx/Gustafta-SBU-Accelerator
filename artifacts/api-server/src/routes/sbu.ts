@@ -170,7 +170,12 @@ router.post("/cases/:id/evidence", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Keterangan bukti tidak valid." }); return;
   }
   const [item] = await db.insert(evidenceTable)
-    .values({ caseId: params.data.id, ...input.data })
+    .values({
+      caseId: params.data.id,
+      code: input.data.code,
+      title: input.data.title,
+      note: input.data.note,
+    })
     .onConflictDoNothing().returning();
   if (!item) { res.status(409).json({ error: "Kategori bukti sudah dicatat. Edit catatan sebelumnya." }); return; }
   res.status(201).json(AddEvidenceResponse.parse(item));

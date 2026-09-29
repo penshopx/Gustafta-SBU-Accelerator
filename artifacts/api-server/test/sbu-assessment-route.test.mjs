@@ -1492,6 +1492,56 @@ test("kategori bukti yang sama dapat dicatat di dua permohonan, tetapi duplikat 
   }
 });
 
+test("caseId pada isi POST bukti tidak dapat mengalihkan catatan dari permohonan pada URL", async () => {
+  globalThis.__routeUserId = "case-owner";
+  globalThis.__routeCaseRows = [
+    { id: 70, ownerId: "case-owner" },
+    { id: 71, ownerId: "case-owner" },
+    { id: 72, ownerId: "other-owner" },
+  ];
+  const existing = {
+    id: 10, caseId: 72, code: "legalitas", title: "Bukti pemilik lain",
+    note: "Tetap privat", updatedAt: new Date("2026-02-01T00:00:00Z"),
+  };
+  globalThis.__routeEvidenceRows = [structuredClone(existing)];
+  globalThis.__routeEvidenceReads = 0;
+  globalThis.__routeEvidenceWrites = 0;
+  const server = app.listen(0);
+  try {
+    for (const [target, code] of [[71, "pajak"], [72, "personel"]]) {
+      const response = await request(server, "/api/cases/70/evidence", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ caseId: target, code, title: `Bukti ${code}`, note: "Catatan baru" }),
+      });
+      assert.equal(response.status, 201, response.raw);
+      assert.equal(response.body.caseId, 70, "respons harus mengikuti ID URL");
+      assert.equal(response.body.code, code);
+      const saved = globalThis.__routeEvidenceRows.find((row) => row.id === response.body.id);
+      assert.equal(saved?.caseId, 70, "baris tersimpan harus mengikuti ID URL");
+      assert.equal(saved?.note, "Catatan baru");
+    }
+    assert.equal(globalThis.__routeEvidenceWrites, 2);
+    assert.deepEqual(globalThis.__routeEvidenceRows.filter((row) => row.caseId === 72), [existing],
+      "catatan milik pengguna lain tidak boleh berubah");
+    assert.deepEqual(globalThis.__routeEvidenceRows.filter((row) => row.caseId === 71), [],
+      "permohonan lain milik pengguna yang sama tidak boleh menerima catatan");
+    const source = await request(server, "/api/cases/70/evidence");
+    const other = await request(server, "/api/cases/71/evidence");
+    assert.equal(source.status, 200, source.raw);
+    assert.deepEqual(source.body.map((row) => row.caseId), [70, 70]);
+    assert.equal(other.status, 200, other.raw);
+    assert.deepEqual(other.body, []);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeEvidenceRows;
+    delete globalThis.__routeEvidenceReads;
+    delete globalThis.__routeEvidenceWrites;
+  }
+});
+
 test("ID bukti dari permohonan lain milik pengguna yang sama tidak dapat diubah atau dihapus", async () => {
   globalThis.__routeUserId = "same-owner";
   globalThis.__routeCaseRows = [
