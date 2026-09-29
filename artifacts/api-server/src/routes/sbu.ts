@@ -194,7 +194,12 @@ router.patch("/cases/:id/evidence/:evidenceId", async (req, res): Promise<void> 
   if (!input.success || Object.keys(input.data).length === 0) {
     res.status(400).json({ error: "Perubahan bukti tidak valid." }); return;
   }
-  const [item] = await db.update(evidenceTable).set({ ...input.data, updatedAt: new Date() })
+  const { title, note } = input.data;
+  const [item] = await db.update(evidenceTable).set({
+    ...(title !== undefined ? { title } : {}),
+    ...(note !== undefined ? { note } : {}),
+    updatedAt: new Date(),
+  })
     .where(and(eq(evidenceTable.id, params.data.evidenceId), eq(evidenceTable.caseId, params.data.id)))
     .returning();
   if (!item) { res.status(404).json({ error: "Catatan bukti tidak ditemukan." }); return; }

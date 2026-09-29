@@ -1918,6 +1918,67 @@ test("caseId pada isi POST bukti tidak dapat mengalihkan catatan dari permohonan
   }
 });
 
+test("caseId pada isi PATCH bukti tidak dapat memindahkan catatan dari permohonan pada URL", async () => {
+  globalThis.__routeUserId = "case-owner";
+  globalThis.__routeCaseRows = [
+    { id: 70, ownerId: "case-owner" },
+    { id: 71, ownerId: "case-owner" },
+    { id: 72, ownerId: "other-owner" },
+  ];
+  const original = {
+    id: 10, caseId: 70, code: "legalitas", title: "Bukti asal",
+    note: "Catatan awal", updatedAt: new Date("2026-02-01T00:00:00Z"),
+  };
+  const sameOwnerTarget = {
+    id: 11, caseId: 71, code: "pajak", title: "Bukti tujuan",
+    note: "Tidak berubah", updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  const otherOwnerTarget = {
+    id: 12, caseId: 72, code: "personel", title: "Bukti privat",
+    note: "Tetap privat", updatedAt: new Date("2026-02-03T00:00:00Z"),
+  };
+  globalThis.__routeEvidenceRows = [
+    structuredClone(original), structuredClone(sameOwnerTarget), structuredClone(otherOwnerTarget),
+  ];
+  globalThis.__routeEvidenceReads = 0;
+  globalThis.__routeEvidenceWrites = 0;
+  const server = app.listen(0);
+  try {
+    for (const target of [71, 72]) {
+      const response = await request(server, "/api/cases/70/evidence/10", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ caseId: target, title: `Bukti terbaru ${target}`, note: `Edit ${target}` }),
+      });
+      assert.equal(response.status, 200, response.raw);
+      assert.equal(response.body.id, 10);
+      assert.equal(response.body.caseId, 70, "respons harus mengikuti ID URL");
+      assert.equal(response.body.title, `Bukti terbaru ${target}`);
+      assert.equal(response.body.note, `Edit ${target}`);
+      assert.equal(globalThis.__routeEvidenceRows[0].caseId, 70,
+        "baris tersimpan harus tetap di permohonan asal");
+      assert.deepEqual(globalThis.__routeEvidenceRows[1], sameOwnerTarget,
+        "permohonan tujuan milik pengguna yang sama tidak berubah");
+      assert.deepEqual(globalThis.__routeEvidenceRows[2], otherOwnerTarget,
+        "permohonan tujuan milik pengguna lain tidak berubah");
+    }
+    assert.equal(globalThis.__routeEvidenceWrites, 2);
+    const source = await request(server, "/api/cases/70/evidence");
+    const other = await request(server, "/api/cases/71/evidence");
+    assert.equal(source.status, 200, source.raw);
+    assert.deepEqual(source.body.map((row) => row.id), [10]);
+    assert.equal(other.status, 200, other.raw);
+    assert.deepEqual(other.body.map((row) => row.id), [11]);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeEvidenceRows;
+    delete globalThis.__routeEvidenceReads;
+    delete globalThis.__routeEvidenceWrites;
+  }
+});
+
 test("ID bukti dari permohonan lain milik pengguna yang sama tidak dapat diubah atau dihapus", async () => {
   globalThis.__routeUserId = "same-owner";
   globalThis.__routeCaseRows = [
