@@ -701,7 +701,7 @@ test("dashboard hanya menghitung status dan menampilkan permohonan milik penggun
       { total: first.body.total, draft: first.body.draft, reviewing: first.body.reviewing, prepared: first.body.prepared },
       { total: 6, draft: 3, reviewing: 2, prepared: 1 },
     );
-    assert.deepEqual(first.body.recent.map((item) => item.id), [91, 93, 95, 96, 97],
+    assert.deepEqual(first.body.recent.map((item) => item.id), [98, 97, 96, 95, 93],
       "recent hanya memuat lima permohonan pemilik yang masuk");
     assert.doesNotMatch(first.raw, /Rahasia Kedua|second-owner|"id":92|"id":94/,
       "dashboard tidak boleh memuat data pemilik lain");
@@ -713,7 +713,7 @@ test("dashboard hanya menghitung status dan menampilkan permohonan milik penggun
       { total: second.body.total, draft: second.body.draft, reviewing: second.body.reviewing, prepared: second.body.prepared },
       { total: 2, draft: 1, reviewing: 0, prepared: 1 },
     );
-    assert.deepEqual(second.body.recent.map((item) => item.id), [92, 94]);
+    assert.deepEqual(second.body.recent.map((item) => item.id), [94, 92]);
     assert.doesNotMatch(second.raw, /Pertama 9|first-owner|"id":91|"id":93|"id":95|"id":96|"id":97|"id":98/,
       "dashboard pemilik kedua tidak boleh memuat data pemilik pertama");
   } finally {
@@ -780,6 +780,49 @@ test("dashboard menampilkan lima permohonan terbaru menurut updatedAt, bukan uru
     assert.equal(body.total, 7);
     assert.deepEqual(body.recent.map((item) => item.id), [202, 206, 204, 207, 205],
       "recent harus memuat lima updatedAt terbesar dalam urutan menurun");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+  }
+});
+
+test("dashboard mempertahankan lima permohonan terbaru saat waktu pembaruan sama", async () => {
+  const caseData = (id, day, status) => ({
+    id,
+    ownerId: "test-user",
+    companyName: `Perusahaan ${id}`,
+    requestType: "baru",
+    qualification: "kecil",
+    classification: "gedung",
+    status,
+    existingSbuExpiresOn: null,
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date(`2026-03-0${day}T00:00:00Z`),
+  });
+  globalThis.__routeCaseRows = [
+    caseData(302, 2, "ditinjau"),
+    caseData(299, 1, "ditinjau"),
+    caseData(306, 2, "draf"),
+    caseData(300, 3, "selesai_persiapan"),
+    caseData(301, 2, "draf"),
+    caseData(304, 2, "draf"),
+    caseData(303, 2, "selesai_persiapan"),
+    caseData(305, 2, "ditinjau"),
+  ];
+  const server = app.listen(0);
+  try {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const { status, body, raw } = await request(server, "/api/dashboard");
+      assert.equal(status, 200, raw);
+      assert.deepEqual(body.recent.map((item) => item.id), [300, 306, 305, 304, 303],
+        "waktu terbaru lebih dulu; pada waktu sama ID terbesar menentukan lima teratas");
+      assert.deepEqual(
+        { total: body.total, draft: body.draft, reviewing: body.reviewing, prepared: body.prepared },
+        { total: 8, draft: 3, reviewing: 3, prepared: 2 },
+        "hitungan status tetap berasal dari seluruh permohonan, bukan lima teratas",
+      );
+      globalThis.__routeCaseRows.reverse();
+    }
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__routeCaseRows;

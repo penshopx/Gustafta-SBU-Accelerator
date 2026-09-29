@@ -79,7 +79,8 @@ router.patch("/me", async (req, res): Promise<void> => {
 
 router.get("/dashboard", async (req, res): Promise<void> => {
   const items = await db.select().from(casesTable)
-    .where(eq(casesTable.ownerId, owner(req))).orderBy(desc(casesTable.updatedAt));
+    .where(eq(casesTable.ownerId, owner(req)))
+    .orderBy(desc(casesTable.updatedAt), desc(casesTable.id));
   res.json(GetDashboardResponse.parse({
     total: items.length,
     draft: items.filter((x) => x.status === "draf").length,
