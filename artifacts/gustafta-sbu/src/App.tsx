@@ -4,7 +4,7 @@ import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from '@clerk/r
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { idID } from '@clerk/localizations';
-import { ArrowRight, ArrowUpRight, BookOpen, BriefcaseBusiness, Check, ChevronLeft, ChevronRight, CircleAlert, LayoutDashboard, LogOut, Menu, Pencil, Plus, Search, Settings2, ShieldCheck, Trash2, X } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, BookOpen, BriefcaseBusiness, Check, ChevronLeft, ChevronRight, LayoutDashboard, LogOut, Menu, Pencil, Plus, Search, Settings2, ShieldCheck, Trash2, X } from 'lucide-react';
 import { Link, Redirect, Route, Router as WouterRouter, Switch, useLocation, useParams } from 'wouter';
 import {
   useGetMe, useUpdateMe, useGetDashboard, useListCases, useCreateCase, useGetCase, useUpdateCase, useDeleteCase,
@@ -16,7 +16,8 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { RegulationsPage } from '@/components/regulations-page';
 import { AssessmentResults, CaseSummary } from '@/components/case-detail-display';
 import { AccountQueries } from '@/components/account-queries';
-import { CaseRows, DashboardOverview, Empty, Status, statusLabels } from '@/components/dashboard-overview';
+import { CaseRows, DashboardResult, Empty, Status, statusLabels } from '@/components/dashboard-overview';
+import { ErrorState, Loading } from '@/components/request-states';
 import { formatTimestampDate } from '@/lib/display-date';
 import { expiryInputValue, expiryPayload } from '@/lib/case-expiry';
 
@@ -68,8 +69,6 @@ function Brand({ inverse = false }: { inverse?: boolean }) {
     gustafta<span className={`ml-1 hidden border-l pl-2 text-[9px] leading-[1.35] tracking-[.12em] uppercase font-mono font-normal sm:inline-block ${inverse ? 'border-[#52687c] text-[#a8c4df]' : 'border-[#b5c7d8] text-[#56718a]'}`}>SBU<br/>Accelerator</span>
   </Link>;
 }
-function Loading({ rows = 3 }: { rows?: number }) { return <div className="space-y-3" aria-label="Memuat data">{Array.from({ length: rows }).map((_, i) => <div key={i} className="surface flex items-center gap-4 p-5"><div className="loading-block h-10 w-10" /><div className="flex-1 space-y-2"><div className="loading-block h-3 w-1/3" /><div className="loading-block h-2.5 w-2/3" /></div></div>)}</div>; }
-function ErrorState({ retry, message }: { retry: () => void; message?: string }) { return <div className="surface p-9 text-center"><CircleAlert className="mx-auto mb-4 text-[#bb5451]" size={26} /><h3 className="font-bold text-lg">Data belum dapat ditampilkan</h3><p className="mt-2 text-sm text-[#58708a]">{message || 'Koneksi sedang terganggu. Coba muat ulang data.'}</p><button data-testid="button-retry" onClick={retry} className="btn btn-outline mt-5">Coba lagi</button></div>; }
 function PageHead({ kicker, title, description, action }: { kicker: string; title: string; description?: string; action?: ReactNode }) { return <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><div className="eyebrow mb-2 text-[#1769d1]">{kicker}</div><h1 className="display text-[32px] font-extrabold leading-tight sm:text-[39px]">{title}</h1>{description && <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#526b81]">{description}</p>}</div>{action}</div>; }
 function Modal({ title, children, close }: { title: string; children: ReactNode; close: () => void }) {
   useEffect(() => { const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); }; window.addEventListener('keydown', esc); return () => window.removeEventListener('keydown', esc); }, [close]);
@@ -125,7 +124,7 @@ function Onboarding() { const me = useGetMe(); if (me.isLoading) return <div cla
 function DashboardPage({ profile }: { profile: Profile }) {
   const data = useGetDashboard({ query: { enabled: canCreate(profile), queryKey: getGetDashboardQueryKey() } });
   if (!canCreate(profile)) return <><PageHead kicker="RUANG KERJA / PENGANTAR" title={`Halo, ${profile.displayName.split(' ')[0]}.`} description={`Anda terdaftar sebagai ${roleLabels[profile.role]}. Berikut fungsi yang tersedia untuk peran Anda saat ini.`}/><div className="grid gap-6 lg:grid-cols-[1.2fr_.8fr]"><div className="rounded-2xl bg-[#142c46] p-8 text-white"><BookOpen className="text-[#85c8fa]" size={28}/><h2 className="display mt-10 text-3xl font-extrabold">Mulai dari sumber yang jelas.</h2><p className="mt-3 max-w-lg leading-7 text-[#b9d1e3]">Jelajahi ringkasan regulasi dan catatan transisi sebagai titik awal. Selalu periksa sumber primer sebelum mengambil keputusan.</p><Link data-testid="link-regulations-intro" href="/regulations" className="btn mt-7 bg-[#8bccff] text-[#102438]">Buka pusat regulasi <ArrowRight size={16}/></Link></div><div className="surface p-8"><div className="eyebrow text-[#1769d1]">BATAS AKSES</div><h3 className="display mt-4 text-xl font-extrabold">Belum ada ruang kasus untuk peran ini.</h3><p className="mt-3 text-sm leading-7 text-[#58718a]">{profile.role === 'profesional' ? 'Peran profesional saat ini dapat membaca rujukan regulasi. Pencatatan kredensial atau akses ke berkas perusahaan belum tersedia.' : 'Peran asosiasi saat ini dapat membaca rujukan regulasi. Dashboard anggota dan akses kasus bersama belum tersedia.'}</p><Link data-testid="link-role-settings" href="/settings" className="mt-6 inline-flex items-center gap-1 text-sm font-bold text-[#1769d1]">Tinjau profil <ArrowRight size={15}/></Link></div></div></>;
-  return <><PageHead kicker="RUANG KERJA / RINGKASAN" title={`Selamat datang, ${profile.displayName.split(' ')[0]}.`} description="Gambaran terkini persiapan kasus SBU Anda. Semua status di sini merujuk pada pekerjaan persiapan, bukan keputusan sertifikasi." action={<Link href="/cases" data-testid="link-all-cases" className="btn btn-primary">Lihat semua kasus <ArrowRight size={15}/></Link>}/>{data.isLoading ? <Loading rows={4}/> : data.isError ? <ErrorState retry={() => data.refetch()}/> : data.data && <DashboardOverview dashboard={data.data}/>}</>;
+  return <><PageHead kicker="RUANG KERJA / RINGKASAN" title={`Selamat datang, ${profile.displayName.split(' ')[0]}.`} description="Gambaran terkini persiapan kasus SBU Anda. Semua status di sini merujuk pada pekerjaan persiapan, bukan keputusan sertifikasi." action={<Link href="/cases" data-testid="link-all-cases" className="btn btn-primary">Lihat semua kasus <ArrowRight size={15}/></Link>}/><DashboardResult result={data}/></>;
 }
 
 function CaseForm({ initial, onDone, close }: { initial?: SbuCase; onDone: () => void; close: () => void }) {

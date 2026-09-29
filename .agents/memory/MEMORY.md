@@ -3,3 +3,4 @@
 - [PostgreSQL isolation tests](postgres-isolation-tests.md) — cloned tables inherit unique indexes under new names; validate live indexes separately before sandbox writes.
 - [Wouter server-rendered tests](wouter-ssr-tests.md) — use a fixed location hook when rendering Link-bearing components without a browser.
 - [Identity-scoped query caches](identity-scoped-query-caches.md) — mount a fresh query cache per authenticated identity; effect-only invalidation can expose prior account data for a render.
+- [React Query error SSR tests](react-query-error-ssr-tests.md) — server rendering can optimistically refetch cached errors; inject error state when testing error presentation.

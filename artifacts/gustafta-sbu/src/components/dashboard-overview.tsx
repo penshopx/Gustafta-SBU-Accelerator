@@ -3,6 +3,7 @@ import { ArrowRight, BriefcaseBusiness, ChevronRight, ClipboardList, Plus, Shiel
 import { Link } from 'wouter';
 import type { Dashboard, SbuCase } from '@workspace/api-client-react';
 import { formatTimestampDate } from '../lib/display-date';
+import { ErrorState, Loading } from './request-states';
 
 export const statusLabels: Record<string, string> = { draf: 'Draf', ditinjau: 'Dalam peninjauan', selesai_persiapan: 'Persiapan selesai', tercatat: 'Tercatat', perlu_bukti: 'Perlu bukti', perlu_tinjauan: 'Perlu tinjauan' };
 
@@ -16,6 +17,12 @@ export function Status({ value }: { value: string }) {
 
 export function CaseRows({ cases }: { cases: SbuCase[] }) {
   return <div className="overflow-hidden rounded-2xl border border-[#d4e1ea] bg-white">{cases.map((item, i) => <Link href={`/cases/${item.id}`} data-testid={`link-case-${item.id}`} key={item.id} className={`group flex flex-col gap-4 p-5 transition-colors hover:bg-[#f4f9fd] sm:flex-row sm:items-center ${i > 0 ? 'border-t border-[#e2eaf0]' : ''}`}><div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#e7f2fc] text-[#1769d1]"><BriefcaseBusiness size={19}/></div><div className="min-w-0 flex-1"><div data-testid={`text-case-company-${item.id}`} className="truncate font-bold text-[#183049]">{item.companyName}</div><div className="mt-1 text-xs text-[#637c92]">{item.requestType === 'baru' ? 'Permohonan baru' : 'Perpanjangan'} · Kualifikasi {item.qualification} · {item.classification}</div></div><div className="flex items-center justify-between gap-4 sm:justify-end"><Status value={item.status}/><span className="hidden min-w-[85px] text-right text-xs text-[#70869a] md:block">{formatTimestampDate(item.updatedAt)}</span><ChevronRight size={17} className="text-[#7c97af] transition-transform group-hover:translate-x-1"/></div></Link>)}</div>;
+}
+
+export function DashboardResult({ result }: { result: { isLoading: boolean; isError: boolean; data?: Dashboard; refetch: () => void } }) {
+  if (result.isLoading) return <Loading rows={4} />;
+  if (result.isError) return <ErrorState retry={result.refetch} />;
+  return result.data ? <DashboardOverview dashboard={result.data} /> : null;
 }
 
 export function DashboardOverview({ dashboard }: { dashboard: Dashboard }) {
