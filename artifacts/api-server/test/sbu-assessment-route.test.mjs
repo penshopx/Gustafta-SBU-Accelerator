@@ -1394,6 +1394,57 @@ test("pengguna lain tidak dapat mengubah atau menghapus kasus, tetapi pemilik da
   }
 });
 
+test("PATCH satu kolom oleh pemilik mempertahankan semua isian permohonan yang tidak dikirim", async () => {
+  const original = {
+    id: 58,
+    ownerId: "case-owner",
+    companyName: "Perusahaan Awal",
+    requestType: "perpanjangan",
+    qualification: "menengah",
+    classification: "instalasi mekanikal",
+    status: "ditinjau",
+    existingSbuExpiresOn: "2027-04-15",
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  globalThis.__routeCaseRows = [structuredClone(original)];
+  globalThis.__routeUserId = "case-owner";
+  const server = app.listen(0);
+  const casePath = "/api/cases/58";
+  try {
+    const before = await request(server, casePath);
+    assert.equal(before.status, 200, before.raw);
+
+    const updated = await request(server, casePath, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ companyName: "Perusahaan Baru" }),
+    });
+    assert.equal(updated.status, 200, updated.raw);
+
+    const saved = globalThis.__routeCaseRows[0];
+    assert.ok(saved.updatedAt > original.updatedAt, "waktu pembaruan harus berubah");
+    assert.deepEqual(saved, {
+      ...original,
+      companyName: "Perusahaan Baru",
+      updatedAt: saved.updatedAt,
+    }, "data tersimpan harus mempertahankan semua kolom yang tidak dikirim");
+
+    const reopened = await request(server, casePath);
+    assert.equal(reopened.status, 200, reopened.raw);
+    assert.deepEqual(reopened.body, {
+      ...before.body,
+      companyName: "Perusahaan Baru",
+      updatedAt: saved.updatedAt.toISOString(),
+    }, "GET berikutnya harus menampilkan kolom yang diubah tanpa kehilangan isian lain");
+    assert.deepEqual(updated.body, reopened.body, "respons PATCH harus sesuai dengan data tersimpan");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeUserId;
+  }
+});
+
 test("PATCH /api/cases/:id menolak perubahan tidak valid atau kosong dari pemilik tanpa mengubah kasus", async () => {
   const original = {
     id: 57,
