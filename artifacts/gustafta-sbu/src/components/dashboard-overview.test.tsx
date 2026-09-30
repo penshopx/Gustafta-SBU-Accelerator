@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createElement } from 'react';
+import { act, createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { createRoot } from 'react-dom/client';
+import { Window as HappyWindow } from 'happy-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Router } from 'wouter';
 import { useGetDashboard, type Dashboard } from '@workspace/api-client-react';
@@ -45,6 +47,65 @@ test('kegagalan pemuatan ringkasan menampilkan pesan dan tombol coba lagi, bukan
   assert.match(html, /data-testid="button-retry"[^>]*>Coba lagi<\/button>/);
   assert.doesNotMatch(html, /aria-label="Memuat data"/);
   assertNoEmptySummary(html);
+});
+
+test('coba lagi memuat ulang ringkasan dan mengganti pesan error dengan data berhasil', async () => {
+  const globals = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = {
+    window: globals.window, document: globals.document, fetch: globals.fetch,
+    actEnvironment: globals.IS_REACT_ACT_ENVIRONMENT,
+  };
+  const window = new HappyWindow();
+  globals.window = window as unknown as Window & typeof globalThis;
+  globals.document = window.document as unknown as Document;
+  globals.IS_REACT_ACT_ENVIRONMENT = true;
+  const dashboard: Dashboard = { total: 3, draft: 2, reviewing: 1, prepared: 0, recent: [] };
+  let requests = 0;
+  globals.fetch = async (input) => {
+    assert.equal(input, '/api/dashboard');
+    requests++;
+    return requests === 1
+      ? new Response(JSON.stringify({ message: 'Gangguan jaringan' }), { status: 503, headers: { 'content-type': 'application/json' } })
+      : Response.json(dashboard);
+  };
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
+  const container = window.document.createElement('div');
+  window.document.body.appendChild(container);
+  const root = createRoot(container as unknown as HTMLElement);
+
+  try {
+    await act(async () => {
+      root.render(createElement(QueryClientProvider, { client },
+        createElement(Router, {
+          hook: (): [string, (path: string) => void] => ['/dashboard', () => {}],
+          children: createElement(DashboardWithQuery),
+        }),
+      ));
+    });
+    assert.equal(requests, 1);
+    assert.match(container.textContent, /Data belum dapat ditampilkan/);
+    assertNoEmptySummary(container.innerHTML);
+
+    const retry = container.querySelector('[data-testid="button-retry"]');
+    assert.ok(retry, 'tombol coba lagi tersedia setelah permintaan gagal');
+    await act(async () => { retry.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); });
+
+    assert.equal(requests, 2, 'klik tombol harus mengirim permintaan dashboard lagi');
+    assert.equal(container.querySelector('[data-testid="text-dashboard-0"]')?.textContent, '3');
+    assert.equal(container.querySelector('[data-testid="text-dashboard-1"]')?.textContent, '2');
+    assert.match(container.textContent, /Belum ada kasus/);
+    assert.doesNotMatch(container.textContent, /Data belum dapat ditampilkan|Koneksi sedang terganggu/);
+    assert.equal(container.querySelector('[data-testid="button-retry"]'), null);
+  } finally {
+    await act(async () => { root.unmount(); });
+    client.clear();
+    container.remove();
+    await window.happyDOM.abort();
+    globals.window = previous.window;
+    globals.document = previous.document;
+    globals.fetch = previous.fetch;
+    globals.IS_REACT_ACT_ENVIRONMENT = previous.actEnvironment;
+  }
 });
 
 test('ringkasan pengguna baru menampilkan empat nol dan keadaan kasus kosong', () => {
