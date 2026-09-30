@@ -23,7 +23,7 @@ async function request(server, userId, path, options = {}) {
   return { status: response.status, body: JSON.parse(raw), raw };
 }
 
-test("POST bukti menyimpan caseId dari URL di PostgreSQL tanpa mengubah bukti pemilik lain", async () => {
+test("POST bukti menolak URL milik pengguna lain dan menyimpan caseId dari URL milik sendiri di PostgreSQL", async () => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk pengujian integrasi PostgreSQL");
   assert.notEqual(process.env.NODE_ENV, "production", "Pengujian tidak boleh dijalankan dalam mode produksi");
 
@@ -120,6 +120,18 @@ test("POST bukti menyimpan caseId dari URL di PostgreSQL tanpa mengubah bukti pe
     app.use(express.json());
     app.use("/api", router);
     server = app.listen(0);
+
+    const beforeDeniedPost = await readEvidence();
+    const denied = await request(server, owner, `/api/cases/${other.id}/evidence`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        caseId: source.id, code: "pajak", title: "Tidak boleh masuk", note: "Milik pemohon A",
+      }),
+    });
+    assert.equal(denied.status, 404, denied.raw);
+    assert.deepEqual(await readEvidence(), beforeDeniedPost,
+      "POST ke URL milik pengguna lain tidak boleh menambah atau mengubah bukti siapa pun");
 
     const posted = await request(server, owner, `/api/cases/${source.id}/evidence`, {
       method: "POST",
