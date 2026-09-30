@@ -1717,6 +1717,62 @@ test("PATCH satu kolom oleh pemilik mempertahankan semua isian permohonan yang t
   }
 });
 
+test("PATCH tanggal SBU dengan null mengosongkan tanggal tanpa mengubah kolom permohonan lain", async () => {
+  const original = {
+    id: 56,
+    ownerId: "case-owner",
+    companyName: "Perusahaan Awal",
+    requestType: "perpanjangan",
+    qualification: "menengah",
+    classification: "instalasi mekanikal",
+    status: "ditinjau",
+    existingSbuExpiresOn: "2027-04-15",
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  globalThis.__routeCaseRows = [structuredClone(original)];
+  globalThis.__routeUserId = "case-owner";
+  globalThis.__routeCaseWrites = 0;
+  const server = app.listen(0);
+  const casePath = "/api/cases/56";
+  try {
+    const before = await request(server, casePath);
+    assert.equal(before.status, 200, before.raw);
+    assert.equal(before.body.existingSbuExpiresOn, "2027-04-15T00:00:00.000Z");
+
+    const updated = await request(server, casePath, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ existingSbuExpiresOn: null }),
+    });
+    assert.equal(updated.status, 200, updated.raw);
+    assert.equal(globalThis.__routeCaseWrites, 1, "pengosongan tanggal harus disimpan");
+
+    const saved = globalThis.__routeCaseRows[0];
+    assert.ok(saved.updatedAt > original.updatedAt, "waktu pembaruan harus berubah");
+    assert.deepEqual(saved, {
+      ...original,
+      existingSbuExpiresOn: null,
+      updatedAt: saved.updatedAt,
+    }, "hanya tanggal SBU dan waktu pembaruan yang boleh berubah di data tersimpan");
+    assert.deepEqual(updated.body, {
+      ...before.body,
+      existingSbuExpiresOn: null,
+      updatedAt: saved.updatedAt.toISOString(),
+    }, "respons PATCH harus mempertahankan semua isian lain");
+
+    globalThis.__routeCaseRows = structuredClone(globalThis.__routeCaseRows);
+    const reopened = await request(server, casePath);
+    assert.equal(reopened.status, 200, reopened.raw);
+    assert.deepEqual(reopened.body, updated.body, "GET berikutnya harus memuat tanggal kosong dan isian lain tetap");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeCaseWrites;
+  }
+});
+
 test("PATCH /api/cases/:id menolak perubahan tidak valid atau kosong dari pemilik tanpa mengubah kasus", async () => {
   const original = {
     id: 57,
