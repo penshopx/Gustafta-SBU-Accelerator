@@ -8,3 +8,11 @@ Use a separate, server-managed Gustafta connection for each SBU owner. Establish
 **Why:** The user chose a multi-company integration. The supplied Gustafta contract determines the source owner from the connection token, but does not supply proof that this owner corresponds to the currently authenticated SBU account. A valid source response alone cannot establish that relationship.
 
 **How to apply:** Provision credentials only after verifying the owner relationship. Keep token entry out of the frontend and resolve the correct connection from authenticated server identity. If future work introduces self-service linking, require a verified authorization flow rather than weakening ownership checks.
+
+## Folder-scoped document access
+
+The user endorsed application-specific folders as the intended document access boundary: an SBU connection should use only the folders its owner authorizes, rather than defaulting to every company document.
+
+**Why:** The owner wants one manageable authorization covering many relevant documents without granting unrelated company data or creating a permission link for every file.
+
+**How to apply:** Treat this as an agreed design direction, not proof of implemented folder support. Verify the upstream contract before building it, and enforce folder authorization on the source server for listing, search, metadata, and content reads. Direct file IDs must not bypass the boundary. Company profile access remains a separate permission, not a folder operation.
