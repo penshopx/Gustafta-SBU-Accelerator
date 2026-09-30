@@ -23,7 +23,7 @@ async function request(server, userId, path, options = {}) {
   return { status: response.status, body: JSON.parse(raw), raw };
 }
 
-test("POST bukti menjaga kepemilikan dan keunikan kategori saat dua kiriman bersamaan di PostgreSQL", async () => {
+test("POST dan PATCH bukti menjaga kepemilikan serta keunikan kategori di PostgreSQL", async () => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk pengujian integrasi PostgreSQL");
   assert.notEqual(process.env.NODE_ENV, "production", "Pengujian tidak boleh dijalankan dalam mode produksi");
 
@@ -185,6 +185,31 @@ test("POST bukti menjaga kepemilikan dan keunikan kategori saat dua kiriman bers
     assert.deepEqual(ownList.body.map(({ id }) => id), [posted.body.id]);
     assert.deepEqual(otherList.body.map(({ id }) => id), [existing.id]);
 
+    const patched = await request(server, owner, `/api/cases/${source.id}/evidence/${posted.body.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        caseId: other.id, title: "Bukti pemohon A diperbarui", note: "Tetap milik A",
+      }),
+    });
+    assert.equal(patched.status, 200, patched.raw);
+    assert.deepEqual({
+      id: patched.body.id, caseId: patched.body.caseId, code: patched.body.code,
+      title: patched.body.title, note: patched.body.note,
+    }, {
+      id: posted.body.id, caseId: source.id, code: "pajak",
+      title: "Bukti pemohon A diperbarui", note: "Tetap milik A",
+    }, "Respons PATCH harus tetap menunjuk permohonan asal dari URL");
+
+    const afterPatch = await readEvidence();
+    assert.equal(afterPatch.length, 2, "PATCH tidak boleh membuat atau menghapus bukti");
+    assert.deepEqual(afterPatch.filter((row) => row.case_id === other.id), [existing],
+      "Baris permohonan tujuan tidak boleh berubah");
+    assert.deepEqual(afterPatch.filter((row) => row.id === posted.body.id).map((row) => ({
+      id: row.id, caseId: row.case_id, code: row.code, title: row.title,
+      note: row.note, updatedAt: row.updated_at.toISOString(),
+    })), [patched.body], "Baris yang tersimpan harus sesuai respons PATCH dan tetap di permohonan asal");
+
     const competing = [
       { code: "sertifikat", title: "Kiriman pertama", note: "Catatan pertama" },
       { code: "sertifikat", title: "Kiriman kedua", note: "Catatan kedua" },
@@ -210,7 +235,7 @@ test("POST bukti menjaga kepemilikan dan keunikan kategori saat dua kiriman bers
     assert.deepEqual(afterRace.filter((row) => row.case_id === other.id), [existing],
       "Bukti pemohon lain tidak boleh berubah akibat kiriman bersamaan");
     assert.deepEqual(afterRace.filter((row) => row.case_id === source.id && row.code === "pajak"),
-      rows.filter((row) => row.case_id === source.id),
+      afterPatch.filter((row) => row.case_id === source.id),
       "Kategori yang sudah ada tidak boleh berubah akibat kiriman bersamaan");
     assert.deepEqual(afterRace.filter((row) => row.case_id === source.id && row.code === "sertifikat")
       .map(({ id, case_id, code, title, note, updated_at }) => ({
