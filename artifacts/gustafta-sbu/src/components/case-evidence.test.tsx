@@ -63,3 +63,43 @@ test('mengedit bukti terbawah langsung memindahkan kartu ke atas dan memperbarui
     testGlobals.IS_REACT_ACT_ENVIRONMENT = originalAct;
   }
 });
+
+test('aksi dari rencana membuka formulir dengan kategori yang disarankan dan menyimpannya', async () => {
+  const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const originalFetch = globalThis.fetch;
+  const originalWindow = testGlobals.window;
+  const originalAct = testGlobals.IS_REACT_ACT_ENVIRONMENT;
+  testGlobals.IS_REACT_ACT_ENVIRONMENT = true;
+  testGlobals.window = { addEventListener() {}, removeEventListener() {} } as unknown as Window & typeof globalThis;
+  const posted: { code: string; title: string }[] = [];
+  globalThis.fetch = async (_input, init) => {
+    if (init?.method === 'POST') {
+      const body = JSON.parse(String(init.body)) as { code: string; title: string };
+      posted.push(body);
+      return Response.json({ id: 22, caseId: 7, ...body, note: '', updatedAt: '2026-09-26T12:00:00Z' }, { status: 201 });
+    }
+    return Response.json(posted.map((body) => ({ id: 22, caseId: 7, ...body, note: '', updatedAt: '2026-09-26T12:00:00Z' })));
+  };
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  let renderer: TestRenderer.ReactTestRenderer | undefined;
+  let closeCount = 0;
+  try {
+    await act(async () => {
+      renderer = TestRenderer.create(createElement(QueryClientProvider, { client },
+        createElement(CaseEvidence, { id: 7, requestType: 'baru', qualification: 'kecil',
+          suggestion: 'legalitas', onSuggestionClose: () => { closeCount++; } })));
+    });
+    assert.equal(renderer!.root.findByProps({ 'data-testid': 'select-evidence-code' }).props.value, 'legalitas');
+    assert.equal(renderer!.root.findByProps({ 'data-testid': 'input-evidence-title' }).props.value, 'Legalitas dan identitas badan usaha');
+    await act(async () => { renderer!.root.findByType('form').props.onSubmit({ preventDefault() {} }); });
+    assert.equal(posted[0]?.code, 'legalitas');
+    assert.equal(closeCount, 1);
+    assert.equal(renderer!.root.findAllByProps({ role: 'dialog' }).length, 0);
+  } finally {
+    await act(async () => { renderer?.unmount(); });
+    client.clear();
+    globalThis.fetch = originalFetch;
+    testGlobals.window = originalWindow;
+    testGlobals.IS_REACT_ACT_ENVIRONMENT = originalAct;
+  }
+});
