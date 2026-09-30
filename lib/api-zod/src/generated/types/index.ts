@@ -27,6 +27,8 @@ export * from './profileInput';
 export * from './profileInputRole';
 export * from './profileRole';
 export * from './regulation';
+export * from './ruangSimpanCompanyProfile';
+export * from './ruangSimpanCompanyProfileResponse';
 export * from './sbuCase';
 export * from './sbuCaseQualification';
 export * from './sbuCaseRequestType';

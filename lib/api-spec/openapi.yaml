@@ -48,6 +48,34 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Profile"
+  /ruang-simpan/company-profile:
+    get:
+      operationId: getRuangSimpanCompanyProfile
+      tags: [workspace]
+      description: Read the authenticated SBU owner's company profile using their server-managed Gustafta connection. No owner parameters or token input.
+      responses:
+        "200":
+          description: Profile read from Ruang Simpan, bound to the current SBU identity
+          headers:
+            Cache-Control:
+              schema: { type: string }
+              description: private, no-store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuangSimpanCompanyProfileResponse"
+        "400":
+          description: Owner parameters or request body are not accepted
+        "401":
+          description: SBU session is missing or invalid
+        "404":
+          description: No connection is configured for this SBU owner
+        "424":
+          description: Gustafta connection is invalid or lacks profile read permission
+        "429":
+          description: Gustafta rate limit exceeded
+        "503":
+          description: Connection or source profile cannot be read safely
   /dashboard:
     get:
       operationId: getDashboard
@@ -265,6 +293,24 @@ paths:
                 $ref: "#/components/schemas/TransitionVerification"
 components:
   schemas:
+    RuangSimpanCompanyProfileResponse:
+      type: object
+      required: [userId, profile]
+      properties:
+        userId: { type: string }
+        profile:
+          $ref: "#/components/schemas/RuangSimpanCompanyProfile"
+    RuangSimpanCompanyProfile:
+      type: object
+      required: [name, nib, address, revision, updated_at]
+      properties:
+        name: { type: string }
+        nib: { type: string }
+        address: { type: string }
+        revision: { type: integer, minimum: 0 }
+        updated_at:
+          type: ["string", "null"]
+          description: ISO timestamp from Gustafta; null when no profile has been entered
     HealthStatus:
       type: object
       required: [status]

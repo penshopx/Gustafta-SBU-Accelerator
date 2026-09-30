@@ -7,3 +7,4 @@
 - [Clerk local JWT issuer checks](clerk-local-jwt-issuer.md) — a locally verified session signature does not necessarily bind its issuer to the configured instance.
 - [Clerk cross-tab sessions](clerk-cross-tab-session.md) — mounted Clerk identity can lag shared cookies; verify API and client owner agree before showing private views.
 - [OpenAPI Unicode patterns](openapi-unicode-patterns.md) — Orval generates unflagged JavaScript RegExp for OpenAPI patterns; Unicode property escapes cannot be used directly.
+- [Ruang Simpan ownership](ruang-simpan-ownership.md) — multi-company access needs verified per-owner connections; a valid source token does not prove its link to an SBU account.
