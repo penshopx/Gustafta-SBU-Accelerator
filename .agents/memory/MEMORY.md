@@ -5,3 +5,4 @@
 - [Identity-scoped query caches](identity-scoped-query-caches.md) — mount a fresh query cache per authenticated identity; effect-only invalidation can expose prior account data for a render.
 - [React Query error SSR tests](react-query-error-ssr-tests.md) — server rendering can optimistically refetch cached errors; inject error state when testing error presentation.
 - [Clerk local JWT issuer checks](clerk-local-jwt-issuer.md) — a locally verified session signature does not necessarily bind its issuer to the configured instance.
+- [Clerk cross-tab sessions](clerk-cross-tab-session.md) — mounted Clerk identity can lag shared cookies; verify API and client owner agree before showing private views.

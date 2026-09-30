@@ -21,6 +21,7 @@ export const ProfileRole = {
 } as const;
 
 export interface Profile {
+  userId: string;
   role: ProfileRole;
   displayName: string;
   organizationName: string;

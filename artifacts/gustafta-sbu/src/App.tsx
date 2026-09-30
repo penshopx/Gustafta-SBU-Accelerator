@@ -16,7 +16,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { RegulationsPage } from '@/components/regulations-page';
 import { AssessmentResults, CaseSummary } from '@/components/case-detail-display';
 import { CaseEvidence } from '@/components/case-evidence';
-import { AccountQueries } from '@/components/account-queries';
+import { AccountQueries, CrossTabAccountGate } from '@/components/account-queries';
 import { CaseRows, DashboardResult, Empty, Status, statusLabels } from '@/components/dashboard-overview';
 import { ErrorState, Loading } from '@/components/request-states';
 import { expiryInputValue, expiryPayload } from '@/lib/case-expiry';
@@ -156,7 +156,15 @@ function NotFoundPage() { return <div className="grid min-h-[100dvh] place-items
 function AccountRoutes() {
   const { isLoaded, user } = useUser();
   if (!isLoaded) return <div className="mx-auto max-w-3xl p-10"><Loading /></div>;
-  return <AccountQueries key={user?.id ?? 'signed-out'}><AppRoutes /></AccountQueries>;
+  return <AccountQueries key={user?.id ?? 'signed-out'}><CrossTabAccountGate userId={user?.id ?? null}><VerifiedRoutes userId={user?.id ?? null} /></CrossTabAccountGate></AccountQueries>;
+}
+function VerifiedRoutes({ userId }: { userId: string | null }) {
+  const me = useGetMe({ query: { enabled: !!userId, queryKey: getGetMeQueryKey() } });
+  // Cookies may change before Clerk updates its in-memory user (or vice versa).
+  // Never render private queries when the API and Clerk disagree about the owner.
+  if (userId && (me.isLoading || !me.data && !me.isError)) return <div className="mx-auto max-w-3xl p-10"><Loading /></div>;
+  if (userId && me.data && me.data.userId !== userId) return <div className="mx-auto max-w-xl p-10"><ErrorState message="Sesi akun berubah. Muat ulang halaman untuk melanjutkan." retry={() => window.location.reload()} /></div>;
+  return <AppRoutes />;
 }
 function HomeRoute() { return <><Show when="signed-in"><Redirect to="/dashboard"/></Show><Show when="signed-out"><PublicHome/></Show></>; }
 function Guard({ children }: { children: ReactNode }) { return <><Show when="signed-in">{children}</Show><Show when="signed-out"><Redirect to="/"/></Show></>; }

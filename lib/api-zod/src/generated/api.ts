@@ -14,6 +14,7 @@ export const HealthCheckResponse = zod.object({
 
 
 export const GetMeResponse = zod.object({
+  "userId": zod.string(),
   "role": zod.enum(['belum_dipilih', 'kontraktor', 'konsultan', 'profesional', 'asosiasi']),
   "displayName": zod.string(),
   "organizationName": zod.string()
@@ -35,6 +36,7 @@ export const UpdateMeBody = zod.object({
 })
 
 export const UpdateMeResponse = zod.object({
+  "userId": zod.string(),
   "role": zod.enum(['belum_dipilih', 'kontraktor', 'konsultan', 'profesional', 'asosiasi']),
   "displayName": zod.string(),
   "organizationName": zod.string()

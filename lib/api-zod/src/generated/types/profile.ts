@@ -8,6 +8,7 @@
 import type { ProfileRole } from './profileRole';
 
 export interface Profile {
+  userId: string;
   role: ProfileRole;
   displayName: string;
   organizationName: string;

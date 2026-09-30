@@ -272,8 +272,9 @@ components:
         status: { type: string }
     Profile:
       type: object
-      required: [role, displayName, organizationName]
+      required: [userId, role, displayName, organizationName]
       properties:
+        userId: { type: string }
         role:
           type: string
           enum: [belum_dipilih, kontraktor, konsultan, profesional, asosiasi]
