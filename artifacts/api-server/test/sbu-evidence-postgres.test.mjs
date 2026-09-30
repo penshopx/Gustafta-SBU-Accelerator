@@ -23,7 +23,7 @@ async function request(server, userId, path, options = {}) {
   return { status: response.status, body: JSON.parse(raw), raw };
 }
 
-test("POST bukti menolak URL milik pengguna lain dan menyimpan caseId dari URL milik sendiri di PostgreSQL", async () => {
+test("POST bukti menjaga kepemilikan dan keunikan kategori saat dua kiriman bersamaan di PostgreSQL", async () => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk pengujian integrasi PostgreSQL");
   assert.notEqual(process.env.NODE_ENV, "production", "Pengujian tidak boleh dijalankan dalam mode produksi");
 
@@ -39,6 +39,30 @@ test("POST bukti menolak URL milik pengguna lain dan menyimpan caseId dari URL m
   let server;
 
   try {
+    const { rows: indexes } = await admin.query(`
+      SELECT i.indisunique, i.indisvalid,
+             i.indpred IS NULL AS unfiltered,
+             i.indexprs IS NULL AS plain_columns,
+             ARRAY(
+               SELECT a.attname
+               FROM unnest(i.indkey) WITH ORDINALITY AS key(attnum, position)
+               JOIN pg_attribute a ON a.attrelid = tbl.oid AND a.attnum = key.attnum
+               WHERE key.position <= i.indnkeyatts
+               ORDER BY key.position
+             )::text[] AS columns
+      FROM pg_index i
+      JOIN pg_class idx ON idx.oid = i.indexrelid
+      JOIN pg_class tbl ON tbl.oid = i.indrelid
+      JOIN pg_namespace ns ON ns.oid = tbl.relnamespace
+      WHERE ns.nspname = 'public'
+        AND tbl.relname = 'sbu_evidence'
+        AND idx.relname = 'sbu_evidence_case_code_unique'
+    `);
+    assert.deepEqual(indexes, [{
+      indisunique: true, indisvalid: true, unfiltered: true, plain_columns: true,
+      columns: ["case_id", "code"],
+    }], "Indeks unik kategori bukti harus terpasang di tabel aplikasi sebelum diklon");
+
     await admin.query(`CREATE SCHEMA "${schema}"`);
     created = true;
     for (const table of ["sbu_profiles", "sbu_cases", "sbu_evidence"]) {
@@ -160,6 +184,44 @@ test("POST bukti menolak URL milik pengguna lain dan menyimpan caseId dari URL m
     assert.equal(otherList.status, 200, otherList.raw);
     assert.deepEqual(ownList.body.map(({ id }) => id), [posted.body.id]);
     assert.deepEqual(otherList.body.map(({ id }) => id), [existing.id]);
+
+    const competing = [
+      { code: "sertifikat", title: "Kiriman pertama", note: "Catatan pertama" },
+      { code: "sertifikat", title: "Kiriman kedua", note: "Catatan kedua" },
+    ];
+    // Launch both HTTP requests before awaiting either one; the route uses the
+    // isolated pool (max 2) so the unique index resolves the competing inserts.
+    const responses = await Promise.all(competing.map((body) => request(
+      server, owner, `/api/cases/${source.id}/evidence`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    )));
+    assert.deepEqual(responses.map(({ status }) => status).sort(), [201, 409],
+      `Dua kiriman kategori sama harus menghasilkan satu 201 dan satu 409: ${responses.map((r) => r.raw)}`);
+    const winnerIndex = responses.findIndex(({ status }) => status === 201);
+    const winner = responses[winnerIndex];
+    assert.equal(winner.body.caseId, source.id);
+    assert.equal(winner.body.code, "sertifikat");
+    assert.match(responses[1 - winnerIndex].body.error, /Kategori bukti sudah dicatat/);
+
+    const afterRace = await readEvidence();
+    assert.deepEqual(afterRace.filter((row) => row.case_id === other.id), [existing],
+      "Bukti pemohon lain tidak boleh berubah akibat kiriman bersamaan");
+    assert.deepEqual(afterRace.filter((row) => row.case_id === source.id && row.code === "pajak"),
+      rows.filter((row) => row.case_id === source.id),
+      "Kategori yang sudah ada tidak boleh berubah akibat kiriman bersamaan");
+    assert.deepEqual(afterRace.filter((row) => row.case_id === source.id && row.code === "sertifikat")
+      .map(({ id, case_id, code, title, note, updated_at }) => ({
+        id, case_id, code, title, note, updatedAt: updated_at.toISOString(),
+      })), [{
+        id: winner.body.id, case_id: source.id, code: "sertifikat",
+        title: competing[winnerIndex].title, note: competing[winnerIndex].note,
+        updatedAt: winner.body.updatedAt,
+      }],
+      "Hanya kiriman pemenang yang tersimpan, tanpa tertimpa oleh kiriman yang ditolak");
+    assert.equal(afterRace.length, 3, "Total hanya satu kategori baru boleh tersimpan");
   } finally {
     if (server) await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__evidenceTestDb;
