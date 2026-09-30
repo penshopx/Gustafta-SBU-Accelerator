@@ -12,7 +12,7 @@ export interface ProfileInput {
   /**
      * @minLength 1
      * @maxLength 120
-     * @pattern .*\S.*
+     * @pattern [^\s\x00-\x1f\x7f-\x9f\u00ad\u034f\u0600-\u0605\u061c\u06dd\u070f\u0890-\u0891\u08e2\u180b-\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u206f\ufe00-\ufe0f\ufeff\ufff9-\ufffb]
      */
   displayName: string;
   /** @maxLength 160 */

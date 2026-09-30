@@ -1198,6 +1198,13 @@ test("PATCH /api/me dengan sesi sah menolak profil tidak valid tanpa menulis ata
       { role: "konsultan", displayName: "", organizationName: "Perusahaan Baru" },
       { role: "konsultan", displayName: "   ", organizationName: "Perusahaan Baru" },
       { role: "konsultan", displayName: "\t \n\u00a0", organizationName: "Perusahaan Baru" },
+      { role: "konsultan", displayName: "\u200b", organizationName: "Perusahaan Baru" },
+      { role: "konsultan", displayName: " \u200b\u200c\u200d\u2060\ufeff\t", organizationName: "Perusahaan Baru" },
+      { role: "konsultan", displayName: "\u00ad\u034f\u061c\u202e", organizationName: "Perusahaan Baru" },
+      { role: "konsultan", displayName: "\u0600\u06dd\u070f\ufff9", organizationName: "Perusahaan Baru" },
+      { role: "konsultan", displayName: " \u{e0001}\u{e0020}\u{e007f} ", organizationName: "Perusahaan Baru" },
+      { role: "konsultan", displayName: "\ufe0f", organizationName: "Perusahaan Baru" },
+      { role: "konsultan", displayName: " \u{e0100}\ufe0f\u200d ", organizationName: "Perusahaan Baru" },
     ]) {
       const response = await request(server, "/api/me", {
         method: "PATCH",
@@ -1209,6 +1216,35 @@ test("PATCH /api/me dengan sesi sah menolak profil tidak valid tanpa menulis ata
       assert.equal(globalThis.__routeProfileWrites, 0, "isi tidak valid tidak boleh mencoba menulis profil");
       assert.deepEqual(globalThis.__routeProfileRows, [original], "profil awal harus tetap utuh");
     }
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeUserId;
+    delete globalThis.__routeProfileRows;
+    delete globalThis.__routeProfileWrites;
+  }
+});
+
+test("PATCH /api/me menerima nama berbagai aksara termasuk joiner dalam nama yang terlihat", async () => {
+  const original = {
+    userId: "profile-owner", role: "kontraktor",
+    displayName: "Nama Asli", organizationName: "Perusahaan Asli",
+  };
+  globalThis.__routeUserId = original.userId;
+  globalThis.__routeProfileRows = [structuredClone(original)];
+  globalThis.__routeProfileWrites = 0;
+  const server = app.listen(0);
+  try {
+    for (const displayName of ["محمد", "李 小龍", "क\u200dिरण", "Élodie", "ᮃᮔ᮪ᮓᮤ", "Nama \ufe0f\u{e0100}"]) {
+      const response = await request(server, "/api/me", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ role: "konsultan", displayName, organizationName: "Perusahaan Baru" }),
+      });
+      assert.equal(response.status, 200, `${displayName}: ${response.raw}`);
+      assert.equal(response.body.displayName, displayName);
+      assert.equal(globalThis.__routeProfileRows[0].displayName, displayName);
+    }
+    assert.equal(globalThis.__routeProfileWrites, 6);
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__routeUserId;

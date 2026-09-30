@@ -6,3 +6,4 @@
 - [React Query error SSR tests](react-query-error-ssr-tests.md) — server rendering can optimistically refetch cached errors; inject error state when testing error presentation.
 - [Clerk local JWT issuer checks](clerk-local-jwt-issuer.md) — a locally verified session signature does not necessarily bind its issuer to the configured instance.
 - [Clerk cross-tab sessions](clerk-cross-tab-session.md) — mounted Clerk identity can lag shared cookies; verify API and client owner agree before showing private views.
+- [OpenAPI Unicode patterns](openapi-unicode-patterns.md) — Orval generates unflagged JavaScript RegExp for OpenAPI patterns; Unicode property escapes cannot be used directly.

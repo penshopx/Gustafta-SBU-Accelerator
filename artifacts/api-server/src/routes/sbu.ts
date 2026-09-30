@@ -65,8 +65,16 @@ router.get("/me", async (req, res): Promise<void> => {
 
 router.patch("/me", async (req, res): Promise<void> => {
   const input = UpdateMeBody.safeParse(req.body);
-  if (!input.success) {
-    res.status(400).json({ error: "Profil tidak valid.", detail: input.error.message });
+  // OpenAPI/Orval emits RegExp without a Unicode flag; this also catches
+  // supplementary-plane format characters and variation selectors that its
+  // pattern cannot classify. A joiner/selector is fine beside a real character.
+  const hasVisibleNameCharacter = input.success &&
+    /[^\s\p{Cc}\p{Cf}\p{Default_Ignorable_Code_Point}]/u.test(input.data.displayName);
+  if (!input.success || !hasVisibleNameCharacter) {
+    res.status(400).json({
+      error: "Profil tidak valid.",
+      detail: input.success ? "Nama harus memuat karakter yang terlihat." : input.error.message,
+    });
     return;
   }
   const userId = owner(req);
