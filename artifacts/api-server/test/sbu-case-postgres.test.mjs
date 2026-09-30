@@ -23,7 +23,7 @@ async function request(server, userId, path, options = {}) {
   return { status: response.status, body: JSON.parse(raw), raw };
 }
 
-test("PATCH satu kolom permohonan mempertahankan kolom lain di PostgreSQL", async () => {
+test("PATCH permohonan di PostgreSQL mempertahankan kolom lain dan tidak memindahkan pemilik", async (t) => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk pengujian integrasi PostgreSQL");
   assert.notEqual(process.env.NODE_ENV, "production", "Pengujian tidak boleh dijalankan dalam mode produksi");
 
@@ -134,6 +134,57 @@ test("PATCH satu kolom permohonan mempertahankan kolom lain di PostgreSQL", asyn
     assert.deepEqual(updated.body, reopened.body, "Respons PATCH harus sesuai dengan pembacaan ulang");
     assert.equal(reopened.body.companyName, saved.company_name);
     assert.equal(reopened.body.existingSbuExpiresOn, "2027-04-15T00:00:00.000Z");
+
+    await t.test("ownerId palsu tidak mengubah pemilik atau membuka akses pengguna kedua", async () => {
+      const secondOwnerId = `test-other-owner-${randomUUID()}`;
+      await isolated.query("INSERT INTO sbu_profiles (user_id) VALUES ($1)", [secondOwnerId]);
+      assert.equal(await publicCount(), 0, "Permohonan uji tetap hanya ada di tabel salinan");
+
+      const otherBefore = await request(server, secondOwnerId, path);
+      assert.equal(otherBefore.status, 404, otherBefore.raw);
+
+      const forgedPatch = await request(server, ownerId, path, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ownerId: secondOwnerId,
+          companyName: "Perusahaan Tetap Milik Pertama",
+          status: "selesai_persiapan",
+        }),
+      });
+      assert.equal(forgedPatch.status, 200, forgedPatch.raw);
+      assert.equal(forgedPatch.body.companyName, "Perusahaan Tetap Milik Pertama");
+      assert.equal(forgedPatch.body.status, "selesai_persiapan");
+      assert.equal(forgedPatch.body.ownerId, undefined, "Pemilik tidak ada dalam kontrak respons");
+
+      const { rows: [afterForgedPatch] } = await isolated.query(
+        "SELECT * FROM sbu_cases WHERE id = $1", [original.id],
+      );
+      assert.equal(afterForgedPatch.owner_id, ownerId, "Drizzle tidak boleh menyimpan ownerId dari body");
+      assert.equal(afterForgedPatch.company_name, forgedPatch.body.companyName);
+      assert.equal(afterForgedPatch.status, forgedPatch.body.status);
+      assert.equal(await publicCount(), 0, "Perubahan tidak boleh masuk ke tabel aplikasi");
+
+      const firstOwnerDetail = await request(server, ownerId, path);
+      assert.equal(firstOwnerDetail.status, 200, firstOwnerDetail.raw);
+      assert.deepEqual(firstOwnerDetail.body, forgedPatch.body);
+
+      const secondOwnerDetail = await request(server, secondOwnerId, path);
+      assert.equal(secondOwnerDetail.status, 404, secondOwnerDetail.raw);
+      assert.deepEqual(secondOwnerDetail.body, { error: "Permohonan tidak ditemukan." });
+
+      const secondOwnerPatch = await request(server, secondOwnerId, path, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ companyName: "Tidak Boleh Diambil Alih" }),
+      });
+      assert.equal(secondOwnerPatch.status, 404, secondOwnerPatch.raw);
+      assert.deepEqual(secondOwnerPatch.body, { error: "Permohonan tidak ditemukan." });
+      const { rows: [afterDeniedPatch] } = await isolated.query(
+        "SELECT * FROM sbu_cases WHERE id = $1", [original.id],
+      );
+      assert.deepEqual(afterDeniedPatch, afterForgedPatch, "PATCH pengguna kedua tidak boleh mengubah data");
+    });
   } finally {
     if (server) await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__caseTestDb;
