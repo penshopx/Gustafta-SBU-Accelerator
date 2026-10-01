@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
-import { createSign, generateKeyPairSync } from "node:crypto";
+import { createSign, createVerify, generateKeyPairSync } from "node:crypto";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -238,6 +238,62 @@ test("payload pemilik yang diubah setelah ditandatangani ditolak sebelum membaca
     for (const headers of [
       { authorization: `Bearer ${tamperedToken}` },
       { cookie: `__session=${tamperedToken}; __client_uat=${Math.floor(Date.now() / 1000) - 1}; __clerk_db_jwt=local-dev-browser` },
+    ]) {
+      const response = await request(server, 34, headers);
+      assert.equal(response.status, 401, response.raw);
+      assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." });
+      assert.doesNotMatch(response.raw, /Perusahaan Rahasia|Bukti rahasia|owner-a|caseId|evidence|findings/i);
+      assert.equal(globalThis.__clerkTestCaseReads, 0, "permohonan tidak boleh dibaca");
+      assert.equal(globalThis.__clerkTestEvidenceReads, 0, "bukti tidak boleh dibaca");
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__clerkTestCases;
+    delete globalThis.__clerkTestEvidence;
+    delete globalThis.__clerkTestCaseReads;
+    delete globalThis.__clerkTestEvidenceReads;
+  }
+});
+
+test("header token yang diubah setelah ditandatangani ditolak sebelum membaca data", async () => {
+  globalThis.__clerkTestCases = [
+    { id: 34, ownerId: "owner-a", companyName: "Perusahaan Rahasia" },
+  ];
+  globalThis.__clerkTestEvidence = [
+    { id: 1, caseId: 34, title: "Bukti rahasia" },
+  ];
+  globalThis.__clerkTestCaseReads = 0;
+  globalThis.__clerkTestEvidenceReads = 0;
+
+  const now = Math.floor(Date.now() / 1000);
+  const [encodedHeader, encodedPayload, signature] = sessionToken("owner-a").split(".");
+  const header = JSON.parse(Buffer.from(encodedHeader, "base64url").toString("utf8"));
+  const claims = JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8"));
+  assert.equal(claims.iss, "https://example.clerk.accounts.dev");
+  assert.equal(claims.sub, "owner-a");
+  assert.ok(claims.nbf <= now && claims.exp > now, "token masih berlaku");
+  assert.ok(createVerify("RSA-SHA256").update(`${encodedHeader}.${encodedPayload}`).end()
+    .verify(publicKey, Buffer.from(signature, "base64url")), "tanda tangan token asli sah");
+
+  // Change only kid: keep the correct owner, issuer, lifetime and signature.
+  const alteredHeader = Buffer.from(JSON.stringify({ ...header, kid: "altered-local-test" })).toString("base64url");
+  assert.notEqual(alteredHeader, encodedHeader);
+  const tamperedToken = `${alteredHeader}.${encodedPayload}.${signature}`;
+  assert.equal(createVerify("RSA-SHA256").update(`${alteredHeader}.${encodedPayload}`).end()
+    .verify(publicKey, Buffer.from(signature, "base64url")), false, "header baru tidak ditandatangani ulang");
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (input, init) => {
+    const url = new URL(typeof input === "string" ? input : input.url);
+    if (url.hostname !== "127.0.0.1") throw new Error(`Unexpected outbound request: ${url.hostname}`);
+    return originalFetch(input, init);
+  };
+  const server = app.listen(0);
+  try {
+    for (const headers of [
+      { authorization: `Bearer ${tamperedToken}` },
+      { cookie: `__session=${tamperedToken}; __client_uat=${now - 1}; __clerk_db_jwt=local-dev-browser` },
     ]) {
       const response = await request(server, 34, headers);
       assert.equal(response.status, 401, response.raw);
