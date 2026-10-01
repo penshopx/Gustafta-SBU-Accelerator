@@ -1,0 +1,9 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "Ot7BiNzsnyM9dn9nAFvFS"
+uri = "file://artifacts/gustafta-film/public/audio/bg_music.mp3"
+type = "audio"
+title = "Gustafta instrumental background music"
+description = "Generated music: Restrained uplifting electronic instrumental for a Indonesian B2B construction preparation software explainer. Warm rounded synth arpeggios, soft precise pulse, light piano notes, 10…"

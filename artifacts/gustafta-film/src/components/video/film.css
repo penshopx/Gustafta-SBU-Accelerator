@@ -1,0 +1,88 @@
+.film-camera,.shot{position:absolute;inset:0;overflow:hidden}
+.shot{background:#101f32;color:#f4f9ff;font-family:'DM Sans',sans-serif}
+.shot h1{font-family:'Manrope',sans-serif;font-size:8.5vmin;line-height:1.08;letter-spacing:-.055em;font-weight:800;margin:0}
+.blue{color:#82c8ff}.cobalt{color:#1769d1}
+.eyebrow,.scene-number,.tag{font-family:'Space Mono',monospace;font-size:2vmin;letter-spacing:.12em;font-weight:700}
+.top-label{position:absolute;top:7%;left:6%;color:#b0d7ff}
+.scene-number{position:absolute;left:6%;bottom:5%;font-size:1.8vmin;color:#9cb5cc}
+.support{font-size:3.3vmin;line-height:1.45;color:#c5d9ed}
+.blueprint{background-image:linear-gradient(#243a5055 1px,transparent 1px),linear-gradient(90deg,#243a5055 1px,transparent 1px);background-size:5vmin 5vmin}
+.opener-copy{position:absolute;top:27%;left:6%;width:47%}
+.opener-copy h1.giant{font-size:25vmin;line-height:1.03}
+.application-types{display:flex;gap:3vmin;margin:3vmin 0;font-size:3.8vmin;font-weight:600}
+.application-types>div{padding-left:2vmin;border-left:3px solid #82c8ff}
+.dossier{position:absolute;left:61%;top:19%;height:66%;width:28%}
+.doc,.sheet-mid,.sheet-back{position:absolute;inset:0;border:2px solid #82c8ff;border-radius:2vmin;background:#203b56}
+.sheet-back{background:#1769d1}.sheet-mid{background:#284f77}
+.doc{padding:4vmin;color:#f4f9ff}
+.doc-icon{width:7vmin;height:7vmin;color:#82c8ff}
+.doc-title{font:800 3.7vmin 'Manrope',sans-serif;margin:4vmin 0}
+.doc-rule{height:1vmin;width:64%;background:#7696b7;margin:2vmin 0;border-radius:1vmin;transform-origin:left;animation:rule-fill .6s .8s both}
+.doc-rule.long{width:95%}.doc-rule.short{width:40%}
+.doc-rule:nth-of-type(3){animation-delay:1.8s}.doc-rule:nth-of-type(4){animation-delay:2.3s}.doc-rule:nth-of-type(5){animation-delay:2.8s}
+@keyframes rule-fill{from{transform:scaleX(.15);opacity:.2}to{transform:scaleX(1);opacity:1}}
+.doc-bottom{position:absolute;bottom:4vmin;left:4vmin;display:flex;gap:1vmin;align-items:center;font:1.5vmin 'Space Mono',monospace;color:#bddaf4}
+.doc-bottom svg{width:3vmin;height:3vmin}
+.sheet-stamp{position:absolute;right:-3%;bottom:19%;padding:1.3vmin 2vmin;border:2px solid #82c8ff;border-radius:.6vmin;background:#101f32;font:2vmin 'Space Mono',monospace;letter-spacing:.1em}
+.trace-line{position:absolute;bottom:11%;left:8%;height:.3vmin;width:83%;background:#82c8ff;transform-origin:left}
+.source-shot{background:#080f18}
+.center-title{position:absolute;top:6%;left:6%;right:6%;text-align:center}
+.center-title .eyebrow{color:#82c8ff;margin-bottom:1.2vmin}
+.center-title h1{font-size:8vmin}.center-title .support{margin-top:1.6vmin}
+.source-vault{position:absolute;left:37%;top:38%;width:26%;height:41%}
+.folder{position:relative;width:100%;height:100%;padding-top:9%}
+.folder-tab{position:absolute;left:0;top:0;width:46%;height:23%;background:#267fdf;border:2px solid #88ceff;border-radius:1.7vmin 3vmin 0 0}
+.folder-front{position:relative;height:100%;padding:3.2vmin;border-radius:2vmin;border:2px solid #88ceff;background:linear-gradient(135deg,#227bcb,#164876);overflow:hidden}
+.folder-icon{width:6vmin;height:6vmin;color:#c1e7ff}
+.folder-label{font:800 4vmin 'Manrope',sans-serif;letter-spacing:-.04em;margin-top:2.2vmin}
+.source-lines{display:flex;gap:1.2vmin;margin-top:3vmin;transform-origin:left}.source-lines i{width:8vmin;height:1vmin;background:#b3e0ff;border-radius:1vmin}
+.vault-orbit{position:absolute;width:130%;height:140%;left:-15%;top:-14%;border:1px solid #50718e;border-radius:50%;animation:vault-orbit 5s linear infinite}
+@keyframes vault-orbit{from{transform:rotate(-12deg) scale(.93)}to{transform:rotate(12deg) scale(1.02)}}
+.source-input{position:absolute;z-index:2;top:5%;display:flex;align-items:center;gap:2vmin;padding:2.5vmin;background:#15283e;border:1px solid #5b80a2;border-radius:1.6vmin;font-size:3vmin;line-height:1.3;white-space:nowrap}
+.source-input svg{height:5vmin;width:5vmin;color:#82c8ff}.profile-input{right:100%}.file-input{left:100%}
+.source-caption{position:absolute;left:6%;right:6%;bottom:7%;display:flex;justify-content:center;gap:2vmin;font-size:3.4vmin}
+.network-shot{background:#0c1c2d}.network-field{position:absolute;top:0;right:0;width:29%;height:100%;background:#175da7}
+.network-title{position:absolute;top:8%;left:6%}
+.network-source{position:absolute;left:6%;top:34%;width:32%;height:41%}
+.network-lines,.denied-path{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.permission-gate{position:absolute;left:49%;border:1px solid #82c8ff;background:#163a58;border-radius:50%;width:10vmin;height:10vmin;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#a6dbff}
+.permission-gate svg{width:4vmin;height:4vmin}.permission-gate span{font-size:1.8vmin}.gate-one{top:27%}.gate-two{top:62%}
+.app-node{position:absolute;left:72%;width:22%;height:22%;border:1px solid #8ed2ff;background:#164c80;padding:3vmin;border-radius:2vmin;display:flex;gap:2vmin;align-items:center;font-size:3.8vmin;font-weight:700;line-height:1.15}
+.app-node svg{width:5vmin;height:5vmin;flex-shrink:0}.sbu-node{top:23%}.other-node{top:57%}
+.network-caption{position:absolute;left:6%;bottom:12%;font-size:3.3vmin}
+.concept-note{position:absolute;left:6%;bottom:6%;font-size:2.4vmin;color:#b7cce0}
+.boundary-preview{position:absolute;left:5%;top:32%;width:35%;height:45%;border:2px dashed #82c8ff;border-radius:2vmin}
+.folder-shot{background:#12253c}
+.tag{display:inline-block;padding:1.1vmin 1.8vmin;border:1px solid #ffcb7c;color:#ffdb9f;border-radius:.8vmin}
+.future-badge{position:absolute;left:6%;top:6%}
+.folder-copy{position:absolute;left:6%;top:30%;width:42%}.folder-copy h1{font-size:7.5vmin}
+.folder-copy .support{margin-top:5vmin}
+.authorized-zone{position:absolute;left:51%;top:14%;width:29%;height:52%;padding:6vmin 3.2vmin 3.5vmin}
+.scope-outline{position:absolute;inset:0;width:100%;height:100%}
+.scope-label{position:absolute;top:2vmin;left:3.2vmin;font:2.4vmin 'Space Mono',monospace;color:#c5e7ff}
+.authorized-zone .folder-label{font-size:3.6vmin}
+.permitted-files{display:flex;gap:2vmin;position:absolute;bottom:3vmin;left:3vmin}
+.permitted-files svg{height:6vmin;width:6vmin;color:#c7eaff}
+.denied-zone{position:absolute;left:76%;top:70%;width:18%;height:20%}
+.denied-folder .folder-tab{background:#1f3347;border-color:#657d96}
+.denied-folder .folder-front{background:#1b3045;border-color:#657d96;padding:1.5vmin;display:flex;align-items:center;gap:1.5vmin}
+.denied-folder .folder-icon{height:4vmin;width:4vmin;color:#95abc0}.denied-folder .folder-label{font-size:2.6vmin;margin:0}
+.lock{position:absolute;top:-3vmin;right:-1vmin;width:7vmin;height:7vmin;border-radius:50%;background:#ffcb7c;color:#23364a;display:grid;place-items:center}
+.lock svg{width:3.6vmin;height:3.6vmin}
+.denial-label{position:absolute;left:0;right:0;bottom:-4.2vmin;font-size:2.5vmin;color:#ffdb9f;text-align:center;white-space:nowrap}
+.review-copy{position:absolute;left:6%;top:30%}.review-copy h1{font-size:11vmin}
+.review-sheet{position:absolute;left:48%;top:19%;width:43%;height:61%;border-radius:2vmin;background:#eef5fa;color:#14253a;padding:4vmin}
+.review-heading{display:flex;gap:2vmin;align-items:center;font:2vmin 'Space Mono',monospace;margin-bottom:3vmin}
+.review-heading svg{height:5vmin;width:5vmin;color:#1769d1}
+.review-step{display:flex;align-items:center;gap:2vmin;padding:2.5vmin 1.7vmin;border-bottom:1px solid #b5ccdf;font-size:3.2vmin;font-weight:700}
+.step-index{font:2.8vmin 'Space Mono',monospace;color:#1769d1}
+.review-step i{margin-left:auto;width:.8vmin;height:4vmin;background:#1769d1}
+.review-caveat{position:absolute;left:6%;bottom:13%;font-size:3.2vmin;color:#d3e5f3}
+.finale{background:#eef5fa;color:#14253a}
+.finale-lockup{position:absolute;inset:8% 6% 12%;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.brand-logo{width:40vmin;height:auto;margin-bottom:1vmin}
+.product-name{font-size:2vmin;letter-spacing:.2em;color:#50718a;margin-bottom:4vmin}
+.finale-message h1{font-size:10vmin}.finale .support{color:#47657e;margin-top:3.5vmin}
+.finale-note{font-size:2.7vmin;color:#47657e;margin-top:3vmin}
+.finale-line{position:absolute;left:6%;bottom:7%;width:88%;height:.35vmin;background:#1769d1;transform-origin:left}
+.loop-sheet{position:absolute;right:3%;bottom:-26%;width:21%;height:35%;border:2px solid #1769d1;background:#d2eaff;border-radius:2vmin;z-index:0}

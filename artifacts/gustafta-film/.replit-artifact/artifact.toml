@@ -1,0 +1,29 @@
+kind = "video"
+videoAspectRatio = "16:9"
+previewPath = "/gustafta-film/"
+title = "Gustafta — Satu sumber, akses terarah"
+description = "Video animasi 30 detik berbahasa Indonesia tentang persiapan SBU, profil perusahaan di Ruang Simpan, dan rencana akses dokumen berbatas folder. Format16:9."
+version = "1.0.0"
+id = "artifacts/gustafta-film"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/gustafta-film/" ]
+localPort = 23021
+
+[services.development]
+run = "pnpm --filter @workspace/gustafta-film run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/gustafta-film", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/gustafta-film/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23021"
+BASE_PATH = "/gustafta-film/"
