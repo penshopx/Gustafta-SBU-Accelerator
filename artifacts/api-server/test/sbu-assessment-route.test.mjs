@@ -209,7 +209,7 @@ async function request(server, path, options) {
   return { status: response.status, body: raw ? JSON.parse(raw) : null, raw };
 }
 
-test("respons daftar regulasi menahan tenggat dan hitung mundur transisi yang belum terverifikasi", async () => {
+test("respons daftar regulasi memuat temuan terpisah tanpa tenggat yang belum terverifikasi", async () => {
   const server = app.listen(0);
   try {
     const { status, body, raw } = await request(server, "/api/regulations");
@@ -219,11 +219,14 @@ test("respons daftar regulasi menahan tenggat dan hitung mundur transisi yang be
       ["kepdirjen-281-2026", "permen-6-2025"]);
 
     for (const regulation of body) {
-      assert.equal(regulation.effectiveStatus, "Tenggat belum terverifikasi",
+      assert.equal(regulation.effectiveStatus, "unverified",
         `${regulation.id} tidak boleh menayangkan tenggat resmi sebelum verifikasi`);
       assert.deepEqual(Object.keys(regulation).sort(),
-        ["detail", "effectiveStatus", "id", "source", "title"].sort(),
+        ["detail", "effectiveStatus", "id", "source", "title", "transitionFindings"].sort(),
         `${regulation.id} tidak boleh memiliki kolom tanggal/hitung mundur tambahan`);
+      assert.ok(regulation.transitionFindings.length > 0);
+      assert.ok(regulation.transitionFindings.every((finding) =>
+        finding.status === "perlu_tinjauan" && !("transitionDate" in finding)));
     }
     assert.doesNotMatch(raw, /\b20\d{2}-\d{2}-\d{2}\b/,
       "tanggal transisi tidak boleh muncul di JSON, termasuk dalam teks rujukan");
@@ -479,6 +482,99 @@ test("hanya verifikasi resmi per alur dengan telaah ahli membuka tanggal; penari
     if (oldAllowlist === undefined) delete process.env.SBU_VERIFIER_USER_IDS;
     else process.env.SBU_VERIFIER_USER_IDS = oldAllowlist;
     delete globalThis.__routeUserId;
+    delete globalThis.__routeVerificationRows;
+    delete globalThis.__routeCase;
+    delete globalThis.__routeEvidence;
+    delete globalThis.__routeEvidenceReads;
+  }
+});
+
+test("GET regulasi membaca status terbaru, aman, dan identik dengan temuan penilaian", async () => {
+  const records = [];
+  globalThis.__routeVerificationRows = records;
+  globalThis.__routeCase = {
+    id: 86, ownerId: "test-user", companyName: "Contoh Perpanjangan",
+    requestType: "perpanjangan", qualification: "kecil", classification: "gedung",
+    status: "draf", existingSbuExpiresOn: "2030-12-31",
+    createdAt: new Date("2026-02-01T00:00:00Z"), updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  globalThis.__routeEvidence = {
+    id: 86, caseId: 86, code: "legalitas", title: "Catatan pemohon",
+    note: "Klaim surat 2026-05-01 dan tenggat 2026-11-01",
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  globalThis.__routeEvidenceReads = 0;
+  const server = app.listen(0);
+  const assessmentPath = "/api/cases/86/assessment";
+  const regulationsPath = "/api/regulations";
+  const buildVerification = (track, overrides = {}) => ({
+    track,
+    publisher: "Ditjen Bina Konstruksi",
+    sourceUrl: "https://pu.go.id/surat/contoh",
+    documentNumber: `Surat ${track}`,
+    signatory: "Direktur Jenderal",
+    issuedOn: track === "transisi" ? "2026-03-31" : "2026-04-30",
+    scope: "Pemberlakuan dan cakupan skema SBU",
+    documentStatus: "berlaku",
+    sourceVerified: true,
+    expertName: "Penelaah Skema",
+    expertOrganization: "LSBU Teridentifikasi",
+    expertReview: "Cakupan dan pemicu alur telah ditelaah.",
+    expertReviewedOn: "2026-05-01",
+    expertApproved: true,
+    verifiedBy: "private-reviewer-id",
+    reviewerPrivateNote: "SHOULD_NEVER_BE_EXPOSED",
+    updatedAt: new Date("2026-05-01T00:00:00Z"),
+    ...overrides,
+  });
+  async function assertParity(expectedStatuses) {
+    const [regulations, assessment] = await Promise.all([
+      request(server, regulationsPath),
+      request(server, assessmentPath),
+    ]);
+    assert.equal(regulations.status, 200, regulations.raw);
+    assert.equal(assessment.status, 200, assessment.raw);
+    const byId = Object.fromEntries(regulations.body.map((item) => [item.id, item]));
+    assert.equal(byId["kepdirjen-281-2026"].effectiveStatus, expectedStatuses.kepdirjen);
+    assert.equal(byId["permen-6-2025"].effectiveStatus, expectedStatuses.permen);
+    for (const regulation of regulations.body) {
+      for (const finding of regulation.transitionFindings) {
+        assert.deepEqual(finding, assessment.body.findings.find((item) => item.code === finding.code),
+          `${finding.code} harus memakai logika dan tanggal yang sama pada kedua endpoint`);
+      }
+    }
+    assert.ok(regulations.body.find((item) => item.id === "kepdirjen-281-2026")
+      .transitionFindings.every((item) => item.code === "transisi"));
+    assert.ok(byId["permen-6-2025"].transitionFindings.every((item) =>
+      ["transisi_operasional", "transisi_konversi"].includes(item.code)));
+    assert.doesNotMatch(regulations.raw, /private-reviewer-id|SHOULD_NEVER_BE_EXPOSED|2030-12-31|2026-05-01|2026-11-01/);
+    return regulations.body;
+  }
+
+  try {
+    await assertParity({ kepdirjen: "unverified", permen: "unverified" });
+    records.push(buildVerification("transisi"));
+    let regulations = await assertParity({ kepdirjen: "verified", permen: "unverified" });
+    assert.equal(regulations.find((item) => item.id === "kepdirjen-281-2026")
+      .transitionFindings[0].transitionDate.slice(0, 10), "2026-09-30");
+
+    records.push(buildVerification("transisi_operasional"));
+    await assertParity({ kepdirjen: "verified", permen: "partial" });
+    records.push(buildVerification("transisi_konversi"));
+    regulations = await assertParity({ kepdirjen: "verified", permen: "verified" });
+    assert.deepEqual(regulations.find((item) => item.id === "permen-6-2025")
+      .transitionFindings.map((finding) => finding.transitionDate.slice(0, 10)), ["2026-04-30", "2026-10-30"]);
+
+    Object.assign(records.find((row) => row.track === "transisi"), { documentStatus: "dicabut" });
+    await assertParity({ kepdirjen: "unverified", permen: "verified" });
+    Object.assign(records.find((row) => row.track === "transisi_operasional"), { expertApproved: false });
+    await assertParity({ kepdirjen: "unverified", permen: "partial" });
+    Object.assign(records.find((row) => row.track === "transisi_konversi"), { expertReview: "" });
+    regulations = await assertParity({ kepdirjen: "unverified", permen: "unverified" });
+    assert.ok(regulations.flatMap((item) => item.transitionFindings)
+      .every((finding) => finding.status === "perlu_tinjauan" && !("transitionDate" in finding)));
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__routeVerificationRows;
     delete globalThis.__routeCase;
     delete globalThis.__routeEvidence;

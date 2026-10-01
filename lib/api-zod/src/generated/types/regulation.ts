@@ -5,11 +5,14 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+import type { Finding } from './finding';
+import type { RegulationEffectiveStatus } from './regulationEffectiveStatus';
 
 export interface Regulation {
   id: string;
   title: string;
   detail: string;
   source: string;
-  effectiveStatus: string;
+  effectiveStatus: RegulationEffectiveStatus;
+  transitionFindings: Finding[];
 }

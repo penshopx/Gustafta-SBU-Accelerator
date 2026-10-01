@@ -456,10 +456,14 @@ components:
             $ref: "#/components/schemas/SbuCase"
     Regulation:
       type: object
-      required: [id, title, detail, source, effectiveStatus]
+      required: [id, title, detail, source, effectiveStatus, transitionFindings]
       properties:
         id: { type: string }
         title: { type: string }
         detail: { type: string }
         source: { type: string }
-        effectiveStatus: { type: string }
+        effectiveStatus: { type: string, enum: [unverified, partial, verified] }
+        transitionFindings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Finding"

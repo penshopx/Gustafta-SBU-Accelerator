@@ -13,7 +13,7 @@ import {
    ListRegulationsResponse, ListTransitionVerificationsResponse,
    PutTransitionVerificationParams, PutTransitionVerificationBody, PutTransitionVerificationResponse,
 } from "@workspace/api-zod";
-import { assessCase, REGULATIONS, TRANSITION_TRACKS } from "../lib/sbu-rules";
+import { assessCase, regulationsFor, TRANSITION_TRACKS } from "../lib/sbu-rules";
 
 const router: IRouter = Router();
 const requireAuth: RequestHandler = (req, res, next) => {
@@ -292,7 +292,8 @@ router.put("/transition-verifications/:track", requireVerifier, async (req, res)
 });
 
 router.get("/regulations", async (_req, res): Promise<void> => {
-  res.json(ListRegulationsResponse.parse(REGULATIONS));
+  const verifications = await db.select().from(transitionVerificationsTable);
+  res.json(ListRegulationsResponse.parse(regulationsFor(verifications)));
 });
 
 export default router;

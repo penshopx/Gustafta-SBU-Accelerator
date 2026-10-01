@@ -339,11 +339,21 @@ export interface Dashboard {
   recent: SbuCase[];
 }
 
+export type RegulationEffectiveStatus = typeof RegulationEffectiveStatus[keyof typeof RegulationEffectiveStatus];
+
+
+export const RegulationEffectiveStatus = {
+  unverified: 'unverified',
+  partial: 'partial',
+  verified: 'verified',
+} as const;
+
 export interface Regulation {
   id: string;
   title: string;
   detail: string;
   source: string;
-  effectiveStatus: string;
+  effectiveStatus: RegulationEffectiveStatus;
+  transitionFindings: Finding[];
 }
 

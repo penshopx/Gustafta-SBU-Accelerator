@@ -4,7 +4,6 @@ export const RULESET = "Permen PU 6/2025 + Kepdirjen 281/KPTS/DK/2026 (persiapan
 
 // Keputusan penayangan dibuat per alur; tidak ada tanggal transisi di respons API
 // sampai bukti pemerintah dan telaah ahli untuk alur tersebut terverifikasi.
-const TRANSITION_STATUS = "Tenggat belum terverifikasi";
 const TRANSITION_FINDINGS = [
   {
     code: "transisi",
@@ -26,23 +25,6 @@ const TRANSITION_FINDINGS = [
   },
 ] as const;
 
-export const REGULATIONS = [
-  {
-    id: "permen-6-2025",
-    title: "Permen PU Nomor 6 Tahun 2025",
-    detail: "Rujukan standar kegiatan usaha jasa konstruksi. Lampiran I memuat alternatif bukti SMAP, termasuk surat komitmen khusus permohonan SBU pertama kali, serta ketentuan pemenuhannya menurut kualifikasi.",
-    source: "Permen PU 6/2025, Lampiran I (PDF unggahan hlm. 266); Pasal 20–21 (PDF hlm. 12–13)",
-    effectiveStatus: TRANSITION_STATUS,
-  },
-  {
-    id: "kepdirjen-281-2026",
-    title: "Kepdirjen Bina Konstruksi 281/KPTS/DK/2026",
-    detail: "Standar skema sertifikasi badan usaha jasa konstruksi. Menggantikan Kepdirjen 37/2025; pilihan bukti SMAP tidak boleh direduksi menjadi satu jalur saja.",
-    source: "Kepdirjen 281/KPTS/DK/2026, diktum KELIMA (PDF unggahan hlm. 4) dan skema SMAP (PDF hlm. 27–32)",
-    effectiveStatus: TRANSITION_STATUS,
-  },
-];
-
 type Finding = {
   code: string;
   title: string;
@@ -53,6 +35,26 @@ type Finding = {
 };
 
 export const TRANSITION_TRACKS = ["transisi", "transisi_operasional", "transisi_konversi"] as const;
+
+const REGULATION_TRACKS = {
+  "kepdirjen-281-2026": ["transisi"],
+  "permen-6-2025": ["transisi_operasional", "transisi_konversi"],
+} as const;
+
+const REGULATION_REFERENCES = [
+  {
+    id: "permen-6-2025",
+    title: "Permen PU Nomor 6 Tahun 2025",
+    detail: "Rujukan standar kegiatan usaha jasa konstruksi. Lampiran I memuat alternatif bukti SMAP, termasuk surat komitmen khusus permohonan SBU pertama kali, serta ketentuan pemenuhannya menurut kualifikasi.",
+    source: "Permen PU 6/2025, Lampiran I (PDF unggahan hlm. 266); Pasal 20–21 (PDF hlm. 12–13)",
+  },
+  {
+    id: "kepdirjen-281-2026",
+    title: "Kepdirjen Bina Konstruksi 281/KPTS/DK/2026",
+    detail: "Standar skema sertifikasi badan usaha jasa konstruksi. Menggantikan Kepdirjen 37/2025; pilihan bukti SMAP tidak boleh direduksi menjadi satu jalur saja.",
+    source: "Kepdirjen 281/KPTS/DK/2026, diktum KELIMA (PDF unggahan hlm. 4) dan skema SMAP (PDF hlm. 27–32)",
+  },
+];
 
 function sixMonthsAfter(day: string): string {
   const [year, month, date] = day.split("-").map(Number);
@@ -89,6 +91,44 @@ function transitionFinding(
     transitionDate: track.code === "transisi_operasional"
       ? verification.issuedOn : sixMonthsAfter(verification.issuedOn),
   };
+}
+
+function regulationFindings(
+  regulationId: keyof typeof REGULATION_TRACKS,
+  verifications: TransitionVerificationRow[],
+): Finding[] {
+  return REGULATION_TRACKS[regulationId].map((code) => {
+    const track = TRANSITION_FINDINGS.find((finding) => finding.code === code)!;
+    return transitionFinding(track, verifications.find((item) => item.track === code));
+  });
+}
+
+function statusFor(findings: Finding[]): "unverified" | "partial" | "verified" {
+  const verifiedCount = findings.filter((finding) => finding.status === "tercatat").length;
+  if (verifiedCount === 0) return "unverified";
+  if (verifiedCount === findings.length) return "verified";
+  return "partial";
+}
+
+// Safe static baseline for callers that do not yet provide verification records.
+export const REGULATIONS = REGULATION_REFERENCES.map((regulation) => {
+  const transitionFindings = regulationFindings(regulation.id as keyof typeof REGULATION_TRACKS, []);
+  return {
+    ...regulation,
+    effectiveStatus: statusFor(transitionFindings),
+    transitionFindings,
+  };
+});
+
+export function regulationsFor(verifications: TransitionVerificationRow[] = []) {
+  return REGULATION_REFERENCES.map((regulation) => {
+    const transitionFindings = regulationFindings(regulation.id as keyof typeof REGULATION_TRACKS, verifications);
+    return {
+      ...regulation,
+      effectiveStatus: statusFor(transitionFindings),
+      transitionFindings,
+    };
+  });
 }
 
 const initialChecks = [

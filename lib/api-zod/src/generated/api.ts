@@ -284,7 +284,15 @@ export const ListRegulationsResponseItem = zod.object({
   "title": zod.string(),
   "detail": zod.string(),
   "source": zod.string(),
-  "effectiveStatus": zod.string()
+  "effectiveStatus": zod.enum(['unverified', 'partial', 'verified']),
+  "transitionFindings": zod.array(zod.object({
+  "code": zod.string(),
+  "title": zod.string(),
+  "status": zod.enum(['tercatat', 'perlu_bukti', 'perlu_tinjauan']),
+  "detail": zod.string(),
+  "source": zod.string(),
+  "transitionDate": zod.coerce.date().optional().describe('Only present after official source and expert review for this track are approved.')
+}))
 })
 export const ListRegulationsResponse = zod.array(ListRegulationsResponseItem)
 
