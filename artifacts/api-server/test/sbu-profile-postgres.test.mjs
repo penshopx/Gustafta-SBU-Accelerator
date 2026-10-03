@@ -13,16 +13,20 @@ const testDir = fileURLToPath(new URL(".", import.meta.url));
 const requireDb = createRequire(new URL("../../../lib/db/package.json", import.meta.url));
 const { Pool } = requireDb("pg");
 
-async function request(server, userId) {
+async function request(server, userId, options = {}) {
   const { port } = server.address();
   const response = await fetch(`http://127.0.0.1:${port}/api/me`, {
-    headers: userId === undefined ? {} : { "x-test-user-id": userId },
+    ...options,
+    headers: {
+      ...options.headers,
+      ...(userId === undefined ? {} : { "x-test-user-id": userId }),
+    },
   });
   const raw = await response.text();
   return { status: response.status, body: JSON.parse(raw), raw };
 }
 
-test("GET /api/me menolak pengunjung tanpa sesi dan mengisolasi profil di PostgreSQL", async (t) => {
+test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil di PostgreSQL", async (t) => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk pengujian integrasi PostgreSQL");
   assert.notEqual(process.env.NODE_ENV, "production", "Pengujian tidak boleh dijalankan dalam mode produksi");
 
@@ -76,7 +80,10 @@ test("GET /api/me menolak pengunjung tanpa sesi dan mengisolasi profil di Postgr
 
     // Only auth is replaced. The route uses the actual Drizzle query builder,
     // PostgreSQL pool and application's real profile table definition.
-    globalThis.__profileTestDb = drizzle(isolated);
+    let routeQueryCount = 0;
+    globalThis.__profileTestDb = drizzle(isolated, {
+      logger: { logQuery() { routeQueryCount += 1; } },
+    });
     await build({
       entryPoints: [join(testDir, "../src/routes/sbu.ts")],
       outfile: join(temporaryDir, "route.mjs"),
@@ -107,6 +114,7 @@ test("GET /api/me menolak pengunjung tanpa sesi dan mengisolasi profil di Postgr
 
     const { default: router } = await import(join(temporaryDir, "route.mjs"));
     const app = express();
+    app.use(express.json());
     app.use("/api", router);
     server = app.listen(0);
 
@@ -115,6 +123,26 @@ test("GET /api/me menolak pengunjung tanpa sesi dan mengisolasi profil di Postgr
       const response = await request(server);
       assert.equal(response.status, 401, response.raw);
       assert.deepEqual(await readProfiles(), [], "Permintaan tanpa sesi tidak boleh menyisipkan profil");
+    });
+
+    await t.test("PATCH tanpa identitas mengembalikan 401 sebelum menjalankan SQL dan tabel salinan tetap kosong", async () => {
+      assert.deepEqual(await readProfiles(), [], "Tabel profil salinan harus mulai kosong");
+      const beforeQueryCount = routeQueryCount;
+      const response = await request(server, undefined, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          role: "konsultan",
+          displayName: "Profil Tanpa Sesi",
+          organizationName: "Organisasi Tanpa Sesi",
+        }),
+      });
+      assert.equal(response.status, 401, response.raw);
+      assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." });
+      assert.equal(routeQueryCount, beforeQueryCount,
+        "PATCH tanpa sesi tidak boleh menjalankan SQL, termasuk upsert ke tabel salinan atau aplikasi");
+      assert.deepEqual(await readProfiles(), [],
+        "PATCH tanpa sesi tidak boleh membuat profil di tabel salinan");
     });
 
     await t.test("dua permintaan pertama bersamaan membuat tepat satu profil awal di tabel salinan", async () => {
