@@ -8,7 +8,8 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "test": "node --test test/*.test.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "test:typecheck": "node --test test/typecheck/*.test.mjs",
+    "typecheck": "tsc --build tsconfig.json"
   },
   "dependencies": {
     "@clerk/express": "^2.1.72",
