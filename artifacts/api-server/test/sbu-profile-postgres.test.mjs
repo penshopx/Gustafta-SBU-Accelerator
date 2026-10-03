@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import { build } from "esbuild";
 import { drizzle } from "drizzle-orm/node-postgres";
+import { createRestrictedRoutePool } from "./helpers/restricted-postgres.mjs";
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const requireDb = createRequire(new URL("../../../lib/db/package.json", import.meta.url));
@@ -32,20 +33,19 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
 
   const schema = `sbu_profile_test_${randomUUID().replaceAll("-", "")}`;
   const admin = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
-  const isolated = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    options: `-c search_path=${schema}`,
-    max: 2,
-  });
+  let isolated;
+  let restricted;
   const temporaryDir = await mkdtemp(join(testDir, ".sbu-profile-pg-"));
   let created = false;
   let server;
 
   try {
-    // Clone only the profile table. No test INSERT/UPDATE/DELETE targets public.
+    // Clone only the profile table; route writes use a separate restricted login.
     await admin.query(`CREATE SCHEMA "${schema}"`);
     created = true;
     await admin.query(`CREATE TABLE "${schema}".sbu_profiles (LIKE public.sbu_profiles INCLUDING ALL)`);
+    restricted = await createRestrictedRoutePool(admin, schema);
+    isolated = restricted.pool;
 
     const { rows: [target] } = await isolated.query(`
       SELECT current_schema() AS current_schema,
@@ -204,7 +204,7 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
     delete globalThis.__profileTestDb;
     try {
       try {
-        await isolated.end();
+        if (restricted) await restricted.close();
       } finally {
         if (created) await admin.query(`DROP SCHEMA "${schema}" CASCADE`);
       }
