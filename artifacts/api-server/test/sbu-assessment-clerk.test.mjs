@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { createSign, createVerify, generateKeyPairSync } from "node:crypto";
+import { request as httpRequest } from "node:http";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -60,6 +61,7 @@ await build({
           export const profilesTable = { userId: "userId" };
           export const db = {
             select() {
+              globalThis.__clerkTestDataReads = (globalThis.__clerkTestDataReads ?? 0) + 1;
               return {
                 from(table) {
                   return Object.assign(Promise.resolve(table === transitionVerificationsTable ? [] : []), {
@@ -89,6 +91,31 @@ async function request(server, id, headers) {
   const response = await fetch(`http://127.0.0.1:${port}/api/cases/${id}/assessment`, { headers });
   const raw = await response.text();
   return { status: response.status, raw, body: JSON.parse(raw) };
+}
+
+// Node fetch replaces a supplied Host with the URL's hostname. Keep the
+// connection local while sending the public Host verbatim for domain tests.
+function requestWithHost(server, id, headers) {
+  return new Promise((resolve, reject) => {
+    const req = httpRequest({
+      hostname: "127.0.0.1", port: server.address().port,
+      path: `/api/cases/${id}/assessment`, headers,
+    }, (res) => {
+      let raw = "";
+      res.setEncoding("utf8");
+      res.on("data", (chunk) => { raw += chunk; });
+      res.on("error", reject);
+      res.on("end", () => {
+        try {
+          resolve({ status: res.statusCode, raw, body: JSON.parse(raw) });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+    req.on("error", reject);
+    req.end();
+  });
 }
 
 test("cookie dan bearer sesi palsu tidak membuka penilaian melalui middleware Clerk", async () => {
@@ -205,6 +232,104 @@ test("sesi bertanda tangan dengan penerbit berbeda ditolak sebelum membaca data"
     delete globalThis.__clerkTestEvidence;
     delete globalThis.__clerkTestCaseReads;
     delete globalThis.__clerkTestEvidenceReads;
+  }
+});
+
+test("domain Clerk dipilih sesuai host/proxy dan issuer lain ditolak tanpa membaca data", async (t) => {
+  const developmentKey = process.env.CLERK_PUBLISHABLE_KEY;
+  const originalFetch = globalThis.fetch;
+  globalThis.__clerkTestCases = [
+    { id: 34, ownerId: "owner-a", companyName: "Perusahaan Sendiri", requestType: "baru",
+      qualification: "kecil", classification: "gedung", status: "draf", existingSbuExpiresOn: null },
+  ];
+  globalThis.__clerkTestEvidence = [
+    { id: 1, caseId: 34, code: "legalitas", title: "Legalitas", note: "Bukti sendiri" },
+  ];
+  globalThis.fetch = (input, init) => {
+    const url = new URL(typeof input === "string" ? input : input.url);
+    if (url.hostname !== "127.0.0.1") throw new Error(`Unexpected outbound request: ${url.hostname}`);
+    return originalFetch(input, init);
+  };
+  const server = app.listen(0);
+  const primaryHost = "sbu.example.test";
+  const alternateHost = "penilaian.example.test";
+  const primaryIssuer = `https://clerk.${primaryHost}`;
+  const alternateIssuer = `https://clerk.${alternateHost}`;
+  const developmentIssuer = "https://example.clerk.accounts.dev";
+  const unrelatedIssuer = "https://unrelated.clerk.accounts.dev";
+
+  // A pk_test fallback intentionally bypasses host-derived keys. Use a
+  // synthetic pk_live key to exercise the actual multi-domain production path;
+  // the real middleware still verifies every token using our local RSA key.
+  const productionKey = `pk_live_${Buffer.from(`clerk.${primaryHost}$`).toString("base64")}`;
+  const scenarios = [
+    { label: "Host domain utama", key: productionKey, headers: { host: primaryHost }, issuer: primaryIssuer },
+    { label: "Host domain alternatif", key: productionKey, headers: { host: alternateHost }, issuer: alternateIssuer },
+    { label: "Host huruf besar dengan port", key: productionKey,
+      headers: { host: "PENILAIAN.EXAMPLE.TEST:443" }, issuer: alternateIssuer },
+    { label: "proxy memilih domain utama di atas Host alternatif", key: productionKey,
+      headers: { host: alternateHost, "x-forwarded-host": primaryHost }, issuer: primaryIssuer },
+    { label: "proxy memilih domain alternatif di atas Host utama", key: productionKey,
+      headers: { host: primaryHost, "x-forwarded-host": alternateHost }, issuer: alternateIssuer },
+    { label: "hop pertama proxy memilih domain utama", key: productionKey,
+      headers: { host: alternateHost, "x-forwarded-host": ` ${primaryHost}, ${alternateHost}` }, issuer: primaryIssuer },
+    { label: "hop pertama proxy memilih domain alternatif dengan port", key: productionKey,
+      headers: { host: primaryHost, "x-forwarded-host": ` PENILAIAN.EXAMPLE.TEST:443 , ${primaryHost}` }, issuer: alternateIssuer },
+    { label: "proxy kosong kembali ke Host", key: productionKey,
+      headers: { host: alternateHost, "x-forwarded-host": "" }, issuer: alternateIssuer },
+    { label: "key pengembangan tetap berlaku pada Host alternatif", key: developmentKey,
+      headers: { host: alternateHost }, issuer: developmentIssuer },
+    { label: "key pengembangan tetap berlaku di belakang proxy", key: developmentKey,
+      headers: { host: primaryHost, "x-forwarded-host": `${alternateHost}, ${primaryHost}` }, issuer: developmentIssuer },
+  ];
+  try {
+    for (const scenario of scenarios) {
+      await t.test(scenario.label, async () => {
+        process.env.CLERK_PUBLISHABLE_KEY = scenario.key;
+        // Both legitimate domain issuers must be tried for every host: this
+        // catches a key accidentally fixed to one domain or to the last hop.
+        for (const issuer of [primaryIssuer, alternateIssuer, developmentIssuer, unrelatedIssuer]) {
+          const token = sessionToken("owner-a", { iss: issuer });
+          const now = Math.floor(Date.now() / 1000);
+          const [header, payload, signature] = token.split(".");
+          assert.ok(createVerify("RSA-SHA256").update(`${header}.${payload}`).end()
+            .verify(publicKey, Buffer.from(signature, "base64url")), "JWT uji benar-benar ditandatangani");
+          for (const authHeaders of [
+            { authorization: `Bearer ${token}` },
+            { cookie: `__session=${token}; __client_uat=${now - 1}; __clerk_db_jwt=local-dev-browser` },
+          ]) {
+            globalThis.__clerkTestCaseReads = 0;
+            globalThis.__clerkTestEvidenceReads = 0;
+            globalThis.__clerkTestDataReads = 0;
+            const response = await requestWithHost(server, 34, { ...scenario.headers, ...authHeaders });
+            const context = `${scenario.label}, ${issuer}, ${Object.keys(authHeaders)[0]}: ${response.raw}`;
+            if (issuer === scenario.issuer) {
+              assert.equal(response.status, 200, context);
+              assert.equal(response.body.caseId, 34, context);
+              assert.equal(response.body.findings.find((finding) => finding.code === "legalitas").status, "tercatat", context);
+              assert.equal(globalThis.__clerkTestCaseReads, 1, context);
+              assert.equal(globalThis.__clerkTestEvidenceReads, 1, context);
+            } else {
+              assert.equal(response.status, 401, context);
+              assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." }, context);
+              assert.doesNotMatch(response.raw, /companyName|ownerId|caseId|evidence|findings|recordedCount|Perusahaan Sendiri|Bukti sendiri/i, context);
+              assert.equal(globalThis.__clerkTestCaseReads, 0, context);
+              assert.equal(globalThis.__clerkTestEvidenceReads, 0, context);
+              assert.equal(globalThis.__clerkTestDataReads, 0, "issuer lain harus ditolak sebelum query apa pun");
+            }
+          }
+        }
+      });
+    }
+  } finally {
+    process.env.CLERK_PUBLISHABLE_KEY = developmentKey;
+    globalThis.fetch = originalFetch;
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__clerkTestCases;
+    delete globalThis.__clerkTestEvidence;
+    delete globalThis.__clerkTestCaseReads;
+    delete globalThis.__clerkTestEvidenceReads;
+    delete globalThis.__clerkTestDataReads;
   }
 });
 
