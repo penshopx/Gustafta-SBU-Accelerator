@@ -24,7 +24,7 @@ async function request(server, userId, path, options = {}) {
   return { status: response.status, body: JSON.parse(raw), raw };
 }
 
-test("POST dan PATCH bukti menjaga kepemilikan serta keunikan kategori di PostgreSQL", async () => {
+test("Rute bukti menjaga kepemilikan, keunikan kategori, dan urutan di PostgreSQL", async (t) => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk pengujian integrasi PostgreSQL");
   assert.notEqual(process.env.NODE_ENV, "production", "Pengujian tidak boleh dijalankan dalam mode produksi");
 
@@ -247,6 +247,56 @@ test("POST dan PATCH bukti menjaga kepemilikan serta keunikan kategori di Postgr
       }],
       "Hanya kiriman pemenang yang tersimpan, tanpa tertimpa oleh kiriman yang ditolak");
     assert.equal(afterRace.length, 3, "Total hanya satu kategori baru boleh tersimpan");
+
+    await t.test("GET bukti konsisten berdasarkan updatedAt menurun lalu ID menurun saat waktu seri", async () => {
+      const { rows: [orderingCase] } = await isolated.query(
+        `INSERT INTO sbu_cases (owner_id, company_name, request_type, qualification, classification)
+         VALUES ($1, 'Pemohon uji urutan', 'baru', 'kecil', 'konstruksi') RETURNING id`, [owner],
+      );
+      const newest = "2026-06-03T10:00:00.000Z";
+      const tied = "2026-06-02T10:00:00.000Z";
+      const oldest = "2026-06-01T10:00:00.000Z";
+      // Neither insertion order nor ID order matches the required result.
+      // Explicit IDs and all writes belong solely to the restricted clone.
+      const fixtures = [
+        { id: 40, updatedAt: tied },
+        { id: 10, updatedAt: newest },
+        { id: 60, updatedAt: oldest },
+        { id: 20, updatedAt: tied },
+        { id: 50, updatedAt: tied },
+        { id: 30, updatedAt: oldest },
+      ];
+      for (const fixture of fixtures) {
+        await isolated.query(
+          `INSERT INTO sbu_evidence (id, case_id, code, title, note, updated_at)
+           VALUES ($1, $2, $3, $4, '', $5)`,
+          [fixture.id, orderingCase.id, `urutan-${fixture.id}`, `Bukti ${fixture.id}`, fixture.updatedAt],
+        );
+      }
+      const { rows: stored } = await isolated.query(
+        "SELECT id, updated_at FROM sbu_evidence WHERE case_id = $1 ORDER BY id", [orderingCase.id],
+      );
+      assert.deepEqual(stored.map(({ id, updated_at }) => ({ id, updatedAt: updated_at.toISOString() })),
+        [...fixtures].sort((a, b) => a.id - b.id),
+        "PostgreSQL harus menyimpan waktu seri identik dan ID berbeda sesuai fixture");
+
+      const expected = [
+        { id: 10, updatedAt: newest },
+        { id: 50, updatedAt: tied },
+        { id: 40, updatedAt: tied },
+        { id: 20, updatedAt: tied },
+        { id: 60, updatedAt: oldest },
+        { id: 30, updatedAt: oldest },
+      ];
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        const listed = await request(server, owner, `/api/cases/${orderingCase.id}/evidence`);
+        assert.equal(listed.status, 200, listed.raw);
+        assert.deepEqual(listed.body.map(({ id, updatedAt }) => ({ id, updatedAt })), expected,
+          `GET ke-${attempt} harus mengurutkan waktu menurun dan memecahkan waktu seri dengan ID menurun`);
+        assert.ok(listed.body.every(({ caseId }) => caseId === orderingCase.id),
+          "Daftar hanya boleh memuat bukti dari permohonan yang diminta");
+      }
+    });
   } finally {
     if (server) await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__evidenceTestDb;
