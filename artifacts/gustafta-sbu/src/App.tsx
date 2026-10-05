@@ -178,6 +178,7 @@ function VerifiedRoutes({ userId }: { userId: string | null }) {
   // Cookies may change before Clerk updates its in-memory user (or vice versa).
   // Never render private queries when the API and Clerk disagree about the owner.
   if (userId && (me.isLoading || !me.data && !me.isError)) return <div className="mx-auto max-w-3xl p-10"><Loading /></div>;
+  if (userId && me.isError) return <div className="mx-auto max-w-xl p-10"><ErrorState message="Identitas sesi belum dapat diperiksa. Coba lagi sebelum membuka ruang kerja." retry={() => me.refetch()} /></div>;
   if (userId && me.data && me.data.userId !== userId) return <div className="mx-auto max-w-xl p-10"><ErrorState message="Sesi akun berubah. Muat ulang halaman untuk melanjutkan." retry={() => window.location.reload()} /></div>;
   return <AppRoutes />;
 }

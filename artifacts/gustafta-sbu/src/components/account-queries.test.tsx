@@ -95,7 +95,8 @@ test('perubahan akun di tab lain langsung menyembunyikan tampilan detail sebelum
         key: 'gustafta:active-account', newValue: 'akun-kedua',
       }));
     });
-    assert.equal(renderer!.toJSON(), null);
+    assert.doesNotMatch(JSON.stringify(renderer!.toJSON()), /Rahasia akun pertama/);
+    assert.equal((renderer!.toJSON() as TestRenderer.ReactTestRendererJSON).props.style.display, 'none');
     assert.equal(reloads, 1);
   } finally {
     await act(async () => { renderer?.unmount(); });
@@ -103,5 +104,73 @@ test('perubahan akun di tab lain langsung menyembunyikan tampilan detail sebelum
     globals.document = oldDocument;
     globals.localStorage = oldStorage;
     globals.IS_REACT_ACT_ENVIRONMENT = oldAct;
+  }
+});
+test('Kembali/Maju memeriksa ulang sesi dengan storage lama, akun baru, kosong, atau tidak tersedia', async () => {
+  const globals = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const original = { window: globals.window, document: globals.document, storage: globals.localStorage, act: globals.IS_REACT_ACT_ENVIRONMENT };
+  const tab = new EventTarget();
+  let reloads = 0;
+  let storedAccount: string | null | undefined;
+  const dom = { style: { display: 'contents' } };
+  globals.IS_REACT_ACT_ENVIRONMENT = true;
+  globals.window = Object.assign(tab, { location: { reload: () => {
+    assert.equal(dom.style.display, 'none', 'DOM must be concealed before reload');
+    reloads++;
+  } } }) as Window & typeof globalThis;
+  globals.document = new EventTarget() as Document;
+  globals.localStorage = {
+    getItem: () => {
+      if (storedAccount === undefined) throw new Error('Storage disabled');
+      return storedAccount;
+    },
+    setItem: () => {},
+  } as unknown as Storage;
+  let renderer: TestRenderer.ReactTestRenderer | undefined;
+  try {
+    for (const route of ['/dashboard', '/cases/1']) {
+      for (const stored of ['akun-pertama', 'akun-kedua', null, undefined]) {
+      storedAccount = stored;
+      await act(async () => {
+        renderer = TestRenderer.create(createElement(CrossTabAccountGate, {
+          userId: 'akun-pertama',
+          children: createElement('main', null, `Rahasia akun pertama ${route}`),
+        }), { createNodeMock: () => dom });
+      });
+      assert.match(JSON.stringify(renderer!.toJSON()), /Rahasia akun pertama/);
+      await act(async () => { tab.dispatchEvent(new Event('pagehide')); });
+      assert.equal(dom.style.display, 'none');
+      assert.doesNotMatch(JSON.stringify(renderer!.toJSON()), /Rahasia akun pertama/);
+      const before = reloads;
+      await act(async () => {
+        tab.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true }));
+      });
+      assert.equal(reloads, before + 1);
+      assert.doesNotMatch(JSON.stringify(renderer!.toJSON()), /Rahasia akun pertama/);
+      // Duplicate lifecycle notifications cannot start a reload loop.
+      await act(async () => {
+        tab.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true }));
+      });
+      assert.equal(reloads, before + 1);
+      await act(async () => { renderer!.unmount(); });
+      const afterUnmount = reloads;
+      tab.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true }));
+      assert.equal(reloads, afterUnmount, 'lifecycle listeners are removed on unmount');
+      }
+    }
+    await act(async () => {
+      renderer = TestRenderer.create(createElement(CrossTabAccountGate, {
+        userId: null, children: createElement('p', null, 'Halaman publik'),
+      }), { createNodeMock: () => dom });
+      tab.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: false }));
+      tab.dispatchEvent(new Event('focus'));
+    });
+    assert.equal(reloads, 8, 'normal pageshow/focus does not reload signed-out pages');
+  } finally {
+    await act(async () => { renderer?.unmount(); });
+    globals.window = original.window;
+    globals.document = original.document;
+    globals.localStorage = original.storage;
+    globals.IS_REACT_ACT_ENVIRONMENT = original.act;
   }
 });

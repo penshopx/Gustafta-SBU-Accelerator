@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import React, { useEffect, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -8,12 +8,32 @@ const activeAccountKey = 'gustafta:active-account';
 // session cookie. Hide the old tree immediately, then reload Clerk from disk.
 export function CrossTabAccountGate({ userId, children }: { userId: string | null; children: ReactNode }) {
   const [blocked, setBlocked] = useState(false);
+  const surface = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const check = (otherId: string | null) => {
-      if (otherId === userId) return;
+    let reloading = false;
+    const conceal = () => {
+      // Conceal the actual DOM before the browser snapshots it for BFCache.
+      // React state alone cannot guarantee the saved frame has been redacted.
+      if (surface.current) surface.current.style.display = 'none';
       flushSync(() => setBlocked(true));
+    };
+    const reload = () => {
+      conceal();
+      if (reloading) return;
+      reloading = true;
       window.location.reload();
+    };
+    const check = (otherId: string | null) => {
+      if ((otherId || null) === userId) return;
+      reload();
+    };
+    const onPageHide = () => conceal();
+    const onPageShow = (event: PageTransitionEvent) => {
+      // A frozen tab misses storage/channel messages. Never trust either its
+      // cached /me response or mounted Clerk identity, even if storage agrees.
+      // Reload gives Clerk and the server-owner gate fresh, empty query caches.
+      if (event.persisted) reload();
     };
     // BroadcastChannel also works when localStorage is unavailable.
     const channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(activeAccountKey);
@@ -32,6 +52,8 @@ export function CrossTabAccountGate({ userId, children }: { userId: string | nul
     };
     window.addEventListener('storage', onStorage);
     window.addEventListener('focus', onFocus);
+    window.addEventListener('pagehide', onPageHide);
+    window.addEventListener('pageshow', onPageShow);
     document.addEventListener('visibilitychange', onFocus);
     try {
       localStorage.setItem(activeAccountKey, userId ?? '');
@@ -42,11 +64,13 @@ export function CrossTabAccountGate({ userId, children }: { userId: string | nul
       channel?.close();
       window.removeEventListener('storage', onStorage);
       window.removeEventListener('focus', onFocus);
+      window.removeEventListener('pagehide', onPageHide);
+      window.removeEventListener('pageshow', onPageShow);
       document.removeEventListener('visibilitychange', onFocus);
     };
   }, [userId]);
 
-  return blocked ? null : children;
+  return <div ref={surface} style={{ display: blocked ? 'none' : 'contents' }}>{blocked ? null : children}</div>;
 }
 
 export function createAccountQueryClient() {
