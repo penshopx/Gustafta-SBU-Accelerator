@@ -8,3 +8,11 @@ Calendar-date UI tests must use the actual server response parser followed by a 
 **Why:** A verified transition worked with raw rule output but disappeared over HTTP because generated date coercion turned a date-only string into a Date, which Express serialized as a UTC-midnight ISO timestamp.
 
 **How to apply:** Whenever date-only API fields reach a renderer, check both the generated parser and serialized response. Cover real wire values and multiple time zones; avoid accepting arbitrary timestamps as calendar dates.
+
+## Testing the viewer's time zone
+
+Run local-timestamp component assertions in fresh processes with `TZ` set before imports when a formatter is initialized at module scope.
+
+**Why:** `Intl.DateTimeFormat` captures the default time zone when constructed. Changing `TZ` after importing the renderer can falsely appear to exercise multiple viewer zones while all assertions use the first zone.
+
+**How to apply:** Use explicit expected dates around midnight and a year boundary, and verify the process's resolved time zone. Keep calendar-date assertions as a separate invariant.

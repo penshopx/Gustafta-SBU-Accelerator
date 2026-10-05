@@ -10,5 +10,6 @@ export function formatCalendarDate(value?: string | null): string {
 }
 
 export function formatTimestampDate(value?: string | null): string {
+  // Updates are instants displayed in the viewer's local zone, unlike SBU calendar days.
   return value ? formatter.format(new Date(value)) : '—';
 }

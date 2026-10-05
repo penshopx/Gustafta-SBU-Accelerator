@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { act, createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createRoot } from 'react-dom/client';
@@ -8,6 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Router } from 'wouter';
 import { useGetDashboard, type Dashboard } from '@workspace/api-client-react';
 import { DashboardOverview, DashboardResult } from './dashboard-overview';
+import { formatCalendarDate } from '../lib/display-date';
 
 function DashboardWithQuery() {
   const result = useGetDashboard();
@@ -172,4 +175,66 @@ test('ringkasan terisi menampilkan angka dan kasus terbaru dari respons tanpa ke
   }
   assert.equal(html.match(/data-testid="link-case-\d+"/g)?.length, 2);
   assert.doesNotMatch(html, /Belum ada kasus|data-testid="link-first-case"|aria-label="Memuat data"|Data belum dapat ditampilkan/);
+});
+
+test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tanggal kalender SBU', () => {
+  const expectedByZone: Record<string, string[]> = {
+    UTC: ['1 Jan 2027', '31 Des 2026', '1 Jan 2027'],
+    'America/Los_Angeles': ['31 Des 2026', '31 Des 2026', '31 Des 2026'],
+    'Asia/Jakarta': ['1 Jan 2027', '1 Jan 2027', '1 Jan 2027'],
+    'Asia/Tokyo': ['1 Jan 2027', '1 Jan 2027', '1 Jan 2027'],
+  };
+  if (!process.env.DASHBOARD_TZ_CHILD) {
+    // The formatter captures the default zone at import time; use fresh processes,
+    // not a TZ change after importing the component.
+    for (const tz of Object.keys(expectedByZone)) {
+      const result = spawnSync(process.execPath, [
+        '--import', 'tsx', '--test',
+        '--test-name-pattern', 'tanggal pembaruan kasus terbaru mengikuti zona waktu',
+        fileURLToPath(import.meta.url),
+      ], {
+        env: { ...process.env, TZ: tz, DASHBOARD_TZ_CHILD: '1' },
+        encoding: 'utf8',
+      });
+      assert.equal(result.status, 0, `${tz}: ${result.stdout}\n${result.stderr}`);
+    }
+    return;
+  }
+
+  const zone = process.env.TZ!;
+  assert.equal(new Intl.DateTimeFormat().resolvedOptions().timeZone, zone);
+  const expected = expectedByZone[zone];
+  assert.ok(expected, `zona pengujian dikenal: ${zone}`);
+  const response: Dashboard = {
+    total: 3, draft: 3, reviewing: 0, prepared: 0,
+    recent: [
+      '2027-01-01T00:30:00.000Z',
+      '2026-12-31T23:30:00.000Z',
+      // Same instant as the first case, expressed with an explicit UTC offset.
+      '2027-01-01T07:30:00.000+07:00',
+    ].map((updatedAt, index) => ({
+      id: index + 1, companyName: `Perusahaan ${index + 1}`,
+      requestType: 'perpanjangan', qualification: 'kecil', classification: 'Gedung',
+      status: 'draf', existingSbuExpiresOn: '2027-04-15',
+      // Distinct from updatedAt so rendering the creation date fails the test.
+      createdAt: '2026-08-01T12:00:00.000Z', updatedAt,
+    })),
+  };
+  const html = renderToStaticMarkup(createElement(Router, {
+    hook: (): [string, (path: string) => void] => ['/dashboard', () => {}],
+    children: createElement(DashboardResult, {
+      result: { isLoading: false, isError: false, data: response, refetch: () => {} },
+    }),
+  }));
+  for (const [index, item] of response.recent.entries()) {
+    const row = html.match(new RegExp(`<a\\b[^>]*data-testid="link-case-${item.id}"[^>]*>([\\s\\S]*?)</a>`));
+    assert.ok(row, `kasus ${item.id} tampil di ${zone}`);
+    assert.ok(row[1].includes(`>${expected[index]}</span>`),
+      `kasus ${item.id} di ${zone} harus menampilkan ${expected[index]}`);
+    assert.doesNotMatch(row[1], /1 Agu 2026|15 Apr 2027/);
+  }
+  assert.equal(html.match(/data-testid="link-case-\d+"/g)?.length, 3);
+  // These calendar values must stay fixed even when the update date crosses a day.
+  assert.equal(formatCalendarDate('2027-04-15'), '15 Apr 2027');
+  assert.equal(formatCalendarDate('2027-04-15T00:00:00.000Z'), '15 Apr 2027');
 });
