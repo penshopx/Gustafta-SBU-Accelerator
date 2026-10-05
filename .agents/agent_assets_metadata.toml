@@ -7,3 +7,18 @@ uri = "file://artifacts/gustafta-film/public/audio/bg_music.mp3"
 type = "audio"
 title = "Gustafta instrumental background music"
 description = "Generated music: Restrained uplifting electronic instrumental for a Indonesian B2B construction preparation software explainer. Warm rounded synth arpeggios, soft precise pulse, light piano notes, 10…"
+logical_id = "8cef8973-969a-47e1-860e-3e88cb1053ef"
+
+[[outputs]]
+id = "RKKuuGTnejoyNdNcBjfbe"
+uri = "file://docs/ruang-simpan-sbu-integration-spec.md"
+type = "text"
+title = "Spesifikasi Integrasi Ruang Simpan ↔ SBU Accelerator"
+description = "Draf spesifikasi: kontrak profil saat ini, hubungan pemilik akun, usulan akses folder/dokumen, penggunaan bukti dalam kasus, pencabutan, retensi, dan kriteria penerimaan."
+logical_id = "40e76945-4838-469d-8967-b7f60581171a"
+content_hash = "sha256:2fbe991dfcd31379d20dc74b1f9c8aa4420d04815c19b39258f7c79d1d0d3820"
+size = 14332
+mtime_ms = 1791174488260
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/40e76945-4838-469d-8967-b7f60581171a/b61cf415-2b13-4230-99f3-b0c9aa4fade0"
+storage_version_token = "1791174510100515"
+content_type = "text/markdown"
