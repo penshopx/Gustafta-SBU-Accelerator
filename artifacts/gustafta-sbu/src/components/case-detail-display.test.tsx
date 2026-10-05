@@ -4,7 +4,8 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import type { Assessment, SbuCase } from '@workspace/api-client-react';
+import type { Assessment, Finding, SbuCase } from '@workspace/api-client-react';
+import { GetAssessmentResponse } from '../../../../lib/api-zod/src/generated/api';
 import { formatCalendarDate } from '../lib/display-date';
 import { expiryInputValue, expiryPayload } from '../lib/case-expiry';
 import { AssessmentResults, CaseSummary } from './case-detail-display';
@@ -71,15 +72,24 @@ test('detail perpanjangan menampilkan kedaluwarsa hanya sebagai masa berlaku SBU
 });
 
 test('tanggal transisi hanya tampil bila temuan terverifikasi oleh server', () => {
-  const pending = renderToStaticMarkup(createElement(AssessmentResults, { assessment }));
+  const pendingResponse: Assessment = JSON.parse(JSON.stringify(GetAssessmentResponse.parse(assessment)));
+  assert.ok(pendingResponse.findings.every((finding) => finding.transitionDate === undefined));
+  const pending = renderToStaticMarkup(createElement(AssessmentResults, { assessment: pendingResponse }));
   assert.doesNotMatch(pending, /Tanggal transisi terverifikasi/);
+  const verifiedFinding: Finding = {
+    ...assessment.findings[2],
+    status: 'tercatat',
+    transitionDate: '2026-10-30',
+  };
+  const approvedResponse: Assessment = JSON.parse(JSON.stringify(GetAssessmentResponse.parse({
+    ...assessment,
+    findings: assessment.findings.map((finding) => finding.code === 'transisi_konversi'
+      ? verifiedFinding
+      : finding),
+  })));
+  assert.equal(approvedResponse.findings[2].transitionDate, '2026-10-30T00:00:00.000Z');
   const approved = renderToStaticMarkup(createElement(AssessmentResults, {
-    assessment: {
-      ...assessment,
-      findings: assessment.findings.map((finding) => finding.code === 'transisi_konversi'
-        ? { ...finding, status: 'tercatat' as const, transitionDate: '2026-10-30T00:00:00.000Z' }
-        : finding),
-    },
+    assessment: approvedResponse,
   }));
   assert.match(approved, /Tanggal transisi terverifikasi: 30 Okt 2026/);
   assert.doesNotMatch(approved, /Tanggal transisi terverifikasi: 15 Apr 2027/);
