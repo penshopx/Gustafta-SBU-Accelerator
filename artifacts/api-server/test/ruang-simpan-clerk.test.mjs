@@ -29,7 +29,7 @@ process.env.RUANG_SIMPAN_CONNECTIONS = JSON.stringify({
 process.env.RUANG_SIMPAN_TOKEN_TEST_OWNER_A = ownerAToken;
 process.env.RUANG_SIMPAN_TOKEN_TEST_OWNER_B = ownerBToken;
 
-const upstreamUrl = "https://gustafta.my.id/api/v1/ruang-simpan/company-profile";
+const upstreamUrl = "https://gustafta-apps.replit.app/api/v1/ruang-simpan/company-profile";
 const ownerAProfile = {
   name: "PT Contoh Owner A",
   nib: "1234567890123",

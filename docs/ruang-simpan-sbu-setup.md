@@ -4,6 +4,11 @@ The API reads each owner's company profile from Ruang Simpan with a dedicated,
 read-only `profile:read` token. Configure credentials as server Secrets only;
 never put tokens in browser/client configuration, source control, or logs.
 
+Publisher origin: `https://gustafta-apps.replit.app`.
+Use `GET /api/v1/ruang-simpan/company-profile`; do not use `gustafta.my.id`
+for this integration. Publisher readiness alone does not establish the
+SBU owner's connection or prove live cross-account isolation.
+
 Set `RUANG_SIMPAN_CONNECTIONS` in the API server environment to a JSON object
 mapping each verified Clerk user ID to the name of that user's token secret:
 

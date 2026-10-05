@@ -2,7 +2,7 @@ import type { RuangSimpanCompanyProfile } from "@workspace/api-zod";
 
 const CONNECTIONS_ENV = "RUANG_SIMPAN_CONNECTIONS";
 const TOKEN_NAME_PATTERN = /^RUANG_SIMPAN_TOKEN_[A-Z0-9_]+$/;
-const UPSTREAM_URL = "https://gustafta.my.id/api/v1/ruang-simpan/company-profile";
+const UPSTREAM_URL = "https://gustafta-apps.replit.app/api/v1/ruang-simpan/company-profile";
 const MAX_RESPONSE_BYTES = 64 * 1024;
 const REQUEST_TIMEOUT_MS = 8_000;
 

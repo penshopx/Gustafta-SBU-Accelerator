@@ -101,7 +101,8 @@ Pemindahan dokumen keluar dari folder yang diizinkan menghentikan akses berikutn
 
 ### Hulu Ruang Simpan
 
-- Host acuan: `https://gustafta.my.id`.
+- Host publisher yang dikonfirmasi pengguna: `https://gustafta-apps.replit.app`.
+- Jangan gunakan `gustafta.my.id` untuk integrasi ini; endpoint masih mengembalikan HTML menurut pemeriksaan pengguna.
 - `GET /api/v1/ruang-simpan/company-profile`.
 - HTTPS server-ke-server dengan Bearer token.
 - Tanpa body dan tanpa parameter `user_id`.

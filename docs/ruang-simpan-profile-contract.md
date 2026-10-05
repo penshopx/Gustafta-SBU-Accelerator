@@ -1,8 +1,14 @@
 # Kontrak baca profil Ruang Simpan
 
-Acuan integrasi dari spesifikasi yang diberikan pengguna. Base URL yang
-dikonfirmasi pengguna: `https://gustafta.my.id`. Keberadaan kontrak tidak
-membuktikan bahwa versi deployment sudah menyediakan endpoint ini.
+Acuan integrasi dari spesifikasi yang diberikan pengguna. Base URL publisher
+yang dikonfirmasi pengguna: `https://gustafta-apps.replit.app`.
+Jangan gunakan `gustafta.my.id` untuk integrasi ini: pengguna melaporkan
+endpoint pada domain itu masih mengembalikan HTML.
+Pengguna telah memverifikasi respons tanpa token berupa 401 JSON,
+`Cache-Control: private, no-store`, dan
+`X-Gustafta-RS-Contract: rs-app-v1-private-no-store`.
+Verifikasi publisher tersebut tidak membuktikan koneksi live SBU atau
+hubungan kepemilikan akun; keduanya harus diperiksa secara terpisah.
 
 ## Cakupan dan izin
 

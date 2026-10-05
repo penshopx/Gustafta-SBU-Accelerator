@@ -153,7 +153,7 @@ test("isolates two Clerk owners, forwards only their mapped tokens, and strips u
       },
     });
     assert.ok(!response.raw.includes("token") && !response.raw.includes("unknown"));
-    assert.equal(seen.at(-1).url, "https://gustafta.my.id/api/v1/ruang-simpan/company-profile");
+    assert.equal(seen.at(-1).url, "https://gustafta-apps.replit.app/api/v1/ruang-simpan/company-profile");
     assert.equal(seen.at(-1).method, "GET");
     assert.equal(seen.at(-1).headers.Authorization, `Bearer ${token}`);
     assert.equal(seen.at(-1).cache, "no-store");
