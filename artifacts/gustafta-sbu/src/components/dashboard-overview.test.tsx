@@ -52,7 +52,10 @@ test('kegagalan pemuatan ringkasan menampilkan pesan dan tombol coba lagi, bukan
   assertNoEmptySummary(html);
 });
 
-test('coba lagi memuat ulang ringkasan dan mengganti pesan error dengan data berhasil', async () => {
+for (const failures of [1, 2]) {
+test(failures === 1
+  ? 'coba lagi memuat ulang ringkasan dan mengganti pesan error dengan data berhasil'
+  : 'coba lagi tetap dapat dipakai setelah permintaan awal dan percobaan ulang gagal karena jaringan', async () => {
   const globals = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
   const previous = {
     window: globals.window, document: globals.document, fetch: globals.fetch,
@@ -67,14 +70,25 @@ test('coba lagi memuat ulang ringkasan dan mengganti pesan error dengan data ber
   globals.fetch = async (input) => {
     assert.equal(input, '/api/dashboard');
     requests++;
-    return requests === 1
-      ? new Response(JSON.stringify({ message: 'Gangguan jaringan' }), { status: 503, headers: { 'content-type': 'application/json' } })
-      : Response.json(dashboard);
+    if (requests <= failures) {
+      if (failures === 2) throw new TypeError('Failed to fetch');
+      return new Response(JSON.stringify({ message: 'Gangguan jaringan' }), {
+        status: 503, headers: { 'content-type': 'application/json' },
+      });
+    }
+    return Response.json(dashboard);
   };
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
   const container = window.document.createElement('div');
   window.document.body.appendChild(container);
   const root = createRoot(container as unknown as HTMLElement);
+  const waitForResult = async (testId: string) => {
+    const deadline = Date.now() + 1000;
+    while (!container.querySelector(`[data-testid="${testId}"]`) || client.isFetching() > 0) {
+      assert.ok(Date.now() < deadline, `hasil ${testId} harus tampil setelah permintaan selesai`);
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+    }
+  };
 
   try {
     await act(async () => {
@@ -85,15 +99,24 @@ test('coba lagi memuat ulang ringkasan dan mengganti pesan error dengan data ber
         }),
       ));
     });
-    assert.equal(requests, 1);
-    assert.match(container.textContent, /Data belum dapat ditampilkan/);
-    assertNoEmptySummary(container.innerHTML);
+    for (let attempt = 1; attempt <= failures; attempt++) {
+      await waitForResult('button-retry');
+      assert.equal(requests, attempt, 'setiap klik hanya mengirim satu permintaan baru');
+      assert.match(container.textContent, /Data belum dapat ditampilkan/);
+      assert.match(container.textContent, /Koneksi sedang terganggu\. Coba muat ulang data\./);
+      assertNoEmptySummary(container.innerHTML);
+      assert.equal(container.querySelector('[aria-label="Memuat data"]'), null);
 
-    const retry = container.querySelector('[data-testid="button-retry"]');
-    assert.ok(retry, 'tombol coba lagi tersedia setelah permintaan gagal');
-    await act(async () => { retry.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); });
+      const retry = container.querySelector('[data-testid="button-retry"]');
+      assert.ok(retry instanceof window.HTMLButtonElement,
+        `tombol coba lagi tersedia setelah kegagalan ke-${attempt}`);
+      assert.equal(retry.textContent, 'Coba lagi');
+      assert.equal(retry.disabled, false, 'tombol tidak terkunci setelah permintaan gagal');
+      await act(async () => { retry.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); });
+    }
 
-    assert.equal(requests, 2, 'klik tombol harus mengirim permintaan dashboard lagi');
+    await waitForResult('text-dashboard-0');
+    assert.equal(requests, failures + 1, 'percobaan berikutnya tetap mengirim permintaan dashboard');
     assert.equal(container.querySelector('[data-testid="text-dashboard-0"]')?.textContent, '3');
     assert.equal(container.querySelector('[data-testid="text-dashboard-1"]')?.textContent, '2');
     assert.match(container.textContent, /Belum ada kasus/);
@@ -110,6 +133,7 @@ test('coba lagi memuat ulang ringkasan dan mengganti pesan error dengan data ber
     globals.IS_REACT_ACT_ENVIRONMENT = previous.actEnvironment;
   }
 });
+}
 
 test('ringkasan pengguna baru menampilkan empat nol dan keadaan kasus kosong', () => {
   // Respons dashboard untuk pemilik baru tetap kosong meski pemilik lain memiliki kasus.
