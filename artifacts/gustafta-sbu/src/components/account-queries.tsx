@@ -1,8 +1,19 @@
-import React, { useEffect, useRef, useState, type ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const activeAccountKey = 'gustafta:active-account';
+const FormOwnerContext = createContext<string | null>(null);
+
+// Capture once, alongside the form's draft. Never obtain the owner from the
+// latest cookie, a global getter, or a refreshed /me response at dispatch time.
+export function useFormMutationOptions() {
+  const owner = useContext(FormOwnerContext);
+  const [options] = useState(() => ({
+    request: { headers: { 'X-SBU-Form-Owner': owner ?? '' } },
+  }));
+  return options;
+}
 
 // Clerk can keep a tab's in-memory user while another tab changes the shared
 // session cookie. Hide the old tree immediately, then reload Clerk from disk.
@@ -79,7 +90,7 @@ export function createAccountQueryClient() {
   });
 }
 
-export function AccountQueries({ children }: { children: ReactNode }) {
+export function AccountQueries({ children, userId = null }: { children: ReactNode; userId?: string | null }) {
   const [client] = useState(createAccountQueryClient);
 
   // A keyed instance is created for each signed-in identity (and for signed-out).
@@ -88,5 +99,5 @@ export function AccountQueries({ children }: { children: ReactNode }) {
     client.clear();
   }, [client]);
 
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return <FormOwnerContext.Provider value={userId}><QueryClientProvider client={client}>{children}</QueryClientProvider></FormOwnerContext.Provider>;
 }

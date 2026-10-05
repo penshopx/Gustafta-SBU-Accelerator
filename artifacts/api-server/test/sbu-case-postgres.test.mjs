@@ -17,7 +17,7 @@ async function request(server, userId, path, options = {}) {
   const { port } = server.address();
   const response = await fetch(`http://127.0.0.1:${port}${path}`, {
     ...options,
-    headers: { "x-test-user-id": userId, ...options.headers },
+    headers: { "x-test-user-id": userId, "X-SBU-Form-Owner": userId, ...options.headers },
   });
   const raw = await response.text();
   return { status: response.status, body: JSON.parse(raw), raw };

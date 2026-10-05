@@ -20,7 +20,7 @@ async function request(server, userId, options = {}) {
     ...options,
     headers: {
       ...options.headers,
-      ...(userId === undefined ? {} : { "x-test-user-id": userId }),
+      ...(userId === undefined ? {} : { "x-test-user-id": userId, "X-SBU-Form-Owner": userId }),
     },
   });
   const raw = await response.text();

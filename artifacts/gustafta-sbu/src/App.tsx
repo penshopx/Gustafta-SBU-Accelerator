@@ -19,7 +19,7 @@ import { AssessmentResults, CaseSummary } from '@/components/case-detail-display
 import { CaseEvidence } from '@/components/case-evidence';
 import { CaseActionPlan } from '@/components/case-action-plan';
 import { CompanyProfilePage } from '@/components/company-profile-page';
-import { AccountQueries, CrossTabAccountGate } from '@/components/account-queries';
+import { AccountQueries, CrossTabAccountGate, useFormMutationOptions } from '@/components/account-queries';
 import { CaseRows, DashboardResult, Empty, Status, statusLabels } from '@/components/dashboard-overview';
 import { ErrorState, Loading } from '@/components/request-states';
 import { expiryInputValue, expiryPayload } from '@/lib/case-expiry';
@@ -74,7 +74,7 @@ function ProfileForm({ profile, onboarding = false }: { profile?: Profile; onboa
   const [role, setRole] = useState<ProfileInput['role']>(profile?.role !== 'belum_dipilih' && profile?.role ? profile.role : 'kontraktor');
   const [name, setName] = useState(profile?.displayName || '');
   const [organization, setOrganization] = useState(profile?.organizationName || '');
-  const mutation = useUpdateMe();
+  const mutation = useUpdateMe(useFormMutationOptions());
   const submit = (e: FormEvent) => { e.preventDefault(); mutation.mutate({ data: { role, displayName: name.trim(), organizationName: organization.trim() } }, { onSuccess: (data) => { qc.setQueryData(getGetMeQueryKey(), data); if (onboarding) navigate('/dashboard'); } }); };
   return <form onSubmit={submit} className="space-y-6">
     <div><div className="mb-3 text-xs font-bold text-[#2b4159]">Peran Anda</div><div className="grid gap-2 sm:grid-cols-2">{roleOptions.map(item => <button type="button" key={item.value} data-testid={`button-role-${item.value}`} onClick={() => setRole(item.value)} className={`rounded-xl border p-4 text-left transition-colors ${role === item.value ? 'border-[#1769d1] bg-[#eaf4ff] ring-1 ring-[#1769d1]' : 'border-[#d1dfe9] bg-white hover:bg-[#f4f9fc]'}`}><span className="flex items-center justify-between font-bold text-sm">{item.title}{role === item.value && <Check size={16} className="text-[#1769d1]" />}</span><span className="mt-1.5 block text-xs leading-relaxed text-[#647b90]">{item.text}</span></button>)}</div></div>
@@ -124,7 +124,7 @@ function DashboardPage({ profile }: { profile: Profile }) {
 }
 
 function CaseForm({ initial, onDone, close }: { initial?: SbuCase; onDone: () => void; close: () => void }) {
-  const qc = useQueryClient(); const create = useCreateCase(); const update = useUpdateCase();
+  const qc = useQueryClient(); const options = useFormMutationOptions(); const create = useCreateCase(options); const update = useUpdateCase(options);
   const [companyName, setCompanyName] = useState(initial?.companyName || '');
   const [requestType, setRequestType] = useState<CaseInput['requestType']>(initial?.requestType || 'baru');
   const [qualification, setQualification] = useState<CaseInput['qualification']>(initial?.qualification || 'kecil');
@@ -146,7 +146,7 @@ function CaseDetailPage({ profile }: { profile: Profile }) {
   const { id: rawId } = useParams<{ id: string }>(); const id = Number(rawId); const valid = Number.isSafeInteger(id) && id > 0; const [, navigate] = useLocation(); const qc = useQueryClient();
   const item = useGetCase(id, { query: { enabled: valid && canCreate(profile), queryKey: getGetCaseQueryKey(id) } });
   const assessment = useGetAssessment(id, { query: { enabled: valid && canCreate(profile), queryKey: getGetAssessmentQueryKey(id) } });
-  const update = useUpdateCase(); const remove = useDeleteCase();
+  const options = useFormMutationOptions(); const update = useUpdateCase(options); const remove = useDeleteCase(options);
   const [editOpen, setEditOpen] = useState(false); const [confirm, setConfirm] = useState(false); const [tab, setTab] = useState<'evidence' | 'assessment'>('evidence');
   const [suggestion, setSuggestion] = useState<string | null>(null);
   if (!canCreate(profile)) return <Redirect to="/dashboard" />;
@@ -171,7 +171,7 @@ function NotFoundPage() { return <div className="grid min-h-[100dvh] place-items
 function AccountRoutes() {
   const { isLoaded, user } = useUser();
   if (!isLoaded) return <div className="mx-auto max-w-3xl p-10"><Loading /></div>;
-  return <AccountQueries key={user?.id ?? 'signed-out'}><CrossTabAccountGate userId={user?.id ?? null}><VerifiedRoutes userId={user?.id ?? null} /></CrossTabAccountGate></AccountQueries>;
+  return <AccountQueries key={user?.id ?? 'signed-out'} userId={user?.id ?? null}><CrossTabAccountGate userId={user?.id ?? null}><VerifiedRoutes userId={user?.id ?? null} /></CrossTabAccountGate></AccountQueries>;
 }
 function VerifiedRoutes({ userId }: { userId: string | null }) {
   const me = useGetMe({ query: { enabled: !!userId, queryKey: getGetMeQueryKey() } });

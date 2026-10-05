@@ -204,10 +204,86 @@ app.use("/api", router);
 
 async function request(server, path, options) {
   const { port } = server.address();
-  const response = await fetch(`http://127.0.0.1:${port}${path}`, options);
+  const response = await fetch(`http://127.0.0.1:${port}${path}`, {
+    ...options,
+    headers: {
+      "X-SBU-Form-Owner": globalThis.__routeUserId === undefined ? "test-user" : globalThis.__routeUserId ?? "",
+      ...options?.headers,
+    },
+  });
   const raw = await response.text();
   return { status: response.status, body: raw ? JSON.parse(raw) : null, raw };
 }
+
+test("formulir tertunda akun A tidak menulis profil, kasus, atau bukti akun B walau sesi sudah B", async () => {
+  const now = new Date("2026-02-01T00:00:00Z");
+  globalThis.__routeUserId = "owner-b";
+  globalThis.__routeProfileRows = [
+    { userId: "owner-a", role: "kontraktor", displayName: "Profil A", organizationName: "Organisasi A" },
+    { userId: "owner-b", role: "kontraktor", displayName: "Profil B", organizationName: "Organisasi B" },
+  ];
+  globalThis.__routeCaseRows = [{
+    id: 34, ownerId: "owner-b", companyName: "Perusahaan B", requestType: "baru",
+    qualification: "kecil", classification: "gedung", status: "draf",
+    existingSbuExpiresOn: null, createdAt: now, updatedAt: now,
+  }];
+  globalThis.__routeEvidenceRows = [{
+    id: 1, caseId: 34, code: "legalitas", title: "Bukti B", note: "", createdAt: now, updatedAt: now,
+  }];
+  globalThis.__routeProfileWrites = 0;
+  globalThis.__routeCaseWrites = 0;
+  globalThis.__routeEvidenceWrites = 0;
+  const before = structuredClone([
+    globalThis.__routeProfileRows, globalThis.__routeCaseRows, globalThis.__routeEvidenceRows,
+  ]);
+  const server = app.listen(0);
+  try {
+    const writes = [
+      ["PATCH", "/api/me", { role: "kontraktor", displayName: "Draf lama A", organizationName: "Organisasi A" }],
+      ["POST", "/api/cases", { companyName: "Draf lama A", requestType: "baru", qualification: "kecil", classification: "gedung" }],
+      ["PATCH", "/api/cases/34", { companyName: "Draf lama A" }],
+      ["DELETE", "/api/cases/34", undefined],
+      ["POST", "/api/cases/34/evidence", { code: "tenaga", title: "Draf lama A", note: "" }],
+      ["PATCH", "/api/cases/34/evidence/1", { title: "Draf lama A" }],
+      ["DELETE", "/api/cases/34/evidence/1", undefined],
+    ];
+    for (const [method, path, data] of writes) {
+      const stale = await request(server, path, {
+        method,
+        headers: { "content-type": "application/json", "X-SBU-Form-Owner": "owner-a" },
+        ...(data === undefined ? {} : { body: JSON.stringify(data) }),
+      });
+      assert.equal(stale.status, 409, `${method} ${path}: ${stale.raw}`);
+      assert.match(stale.body.error, /Muat ulang/);
+      assert.deepEqual([
+        globalThis.__routeProfileRows, globalThis.__routeCaseRows, globalThis.__routeEvidenceRows,
+      ], before, "penolakan tidak mengubah data akun A maupun B");
+    }
+    assert.equal(globalThis.__routeProfileWrites, 0);
+    assert.equal(globalThis.__routeCaseWrites, 0);
+    assert.equal(globalThis.__routeEvidenceWrites, 0);
+    // Matching B forms still work, with ownership derived from auth, not the header/body.
+    const freshProfile = await request(server, "/api/me", {
+      method: "PATCH", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ role: "konsultan", displayName: "Profil B baru", organizationName: "Organisasi B" }),
+    });
+    assert.equal(freshProfile.status, 200, freshProfile.raw);
+    assert.equal(freshProfile.body.userId, "owner-b");
+    assert.deepEqual(globalThis.__routeProfileRows[0], before[0][0], "profil akun A tidak tersentuh");
+    const freshCase = await request(server, "/api/cases", {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ companyName: "Kasus B baru", requestType: "baru", qualification: "kecil", classification: "gedung" }),
+    });
+    assert.equal(freshCase.status, 201, freshCase.raw);
+    assert.equal(globalThis.__routeCaseRows.find(row => row.id === freshCase.body.id).ownerId, "owner-b");
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    for (const key of [
+      "__routeUserId", "__routeProfileRows", "__routeCaseRows", "__routeEvidenceRows",
+      "__routeProfileWrites", "__routeCaseWrites", "__routeEvidenceWrites",
+    ]) delete globalThis[key];
+  }
+});
 
 test("respons daftar regulasi memuat temuan terpisah tanpa tenggat yang belum terverifikasi", async () => {
   const server = app.listen(0);

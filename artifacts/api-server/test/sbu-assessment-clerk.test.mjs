@@ -437,6 +437,54 @@ test("header token yang diubah setelah ditandatangani ditolak sebelum membaca da
   }
 });
 
+test("formulir akun lama ditolak untuk semua mutasi dengan cookie Clerk akun baru, sebelum akses data", async () => {
+  const server = app.listen(0);
+  const writes = [
+    ["PATCH", "/api/me"],
+    ["POST", "/api/cases"],
+    ["PATCH", "/api/cases/34"],
+    ["DELETE", "/api/cases/34"],
+    ["POST", "/api/cases/34/evidence"],
+    ["PATCH", "/api/cases/34/evidence/1"],
+    ["DELETE", "/api/cases/34/evidence/1"],
+    ["PUT", "/api/transition-verifications/transisi"],
+  ];
+  const tokenB = sessionToken("owner-b");
+  const cookie = `__session=${tokenB}; __client_uat=${Math.floor(Date.now() / 1000) - 1}; __clerk_db_jwt=local-dev-browser`;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (input, init) => {
+    const url = new URL(typeof input === "string" ? input : input.url);
+    if (url.hostname !== "127.0.0.1") throw new Error(`Unexpected outbound request: ${url.hostname}`);
+    return originalFetch(input, init);
+  };
+  try {
+    for (const [method, path] of writes) {
+      for (const formOwner of ["owner-a", "", null]) {
+        const before = globalThis.__clerkTestDataReads ?? 0;
+        const response = await fetch(`http://127.0.0.1:${server.address().port}${path}`, {
+          method,
+          headers: { cookie, ...(formOwner === null ? {} : { "X-SBU-Form-Owner": formOwner }) },
+        });
+        assert.equal(response.status, 409, `${method} ${path}: ${await response.text()}`);
+        assert.equal(globalThis.__clerkTestDataReads ?? 0, before, "menolak sebelum membaca/menulis database");
+      }
+    }
+    // A matching precondition is not authentication; logged-out drafts still fail.
+    const signedOut = await fetch(`http://127.0.0.1:${server.address().port}/api/me`, {
+      method: "PATCH", headers: { "X-SBU-Form-Owner": "owner-a" },
+    });
+    assert.equal(signedOut.status, 401);
+    // Fresh forms under B pass the guard and reach normal input validation.
+    const fresh = await fetch(`http://127.0.0.1:${server.address().port}/api/me`, {
+      method: "PATCH", headers: { cookie, "X-SBU-Form-Owner": "owner-b" },
+    });
+    assert.equal(fresh.status, 400, await fresh.text());
+  } finally {
+    globalThis.fetch = originalFetch;
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
 test("sesi yang diverifikasi Clerk hanya membaca penilaian dan bukti milik pemegang sesi", async () => {
   globalThis.__clerkTestCases = [
     { id: 34, ownerId: "owner-a", companyName: "Perusahaan Sendiri", requestType: "baru",

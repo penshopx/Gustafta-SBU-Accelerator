@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AddEvidence409,
   Assessment,
   CaseInput,
   CaseUpdate,
@@ -27,6 +28,7 @@ import type {
   Evidence,
   EvidenceInput,
   EvidenceUpdate,
+  FormOwnerMismatchResponse,
   HealthStatus,
   Profile,
   ProfileInput,
@@ -245,7 +247,7 @@ return customFetch<Profile>(getUpdateMeUrl(),
 
 export const getUpdateMeMutationKey = () => ['updateMe'] as const;
 
-export const getUpdateMeMutationOptions = <TError = ErrorType<unknown>,
+export const getUpdateMeMutationOptions = <TError = ErrorType<FormOwnerMismatchResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMe>>, TError,UpdateMeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateMe>>, TError,UpdateMeMutationVariables, TContext> => {
 
@@ -274,10 +276,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateMeMutationResult = NonNullable<Awaited<ReturnType<typeof updateMe>>>
     export type UpdateMeMutationBody = BodyType<ProfileInput>
-    export type UpdateMeMutationError = ErrorType<unknown>
+    export type UpdateMeMutationError = ErrorType<FormOwnerMismatchResponse>
     export type UpdateMeMutationVariables = {data: BodyType<ProfileInput>}
 
-    export const useUpdateMe = <TError = ErrorType<unknown>,
+    export const useUpdateMe = <TError = ErrorType<FormOwnerMismatchResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMe>>, TError,UpdateMeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateMe>>,
@@ -543,7 +545,7 @@ return customFetch<SbuCase>(getCreateCaseUrl(),
 
 export const getCreateCaseMutationKey = () => ['createCase'] as const;
 
-export const getCreateCaseMutationOptions = <TError = ErrorType<unknown>,
+export const getCreateCaseMutationOptions = <TError = ErrorType<FormOwnerMismatchResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCase>>, TError,CreateCaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createCase>>, TError,CreateCaseMutationVariables, TContext> => {
 
@@ -572,10 +574,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateCaseMutationResult = NonNullable<Awaited<ReturnType<typeof createCase>>>
     export type CreateCaseMutationBody = BodyType<CaseInput>
-    export type CreateCaseMutationError = ErrorType<unknown>
+    export type CreateCaseMutationError = ErrorType<FormOwnerMismatchResponse>
     export type CreateCaseMutationVariables = {data: BodyType<CaseInput>}
 
-    export const useCreateCase = <TError = ErrorType<unknown>,
+    export const useCreateCase = <TError = ErrorType<FormOwnerMismatchResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createCase>>, TError,CreateCaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createCase>>,
@@ -697,7 +699,7 @@ return customFetch<SbuCase>(getUpdateCaseUrl(id),
 
 export const getUpdateCaseMutationKey = () => ['updateCase'] as const;
 
-export const getUpdateCaseMutationOptions = <TError = ErrorType<unknown>,
+export const getUpdateCaseMutationOptions = <TError = ErrorType<FormOwnerMismatchResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCase>>, TError,UpdateCaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateCase>>, TError,UpdateCaseMutationVariables, TContext> => {
 
@@ -726,10 +728,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateCaseMutationResult = NonNullable<Awaited<ReturnType<typeof updateCase>>>
     export type UpdateCaseMutationBody = BodyType<CaseUpdate>
-    export type UpdateCaseMutationError = ErrorType<unknown>
+    export type UpdateCaseMutationError = ErrorType<FormOwnerMismatchResponse>
     export type UpdateCaseMutationVariables = {id: number;data: BodyType<CaseUpdate>}
 
-    export const useUpdateCase = <TError = ErrorType<unknown>,
+    export const useUpdateCase = <TError = ErrorType<FormOwnerMismatchResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCase>>, TError,UpdateCaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateCase>>,
@@ -765,7 +767,7 @@ export const deleteCase = async (id: number, options?: Parameters<typeof customF
 
 export const getDeleteCaseMutationKey = () => ['deleteCase'] as const;
 
-export const getDeleteCaseMutationOptions = <TError = ErrorType<unknown>,
+export const getDeleteCaseMutationOptions = <TError = ErrorType<FormOwnerMismatchResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCase>>, TError,DeleteCaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteCase>>, TError,DeleteCaseMutationVariables, TContext> => {
 
@@ -794,10 +796,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteCaseMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCase>>>
 
-    export type DeleteCaseMutationError = ErrorType<unknown>
+    export type DeleteCaseMutationError = ErrorType<FormOwnerMismatchResponse>
     export type DeleteCaseMutationVariables = {id: number}
 
-    export const useDeleteCase = <TError = ErrorType<unknown>,
+    export const useDeleteCase = <TError = ErrorType<FormOwnerMismatchResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCase>>, TError,DeleteCaseMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof deleteCase>>,
@@ -919,7 +921,7 @@ return customFetch<Evidence>(getAddEvidenceUrl(id),
 
 export const getAddEvidenceMutationKey = () => ['addEvidence'] as const;
 
-export const getAddEvidenceMutationOptions = <TError = ErrorType<unknown>,
+export const getAddEvidenceMutationOptions = <TError = ErrorType<AddEvidence409>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addEvidence>>, TError,AddEvidenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof addEvidence>>, TError,AddEvidenceMutationVariables, TContext> => {
 
@@ -948,10 +950,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AddEvidenceMutationResult = NonNullable<Awaited<ReturnType<typeof addEvidence>>>
     export type AddEvidenceMutationBody = BodyType<EvidenceInput>
-    export type AddEvidenceMutationError = ErrorType<unknown>
+    export type AddEvidenceMutationError = ErrorType<AddEvidence409>
     export type AddEvidenceMutationVariables = {id: number;data: BodyType<EvidenceInput>}
 
-    export const useAddEvidence = <TError = ErrorType<unknown>,
+    export const useAddEvidence = <TError = ErrorType<AddEvidence409>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addEvidence>>, TError,AddEvidenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof addEvidence>>,
@@ -1004,7 +1006,7 @@ return customFetch<Evidence>(getUpdateEvidenceUrl(id,evidenceId),
 
 export const getUpdateEvidenceMutationKey = () => ['updateEvidence'] as const;
 
-export const getUpdateEvidenceMutationOptions = <TError = ErrorType<unknown>,
+export const getUpdateEvidenceMutationOptions = <TError = ErrorType<FormOwnerMismatchResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEvidence>>, TError,UpdateEvidenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateEvidence>>, TError,UpdateEvidenceMutationVariables, TContext> => {
 
@@ -1033,10 +1035,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateEvidenceMutationResult = NonNullable<Awaited<ReturnType<typeof updateEvidence>>>
     export type UpdateEvidenceMutationBody = BodyType<EvidenceUpdate>
-    export type UpdateEvidenceMutationError = ErrorType<unknown>
+    export type UpdateEvidenceMutationError = ErrorType<FormOwnerMismatchResponse>
     export type UpdateEvidenceMutationVariables = {id: number;evidenceId: number;data: BodyType<EvidenceUpdate>}
 
-    export const useUpdateEvidence = <TError = ErrorType<unknown>,
+    export const useUpdateEvidence = <TError = ErrorType<FormOwnerMismatchResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEvidence>>, TError,UpdateEvidenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateEvidence>>,
@@ -1074,7 +1076,7 @@ export const deleteEvidence = async (id: number,
 
 export const getDeleteEvidenceMutationKey = () => ['deleteEvidence'] as const;
 
-export const getDeleteEvidenceMutationOptions = <TError = ErrorType<unknown>,
+export const getDeleteEvidenceMutationOptions = <TError = ErrorType<FormOwnerMismatchResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEvidence>>, TError,DeleteEvidenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof deleteEvidence>>, TError,DeleteEvidenceMutationVariables, TContext> => {
 
@@ -1103,10 +1105,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type DeleteEvidenceMutationResult = NonNullable<Awaited<ReturnType<typeof deleteEvidence>>>
 
-    export type DeleteEvidenceMutationError = ErrorType<unknown>
+    export type DeleteEvidenceMutationError = ErrorType<FormOwnerMismatchResponse>
     export type DeleteEvidenceMutationVariables = {id: number;evidenceId: number}
 
-    export const useDeleteEvidence = <TError = ErrorType<unknown>,
+    export const useDeleteEvidence = <TError = ErrorType<FormOwnerMismatchResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEvidence>>, TError,DeleteEvidenceMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof deleteEvidence>>,
@@ -1376,7 +1378,7 @@ return customFetch<TransitionVerification>(getPutTransitionVerificationUrl(track
 
 export const getPutTransitionVerificationMutationKey = () => ['putTransitionVerification'] as const;
 
-export const getPutTransitionVerificationMutationOptions = <TError = ErrorType<unknown>,
+export const getPutTransitionVerificationMutationOptions = <TError = ErrorType<FormOwnerMismatchResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putTransitionVerification>>, TError,PutTransitionVerificationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof putTransitionVerification>>, TError,PutTransitionVerificationMutationVariables, TContext> => {
 
@@ -1405,10 +1407,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type PutTransitionVerificationMutationResult = NonNullable<Awaited<ReturnType<typeof putTransitionVerification>>>
     export type PutTransitionVerificationMutationBody = BodyType<TransitionVerificationInput>
-    export type PutTransitionVerificationMutationError = ErrorType<unknown>
+    export type PutTransitionVerificationMutationError = ErrorType<FormOwnerMismatchResponse>
     export type PutTransitionVerificationMutationVariables = {track: 'transisi' | 'transisi_operasional' | 'transisi_konversi';data: BodyType<TransitionVerificationInput>}
 
-    export const usePutTransitionVerification = <TError = ErrorType<unknown>,
+    export const usePutTransitionVerification = <TError = ErrorType<FormOwnerMismatchResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putTransitionVerification>>, TError,PutTransitionVerificationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof putTransitionVerification>>,

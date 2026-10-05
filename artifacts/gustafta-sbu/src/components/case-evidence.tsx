@@ -1,3 +1,4 @@
+import { useFormMutationOptions } from './account-queries';
 import React, { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, Pencil, Plus, Trash2, X } from 'lucide-react';
@@ -40,8 +41,9 @@ function EvidenceDialog({ title, close, children }: { title: string; close: () =
 
 function EvidenceForm({ id, initial, suggestedCode = '', close, requestType, qualification }: { id: number; initial?: Evidence; suggestedCode?: string; close: () => void; requestType: SbuCase['requestType']; qualification: SbuCase['qualification'] }) {
   const qc = useQueryClient();
-  const add = useAddEvidence();
-  const update = useUpdateEvidence();
+  const options = useFormMutationOptions();
+  const add = useAddEvidence(options);
+  const update = useUpdateEvidence(options);
   const suggested = evidenceOptions.find(option => option.code === suggestedCode);
   const [code, setCode] = useState(initial?.code || suggested?.code || '');
   const [title, setTitle] = useState(initial?.title || suggested?.title || '');
@@ -71,7 +73,7 @@ function EvidenceForm({ id, initial, suggestedCode = '', close, requestType, qua
 export function CaseEvidence({ id, requestType, qualification, suggestion, onSuggestionClose }: { id: number; requestType: SbuCase['requestType']; qualification: SbuCase['qualification']; suggestion?: string | null; onSuggestionClose?: () => void }) {
   const qc = useQueryClient();
   const evidence = useListEvidence(id, { query: { queryKey: getListEvidenceQueryKey(id) } });
-  const remove = useDeleteEvidence();
+  const remove = useDeleteEvidence(useFormMutationOptions());
   const [open, setOpen] = useState(suggestion !== null && suggestion !== undefined);
   const [editing, setEditing] = useState<Evidence>();
   const [confirm, setConfirm] = useState<number | null>(null);

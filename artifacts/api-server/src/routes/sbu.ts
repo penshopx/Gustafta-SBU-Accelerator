@@ -25,6 +25,23 @@ const requireAuth: RequestHandler = (req, res, next) => {
 };
 router.use(requireAuth);
 
+// The cookie can change in another tab before an old form hears about it.
+// This is a precondition, not authentication: ownership always comes from Clerk.
+router.use((req, res, next) => {
+  if (!["POST", "PATCH", "PUT", "DELETE"].includes(req.method)) {
+    next();
+    return;
+  }
+  const formOwner = req.get("X-SBU-Form-Owner");
+  if (!formOwner || formOwner !== owner(req)) {
+    res.status(409).json({
+      error: "Sesi akun berubah atau formulir tidak lagi sah. Muat ulang halaman sebelum menyimpan.",
+    });
+    return;
+  }
+  next();
+});
+
 function owner(req: Request): string {
   const id = getAuth(req).userId;
   if (!id) throw new Error("Authentication middleware was not applied");

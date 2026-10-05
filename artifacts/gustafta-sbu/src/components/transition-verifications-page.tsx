@@ -1,3 +1,4 @@
+import { useFormMutationOptions } from './account-queries';
 import React, { useState, type FormEvent, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, CircleAlert, ClipboardCheck, FileText, LockKeyhole, Pencil, RefreshCw, ShieldAlert, ShieldCheck, X } from 'lucide-react';
@@ -80,7 +81,7 @@ function VerificationForm({
   } : { ...blank });
   const [problem, setProblem] = useState('');
   const [confirmation, setConfirmation] = useState<string[] | null>(null);
-  const mutation = usePutTransitionVerification();
+  const mutation = usePutTransitionVerification(useFormMutationOptions());
   const update = <K extends keyof TransitionVerificationInput>(key: K, value: TransitionVerificationInput[K]) => {
     setForm(previous => ({ ...previous, [key]: value })); setProblem(''); setConfirmation(null);
   };

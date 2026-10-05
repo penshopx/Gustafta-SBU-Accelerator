@@ -34,6 +34,7 @@ paths:
                 $ref: "#/components/schemas/Profile"
     patch:
       operationId: updateMe
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       requestBody:
         required: true
@@ -42,6 +43,8 @@ paths:
             schema:
               $ref: "#/components/schemas/ProfileInput"
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Updated profile
           content:
@@ -102,6 +105,7 @@ paths:
                   $ref: "#/components/schemas/SbuCase"
     post:
       operationId: createCase
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       requestBody:
         required: true
@@ -116,6 +120,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SbuCase"
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
   /cases/{id}:
     parameters:
       - in: path
@@ -135,6 +141,7 @@ paths:
                 $ref: "#/components/schemas/SbuCase"
     patch:
       operationId: updateCase
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       requestBody:
         required: true
@@ -149,10 +156,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SbuCase"
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
     delete:
       operationId: deleteCase
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "204":
           description: Deleted
   /cases/{id}/evidence:
@@ -176,6 +188,7 @@ paths:
                   $ref: "#/components/schemas/Evidence"
     post:
       operationId: addEvidence
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       requestBody:
         required: true
@@ -190,6 +203,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Evidence"
+        "409":
+          description: Missing or mismatched form owner, or this evidence category is already recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error: { type: string }
   /cases/{id}/evidence/{evidenceId}:
     parameters:
       - in: path
@@ -204,6 +226,7 @@ paths:
           type: integer
     patch:
       operationId: updateEvidence
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       requestBody:
         required: true
@@ -218,10 +241,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Evidence"
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
     delete:
       operationId: deleteEvidence
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "204":
           description: Deleted
   /cases/{id}/assessment:
@@ -276,6 +304,7 @@ paths:
         schema: { type: string, enum: [transisi, transisi_operasional, transisi_konversi] }
     put:
       operationId: putTransitionVerification
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       description: Restricted to configured official-source reviewers; replaces the entire record, including any revoked approval.
       requestBody:
@@ -285,6 +314,8 @@ paths:
             schema:
               $ref: "#/components/schemas/TransitionVerificationInput"
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Recorded verification
           content:
@@ -292,6 +323,22 @@ paths:
               schema:
                 $ref: "#/components/schemas/TransitionVerification"
 components:
+  responses:
+    FormOwnerMismatch:
+      description: Missing form owner or the authenticated Clerk account no longer matches the form's original account. No data is read or written. Reload before retrying.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error: { type: string }
+  securitySchemes:
+    FormOwner:
+      type: apiKey
+      in: header
+      name: X-SBU-Form-Owner
+      description: Required mutation precondition containing the Clerk user ID captured when the form opens. This is not authentication; a valid Clerk session is still required. Missing or mismatched values return 409 before any data access. Supply through the generated client's request.headers.
   schemas:
     RuangSimpanCompanyProfileResponse:
       type: object

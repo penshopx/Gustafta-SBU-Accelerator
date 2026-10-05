@@ -357,3 +357,11 @@ export interface Regulation {
   transitionFindings: Finding[];
 }
 
+export type FormOwnerMismatchResponse = {
+  error: string;
+};
+
+export type AddEvidence409 = {
+  error: string;
+};
+
