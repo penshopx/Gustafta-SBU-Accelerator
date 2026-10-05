@@ -11,3 +11,4 @@
 - [Ruang Simpan ownership](ruang-simpan-ownership.md) — multi-company access needs verified per-owner connections; a valid source token does not prove its link to an SBU account.
 - [Calendar dates across API boundaries](calendar-date-wire-format.md) — generated date parsers may turn date-only strings into ISO timestamps; test the JSON wire response, not just raw rule output.
 - [Form owner preconditions](form-owner-preconditions.md) — old drafts need an immutable account precondition checked by the server; cross-tab notifications alone cannot protect writes.
+- [Print invocation verification](print-invocation-verification.md) — valid PDF pagination does not prove the app's native print action works; verify both separately.

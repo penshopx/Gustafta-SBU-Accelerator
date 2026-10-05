@@ -252,6 +252,34 @@ paths:
           $ref: "#/components/responses/FormOwnerMismatch"
         "204":
           description: Deleted
+  /cases/{id}/preparation-summary:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: integer }
+      - in: header
+        name: X-SBU-Form-Owner
+        required: true
+        description: Account that initiated the export; must match the authenticated session.
+        schema: { type: string }
+    get:
+      operationId: getPreparationSummary
+      tags: [workspace]
+      responses:
+        "200":
+          description: Private, self-contained printable HTML snapshot from current case and rules
+          content:
+            text/html:
+              schema: { type: string }
+        "400":
+          description: Invalid case ID
+        "401":
+          description: Sign-in required
+        "404":
+          description: Case absent or not owned by this session
+        "409":
+          description: Initiating account does not match session
   /cases/{id}/assessment:
     parameters:
       - in: path

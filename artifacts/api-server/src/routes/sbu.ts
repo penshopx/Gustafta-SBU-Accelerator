@@ -14,6 +14,8 @@ import {
    PutTransitionVerificationParams, PutTransitionVerificationBody, PutTransitionVerificationResponse,
 } from "@workspace/api-zod";
 import { assessCase, regulationsFor, TRANSITION_TRACKS } from "../lib/sbu-rules";
+import { preparationSummary } from "../lib/preparation-summary";
+import { GetPreparationSummaryParams, GetPreparationSummaryResponse } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 const requireAuth: RequestHandler = (req, res, next) => {
@@ -265,6 +267,31 @@ router.get("/cases/:id/assessment", async (req, res): Promise<void> => {
   const verifications = item.requestType === "perpanjangan"
     ? await db.select().from(transitionVerificationsTable) : [];
   res.json(GetAssessmentResponse.parse(assessCase(item, evidence, verifications)));
+});
+
+router.get("/cases/:id/preparation-summary", async (req, res): Promise<void> => {
+  res.set("Cache-Control", "private, no-store");
+  res.set("Referrer-Policy", "no-referrer");
+  const params = GetPreparationSummaryParams.safeParse(req.params);
+  if (!params.success) { res.status(400).json({ error: "ID tidak valid." }); return; }
+  const userId = owner(req);
+  if (req.get("X-SBU-Form-Owner") !== userId) {
+    res.status(409).json({ error: "Sesi akun berubah. Muat ulang sebelum membuat ringkasan." }); return;
+  }
+  // One consistent snapshot, including the latest source revocations/approvals.
+  const html = await db.transaction(async (tx) => {
+    const [item] = await tx.select().from(casesTable)
+      .where(and(eq(casesTable.id, params.data.id), eq(casesTable.ownerId, userId)));
+    if (!item) return null;
+    const evidence = await tx.select().from(evidenceTable).where(eq(evidenceTable.caseId, item.id));
+    const verifications = await tx.select().from(transitionVerificationsTable);
+    return preparationSummary(item, evidence, verifications);
+  }, { isolationLevel: "repeatable read", accessMode: "read only" });
+  if (!html) { res.status(404).json({ error: "Permohonan tidak ditemukan." }); return; }
+  res.set("Content-Disposition", 'attachment; filename="ringkasan-persiapan-sbu.html"');
+  res.set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'");
+  res.set("X-Content-Type-Options", "nosniff");
+  res.type("html").send(GetPreparationSummaryResponse.parse(html));
 });
 
 router.get("/transition-verifications", requireVerifier, async (_req, res): Promise<void> => {

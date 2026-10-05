@@ -1119,6 +1119,77 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getDeleteEvidenceMutationOptions(options));
     }
 
+export const getGetPreparationSummaryUrl = (id: number,) => {
+
+
+
+
+  return `/api/cases/${id}/preparation-summary`
+}
+
+export const getPreparationSummary = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<string> => {
+
+  return customFetch<string>(getGetPreparationSummaryUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPreparationSummaryQueryKey = (id: number,) => {
+    return [
+    `/api/cases/${id}/preparation-summary`
+    ] as const;
+    }
+
+
+export const getGetPreparationSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getPreparationSummary>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPreparationSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPreparationSummaryQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPreparationSummary>>> = ({ signal }) => getPreparationSummary(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPreparationSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPreparationSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getPreparationSummary>>>
+export type GetPreparationSummaryQueryError = ErrorType<void>
+
+
+
+export function useGetPreparationSummary<TData = Awaited<ReturnType<typeof getPreparationSummary>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPreparationSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPreparationSummaryQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getGetAssessmentUrl = (id: number,) => {
 
 

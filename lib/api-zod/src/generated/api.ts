@@ -257,6 +257,17 @@ export const DeleteEvidenceParams = zod.object({
 export const DeleteEvidenceResponse = zod.void()
 
 
+export const GetPreparationSummaryParams = zod.object({
+  "id": zod.coerce.number().int()
+})
+
+export const GetPreparationSummaryHeader = zod.object({
+  "X-SBU-Form-Owner": zod.string().describe('Account that initiated the export; must match the authenticated session.')
+})
+
+export const GetPreparationSummaryResponse = zod.unknown()
+
+
 export const GetAssessmentParams = zod.object({
   "id": zod.coerce.number().int()
 })

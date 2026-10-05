@@ -36,6 +36,7 @@ await build({
                const profileRows = () => globalThis.__routeProfileRows ?? [];
                const verificationRows = () => globalThis.__routeVerificationRows ?? [];
             export const db = {
+              transaction(callback) { return callback(this); },
               select() {
                 return {
                   from(table) {
@@ -212,8 +213,70 @@ async function request(server, path, options) {
     },
   });
   const raw = await response.text();
-  return { status: response.status, body: raw ? JSON.parse(raw) : null, raw };
+  return { status: response.status, body: raw && response.headers.get("content-type")?.includes("application/json") ? JSON.parse(raw) : null, raw, headers: response.headers };
 }
+
+test("ringkasan privat memeriksa pemilik, mengambil snapshot terbaru dan tidak menyalin klaim tenggat dari catatan", async () => {
+  globalThis.__routeUserId = "summary-owner";
+  globalThis.__routeCaseRows = [{
+    id: 901, ownerId: "summary-owner", companyName: 'Usaha <script>alert("x")</script>',
+    requestType: "perpanjangan", qualification: "kecil", classification: "gedung",
+    status: "draf", existingSbuExpiresOn: "2029-01-01",
+    createdAt: new Date("2026-01-01Z"), updatedAt: new Date("2026-02-01Z"),
+  }];
+  globalThis.__routeEvidenceRows = [{
+    id: 902, caseId: 901, code: "legalitas", title: "rahasia-judul",
+    note: "rahasia-catatan tenggat 2026-10-10 https://private.invalid",
+    updatedAt: new Date("2026-02-02Z"),
+  }];
+  globalThis.__routeVerificationRows = [];
+  globalThis.__routeEvidenceReads = 0;
+  const server = app.listen(0);
+  const path = "/api/cases/901/preparation-summary";
+  try {
+    globalThis.__routeUserId = null;
+    assert.equal((await request(server, path)).status, 401);
+    globalThis.__routeUserId = "other-account";
+    assert.equal((await request(server, path)).status, 404);
+    assert.equal(globalThis.__routeEvidenceReads, 0);
+    globalThis.__routeUserId = "summary-owner";
+    assert.equal((await request(server, path, { headers: { "X-SBU-Form-Owner": "old-account" } })).status, 409);
+    assert.equal((await request(server, "/api/cases/invalid/preparation-summary")).status, 400);
+    const first = await request(server, path);
+    assert.equal(first.status, 200, first.raw);
+    assert.equal(first.headers.get("cache-control"), "private, no-store");
+    assert.match(first.headers.get("content-disposition"), /attachment; filename="ringkasan-persiapan-sbu.html"/);
+    assert.match(first.raw, /Data adalah deklarasi pengguna, bukan verifikasi dokumen, penetapan kelayakan, atau keputusan LSBU/);
+    assert.match(first.raw, /thead\{display:table-header-group/);
+    assert.match(first.raw, /<thead><tr><td><div class="page-notice">Data adalah deklarasi pengguna/);
+    assert.match(first.raw, /Usaha &lt;script&gt;/);
+    assert.match(first.raw, /legalitas — 1 catatan deklarasi/);
+    assert.doesNotMatch(first.raw, /<script|rahasia-judul|rahasia-catatan|private.invalid|2026-10-10|summary-owner/);
+    globalThis.__routeCaseRows[0].companyName = "Perusahaan terbaru";
+    globalThis.__routeEvidenceRows = [];
+    globalThis.__routeVerificationRows = [{
+      track: "transisi_konversi", publisher: "Penerbit", sourceUrl: "https://pu.go.id/surat",
+      documentNumber: "Nomor sumber terkini", signatory: "Penandatangan", issuedOn: "2026-04-10",
+      scope: "Konversi SBU", documentStatus: "berlaku", sourceVerified: true,
+      expertName: "Ahli", expertOrganization: "LSBU", expertReview: "Disetujui sesuai cakupan",
+      expertReviewedOn: "2026-04-11", expertApproved: true, verifiedBy: "reviewer",
+      updatedAt: new Date("2026-04-11Z"),
+    }];
+    const updated = await request(server, path);
+    assert.match(updated.raw, /Perusahaan terbaru/);
+    assert.match(updated.raw, /Belum ada catatan bukti/);
+    assert.match(updated.raw, /Nomor sumber terkini/);
+    assert.match(updated.raw, /Tanggal transisi dari sumber terverifikasi: 2026-10-10/);
+    globalThis.__routeVerificationRows[0].documentStatus = "dicabut";
+    const revoked = await request(server, path);
+    assert.doesNotMatch(revoked.raw, /2026-10-10|Nomor sumber terkini|Tanggal transisi dari sumber terverifikasi/);
+    globalThis.__routeCaseRows = [];
+    assert.equal((await request(server, path)).status, 404);
+  } finally {
+    await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    for (const key of ["__routeUserId", "__routeCaseRows", "__routeEvidenceRows", "__routeVerificationRows", "__routeEvidenceReads"]) delete globalThis[key];
+  }
+});
 
 test("formulir tertunda akun A tidak menulis profil, kasus, atau bukti akun B walau sesi sudah B", async () => {
   const now = new Date("2026-02-01T00:00:00Z");
