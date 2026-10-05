@@ -23,6 +23,7 @@ import { AccountQueries, CrossTabAccountGate, useFormMutationOptions } from '@/c
 import { CaseRows, DashboardResult, Empty, Status, statusLabels } from '@/components/dashboard-overview';
 import { ErrorState, Loading } from '@/components/request-states';
 import { expiryInputValue, expiryPayload } from '@/lib/case-expiry';
+import { hasVisibleNameCharacter, ProfileNameField } from '@/components/profile-name-field';
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);
@@ -75,13 +76,14 @@ function ProfileForm({ profile, onboarding = false }: { profile?: Profile; onboa
   const [name, setName] = useState(profile?.displayName || '');
   const [organization, setOrganization] = useState(profile?.organizationName || '');
   const mutation = useUpdateMe(useFormMutationOptions());
-  const submit = (e: FormEvent) => { e.preventDefault(); mutation.mutate({ data: { role, displayName: name.trim(), organizationName: organization.trim() } }, { onSuccess: (data) => { qc.setQueryData(getGetMeQueryKey(), data); if (onboarding) navigate('/dashboard'); } }); };
+  const nameValid = hasVisibleNameCharacter(name);
+  const submit = (e: FormEvent) => { e.preventDefault(); if (!nameValid || mutation.isPending) return; mutation.mutate({ data: { role, displayName: name.trim(), organizationName: organization.trim() } }, { onSuccess: (data) => { qc.setQueryData(getGetMeQueryKey(), data); if (onboarding) navigate('/dashboard'); } }); };
   return <form onSubmit={submit} className="space-y-6">
     <div><div className="mb-3 text-xs font-bold text-[#2b4159]">Peran Anda</div><div className="grid gap-2 sm:grid-cols-2">{roleOptions.map(item => <button type="button" key={item.value} data-testid={`button-role-${item.value}`} onClick={() => setRole(item.value)} className={`rounded-xl border p-4 text-left transition-colors ${role === item.value ? 'border-[#1769d1] bg-[#eaf4ff] ring-1 ring-[#1769d1]' : 'border-[#d1dfe9] bg-white hover:bg-[#f4f9fc]'}`}><span className="flex items-center justify-between font-bold text-sm">{item.title}{role === item.value && <Check size={16} className="text-[#1769d1]" />}</span><span className="mt-1.5 block text-xs leading-relaxed text-[#647b90]">{item.text}</span></button>)}</div></div>
-    <div className="grid gap-4 sm:grid-cols-2"><Field label="Nama tampilan"><input data-testid="input-display-name" className="field" maxLength={120} required value={name} onChange={e => setName(e.target.value)} placeholder="Nama Anda" /></Field><Field label="Nama organisasi"><input data-testid="input-organization" className="field" maxLength={160} value={organization} onChange={e => setOrganization(e.target.value)} placeholder="Opsional" /></Field></div>
+    <div className="grid gap-4 sm:grid-cols-2"><Field label="Nama tampilan"><ProfileNameField value={name} onChange={setName}/></Field><Field label="Nama organisasi"><input data-testid="input-organization" className="field" maxLength={160} value={organization} onChange={e => setOrganization(e.target.value)} placeholder="Opsional" /></Field></div>
     {mutation.isError && <p role="alert" className="text-sm text-[#b34442]">{errText(mutation.error)}</p>}
     {mutation.isSuccess && !onboarding && <p role="status" className="text-sm font-semibold text-[#19745f]">Profil berhasil disimpan.</p>}
-    <button data-testid="button-save-profile" disabled={mutation.isPending || !name.trim()} className="btn btn-primary w-full sm:w-auto">{mutation.isPending ? 'Menyimpan...' : onboarding ? 'Masuk ke ruang kerja' : 'Simpan perubahan'} <ArrowRight size={16} /></button>
+    <button data-testid="button-save-profile" disabled={mutation.isPending || !nameValid} className="btn btn-primary w-full sm:w-auto">{mutation.isPending ? 'Menyimpan...' : onboarding ? 'Masuk ke ruang kerja' : 'Simpan perubahan'} <ArrowRight size={16} /></button>
   </form>;
 }
 
