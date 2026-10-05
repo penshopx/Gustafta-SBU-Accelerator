@@ -1117,6 +1117,7 @@ test("GET /api/me membuat satu profil awal hanya untuk pemilik sesi baru", async
     organizationName: "",
   };
   const expectedResponse = {
+    userId,
     role: initialProfile.role,
     displayName: initialProfile.displayName,
     organizationName: initialProfile.organizationName,
@@ -1165,6 +1166,7 @@ test("GET /api/me hanya menampilkan profil pengguna yang masuk", async () => {
       const response = await request(server, "/api/me");
       assert.equal(response.status, 200, response.raw);
       assert.deepEqual(response.body, {
+        userId: current.userId,
         role: current.role,
         displayName: current.displayName,
         organizationName: current.organizationName,
@@ -1454,6 +1456,7 @@ test("PATCH /api/me menolak pengunjung tanpa sesi tanpa mengubah atau membuat pr
     const allowed = await update("Nama Diperbarui");
     assert.equal(allowed.status, 200, allowed.raw);
     assert.deepEqual(allowed.body, {
+      userId: original.userId,
       role: "konsultan", displayName: "Nama Diperbarui", organizationName: "Perusahaan Baru",
     });
     assert.deepEqual(globalThis.__routeProfileRows, [{
@@ -1494,11 +1497,15 @@ test("GET /api/me menampilkan seluruh perubahan profil dari PATCH berikutnya tan
       body: JSON.stringify(changes),
     });
     assert.equal(patched.status, 200, patched.raw);
-    assert.deepEqual(patched.body, changes);
+    const expectedResponse = { userId: ownId, ...changes };
+    assert.deepEqual(patched.body, expectedResponse);
+    for (const value of [otherProfile.userId, otherProfile.displayName, otherProfile.organizationName]) {
+      assert.ok(!patched.raw.includes(value), `PATCH tidak boleh membocorkan ${value}`);
+    }
 
     const reopened = await request(server, "/api/me");
     assert.equal(reopened.status, 200, reopened.raw);
-    assert.deepEqual(reopened.body, changes, "GET berikutnya harus membaca semua nilai profil yang tersimpan");
+    assert.deepEqual(reopened.body, expectedResponse, "GET berikutnya harus membaca semua nilai profil yang tersimpan");
     assert.deepEqual(globalThis.__routeProfileRows, [
       { userId: ownId, ...changes },
       otherProfile,
@@ -1508,6 +1515,7 @@ test("GET /api/me menampilkan seluruh perubahan profil dari PATCH berikutnya tan
     const other = await request(server, "/api/me");
     assert.equal(other.status, 200, other.raw);
     assert.deepEqual(other.body, {
+      userId: otherProfile.userId,
       role: otherProfile.role,
       displayName: otherProfile.displayName,
       organizationName: otherProfile.organizationName,
@@ -1558,7 +1566,10 @@ test("PATCH /api/me mengabaikan userId pihak lain dalam isi permintaan saat upse
         body: JSON.stringify({ userId: targetId, ...changes }),
       });
       assert.equal(response.status, 200, `${description}: ${response.raw}`);
-      assert.deepEqual(response.body, changes, description);
+      assert.deepEqual(response.body, { userId: ownId, ...changes }, description);
+      for (const value of [targetId, otherProfile.displayName, otherProfile.organizationName]) {
+        assert.ok(!response.raw.includes(value), `${description}: respons tidak boleh membocorkan ${value}`);
+      }
       assert.deepEqual(globalThis.__routeProfileRows, [
         { userId: ownId, ...changes },
         ...initialRows.filter((row) => row.userId === otherId),

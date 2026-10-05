@@ -157,6 +157,7 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
       for (const response of responses) {
         assert.equal(response.status, 200, response.raw);
         assert.deepEqual(response.body, {
+          userId,
           role: "belum_dipilih",
           displayName: "",
           organizationName: "",
@@ -190,6 +191,7 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
       const response = await request(server, current.userId);
       assert.equal(response.status, 200, response.raw);
       assert.deepEqual(response.body, {
+        userId: current.userId,
         role: current.role,
         displayName: current.displayName,
         organizationName: current.organizationName,
