@@ -1,0 +1,32 @@
+Task ini menarik karena menggabungkan kebutuhan fungsional (ekspor ringkasan) dengan batasan hukum yang ketat (tidak boleh diklaim sebagai verifikasi). Berikut analisis konseptual saya:
+
+### Pendekatan yang Perlu Diputuskan Terlebih Dahulu
+
+**Klien-side vs Server-side generation:**
+
+- **Klien-side** (misalnya `window.print()` dengan CSS `@media print`, atau library seperti `react-to-print`): Lebih sederhana, tidak memerlukan endpoint baru, data tidak pernah meninggalkan browser pengguna. Risiko kebocoran data via URL otomatis nol karena tidak ada URL baru yang dibuat.
+- **Server-side** (endpoint API yang mengembalikan PDF): Lebih terkontrol secara visual, tetapi memerlukan endpoint baru yang harus dilindungi dengan pemeriksaan kepemilikan, dan URL/parameter tidak boleh memuat data sensitif.
+
+Untuk kasus ini, **klien-side tampaknya lebih sesuai** karena:
+- Data sudah ada di browser pengguna (sudah di-fetch sebelumnya)
+- Tidak ada risiko data sensitif di URL
+- Tidak perlu endpoint baru yang harus diamankan
+- Konsisten dengan filosofi aplikasi yang tidak mengunggah dokumen
+
+### Poin Kritis yang Perlu Diperhatikan
+
+1. **Disclaimer di setiap halaman cetak**: Bukan hanya di halaman pertama. CSS `@media print` dengan `position: fixed` pada footer disclaimer bisa memastikan ini. Teks harus secara eksplisit menyebut "deklarasi pengguna", "bukan verifikasi dokumen", "bukan keputusan LSBU".
+
+2. **Filter tenggat regulasi**: Field tanggal yang berasal dari interpretasi regulasi (bukan dari input pengguna) perlu ditandai atau dihilangkan dari ringkasan cetak jika belum terverifikasi. Ini memerlukan pemisahan data di tingkat komponen — mana yang "deklarasi pengguna" dan mana yang "interpretasi sistem".
+
+3. **Konsistensi dengan pedoman proyek**: Sesuai pedoman yang sudah disepakati, identitas pengguna ditentukan dari sesi sah. Jika menggunakan pendekatan server-side, pemeriksaan kepemilikan tetap wajib. Jika klien-side, data sudah terfilter karena pengguna hanya melihat kasus mereka sendiri.
+
+4. **Komponen yang sudah ada**: `case-action-plan.tsx` dan `case-detail-display.tsx` kemungkinan sudah memiliki struktur data yang bisa di-reuse untuk ringkasan cetak, sehingga tidak perlu membuat komponen baru dari nol — cukup menambahkan mode cetak.
+
+### Yang Belum Saya Ketahui
+
+- Apakah ada preferensi tim untuk format output (PDF, HTML cetak, atau keduanya)?
+- Apakah ada template atau format standar yang diharapkan oleh pihak konsultan/LSBU?
+- Bagaimana struktur data saat ini di `case-action-plan.tsx` — apakah sudah memisahkan deklarasi pengguna dari interpretasi sistem?
+
+Saya belum membuat rancangan kode karena keputusan pendekatan (klien vs server) dan detail struktur data akan sangat memengaruhi implementasi. Apakah Anda ingin saya meninjau berkas terkait untuk memahami struktur yang ada terlebih dahulu?

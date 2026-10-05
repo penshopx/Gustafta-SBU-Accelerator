@@ -1,0 +1,473 @@
+Saya akan mulai dengan meninjau berkas terkait untuk memahami struktur saat ini.
+
+
+Saya tidak memiliki akses langsung ke sistem berkas untuk membaca konten aktual ketiga berkas tersebut. Namun, berdasarkan pola yang sudah mapan di proyek ini (Clerk auth, Drizzle ORM, `X-SBU-Form-Owner`, conditional spread untuk PATCH, ownership check), saya akan merancang implementasi lengkap yang memenuhi semua kriteria "Selesai jika".
+
+---
+
+## Rancangan Implementasi: Ringkasan Kasus untuk Konsultasi
+
+### Prinsip Desain
+
+1. **Endpoint baru** `GET /api/cases/:id/summary` — mengembalikan data terstruktur khusus ringkasan, bukan data mentah database.
+2. **Kepemilikan ganda** — sesi sah menentukan identitas, pemeriksaan kepemilikan menentukan hak akses, `X-SBU-Form-Owner` sebagai lapisan tambahan (sesuai pedoman proyek).
+3. **Disclaimer wajib** — setiap halaman/output mencantumkan bahwa data adalah deklarasi pengguna, bukan verifikasi.
+4. **Tidak ada data sensitif di URL** — hanya UUID kasus yang opaque; tidak ada userId, nama perusahaan, atau tenggat regulasi di URL.
+5. **Tenggat regulasi** — tidak ditampilkan kecuali sudah diverifikasi dan ditandai secara eksplisit.
+
+---
+
+### 1. Backend: Endpoint Ringkasan
+
+**`artifacts/api-server/src/routes/sbu.ts`** — tambahkan endpoint baru:
+
+```typescript
+import { z } from 'zod';
+import { eq, and } from 'drizzle-orm';
+import { sbuAssessments, sbuEvidence, sbuFindings } from '@workspace/db/schema';
+
+// Skema respons ringkasan — hanya kolom yang aman untuk konsultasi
+const summaryResponseSchema = z.object({
+  caseId: z.string(),
+  companyName: z.string(),
+  qualification: z.string(),
+  classification: z.string().nullable(),
+  evidenceCategories: z.array(z.object({
+    category: z.string(),
+    items: z.array(z.object({
+      name: z.string(),
+      status: z.enum(['available', 'missing', 'needs_review']),
+      notes: z.string().nullable(),
+    })),
+  })),
+  findings: z.array(z.object({
+    area: z.string(),
+    description: z.string(),
+    ruleSource: z.string().nullable(),
+    ruleReference: z.string().nullable(),
+    requiresHumanReview: z.boolean(),
+  })),
+  generatedAt: z.string(),
+  disclaimer: z.string(),
+});
+
+const DISCLAIMER_TEXT =
+  'Dokumen ini berisi data berdasarkan deklarasi pengguna dan bukan merupakan ' +
+  'verifikasi dokumen, penilaian kelayakan, atau keputusan LSBU. ' +
+  'Keputusan penerbitan Sertifikat Badan Usaha (SBU) tetap menjadi wewenang ' +
+  'pihak berwenang. Catatan bukti di sini bukan bukti terverifikasi.';
+
+app.get('/api/cases/:id/summary', async (req, res) => {
+  const sessionUserId = req.auth?.userId;
+  const caseId = req.params.id;
+  const formOwner = req.headers['x-sbu-form-owner'] as string | undefined;
+
+  // 1. Autentikasi: sesi sah menentukan identitas
+  if (!sessionUserId) {
+    return res.status(401).json({ error: 'Sesi tidak valid' });
+  }
+
+  // 2. Pengikatan formulir: lapisan tambahan (bukan pengganti autentikasi)
+  if (formOwner && formOwner !== sessionUserId) {
+    return res.status(409).json({ error: 'Identitas formulir tidak cocok dengan sesi' });
+  }
+
+  // 3. Pemeriksaan kepemilikan: hak akses terhadap data
+  const existingCase = await db.query.sbuAssessments.findFirst({
+    where: eq(sbuAssessments.id, caseId),
+  });
+
+  if (!existingCase) {
+    return res.status(404).json({ error: 'Kasus tidak ditemukan' });
+  }
+
+  if (existingCase.userId !== sessionUserId) {
+    return res.status(403).json({ error: 'Akses ditolak' });
+  }
+
+  // 4. Ambil data terkait untuk ringkasan
+  const evidenceRows = await db.query.sbuEvidence.findMany({
+    where: eq(sbuEvidence.assessmentId, caseId),
+  });
+
+  const findingsRows = await db.query.sbuFindings.findMany({
+    where: eq(sbuFindings.assessmentId, caseId),
+  });
+
+  // 5. Kelompokkan bukti per kategori
+  const evidenceMap = new Map<string, typeof evidenceRows>();
+  for (const ev of evidenceRows) {
+    const cat = ev.category ?? 'Lainnya';
+    if (!evidenceMap.has(cat)) evidenceMap.set(cat, []);
+    evidenceMap.get(cat)!.push(ev);
+  }
+
+  const evidenceCategories = Array.from(evidenceMap.entries()).map(
+    ([category, items]) => ({
+      category,
+      items: items.map((item) => ({
+        name: item.documentName,
+        status: item.status,
+        notes: item.notes ?? null,
+      })),
+    })
+  );
+
+  // 6. Format temuan — TIDAK menyertakan tenggat regulasi yang belum terverifikasi
+  const findings = findingsRows.map((f) => ({
+    area: f.area,
+    description: f.description,
+    ruleSource: f.ruleSource ?? null,
+    ruleReference: f.ruleReference ?? null,
+    requiresHumanReview: f.requiresHumanReview ?? true,
+  }));
+
+  // 7. Bangun respons dan validasi dengan Zod
+  const summary = {
+    caseId: existingCase.id,
+    companyName: existingCase.companyName,
+    qualification: existingCase.qualification,
+    classification: existingCase.classification ?? null,
+    evidenceCategories,
+    findings,
+    generatedAt: new Date().toISOString(),
+    disclaimer: DISCLAIMER_TEXT,
+  };
+
+  const parsed = summaryResponseSchema.safeParse(summary);
+  if (!parsed.success) {
+    return res.status(500).json({ error: 'Gagal membangun ringkasan' });
+  }
+
+  return res.json(parsed.data);
+});
+```
+
+**Poin keamanan yang dipenuhi:**
+- URL hanya berisi UUID kasus (`/api/cases/:id/summary`) — tidak ada data sensitif.
+- Tiga lapisan pertahanan: sesi → form owner → kepemilikan.
+- Tenggat regulasi tidak disertakan dalam respons.
+- Disclaimer wajib ada di setiap respons.
+
+---
+
+### 2. Frontend: Komponen Ringkasan yang Dapat Dicetak
+
+**`artifacts/gustafta-sbu/src/components/case-summary-print.tsx`** — komponen baru:
+
+```tsx
+import { useState } from 'react';
+
+interface EvidenceItem {
+  name: string;
+  status: 'available' | 'missing' | 'needs_review';
+  notes: string | null;
+}
+
+interface EvidenceCategory {
+  category: string;
+  items: EvidenceItem[];
+}
+
+interface Finding {
+  area: string;
+  description: string;
+  ruleSource: string | null;
+  ruleReference: string | null;
+  requiresHumanReview: boolean;
+}
+
+interface CaseSummary {
+  caseId: string;
+  companyName: string;
+  qualification: string;
+  classification: string | null;
+  evidenceCategories: EvidenceCategory[];
+  findings: Finding[];
+  generatedAt: string;
+  disclaimer: string;
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  available: 'Tercatat tersedia',
+  missing: 'Belum tercatat',
+  needs_review: 'Perlu peninjauan',
+};
+
+export function CaseSummaryPrint({ caseId, formOwner }: { caseId: string; formOwner: string }) {
+  const [summary, setSummary] = useState<CaseSummary | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchSummary = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/cases/${caseId}/summary`, {
+        headers: { 'X-SBU-Form-Owner': formOwner },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `Gagal memuat ringkasan (${res.status})`);
+      }
+      setSummary(await res.json());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal memuat ringkasan');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePrint = () => {
+    if (!summary) return;
+    window.print();
+  };
+
+  return (
+    <div>
+      {/* Tombol di layar biasa — tersembunyi saat cetak */}
+      <div className="print:hidden flex gap-3 mb-4">
+        <button
+          onClick={fetchSummary}
+          disabled={isLoading}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+        >
+          {isLoading ? 'Memuat...' : 'Muat Ringkasan'}
+        </button>
+        {summary && (
+          <button
+            onClick={handlePrint}
+            className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-800"
+          >
+            Cetak / Simpan PDF
+          </button>
+        )}
+      </div>
+
+      {error && (
+        <div className="print:hidden bg-red-50 text-red-700 p-3 rounded border border-red-200 mb-4">
+          {error}
+        </div>
+      )}
+
+      {/* Konten ringkasan — hanya muncul setelah dimuat, dioptimalkan untuk cetak */}
+      {summary && (
+        <div className="print-summary">
+          {/* Header dengan disclaimer */}
+          <header className="border-b-2 border-gray-800 pb-3 mb-6">
+            <h1 className="text-xl font-bold">Ringkasan Persiapan SBU</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Dicetak: {new Date(summary.generatedAt).toLocaleString('id-ID')}
+            </p>
+            <div className="mt-3 bg-yellow-50 border border-yellow-300 p-3 text-sm text-yellow-900">
+              <strong>⚠ Pernyataan Penting:</strong> {summary.disclaimer}
+            </div>
+          </header>
+
+          {/* Informasi kasus */}
+          <section className="mb-6">
+            <h2 className="text-lg font-semibold border-b pb-1 mb-3">Informasi Kasus</h2>
+            <dl className="grid grid-cols-2 gap-2 text-sm">
+              <dt className="font-medium text-gray-600">Perusahaan:</dt>
+              <dd>{summary.companyName}</dd>
+              <dt className="font-medium text-gray-600">Kualifikasi:</dt>
+              <dd>{summary.qualification}</dd>
+              {summary.classification && (
+                <>
+                  <dt className="font-medium text-gray-600">Klasifikasi:</dt>
+                  <dd>{summary.classification}</dd>
+                </>
+              )}
+            </dl>
+          </section>
+
+          {/* Catatan bukti per kategori */}
+          <section className="mb-6">
+            <h2 className="text-lg font-semibold border-b pb-1 mb-3">Catatan Bukti</h2>
+            <p className="text-xs text-gray-500 mb-3 italic">
+              Catatan ini berdasarkan deklarasi pengguna, bukan verifikasi dokumen.
+            </p>
+            {summary.evidenceCategories.length === 0 ? (
+              <p className="text-sm text-gray-500">Belum ada catatan bukti.</p>
+            ) : (
+              summary.evidenceCategories.map((cat) => (
+                <div key={cat.category} className="mb-4">
+                  <h3 className="font-medium text-sm bg-gray-100 px-2 py-1 rounded">
+                    {cat.category}
+                  </h3>
+                  <table className="w-full text-sm mt-1">
+                    <thead>
+                      <tr className="text-left text-gray-600">
+                        <th className="py-1 pr-4">Dokumen</th>
+                        <th className="py-1 pr-4">Status</th>
+                        <th className="py-1">Catatan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cat.items.map((item, i) => (
+                        <tr key={i} className="border-t border-gray-200">
+                          <td className="py-1 pr-4">{item.name}</td>
+                          <td className="py-1 pr-4">{STATUS_LABEL[item.status] ?? item.status}</td>
+                          <td className="py-1 text-gray-500">{item.notes ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))
+            )}
+          </section>
+
+          {/* Temuan dan sumber aturan */}
+          <section className="mb-6">
+            <h2 className="text-lg font-semibold border-b pb-1 mb-3">Temuan dan Sumber Aturan</h2>
+            {summary.findings.length === 0 ? (
+              <p className="text-sm text-gray-500">Belum ada temuan.</p>
+            ) : (
+              <ul className="space-y-3">
+                {summary.findings.map((f, i) => (
+                  <li key={i} className="text-sm border-l-2 border-blue-400 pl-3">
+                    <p className="font-medium">{f.area}</p>
+                    <p className="text-gray-700">{f.description}</p>
+                    {f.ruleSource && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Rujukan: {f.ruleSource}
+                        {f.ruleReference ? ` — ${f.ruleReference}` : ''}
+                      </p>
+                    )}
+                    {f.requiresHumanReview && (
+                      <span className="inline-block mt-1 text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded">
+                        Perlu peninjauan manusia
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Footer disclaimer — muncul di setiap halaman cetak */}
+          <footer className="border-t-2 border-gray-800 pt-3 mt-8 text-xs text-gray-500">
+            <p>{summary.disclaimer}</p>
+            <p className="mt-1">
+              Ringkasan ini dihasilkan oleh Gustafta SBU Accelerator dan bukan merupakan
+              dokumen resmi dari LSBU, LPJK, atau Kementerian PUPR.
+            </p>
+          </footer>
+        </div>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+### 3. CSS Cetak
+
+**`artifacts/gustafta-sbu/src/styles/print.css`** — tambahkan atau gabungkan ke file CSS yang sudah ada:
+
+```css
+@media print {
+  /* Sembunyikan semua elemen yang bukan ringkasan */
+  body > *:not(.print-summary),
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Tampilkan hanya ringkasan */
+  .print-summary {
+    display: block !important;
+    width: 100%;
+    font-size: 11pt;
+    color: #000;
+  }
+
+  /* Pastikan disclaimer muncul di setiap halaman */
+  .print-summary footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    font-size: 8pt;
+    border-top: 1px solid #000;
+    padding-top: 4px;
+  }
+
+  /* Hindari pemotongan tabel di tengah baris */
+  .print-summary tr {
+    break-inside: avoid;
+  }
+
+  /* Hindari pemotongan section */
+  .print-summary section {
+    break-inside: avoid;
+  }
+
+  /* Hapus background warna untuk hemat tinta, kecuali disclaimer */
+  .print-summary .bg-yellow-50 {
+    background-color: #fffde7 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print-summary .bg-orange-100 {
+    background-color: #fff3e0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
+```
+
+---
+
+### 4. Integrasi ke Halaman Detail Kasus
+
+**`artifacts/gustafta-sbu/src/components/case-detail-display.tsx`** — tambahkan komponen ringkasan:
+
+```tsx
+import { CaseSummaryPrint } from './case-summary-print';
+
+// Di dalam komponen CaseDetailDisplay, tambahkan:
+export function CaseDetailDisplay({ caseData, currentUserId }) {
+  // ... kode yang sudah ada
+
+  return (
+    <div>
+      {/* ... konten detail kasus yang sudah ada ... */}
+
+      {/* Bagian baru: Ringkasan untuk Konsultasi */}
+      <section className="mt-8 border-t pt-6">
+        <h2 className="text-lg font-semibold mb-2">Ringkasan untuk Konsultasi</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Unduh atau cetak ringkasan kasus untuk dibawa ke pembahasan internal
+          atau konsultasi dengan pihak berwenang.
+        </p>
+        <CaseSummaryPrint caseId={caseData.id} formOwner={currentUserId} />
+      </section>
+    </div>
+  );
+}
+```
+
+---
+
+### 5. Pemetaan terhadap Kriteria "Selesai Jika"
+
+| Kriteria | Cara Dipenuhi |
+|---|---|
+| **Pemilik kasus dapat mengunduh/mencetak ringkasan** | Endpoint `GET /api/cases/:id/summary` + tombol Cetak/Simpan PDF via `window.print()` dengan CSS `@media print` |
+| **Kategori catatan bukti, temuan, dan sumber aturan terbaru** | Respons mencakup `evidenceCategories` (dikelompokkan per kategori), `findings` dengan `ruleSource` dan `ruleReference` |
+| **Setiap halaman jelas menyebut data adalah deklarasi pengguna** | Disclaimer di header, di bagian catatan bukti, dan di footer (fixed di setiap halaman cetak) |
+| **Bukan verifikasi dokumen, kelayakan, atau keputusan LSBU** | Teks disclaimer eksplisit menyebutkan ketiga hal ini |
+| **Tidak menampilkan tenggat regulasi yang belum terverifikasi** | Endpoint tidak menyertakan field tenggat; hanya `ruleSource` dan `ruleReference` yang sudah ada di database |
+| **Tidak ada data sensitif dalam URL** | URL hanya `/api/cases/:id/summary` dengan UUID opaque |
+| **Hasil hanya diakses pemilik kasus** | Tiga lapisan: sesi sah → `X-SBU-Form-Owner` → pemeriksaan kepemilikan (`existingCase.userId !== sessionUserId` → 403) |
+
+---
+
+### Catatan Penting
+
+- Implementasi ini mengikuti pedoman proyek: sesi sah menentukan identitas, pemeriksaan kepemilikan menentukan hak akses, dan `X-SBU-Form-Owner` sebagai lapisan tambahan.
+- Conditional spread tidak diperlukan di sini karena ini adalah endpoint GET (baca), bukan PATCH (tulis).
+- Jika `window.print()` dianggap kurang memadai untuk "unduh", alternatifnya adalah menambahkan library seperti `html2pdf.js` atau endpoint server-side yang menghasilkan PDF menggunakan Puppeteer/Playwright. Namun `window.print()` dengan opsi "Save as PDF" di browser sudah memenuhi kebutuhan dasar tanpa dependensi tambahan.
