@@ -31,7 +31,8 @@ Kualifikasi “Kecil” tidak otomatis dikonversi menjadi K1/K2/K3.
   Data belum diimpor atau dipublikasikan sebagai kasus nyata/aturan final.
 - Pustaka kasus bukan pengganti teks primer dan matriks persyaratan resmi.
   Paket teks/metadata regulasi tersedia sebagai draf kurasi. PDF asli tiga
-  sumber utama sudah diterima dan dicocokkan dengan manifest; sumber pelengkap
+  sumber utama sudah diterima dan dicocokkan dengan manifest. Lampiran PP
+  susulan termasuk matriks sektor PU juga sudah diterima; sumber pelengkap
   serta telaah persyaratan masih belum lengkap. Rincian pemeriksaan di bawah.
 
 ## Pemeriksaan paket tambahan — 6 Oktober 2026
@@ -110,11 +111,22 @@ Pemeriksaan dapat diulang dengan
 `python .agents/scripts/check-regulatory-originals.py`; gambar sementara
 ditulis ke `/tmp/sbu-original-pdf-review`, bukan ke storage aplikasi.
 
+### Lampiran PP susulan — 6 Oktober 2026
+
+20 PDF susulan memuat 10.462 halaman. Lampiran I.H (515 halaman), termasuk
+contoh tabel jasa konstruksi I.H.8–I.H.9, sudah diperiksa secara terarah.
+Gap ketersediaan bahan matriks sektor PU kini menjadi **sumber diterima,
+menunggu telaah**, bukan lagi belum ada lampiran. Lampiran II belum terlihat
+dalam unggahan; penamaan rentang berkas terakhir I.F berbeda dari isi aktual.
+Inventaris, batas pemeriksaan, dan catatan kelengkapan tercatat di
+[Pemeriksaan lampiran PP 28/2025](pp28-annex-review.md).
+
 ### Gerbang sebelum penerapan regulasi
 
 - Lengkapi sumber yang menurut paket belum tersedia: surat pemicu operasional
   SIJK, teks mandiri UU Jasa Konstruksi beserta perubahannya, PP 22/2020 jo.
-  PP 14/2021, Permen PUPR 8/2022, dan matriks lampiran PP 28/2025.
+  PP 14/2021, dan Permen PUPR 8/2022. Periksa kebutuhan Lampiran II sesuai
+  cakupan fitur; matriks sektor PU PP 28/2025 sudah tersedia untuk ditelaah.
 - Verifikasi nomor/tahun, hubungan perubahan/pencabutan, cakupan jenis usaha,
   locator pasal/lampiran, serta pasangan baris/kolom tabel dari sumber primer.
   Jangan menghitung tenggat transisi dari tanggal keputusan atau paparan.
