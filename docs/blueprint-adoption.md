@@ -143,6 +143,11 @@ Inventaris, batas pemeriksaan, dan catatan kelengkapan tercatat di
 
 ## Batas penerapan berikutnya
 
+Telaah terarah contoh gedung hunian (KBLI 41011, BG001/GT001) sudah
+dicatat dalam [Draf matriks SBU](sbu-requirements-review.md). Pemetaan awal
+mencakup jenis usaha, pilihan kualifikasi, peran TKK, dan batas interpretasi
+waktu penerbitan. Ini bahan kurasi, bukan katalog atau aturan aktif.
+
 - Dokumen asli tetap hanya di Ruang Simpan sesuai keputusan pengguna.
   Tidak ada fallback file lokal atau penyimpanan dokumen asli di SBU.
 - Akses live Ruang Simpan tetap terpisah dan belum dianggap selesai.
