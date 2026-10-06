@@ -30,8 +30,9 @@ Kualifikasi “Kecil” tidak otomatis dikonversi menjadi K1/K2/K3.
   Semua berstatus **Draf** dan berasal dari **Skenario studi banding**.
   Data belum diimpor atau dipublikasikan sebagai kasus nyata/aturan final.
 - Pustaka kasus bukan pengganti teks primer dan matriks persyaratan resmi.
-  Paket teks/metadata regulasi kini tersedia sebagai draf kurasi; PDF asli dan
-  sejumlah sumber pelengkap belum disertakan. Rincian pemeriksaan ada di bawah.
+  Paket teks/metadata regulasi tersedia sebagai draf kurasi. PDF asli tiga
+  sumber utama sudah diterima dan dicocokkan dengan manifest; sumber pelengkap
+  serta telaah persyaratan masih belum lengkap. Rincian pemeriksaan di bawah.
 
 ## Pemeriksaan paket tambahan — 6 Oktober 2026
 
@@ -68,6 +69,46 @@ impor database, perubahan fitur, atau penerbitan korpus pada pemeriksaan ini.
 - PDF asli tidak ada di arsip. Hash dalam manifest belum dapat dicocokkan
   dengan PDF asli. `session-file://` bukan tautan produksi; anotasi pemeriksaan
   visual adalah catatan dari penyusun, bukan pemeriksaan visual ulang di SBU.
+
+### PDF asli susulan — 6 Oktober 2026
+
+Tiga PDF susulan dicocokkan secara SHA-256 dengan manifest Knowledge Pack.
+Semua cocok persis; ini mengonfirmasi kesamaan berkas dengan bahan ekstraksi,
+bukan validasi tanda tangan elektronik atau verifikasi status hukum terkini.
+
+| Sumber | Halaman PDF | SHA-256 | Hasil pencocokan |
+| --- | ---: | --- | --- |
+| PP 28/2025 (`SBU-SRC-001`) | 383 | `8808de485eab2499cf3d8369921c097beaea68ae55aa767c61095d47a5a118fb` | Cocok |
+| Permen PU 6/2025 (`SBU-SRC-002`) | 393 | `117f681ebd049e02d886864e49ad20104cfd4001f613e2c208271a80eec81d47` | Cocok |
+| Kepdirjen BK 281/KPTS/DK/2026 beserta surat pengantar (`SBU-SRC-003`) | 186 | `8055de1c63f7139a680540ae6da789c663029b4a5d1683a1e2ca28a4259a588f` | Cocok |
+
+Pemeriksaan terarah menggunakan teks dan gambar halaman:
+
+- PP: identitas pada halaman PDF 1; penjelasan dimulai pada halaman PDF 311
+  dan salinan berakhir pada halaman PDF 383. Matriks lampiran yang dibutuhkan
+  untuk ketentuan spesifik belum ditemukan dalam salinan ini.
+- Permen: identitas pada halaman PDF 1; Pasal 20 pada halaman PDF 12 dan
+  Pasal 21 pada halaman PDF 13. Pasal 21 ayat (2) menghitung enam bulan
+  konversi sejak surat Pasal 20 ayat (2), bukan sejak tanggal keputusan.
+  Tanggal pengundangan 30 Desember 2025 dan Berita Negara 2025 Nomor 1142
+  dicocokkan visual pada halaman PDF 16 karena ekstraksi teks tidak lengkap.
+- Kepdirjen: identitas pada halaman PDF 3 dan Diktum Keenam pada halaman PDF 5
+  dibaca secara visual karena halaman scan tidak memiliki teks native.
+  Surat pengantar pada halaman PDF 1 tertanggal 28 Agustus 2026; butir 2
+  mensyaratkan penyesuaian SIJK dan diterbitkannya surat pimpinan unit.
+  Surat pengantar tersebut bukan bukti tanggal dimulainya operasional SIJK.
+- Lampiran Kepdirjen bagian 2.1.3 pada halaman PDF 15 menyebut subkualifikasi
+  kecil 1/2/3 untuk Pekerjaan Konstruksi. Tabel konsultansi bagian 2.1.5 pada
+  halaman PDF 16 memakai K/M/B untuk BUJKN, dengan cakupan berbeda bagi
+  BUJK PMA/KPBUJKA. Tabel itu diperiksa visual; semua ambang persyaratan dan
+  seluruh tabel lain belum ditelaah satu per satu.
+
+Unggahan ini adalah bahan penelaahan di workspace, bukan pemasangan dokumen
+ke storage SBU atau tautan sitasi produksi. Tidak ada perubahan tanggal
+transisi, kualifikasi kasus, aturan aktif, atau data perusahaan.
+Pemeriksaan dapat diulang dengan
+`python .agents/scripts/check-regulatory-originals.py`; gambar sementara
+ditulis ke `/tmp/sbu-original-pdf-review`, bukan ke storage aplikasi.
 
 ### Gerbang sebelum penerapan regulasi
 
