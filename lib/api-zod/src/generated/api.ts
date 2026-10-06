@@ -8,6 +8,24 @@
 import * as zod from 'zod';
 
 
+/**
+ * @summary Read the current authenticated private workspace
+ */
+export const GetWorkspaceResponse = zod.object({
+  "userId": zod.string(),
+  "orgId": zod.number().int(),
+  "role": zod.string(),
+  "clientIds": zod.array(zod.number().int()),
+  "clients": zod.array(zod.object({
+  "id": zod.number().int(),
+  "name": zod.string(),
+  "businessType": zod.string().nullable(),
+  "isDefault": zod.boolean()
+})),
+  "disclaimer": zod.string()
+})
+
+
 export const HealthCheckResponse = zod.object({
   "status": zod.string()
 })
@@ -69,6 +87,7 @@ export const GetDashboardResponse = zod.object({
   "prepared": zod.number().int(),
   "recent": zod.array(zod.object({
   "id": zod.number().int(),
+  "clientId": zod.number().int().nullish(),
   "companyName": zod.string(),
   "requestType": zod.enum(['baru', 'perpanjangan']),
   "qualification": zod.enum(['kecil', 'menengah', 'besar']),
@@ -83,6 +102,7 @@ export const GetDashboardResponse = zod.object({
 
 export const ListCasesResponseItem = zod.object({
   "id": zod.number().int(),
+  "clientId": zod.number().int().nullish(),
   "companyName": zod.string(),
   "requestType": zod.enum(['baru', 'perpanjangan']),
   "qualification": zod.enum(['kecil', 'menengah', 'besar']),
@@ -112,6 +132,7 @@ export const CreateCaseBody = zod.object({
 
 export const CreateCaseResponse = zod.object({
   "id": zod.number().int(),
+  "clientId": zod.number().int().nullish(),
   "companyName": zod.string(),
   "requestType": zod.enum(['baru', 'perpanjangan']),
   "qualification": zod.enum(['kecil', 'menengah', 'besar']),
@@ -129,6 +150,7 @@ export const GetCaseParams = zod.object({
 
 export const GetCaseResponse = zod.object({
   "id": zod.number().int(),
+  "clientId": zod.number().int().nullish(),
   "companyName": zod.string(),
   "requestType": zod.enum(['baru', 'perpanjangan']),
   "qualification": zod.enum(['kecil', 'menengah', 'besar']),
@@ -162,6 +184,7 @@ export const UpdateCaseBody = zod.object({
 
 export const UpdateCaseResponse = zod.object({
   "id": zod.number().int(),
+  "clientId": zod.number().int().nullish(),
   "companyName": zod.string(),
   "requestType": zod.enum(['baru', 'perpanjangan']),
   "qualification": zod.enum(['kecil', 'menengah', 'besar']),

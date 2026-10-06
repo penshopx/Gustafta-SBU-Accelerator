@@ -121,6 +121,9 @@ test("Rute bukti menjaga kepemilikan, keunikan kategori, dan urutan di PostgreSQ
       plugins: [{
         name: "isolated-evidence-db",
         setup(builder) {
+          builder.onResolve({ filter: /\/workspace-context$/ }, () => ({
+            path: join(testDir, "helpers/workspace-context-fixture.mjs"),
+          }));
           builder.onResolve({ filter: /^@workspace\/db$/ }, () => ({ path: "db", namespace: "evidence-test" }));
           builder.onResolve({ filter: /^@clerk\/express$/ }, () => ({ path: "auth", namespace: "evidence-test" }));
           builder.onResolve({ filter: /^@workspace\/api-zod$/ }, () => ({

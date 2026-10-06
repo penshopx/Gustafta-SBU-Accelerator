@@ -16,3 +16,11 @@ The user endorsed application-specific folders as the intended document access b
 **Why:** The owner wants one manageable authorization covering many relevant documents without granting unrelated company data or creating a permission link for every file.
 
 **How to apply:** Treat this as an agreed design direction, not proof of implemented folder support. Verify the upstream contract before building it, and enforce folder authorization on the source server for listing, search, metadata, and content reads. Direct file IDs must not bypass the boundary. Company profile access remains a separate permission, not a folder operation.
+
+## Original document storage
+
+Dokumen asli tetap hanya disimpan di Ruang Simpan. Jangan menambahkan penyimpanan cadangan dokumen asli di SBU.
+
+**Why:** Pengguna memilih “Hanya Ruang Simpan” saat diminta menentukan penyimpanan dokumen untuk penerapan blueprint.
+
+**How to apply:** SBU boleh menyimpan referensi dan catatan persiapan, bukan salinan dokumen asli. Bila API dokumen sumber belum tersedia atau belum diizinkan, jangan menggantinya dengan unggahan lokal.

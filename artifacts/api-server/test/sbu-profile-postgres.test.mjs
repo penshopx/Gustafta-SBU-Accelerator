@@ -94,6 +94,9 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
       plugins: [{
         name: "isolated-profile-db",
         setup(builder) {
+          builder.onResolve({ filter: /\/workspace-context$/ }, () => ({
+            path: join(testDir, "helpers/workspace-context-fixture.mjs"),
+          }));
           builder.onResolve({ filter: /^@workspace\/db$/ }, () => ({ path: "db", namespace: "profile-test" }));
           builder.onResolve({ filter: /^@clerk\/express$/ }, () => ({ path: "auth", namespace: "profile-test" }));
           builder.onResolve({ filter: /^@workspace\/api-zod$/ }, () => ({

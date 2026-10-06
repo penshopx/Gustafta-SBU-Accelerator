@@ -11,6 +11,8 @@ import type { SbuCaseStatus } from './sbuCaseStatus';
 
 export interface SbuCase {
   id: number;
+  /** @nullable */
+  clientId?: number | null;
   companyName: string;
   requestType: SbuCaseRequestType;
   qualification: SbuCaseQualification;

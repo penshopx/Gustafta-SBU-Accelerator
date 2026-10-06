@@ -117,6 +117,9 @@ test("dashboard PostgreSQL menjaga urutan dan anggota lima terbaru saat enam wak
       plugins: [{
         name: "isolated-dashboard-db",
         setup(builder) {
+          builder.onResolve({ filter: /\/workspace-context$/ }, () => ({
+            path: join(testDir, "helpers/workspace-context-fixture.mjs"),
+          }));
           builder.onResolve({ filter: /^@workspace\/db$/ }, () => ({ path: "db", namespace: "dashboard-test" }));
           builder.onResolve({ filter: /^@clerk\/express$/ }, () => ({ path: "auth", namespace: "dashboard-test" }));
           builder.onResolve({ filter: /^@workspace\/api-zod$/ }, () => ({

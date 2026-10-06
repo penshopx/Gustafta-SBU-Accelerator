@@ -72,6 +72,9 @@ test("PATCH tanggal SBU menjadi null tersimpan sebagai SQL NULL dan tetap null s
       plugins: [{
         name: "isolated-case-date-db",
         setup(builder) {
+          builder.onResolve({ filter: /\/workspace-context$/ }, () => ({
+            path: join(testDir, "helpers/workspace-context-fixture.mjs"),
+          }));
           builder.onResolve({ filter: /^@workspace\/db$/ }, () => ({ path: "db", namespace: "case-date-test" }));
           builder.onResolve({ filter: /^@clerk\/express$/ }, () => ({ path: "auth", namespace: "case-date-test" }));
           builder.onResolve({ filter: /^@workspace\/api-zod$/ }, () => ({

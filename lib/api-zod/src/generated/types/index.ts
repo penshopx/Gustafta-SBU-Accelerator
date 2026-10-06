@@ -40,3 +40,5 @@ export * from './transitionVerification';
 export * from './transitionVerificationInput';
 export * from './transitionVerificationInputDocumentStatus';
 export * from './transitionVerificationTrack';
+export * from './workspace';
+export * from './workspaceClientsItem';

@@ -10,6 +10,20 @@ tags:
   - name: health
   - name: workspace
 paths:
+  /workspace:
+    get:
+      operationId: getWorkspace
+      tags: [sbu]
+      summary: Read the current authenticated private workspace
+      responses:
+        "200":
+          description: Private workspace and legacy case container
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+        "401":
+          description: Authentication required
   /healthz:
     get:
       operationId: healthCheck
@@ -368,6 +382,27 @@ components:
       name: X-SBU-Form-Owner
       description: Required mutation precondition containing the Clerk user ID captured when the form opens. This is not authentication; a valid Clerk session is still required. Missing or mismatched values return 409 before any data access. Supply through the generated client's request.headers.
   schemas:
+    Workspace:
+      type: object
+      required: [userId, orgId, role, clientIds, clients, disclaimer]
+      properties:
+        userId: { type: string }
+        orgId: { type: integer }
+        role: { type: string }
+        clientIds:
+          type: array
+          items: { type: integer }
+        clients:
+          type: array
+          items:
+            type: object
+            required: [id, name, businessType, isDefault]
+            properties:
+              id: { type: integer }
+              name: { type: string }
+              businessType: { type: ["string", "null"] }
+              isDefault: { type: boolean }
+        disclaimer: { type: string }
     RuangSimpanCompanyProfileResponse:
       type: object
       required: [userId, profile]
@@ -419,6 +454,7 @@ components:
       required: [id, companyName, requestType, qualification, classification, status, createdAt, updatedAt, existingSbuExpiresOn]
       properties:
         id: { type: integer }
+        clientId: { type: ["integer", "null"] }
         companyName: { type: string }
         requestType: { type: string, enum: [baru, perpanjangan] }
         qualification: { type: string, enum: [kecil, menengah, besar] }

@@ -88,6 +88,9 @@ test("PATCH permohonan di PostgreSQL mempertahankan kolom lain dan tidak meminda
       plugins: [{
         name: "isolated-case-db",
         setup(builder) {
+          builder.onResolve({ filter: /\/workspace-context$/ }, () => ({
+            path: join(testDir, "helpers/workspace-context-fixture.mjs"),
+          }));
           builder.onResolve({ filter: /^@workspace\/db$/ }, () => ({ path: "db", namespace: "case-test" }));
           builder.onResolve({ filter: /^@clerk\/express$/ }, () => ({ path: "auth", namespace: "case-test" }));
           builder.onResolve({ filter: /^@workspace\/api-zod$/ }, () => ({

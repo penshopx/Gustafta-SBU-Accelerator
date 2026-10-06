@@ -44,6 +44,16 @@ Ruang kerja persiapan permohonan SBU baru dan perpanjangan untuk ekosistem jasa 
 
 Empat peran dapat membentuk profil. Kontraktor/konsultan dapat membuat dan mengelola kasus persiapan SBU, mencatat bukti per kategori, serta melihat daftar pemeriksaan dan dasar aturannya. Area profesional/asosiasi masih pengenalan, belum berbagi akses kasus.
 
+## Arsitektur fondasi blueprint
+
+- Stack tetap React/Vite + Express + PostgreSQL/Drizzle + Clerk. Ruang kerja privat di database aplikasi tidak memakai Clerk Organizations dan belum membuka kolaborasi tim.
+- `sbu_workspaces` mengikat satu ruang kerja privat ke identitas pemilik. `sbu_clients` memiliki wadah bawaan; kasus lama dan baru memperoleh `client_id` tanpa mengubah pemilik, nama badan usaha, tanggal, status, atau kualifikasi lama.
+- Wadah bawaan bernama “Wadah kasus pribadi” bukan profil badan usaha yang terverifikasi. Kasus lama dapat mewakili badan usaha berbeda; jangan menggabungkan identitas perusahaan atau mengisi NIB/NPWP/alamat dari dugaan.
+- `getContext(req)` mengambil identitas sesi dan memuat ruang kerja serta daftar wadah miliknya. Semua rute kasus tetap memeriksa `owner_id`; peran profil, ID klien, dan header organisasi tidak memberi akses ke akun lain.
+- Audit CRUD kasus disimpan dalam transaksi yang sama dengan mutasi. Ringkasan audit hanya mencatat nama field yang berubah, bukan isi dokumen, catatan bukti, atau salinan data perusahaan.
+- Migrasi aditif dan backfill: `pnpm --filter @workspace/db run migrate:workspace`. Server menjalankannya sebelum mulai melayani permintaan; kegagalan migrasi menghentikan startup. Jangan menjalankan migrasi produksi manual untuk database Replit; publikasi mengikuti alur migrasi platform.
+- `sbu_app_settings` memuat teks deklarasi; batas minimum independensi tidak dapat dihapus oleh nilai setting. Disclaimer global juga tampil pada halaman publik dan privat.
+
 ## User preferences
 
 - Bahasa Indonesia.

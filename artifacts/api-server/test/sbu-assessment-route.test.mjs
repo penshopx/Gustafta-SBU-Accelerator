@@ -22,6 +22,9 @@ await build({
   plugins: [{
     name: "test-data",
     setup(build) {
+      build.onResolve({ filter: /\/workspace-context$/ }, () => ({
+        path: join(testDir, "helpers/workspace-context-fixture.mjs"),
+      }));
       build.onResolve({ filter: /^(@workspace\/db|@clerk\/express|drizzle-orm|@workspace\/api-zod)$/ }, (args) => {
         if (args.path === "@workspace/api-zod") return { path: join(testDir, "../../../lib/api-zod/src/index.ts") };
         return { path: args.path, namespace: "test-data" };

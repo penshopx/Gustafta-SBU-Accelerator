@@ -5,6 +5,23 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+export type WorkspaceClientsItem = {
+  id: number;
+  name: string;
+  /** @nullable */
+  businessType: string | null;
+  isDefault: boolean;
+};
+
+export interface Workspace {
+  userId: string;
+  orgId: number;
+  role: string;
+  clientIds: number[];
+  clients: WorkspaceClientsItem[];
+  disclaimer: string;
+}
+
 export interface RuangSimpanCompanyProfile {
   name: string;
   nib: string;
@@ -95,6 +112,8 @@ export const SbuCaseStatus = {
 
 export interface SbuCase {
   id: number;
+  /** @nullable */
+  clientId?: number | null;
   companyName: string;
   requestType: SbuCaseRequestType;
   qualification: SbuCaseQualification;

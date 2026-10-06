@@ -75,6 +75,9 @@ await build({
   plugins: [{
     name: "isolated-test-dependencies",
     setup(builder) {
+      builder.onResolve({ filter: /\/workspace-context$/ }, () => ({
+        path: join(testDir, "helpers/workspace-context-fixture.mjs"),
+      }));
       builder.onResolve({ filter: /^@workspace\/db$/ }, () => ({ path: "db", namespace: "isolated" }));
       builder.onResolve({ filter: /^drizzle-orm$/ }, () => ({ path: "sql", namespace: "isolated" }));
       builder.onResolve({ filter: /^@workspace\/api-zod$/ }, () => ({

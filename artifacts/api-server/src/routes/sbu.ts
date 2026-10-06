@@ -16,6 +16,8 @@ import {
 import { assessCase, regulationsFor, TRANSITION_TRACKS } from "../lib/sbu-rules";
 import { preparationSummary } from "../lib/preparation-summary";
 import { GetPreparationSummaryParams, GetPreparationSummaryResponse } from "@workspace/api-zod";
+import { GetWorkspaceResponse } from "@workspace/api-zod";
+import { getContext, recordCaseAudit, workspaceDisclaimer } from "../lib/workspace-context";
 
 const router: IRouter = Router();
 const requireAuth: RequestHandler = (req, res, next) => {
@@ -49,6 +51,23 @@ function owner(req: Request): string {
   if (!id) throw new Error("Authentication middleware was not applied");
   return id;
 }
+
+// Every case endpoint resolves the same server-owned private workspace.
+// Existing Clerk owner checks stay in place; clients do not grant team access.
+router.use(async (req, _res, next) => {
+  if (/^\/(?:cases|dashboard)(?:\/|$)/.test(req.path)) await getContext(req);
+  next();
+});
+
+router.get("/workspace", async (req, res): Promise<void> => {
+  const context = await getContext(req);
+  res.set("Cache-Control", "private, no-store");
+  res.json(GetWorkspaceResponse.parse({
+    userId: context.userId, orgId: context.orgId, role: context.role,
+    clientIds: context.clientIds, clients: context.clients,
+    disclaimer: await workspaceDisclaimer(),
+  }));
+});
 
 // No applicant profile or self-selected role grants regulatory verification rights.
 // Configure trusted Clerk user IDs on the server; without the allowlist, all writes fail closed.
@@ -136,14 +155,20 @@ router.post("/cases", async (req, res): Promise<void> => {
     res.status(403).json({ error: "Ruang kerja SBU saat ini tersedia untuk peran kontraktor dan konsultan." });
     return;
   }
-  const [item] = await db.insert(casesTable).values({
-    ownerId: userId,
-    companyName: input.data.companyName,
-    requestType: input.data.requestType,
-    qualification: input.data.qualification,
-    classification: input.data.classification,
-    existingSbuExpiresOn: dateOnly(input.data.existingSbuExpiresOn),
-  }).returning();
+  const context = await getContext(req);
+  const item = await db.transaction(async (tx) => {
+    const [created] = await tx.insert(casesTable).values({
+      ownerId: userId,
+      clientId: context.defaultClientId,
+      companyName: input.data.companyName,
+      requestType: input.data.requestType,
+      qualification: input.data.qualification,
+      classification: input.data.classification,
+      existingSbuExpiresOn: dateOnly(input.data.existingSbuExpiresOn),
+    }).returning();
+    await recordCaseAudit(context, "case.created", created.id, Object.keys(input.data), tx);
+    return created;
+  });
   res.status(201).json(CreateCaseResponse.parse(item));
 });
 
@@ -173,16 +198,27 @@ router.patch("/cases/:id", async (req, res): Promise<void> => {
     ...(existingSbuExpiresOn !== undefined ? { existingSbuExpiresOn: dateOnly(existingSbuExpiresOn) } : {}),
     updatedAt: new Date(),
   };
-  const [item] = await db.update(casesTable).set(changes)
-    .where(and(eq(casesTable.id, params.data.id), eq(casesTable.ownerId, userId))).returning();
+  const context = await getContext(req);
+  const item = await db.transaction(async (tx) => {
+    const [updated] = await tx.update(casesTable).set(changes)
+      .where(and(eq(casesTable.id, params.data.id), eq(casesTable.ownerId, userId))).returning();
+    if (updated) await recordCaseAudit(context, "case.updated", updated.id, Object.keys(input.data), tx);
+    return updated;
+  });
+  if (!item) { res.status(404).json({ error: "Permohonan tidak ditemukan." }); return; }
   res.json(UpdateCaseResponse.parse(item));
 });
 
 router.delete("/cases/:id", async (req, res): Promise<void> => {
   const params = DeleteCaseParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: "ID tidak valid." }); return; }
-  const [item] = await db.delete(casesTable)
-    .where(and(eq(casesTable.id, params.data.id), eq(casesTable.ownerId, owner(req)))).returning();
+  const context = await getContext(req);
+  const item = await db.transaction(async (tx) => {
+    const [deleted] = await tx.delete(casesTable)
+      .where(and(eq(casesTable.id, params.data.id), eq(casesTable.ownerId, context.userId))).returning();
+    if (deleted) await recordCaseAudit(context, "case.deleted", deleted.id, [], tx);
+    return deleted;
+  });
   if (!item) { res.status(404).json({ error: "Permohonan tidak ditemukan." }); return; }
   res.sendStatus(204);
 });
