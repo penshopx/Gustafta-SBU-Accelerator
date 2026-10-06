@@ -30,8 +30,61 @@ Kualifikasi “Kecil” tidak otomatis dikonversi menjadi K1/K2/K3.
   Semua berstatus **Draf** dan berasal dari **Skenario studi banding**.
   Data belum diimpor atau dipublikasikan sebagai kasus nyata/aturan final.
 - Pustaka kasus bukan pengganti teks primer dan matriks persyaratan resmi.
-  Paket regulasi yang ditautkan dalam blueprint belum tersedia sebagai ekspor
-  lengkap pada tahap ini.
+  Paket teks/metadata regulasi kini tersedia sebagai draf kurasi; PDF asli dan
+  sejumlah sumber pelengkap belum disertakan. Rincian pemeriksaan ada di bawah.
+
+## Pemeriksaan paket tambahan — 6 Oktober 2026
+
+Sebelas arsip tambahan diperiksa melalui daftar isi, metadata, perbandingan
+konten, dan pembacaan JSONL/CSV. Arsip tidak diekstrak menimpa proyek; tidak ada
+impor database, perubahan fitur, atau penerbitan korpus pada pemeriksaan ini.
+
+### Duplikasi dan pustaka kasus
+
+- Isi Markdown blueprint dan paket prompt identik dengan unggahan sebelumnya.
+- Dua ZIP `Pustaka_Kasus_SBU_Accelerator_150_Draf` identik byte demi byte.
+  Gunakan satu paket, bukan dua impor terpisah.
+- Ekspor CSV SBU, SKK, dan perizinan masing-masing berisi 50 baris. Pasangan
+  CSV biasa dan `_all.csv` memiliki himpunan rekaman yang sama dengan urutan
+  berbeda; bukan tambahan kasus baru.
+- JSONL gabungan sama dengan penggabungan tiga JSONL per modul. Ada tepat
+  150 kode unik: tiap modul berisi 20 Baru, 15 Perpanjangan, 15 Perubahan data.
+  Seluruhnya Draf, asal Skenario studi banding, dengan hasil aktual dan sumber
+  kejadian kosong. CSV adalah ringkasan; JSONL memuat bahan diagnosis/langkah.
+
+### Knowledge Pack
+
+- Register berisi 20 sumber: metadata menyebut 19 PDF dan satu aset gambar.
+  Ada 18 kandidat sumber regulasi/pendukung; materi penjualan dan logo
+  dikecualikan. Jumlah tersebut bukan 20 peraturan final.
+- Data memuat 2.371 rekaman halaman dan 1.326 potongan kandidat. Pemeriksaan
+  seluruh rekaman menemukan ID unik, referensi dokumen induk yang tersedia,
+  dan rentang halaman yang sesuai jumlah halaman dalam register.
+- Seluruh dokumen dan potongan berstatus draf; potongan belum terbit dan
+  `use_for_rules_engine` bernilai false. Ada 117 halaman ditandai minim teks.
+  Konsistensi struktur bukan verifikasi hukum, OCR, atau ketepatan isi tabel.
+- Knowledge Pack yang ditautkan di ZIP pustaka regulasi identik dengan paket
+  Knowledge Pack terpisah. Tidak perlu mengimpor keduanya.
+- PDF asli tidak ada di arsip. Hash dalam manifest belum dapat dicocokkan
+  dengan PDF asli. `session-file://` bukan tautan produksi; anotasi pemeriksaan
+  visual adalah catatan dari penyusun, bukan pemeriksaan visual ulang di SBU.
+
+### Gerbang sebelum penerapan regulasi
+
+- Lengkapi sumber yang menurut paket belum tersedia: surat pemicu operasional
+  SIJK, teks mandiri UU Jasa Konstruksi beserta perubahannya, PP 22/2020 jo.
+  PP 14/2021, Permen PUPR 8/2022, dan matriks lampiran PP 28/2025.
+- Verifikasi nomor/tahun, hubungan perubahan/pencabutan, cakupan jenis usaha,
+  locator pasal/lampiran, serta pasangan baris/kolom tabel dari sumber primer.
+  Jangan menghitung tenggat transisi dari tanggal keputusan atau paparan.
+- Pisahkan regulasi primer, referensi klasifikasi BPS, panduan operasional,
+  dan praktik lembaga. Checklist skenario bukan persyaratan universal.
+- Sesuaikan instruksi storage dalam paket: dokumen asli tetap hanya di Ruang
+  Simpan. Jangan mengikuti usulan unggah PDF ke storage SBU; tautan sumber
+  harus memakai referensi yang diizinkan, bukan URI lampiran sesi.
+- Bahan ini dapat menjadi masukan area kurasi draf untuk katalog/matriks,
+  tetapi belum menjadi syarat aktif, jawaban tutor terverifikasi, atau bukti
+  aplikasi sudah layak dijual. Publikasi menunggu telaah berwenang.
 
 ## Batas penerapan berikutnya
 
