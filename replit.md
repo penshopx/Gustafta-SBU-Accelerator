@@ -54,6 +54,12 @@ Empat peran dapat membentuk profil. Kontraktor/konsultan dapat membuat dan menge
 - Migrasi aditif dan backfill: `pnpm --filter @workspace/db run migrate:workspace`. Server menjalankannya sebelum mulai melayani permintaan; kegagalan migrasi menghentikan startup. Jangan menjalankan migrasi produksi manual untuk database Replit; publikasi mengikuti alur migrasi platform.
 - `sbu_app_settings` memuat teks deklarasi; batas minimum independensi tidak dapat dihapus oleh nilai setting. Disclaimer global juga tampil pada halaman publik dan privat.
 
+## Rujukan framework lanjutan
+
+- Framework SBU Accelerator 2.0 melengkapi blueprint; penyesuaian dan batas penerapannya tercatat di `docs/blueprint-adoption.md`. Fitur agentic, OCR, simulator, dan pemantauan pasca-terbit belum diaktifkan.
+- Dokumen asli tetap hanya di Ruang Simpan. Usulan Evidence Vault pada framework tidak mengizinkan unggahan cadangan dokumen asli di SBU.
+- Untuk pengembangan lanjutan, aturan berversi yang ditelaah menentukan hasil; AI hanya membantu ekstraksi, penjelasan, dan draf. Contoh aturan dengan placeholder atau sumber belum terverifikasi tidak boleh menjadi aturan aktif.
+
 ## User preferences
 
 - Bahasa Indonesia.

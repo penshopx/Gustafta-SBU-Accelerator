@@ -24,6 +24,8 @@ Kualifikasi “Kecil” tidak otomatis dikonversi menjadi K1/K2/K3.
 ## Sumber yang diterima
 
 - Blueprint dan Paket Prompt Replit SBU Accelerator.
+- Framework Gustafta SBU Accelerator 2.0, sebagai rancangan arsitektur
+  lanjutan, bukan bukti modul agentic atau aturan final sudah tersedia.
 - Pustaka kasus berisi 150 kode unik: 50 SBU, 50 SKK, 50 perizinan.
   Semua berstatus **Draf** dan berasal dari **Skenario studi banding**.
   Data belum diimpor atau dipublikasikan sebagai kasus nyata/aturan final.
@@ -42,6 +44,47 @@ Kualifikasi “Kecil” tidak otomatis dikonversi menjadi K1/K2/K3.
   bukan peluang lolos, penilaian resmi, atau jaminan SBU.
 - Harga, pembayaran Scalev, tutor AI, direktori, dan handoff belum diterapkan.
 - Klinik/Workroom Gustafta OS tidak dibangun ulang dalam aplikasi SBU.
+
+## Penyesuaian Framework 2.0
+
+Framework melengkapi blueprint dengan Rule Engine berversi, pemetaan
+KBLI/subklasifikasi/SKK, penjelasan AI, dan pemantauan pasca-terbit. Fondasi
+tahap pertama tetap digunakan; framework tidak membuktikan fitur itu sudah
+berjalan dan tidak menggantikan keputusan penyimpanan pengguna.
+
+- **Rules decide, AI explains:** keputusan pemeriksaan berasal dari aturan
+  deterministik yang telah ditelaah. LLM tidak menetapkan ambang, status
+  kelayakan, atau aturan baru secara otomatis.
+- Temuan baru perlu membawa ID aturan, versi, sumber pasal/lampiran, cakupan,
+  dan status telaah. Contoh YAML yang berisi placeholder belum dapat
+  diaktifkan; pemeriksaan deklaratif lama tidak otomatis menjadi aturan final.
+- Kualifikasi harus mengikuti master per jenis usaha. Contoh
+  “kecil/menengah/besar” dalam framework bukan alasan menetapkan K1/K2/K3
+  pada kasus lama atau menganggap daftar itu berlaku untuk semua jenis usaha.
+- Data atau cakupan aturan yang belum lengkap menghasilkan **belum dapat
+  dinilai**, bukan klaim siap atau tidak memenuhi. Skor persiapan harus
+  menjelaskan cakupan dan kekurangan data; bukan prediksi keputusan LSBU.
+- Evidence Vault/OCR berarti pengolahan dokumen yang diizinkan dari Ruang
+  Simpan, bukan penambahan unggahan atau fallback penyimpanan asli di SBU.
+  Pemrosesan oleh layanan AI memerlukan persetujuan, batas akses, dan retensi
+  hasil ekstraksi yang jelas sebelum diaktifkan.
+- Simulator tanpa akun hanya cocok untuk input hipotetis/minimal pada tahap
+  awal; tidak boleh membuka kasus privat atau mengambil dokumen perusahaan.
+  Janji “3 menit”, testimoni, dan klaim akurasi memerlukan bukti nyata.
+- Hermes/MultiClaw/OpenClaw merupakan usulan arsitektur, bukan keharusan
+  mengganti stack. Jangan memasang agen dengan akses luas sebelum izin per
+  kasus, batas langkah/biaya, audit, dan persetujuan tindakan tersedia.
+- Tidak menyimpan kredensial OSS/SIJK atau melakukan login/submit otomatis.
+  Draf dokumen keluar tetap harus ditinjau pengguna.
+- Klaim tanggal pemberlakuan, cakupan kewajiban SMM/SMAP, dan tenggat komitmen
+  dalam framework masih harus dicocokkan dengan teks primer serta pemicu
+  operasional yang sesuai; kutipan ringkasan tidak mengaktifkan aturan.
+- Paket bisnis dalam framework adalah alternatif desain, bukan perubahan
+  harga atau hak akses yang sudah disetujui dan diterapkan.
+
+Prioritas tetap katalog/matriks dengan alur telaah, kemudian Rule Engine dan
+rencana aksi. OCR, simulator publik, agen, dan compliance tracker bergantung
+pada sumber serta kontrak akses tersebut; tidak diaktifkan hanya dari diagram.
 
 ## Pemeriksaan
 
