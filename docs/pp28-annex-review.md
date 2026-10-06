@@ -2,7 +2,9 @@
 
 ## Lingkup — 6 Oktober 2026
 
-Diterima 20 PDF dengan total 10.462 halaman PDF (sekitar 337 MB).
+Inventaris kini memuat 21 PDF unik dengan total 11.208 halaman PDF.
+Unggahan pertama memuat 20 PDF (10.462 halaman); Lampiran II susulan menambah
+746 halaman. Unggahan ulang Lampiran III/IV tidak menambah sumber unik.
 Pemeriksaan mencakup jumlah halaman, hash SHA-256 lokal, teks halaman awal/akhir,
 dan pemeriksaan visual terarah. Ini bukan telaah seluruh baris persyaratan,
 validasi tanda tangan, atau pemeriksaan status hukum terkini terhadap penerbit.
@@ -23,9 +25,10 @@ Dokumen tidak diimpor ke database, rules engine, ataupun penyimpanan aplikasi.
 | Berkas berlabel I.I — transportasi | 411 |
 | Berkas berlabel I.J–I.P | 500 |
 | Berkas berlabel I.Q–I.V | 277 |
+| Lampiran II — perizinan berusaha untuk menunjang kegiatan usaha | 746 |
 | Lampiran III — metode analisis risiko | 18 |
 | Lampiran IV — pedoman penyusunan standar kegiatan usaha/produk/jasa | 8 |
-| **Total** | **10.462** |
+| **Total unik** | **11.208** |
 
 Jumlah dan pemeriksaan batas berkas tidak membuktikan bahwa semua halaman
 internal, sektor, atau kelanjutan baris tabel lengkap.
@@ -56,16 +59,32 @@ Hash lokal berkas prioritas:
 | Sumber | SHA-256 |
 | --- | --- |
 | I.H | `0341f2849ac502ff350024b75c93225d754988380ace44fd9a04c20cf7ebe504` |
+| II | `83c1c651889194d176ac206b86a67f4a3a85da458820498693d84be590f094cb` |
 | III | `55b71be9e4dcff28cdec24b7242663358b42e3ce41edb45ae7da07bc41e2921e` |
 | IV | `63bd92a6a0dd94d73746b81cc3bf8eed6aefc16ff2f7b13e06b3fc232da2a8aa` |
 
 Hash lampiran ini belum dicocokkan dengan manifest penerbit/Knowledge Pack;
 hash lokal adalah identitas berkas, bukan pembuktian keaslian.
 
+## Lampiran II serta unggahan ulang III/IV
+
+- Identitas Lampiran II PP 28/2025 dan struktur tabel PB UMKU dicocokkan
+  visual pada halaman PDF 1. Salinan memuat 746 halaman; halaman terakhir
+  berlabel II.U.5 pada ekstraksi teks.
+- Ini bahan penelaahan Perizinan Berusaha untuk Menunjang Kegiatan Usaha,
+  bukan daftar syarat SBU universal. Cakupan tiap izin, parameter, persyaratan,
+  kewajiban, dan masa berlaku perlu ditelaah sesuai sektor/aktivitas terkait.
+- Lampiran III dan IV susulan masing-masing cocok SHA-256 dengan berkas
+  sebelumnya. Catat sebagai unggahan ulang sumber yang sama, bukan revisi
+  peraturan atau dua tambahan dokumen.
+- Pemeriksaan Lampiran II masih terarah pada identitas dan batas berkas;
+  bukan penelaahan seluruh 746 halaman atau kelengkapan setiap sektor.
+
 ## Catatan kelengkapan
 
-- Lampiran II tidak terdapat dalam daftar 20 berkas pada unggahan ini.
-  Itu bukan pernyataan bahwa lampiran tersebut tidak ada atau tidak diterbitkan.
+- Lampiran II sudah diterima melalui unggahan susulan. Kelompok Lampiran
+  I–IV kini tersedia sebagai bahan penelaahan; ini tidak membuktikan seluruh
+  halaman internal dan tabel sudah lengkap atau telah diverifikasi.
 - Berkas `2.6h` bernama rentang I.F.5249–11000 sebenarnya berisi 443 halaman.
   Halaman pertama berlabel I.F.5249 dan halaman terakhir I.F.5691; label
   terakhir dicocokkan visual. Simpan nama asli sebagai provenance, tetapi
@@ -81,3 +100,5 @@ hash lokal adalah identitas berkas, bukan pembuktian keaslian.
 `python .agents/scripts/inspect-pp28-annexes.py` menampilkan jumlah halaman,
 hash tiap PDF, dan cuplikan batas berkas. Gambar awal berkas ditulis ke
 `/tmp/pp28-annex-review`; tidak ada penyalinan PDF ke storage SBU.
+Tanpa argumen, script memeriksa paket 20 berkas awal; berikan path PDF sebagai
+argumen untuk memeriksa lampiran susulan tanpa memproses ulang paket besar.

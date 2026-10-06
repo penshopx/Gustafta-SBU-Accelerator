@@ -3,6 +3,7 @@
 import glob
 import hashlib
 from pathlib import Path
+import sys
 
 import pymupdf
 
@@ -11,9 +12,8 @@ def main():
     output = Path("/tmp/pp28-annex-review")
     output.mkdir(exist_ok=True)
     total = 0
-    for index, filename in enumerate(
-        sorted(glob.glob("attached_assets/*179129285*.pdf")), 1
-    ):
+    filenames = sys.argv[1:] or sorted(glob.glob("attached_assets/*179129285*.pdf"))
+    for filename in filenames:
         digest = hashlib.sha256()
         with open(filename, "rb") as source:
             for block in iter(lambda: source.read(1024 * 1024), b""):
@@ -29,7 +29,7 @@ def main():
                 text = document[number].get_text()
                 print("BOUNDARY", number + 1, " ".join(text.split())[:700])
             # First-page images allow inspection of table headings and sector titles.
-            target = output / f"annex-{index:02d}-first.png"
+            target = output / f"{Path(filename).stem}-first.png"
             document[0].get_pixmap(matrix=pymupdf.Matrix(1.1, 1.1)).save(
                 str(target)
             )
