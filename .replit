@@ -22,3 +22,8 @@ timeoutMs = 20000
 [nix]
 channel = "stable-25_05"
 packages = ["freetype", "gumbo", "harfbuzz", "jbig2dec", "libjpeg_turbo", "mupdf", "openjpeg", "swig", "xcbuild"]
+
+[userenv]
+
+[userenv.development]
+RUANG_SIMPAN_CONNECTIONS = "{\"user_3KM8p5woKgBPACnOcPPHVlCLOCu\":\"RUANG_SIMPAN_TOKEN_SBU\"}"

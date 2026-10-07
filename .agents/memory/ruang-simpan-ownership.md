@@ -9,6 +9,14 @@ Use a separate, server-managed Gustafta connection for each SBU owner. Establish
 
 **How to apply:** Provision credentials only after verifying the owner relationship. Keep token entry out of the frontend and resolve the correct connection from authenticated server identity. If future work introduces self-service linking, require a verified authorization flow rather than weakening ownership checks.
 
+## Resolving an owner-supplied email
+
+An owner-supplied email may locate the local SBU account only after explicit confirmation of entitlement to the token's company profile. Require exactly one matching account with a verified email in the selected authentication environment, and map its Clerk user ID, never the email.
+
+**Why:** Looking up a confirmed local account is different from inferring cross-application ownership because two accounts have matching email addresses. Email alone is not proof of entitlement.
+
+**How to apply:** Keep account lookup server-side and read-only. Stop if the result is missing, ambiguous, or unverified. Do not create sessions for the real owner to test the integration, and do not report email addresses or account IDs in verification reports.
+
 ## Folder-scoped document access
 
 The user endorsed application-specific folders as the intended document access boundary: an SBU connection should use only the folders its owner authorizes, rather than defaulting to every company document.
