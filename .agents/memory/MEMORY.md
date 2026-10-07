@@ -12,3 +12,4 @@
 - [Calendar dates across API boundaries](calendar-date-wire-format.md) — generated date parsers may turn date-only strings into ISO timestamps; test the JSON wire response, not just raw rule output.
 - [Form owner preconditions](form-owner-preconditions.md) — old drafts need an immutable account precondition checked by the server; cross-tab notifications alone cannot protect writes.
 - [Print invocation verification](print-invocation-verification.md) — valid PDF pagination does not prove the app's native print action works; verify both separately.
+- [Commercial audit evidence](commercial-audit-evidence.md) — separate implementation, testing, and live validation; missing evidence does not prove a feature is absent.

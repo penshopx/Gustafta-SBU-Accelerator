@@ -1,0 +1,77 @@
+Ya, silakan. Restrukturisasi laporan dengan kategori status **Terbukti**, **Belum Terverifikasi**, dan **Belum Tersedia** jauh lebih akurat, objektif, dan berguna untuk pengambilan keputusan. 
+
+Saya sepenuhnya menerima koreksi Anda. Klaim sebelumnya mengenai "belum layak dalam bentuk apa pun" dan estimasi waktu yang tidak terukur memang terlalu mutlak dan tidak mencerminkan kemajuan nyata yang sudah dicapai (seperti keberhasilan endpoint JSON, implementasi ekspor, dan keberadaan onboarding).
+
+Berikut adalah draf **Laporan Audit Kelayakan Jual (Terkoreksi)** berdasarkan fakta terbaru yang Anda berikan. Silakan tinjau dan sesuaikan jika ada detail yang perlu dipertajam.
+
+---
+
+# LAPORAN AUDIT KELAYAKAN JUAL (TERKOREKSI)
+**Objek:** Gustafta SBU Accelerator  
+**Tanggal:** 7 Oktober 2026  
+**Metode:** Pencocokan klaim dengan kode aktual, hasil pemeriksaan endpoint, dan status pengujian Preview.
+
+### Definisi Status
+- **TERBUKTI:** Telah diimplementasikan dalam kode dan/atau berhasil diuji dalam lingkungan Preview.
+- **BELUM TERVERIFIKASI:** Fitur ada secara desain/kode, tetapi memerlukan pengujian live multi-pengguna atau validasi pasar untuk mengonfirmasi keandalan/kegunaannya.
+- **BELUM TERSEDIA:** Belum diimplementasikan atau belum terdokumentasi dalam antarmuka/sistem saat ini.
+
+---
+
+### 1. Nilai Produk dan Fitur Minimum
+| Aspek | Status | Catatan / Bukti |
+|---|---|---|
+| Alur Onboarding Dasar | **TERBUKTI** | Tersedia pemilihan peran dan pengisian profil awal. |
+| Ekspor Ringkasan Kasus | **TERBUKTI** | `case-preparation-export.tsx` menyediakan Unduh HTML dan Cetak/PDF, terpasang di detail kasus. |
+| Kemudahan Penggunaan (Real User) | **BELUM TERVERIFIKASI** | Keberadaan fitur tidak otomatis menjamin kontraktor/konsultan nyata dapat menggunakannya dengan efisien tanpa pendampingan. |
+| Janji "Percepatan" Penerbitan | **BELUM TERVERIFIKASI** | Belum ada data dasar (baseline) atau studi kasus yang membuktikan penghematan waktu secara nyata. |
+
+### 2. Ketepatan Regulasi
+| Aspek | Status | Catatan / Bukti |
+|---|---|---|
+| Mesin Temuan & Sumber Aturan | **TERBUKTI** | Menghasilkan temuan dengan sumber; rencana aksi memisahkan kebutuhan bukti dan pemeriksaan manual; pusat regulasi menampilkan rujukan. |
+| Kedalaman Penilaian (BG001 & Subklasifikasi) | **BELUM TERVERIFIKASI** | Pemeriksaan saat ini lebih berfokus pada kelengkapan kategori deklarasi. Kecukupan finansial, personel, dan peralatan untuk subklasifikasi spesifik belum menjadi penilaian lengkap. |
+
+### 3. Keamanan dan Keandalan
+| Aspek | Status | Catatan / Bukti |
+|---|---|---|
+| Pemeriksaan Kepemilikan (Ownership) | **TERBUKTI** | Logika pemeriksaan hak akses dan uji otomatis sudah ada dalam kode. |
+| Isolasi Data Dua Pemilik (Live) | **BELUM TERVERIFIKASI** | *Catatan:* Belum terverifikasi live bukan berarti terbukti bocor. Pengujian dua koneksi pemilik secara live masih diperlukan sebagai bukti kesiapan akhir. |
+| Prosedur Pemulihan Data (Backup/Recovery) | **BELUM TERSEDIA** | Belum diverifikasi atau terdokumentasi dalam pemeriksaan saat ini. |
+
+### 4. Integrasi dan Operasional
+| Aspek | Status | Catatan / Bukti |
+|---|---|---|
+| Endpoint API Gustafta (Ruang Simpan) | **TERBUKTI** | Pemeriksaan nyata menghasilkan 401 JSON (tanpa token) dan 200 JSON (dengan token), beserta header keamanan (`Cache-Control`) yang benar. |
+| Pembacaan Profil Perusahaan (Server-side) | **TERBUKTI** | Berhasil dibaca live melalui kode integrasi server SBU di lingkungan Preview. |
+| Koneksi & Isolasi Dua Pemilik (Live) | **BELUM TERVERIFIKASI** | Konfigurasi koneksi live untuk dua akun berbeda masih dalam tahap penyelesaian pengujian. |
+| Kontak Dukungan & SLA | **BELUM TERSEDIA** | Tidak ditemukan dalam pemeriksaan UI saat ini. |
+
+### 5. Kesiapan Komersial
+| Aspek | Status | Catatan / Bukti |
+|---|---|---|
+| Halaman Ketentuan Penggunaan (ToS) | **BELUM TERSEDIA** | Tidak ditemukan dalam pemeriksaan UI. |
+| Kebijakan Privasi (Privacy Policy) | **BELUM TERSEDIA** | Tidak ditemukan dalam pemeriksaan UI. |
+| Model Harga / Pembayaran | **BELUM TERSEDIA** | Belum diterapkan menurut dokumen adopsi blueprint. |
+
+---
+
+### KESIMPULAN DAN REKOMENDASI
+
+Berdasarkan status di atas, klaim bahwa aplikasi "belum layak dijual dalam bentuk apa pun" **dicabut** dan diganti dengan rekomendasi bertahap berikut:
+
+1. **Penjualan Umum:** **TIDAK DIREKOMENDASIKAN.**  
+   Masih kurang bukti kesiapan produksi, kedalaman regulasi untuk semua subklasifikasi, dan kelengkapan dokumen komersial (ToS, Privasi, Harga).
+
+2. **Pilot Terbatas dengan Pendampingan:** **DAPAT DIPERTIMBANGKAN.**  
+   Aplikasi memiliki fondasi fitur yang **TERBUKTI** (onboarding, ekspor, mesin temuan dasar, integrasi API). Pilot ini dapat digunakan untuk menguji manfaat nyata dan kemudahan penggunaan, dengan syarat cakupan serta batas layanan (disclaimer) dikomunikasikan dengan sangat jelas kepada peserta pilot.
+
+3. **Penjualan Berbayar Terbatas:** **BELUM DAPAT DIPUTUSKAN.**  
+   Memerlukan bukti tambahan berupa: hasil sukses dari pilot terbatas, kesiapan operasional (dukungan, pemulihan data), dan penyesuaian klaim pemasaran agar sepenuhnya selaras dengan fitur yang benar-benar tersedia.
+
+---
+
+**Tindakan Selanjutnya (Opsional):**  
+Tidak ada perubahan kode atau konfigurasi yang dilakukan sebagai bagian dari laporan ini. Jika Anda setuju dengan struktur ini, kita dapat menggunakannya sebagai acuan resmi untuk menentukan langkah komersial berikutnya, sambil melanjutkan penyelesaian pengujian live dua pemilik yang masih antre.
+
+Apakah draf terkoreksi ini sudah sesuai dengan temuan Anda?
