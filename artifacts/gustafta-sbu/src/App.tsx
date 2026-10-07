@@ -25,6 +25,7 @@ import { CaseRows, DashboardResult, Empty, Status, statusLabels } from '@/compon
 import { Disclaimer } from '@/components/disclaimer';
 import { WorkspaceFoundation } from '@/components/workspace-foundation';
 import { ErrorState, Loading } from '@/components/request-states';
+import { SessionVerificationError } from '@/components/session-verification-error';
 import { expiryInputValue, expiryPayload } from '@/lib/case-expiry';
 import { hasVisibleNameCharacter, ProfileNameField } from '@/components/profile-name-field';
 
@@ -180,11 +181,12 @@ function AccountRoutes() {
   return <AccountQueries key={user?.id ?? 'signed-out'} userId={user?.id ?? null}><CrossTabAccountGate userId={user?.id ?? null}><VerifiedRoutes userId={user?.id ?? null} /></CrossTabAccountGate></AccountQueries>;
 }
 function VerifiedRoutes({ userId }: { userId: string | null }) {
+  const clerk = useClerk();
   const me = useGetMe({ query: { enabled: !!userId, queryKey: getGetMeQueryKey() } });
   // Cookies may change before Clerk updates its in-memory user (or vice versa).
   // Never render private queries when the API and Clerk disagree about the owner.
   if (userId && (me.isLoading || !me.data && !me.isError)) return <div className="mx-auto max-w-3xl p-10"><Loading /></div>;
-  if (userId && me.isError) return <div className="mx-auto max-w-xl p-10"><ErrorState message="Identitas sesi belum dapat diperiksa. Coba lagi sebelum membuka ruang kerja." retry={() => me.refetch()} /></div>;
+  if (userId && me.isError) return <div className="mx-auto max-w-xl p-10"><SessionVerificationError error={me.error} retry={() => me.refetch()} reload={() => window.location.reload()} signOut={() => clerk.signOut({ redirectUrl: `${basePath}/sign-in` })} /></div>;
   if (userId && me.data && me.data.userId !== userId) return <div className="mx-auto max-w-xl p-10"><ErrorState message="Sesi akun berubah. Muat ulang halaman untuk melanjutkan." retry={() => window.location.reload()} /></div>;
   return <AppRoutes />;
 }

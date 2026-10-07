@@ -1,0 +1,45 @@
+import React, { useState } from 'react';
+import { CircleAlert } from 'lucide-react';
+
+export function sessionFailureMessage(error: unknown) {
+  const status = error && typeof error === 'object' && 'status' in error
+    && typeof error.status === 'number' && Number.isInteger(error.status)
+    && error.status >= 100 && error.status <= 599 ? error.status : null;
+  if (status === 401) return { status, message: 'Server belum mengenali sesi Anda. Keluar dan masuk kembali untuk memperbarui sesi. Data ruang kerja tidak dihapus.' };
+  if (status === 403) return { status, message: 'Pemeriksaan identitas ditolak oleh server. Masuk kembali tidak otomatis memberikan izin tambahan.' };
+  if (status === 404) return { status, message: 'Layanan pemeriksaan identitas tidak ditemukan. Muat ulang halaman; jika tetap gagal, konfigurasi API perlu diperiksa.' };
+  if (status !== null && status >= 500) return { status, message: 'Layanan pemeriksaan identitas sedang gagal. Coba lagi setelah layanan pulih; data privat tetap ditutup.' };
+  if (status !== null && status >= 200 && status < 300) return { status, message: 'Respons pemeriksaan identitas tidak dapat dibaca. Konfigurasi atau format respons API perlu diperiksa.' };
+  return { status, message: 'Identitas sesi belum dapat diperiksa. Periksa koneksi lalu coba lagi. Data privat tetap ditutup sampai pemeriksaan berhasil.' };
+}
+
+export function SessionVerificationError({ error, retry, reload, signOut }: {
+  error: unknown;
+  retry: () => Promise<unknown>;
+  reload: () => void;
+  signOut: () => Promise<unknown>;
+}) {
+  const failure = sessionFailureMessage(error);
+  const [pending, setPending] = useState(false);
+  const [actionError, setActionError] = useState(false);
+  const run = async (action: () => Promise<unknown>) => {
+    if (pending) return;
+    setPending(true);
+    setActionError(false);
+    try { await action(); }
+    catch { setActionError(true); }
+    finally { setPending(false); }
+  };
+  return <section className="surface p-9 text-center" data-testid="session-verification-error">
+    <CircleAlert className="mx-auto mb-4 text-[#bb5451]" size={26} />
+    <h2 className="text-lg font-bold">Identitas sesi belum terverifikasi</h2>
+    <p role="alert" className="mt-2 text-sm leading-6 text-[#58708a]">{failure.message}</p>
+    <p className="mt-3 text-xs text-[#58708a]">Pemeriksaan: GET /api/me{failure.status !== null ? ` · HTTP ${failure.status}` : ' · koneksi atau respons gagal'}</p>
+    <div className="mt-5 flex flex-wrap justify-center gap-2">
+      <button disabled={pending} className="btn btn-outline" data-testid="button-retry-session" onClick={() => void run(retry)}>{pending ? 'Memproses...' : 'Coba lagi'}</button>
+      <button disabled={pending} className="btn btn-outline" data-testid="button-reload-session" onClick={reload}>Muat ulang halaman</button>
+      {failure.status === 401 && <button disabled={pending} className="btn btn-primary" data-testid="button-relogin-session" onClick={() => void run(signOut)}>Keluar dan masuk kembali</button>}
+    </div>
+    {actionError && <p role="alert" className="mt-4 text-sm text-[#b34442]">Tindakan belum berhasil. Coba muat ulang halaman. Ruang kerja tetap tertutup.</p>}
+  </section>;
+}
