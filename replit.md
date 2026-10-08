@@ -8,14 +8,20 @@ Ruang kerja persiapan permohonan SBU baru dan perpanjangan untuk ekosistem jasa 
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
+- `pnpm --filter @workspace/gustafta-sbu run typecheck` — bangun ulang deklarasi klien API sebelum memeriksa frontend, termasuk saat `dist` lama masih ada.
+- `pnpm --filter @workspace/gustafta-sbu run test:typecheck` — regresi checkout bersih, deklarasi Regulation lama, codegen, kegagalan tipe nyata, dan urutan post-merge; tidak menjalankan operasi database.
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
 
 ### Validasi otomatis sebelum penggabungan
 
+- `scripts/post-merge.sh` menjalankan instalasi, lalu codegen beserta pembangunan ulang deklarasi library sebelum langkah database yang sudah ada. Codegen memakai `--force` agar metadata incremental tidak mempertahankan deklarasi lama.
+- Batas waktu post-merge adalah 120 detik untuk menampung instalasi, regenerasi, dan langkah persiapan yang sudah ada.
+- `frontend-typecheck-regression`: `pnpm --filter @workspace/gustafta-sbu run test:typecheck` — validasi proyek untuk urutan persiapan frontend dan pemulihan deklarasi lama.
+
 - `api-typecheck-regression`: `pnpm --filter @workspace/api-server test:typecheck` — uji sumber checkout bersih, deklarasi tertinggal, pengulangan incremental, larangan keluaran kode API, dan penolakan kesalahan tipe.
 - `api-typecheck`: `pnpm --filter @workspace/api-server typecheck` — pemeriksaan tipe API beserta project references.
-- Kedua perintah terdaftar sebagai validasi proyek agar kegagalan menghentikan penyelesaian tugas sebelum penggabungan. Jangan menggantinya dengan `test` API biasa: suite tersebut mencakup tes database; gate tipe ini hanya mengompilasi dan memakai fixture sementara tanpa menulis data aplikasi.
+- Perintah regresi frontend dan kedua perintah API terdaftar sebagai validasi proyek agar kegagalan menghentikan penyelesaian tugas sebelum penggabungan. Jangan menggantinya dengan `test` API biasa: suite tersebut mencakup tes database; gate tipe ini hanya mengompilasi dan memakai fixture sementara tanpa menulis data aplikasi.
 
 ### Batas kepercayaan domain autentikasi
 
