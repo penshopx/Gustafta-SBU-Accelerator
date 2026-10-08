@@ -40,6 +40,8 @@ import type {
   RequestCaseDocumentUpload201,
   RuangSimpanCompanyProfileResponse,
   SbuCase,
+  SbuChatInput,
+  SbuChatReply,
   TransitionVerification,
   TransitionVerificationInput,
   Workspace
@@ -71,6 +73,94 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getSendSbuChatMessageUrl = () => {
+
+
+
+
+  return `/api/openai/sbu/messages`
+}
+
+/**
+ * @summary Role-focused SBU AI guidance without reading company data or documents
+ */
+export const sendSbuChatMessage = async (sbuChatInput: SbuChatInput, options?: Parameters<typeof customFetch>[1]): Promise<SbuChatReply> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SbuChatReply>(getSendSbuChatMessageUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(sbuChatInput)
+  }
+);}
+
+
+
+
+
+export const getSendSbuChatMessageMutationKey = () => ['sendSbuChatMessage'] as const;
+
+export const getSendSbuChatMessageMutationOptions = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendSbuChatMessage>>, TError,SendSbuChatMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendSbuChatMessage>>, TError,SendSbuChatMessageMutationVariables, TContext> => {
+
+const mutationKey = getSendSbuChatMessageMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendSbuChatMessage>>, SendSbuChatMessageMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  sendSbuChatMessage(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendSbuChatMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sendSbuChatMessage>>>
+    export type SendSbuChatMessageMutationBody = BodyType<SbuChatInput>
+    export type SendSbuChatMessageMutationError = ErrorType<void | FormOwnerMismatchResponse>
+    export type SendSbuChatMessageMutationVariables = {data: BodyType<SbuChatInput>}
+
+    /**
+ * @summary Role-focused SBU AI guidance without reading company data or documents
+ */
+export const useSendSbuChatMessage = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendSbuChatMessage>>, TError,SendSbuChatMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendSbuChatMessage>>,
+        TError,
+        SendSbuChatMessageMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSendSbuChatMessageMutationOptions(options));
+    }
 
 export const getGetLocalCompanyProfileUrl = () => {
 

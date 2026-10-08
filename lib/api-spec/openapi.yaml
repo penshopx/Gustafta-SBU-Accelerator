@@ -10,6 +10,33 @@ tags:
   - name: health
   - name: workspace
 paths:
+  /openai/sbu/messages:
+    post:
+      operationId: sendSbuChatMessage
+      tags: [workspace]
+      summary: Role-focused SBU AI guidance without reading company data or documents
+      security: [{ FormOwner: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SbuChatInput" }
+      responses:
+        "200":
+          description: Private preliminary AI guidance
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SbuChatReply" }
+        "400":
+          description: Invalid conversation or missing consent
+        "401":
+          description: Authentication required
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
+        "429":
+          description: Too many requests or another response is being generated
+        "503":
+          description: AI provider unavailable; no fabricated reply
   /company-profile:
     get:
       operationId: getLocalCompanyProfile
@@ -487,6 +514,34 @@ components:
       name: X-SBU-Form-Owner
       description: Required mutation precondition containing the Clerk user ID captured when the form opens. This is not authentication; a valid Clerk session is still required. Missing or mismatched values return 409 before any data access. Supply through the generated client's request.headers.
   schemas:
+    SbuChatInput:
+      type: object
+      required: [mode, messages, consent]
+      properties:
+        mode:
+          type: string
+          enum: [bujk, pendamping, asesor, lsbu, asosiasi, umum]
+        consent:
+          type: boolean
+        messages:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: { $ref: "#/components/schemas/SbuChatMessage" }
+    SbuChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role: { type: string, enum: [user, assistant] }
+        content: { type: string, minLength: 1, maxLength: 12000 }
+    SbuChatReply:
+      type: object
+      required: [userId, mode, answer, disclaimer]
+      properties:
+        userId: { type: string }
+        mode: { type: string, enum: [bujk, pendamping, asesor, lsbu, asosiasi, umum] }
+        answer: { type: string }
+        disclaimer: { type: string }
     LocalCompanyProfileInput:
       type: object
       additionalProperties: false

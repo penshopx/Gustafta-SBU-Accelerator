@@ -19,6 +19,7 @@ import { GetPreparationSummaryParams, GetPreparationSummaryResponse } from "@wor
 import { GetWorkspaceResponse } from "@workspace/api-zod";
 import { getContext, recordCaseAudit, workspaceDisclaimer } from "../lib/workspace-context";
 import standaloneRouter from "./standalone";
+import sbuChatRouter from "./sbu-chat";
 
 const router: IRouter = Router();
 const requireAuth: RequestHandler = (req, res, next) => {
@@ -48,6 +49,7 @@ router.use((req, res, next) => {
 });
 
 router.use(standaloneRouter);
+router.use(sbuChatRouter);
 
 function owner(req: Request): string {
   const id = getAuth(req).userId;

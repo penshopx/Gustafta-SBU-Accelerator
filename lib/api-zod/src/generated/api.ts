@@ -9,6 +9,32 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Role-focused SBU AI guidance without reading company data or documents
+ */
+export const sendSbuChatMessageBodyMessagesItemContentMax = 12000;
+
+export const sendSbuChatMessageBodyMessagesMax = 20;
+
+
+
+export const SendSbuChatMessageBody = zod.object({
+  "mode": zod.enum(['bujk', 'pendamping', 'asesor', 'lsbu', 'asosiasi', 'umum']),
+  "consent": zod.boolean(),
+  "messages": zod.array(zod.object({
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string().min(1).max(sendSbuChatMessageBodyMessagesItemContentMax)
+})).min(1).max(sendSbuChatMessageBodyMessagesMax)
+})
+
+export const SendSbuChatMessageResponse = zod.object({
+  "userId": zod.string(),
+  "mode": zod.enum(['bujk', 'pendamping', 'asesor', 'lsbu', 'asosiasi', 'umum']),
+  "answer": zod.string(),
+  "disclaimer": zod.string()
+})
+
+
+/**
  * @summary Read the current owner's standalone company profile
  */
 export const getLocalCompanyProfileResponseOneCompanyNameMax = 200;

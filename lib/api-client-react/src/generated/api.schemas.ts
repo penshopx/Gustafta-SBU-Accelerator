@@ -5,6 +5,64 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+export type SbuChatInputMode = typeof SbuChatInputMode[keyof typeof SbuChatInputMode];
+
+
+export const SbuChatInputMode = {
+  bujk: 'bujk',
+  pendamping: 'pendamping',
+  asesor: 'asesor',
+  lsbu: 'lsbu',
+  asosiasi: 'asosiasi',
+  umum: 'umum',
+} as const;
+
+export type SbuChatMessageRole = typeof SbuChatMessageRole[keyof typeof SbuChatMessageRole];
+
+
+export const SbuChatMessageRole = {
+  user: 'user',
+  assistant: 'assistant',
+} as const;
+
+export interface SbuChatMessage {
+  role: SbuChatMessageRole;
+  /**
+     * @minLength 1
+     * @maxLength 12000
+     */
+  content: string;
+}
+
+export interface SbuChatInput {
+  mode: SbuChatInputMode;
+  consent: boolean;
+  /**
+     * @minItems 1
+     * @maxItems 20
+     */
+  messages: SbuChatMessage[];
+}
+
+export type SbuChatReplyMode = typeof SbuChatReplyMode[keyof typeof SbuChatReplyMode];
+
+
+export const SbuChatReplyMode = {
+  bujk: 'bujk',
+  pendamping: 'pendamping',
+  asesor: 'asesor',
+  lsbu: 'lsbu',
+  asosiasi: 'asosiasi',
+  umum: 'umum',
+} as const;
+
+export interface SbuChatReply {
+  userId: string;
+  mode: SbuChatReplyMode;
+  answer: string;
+  disclaimer: string;
+}
+
 export interface LocalCompanyProfileInput {
   /** @maxLength 200 */
   companyName: string;
