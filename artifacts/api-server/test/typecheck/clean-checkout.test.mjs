@@ -7,7 +7,8 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const workspace = fileURLToPath(new URL("../../../../", import.meta.url));
-const packages = ["lib/db", "lib/api-zod", "artifacts/api-server"];
+const libraries = ["db", "api-zod", "integrations-openai-ai-server"];
+const packages = [...libraries.map((lib) => `lib/${lib}`), "artifacts/api-server"];
 
 // Copy sources, never dist or build metadata. Workspace imports must resolve to
 // the fixture too, otherwise the real checkout's declarations could hide a bug.
@@ -31,7 +32,7 @@ function cleanWorkspace() {
         symlinkSync(path.join(workspace, pkg, "node_modules", entry), path.join(modules, entry), "dir");
       }
       mkdirSync(path.join(modules, "@workspace"));
-      for (const lib of ["db", "api-zod"]) {
+      for (const lib of libraries) {
         symlinkSync(path.join(root, "lib", lib), path.join(modules, "@workspace", lib), "dir");
       }
     }
@@ -60,7 +61,7 @@ test("API typecheck builds references from clean sources and refreshes stale dec
   const root = cleanWorkspace();
   try {
     assertPassed(check(root));
-    for (const lib of ["db", "api-zod"]) {
+    for (const lib of libraries) {
       assert.ok(existsSync(path.join(root, "lib", lib, "dist/index.d.ts")));
     }
     assert.ok(!existsSync(path.join(root, "artifacts/api-server/dist")), "API typecheck must not emit application code");

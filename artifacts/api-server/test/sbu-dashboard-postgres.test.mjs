@@ -13,16 +13,22 @@ import { createRestrictedRoutePool } from "./helpers/restricted-postgres.mjs";
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const { Pool } = createRequire(new URL("../../../lib/db/package.json", import.meta.url))("pg");
 
-async function request(server, userId) {
+async function request(server, userId, path = "/dashboard", { method = "GET", body } = {}) {
   const { port } = server.address();
-  const response = await fetch(`http://127.0.0.1:${port}/api/dashboard`, {
-    headers: { "x-test-user-id": userId },
+  const response = await fetch(`http://127.0.0.1:${port}/api${path}`, {
+    method,
+    headers: {
+      "x-test-user-id": userId,
+      "X-SBU-Form-Owner": userId,
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   const raw = await response.text();
-  return { status: response.status, body: JSON.parse(raw), raw };
+  return { status: response.status, body: raw ? JSON.parse(raw) : null, raw };
 }
 
-test("dashboard PostgreSQL menjaga urutan dan anggota lima terbaru saat enam waktu seri, tanpa membatasi hitungan", async () => {
+test("dashboard PostgreSQL menjaga hitungan dan lima terbaru pada data tetap maupun setelah mutasi", async (t) => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk pengujian integrasi PostgreSQL");
   assert.notEqual(process.env.NODE_ENV, "production", "Pengujian tidak boleh dijalankan dalam mode produksi");
 
@@ -139,6 +145,7 @@ test("dashboard PostgreSQL menjaga urutan dan anggota lima terbaru saat enam wak
     });
     const { default: router } = await import(join(temporaryDir, "route.mjs"));
     const app = express();
+    app.use(express.json());
     app.use("/api", router);
     server = app.listen(0);
 
@@ -164,6 +171,92 @@ test("dashboard PostgreSQL menjaga urutan dan anggota lima terbaru saat enam wak
       "GET berulang tidak boleh mengubah permohonan salinan");
     assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
       "Permintaan dashboard tidak boleh memasukkan data uji ke tabel aplikasi");
+
+    await t.test("PATCH dan DELETE di dalam/luar lima teratas langsung tercermin tanpa mengubah pengguna lain", async () => {
+      const otherDashboard = await request(server, otherOwnerId);
+      assert.equal(otherDashboard.status, 200, otherDashboard.raw);
+      assert.deepEqual(otherDashboard.body, {
+        total: 1, draft: 1, reviewing: 0, prepared: 0,
+        recent: otherDashboard.body.recent,
+      });
+      assert.deepEqual(otherDashboard.body.recent.map((item) => item.id), [999]);
+      const otherRows = (await isolated.query(
+        "SELECT * FROM sbu_cases WHERE owner_id = $1 ORDER BY id", [otherOwnerId],
+      )).rows;
+
+      const assertDashboard = async (expectedCounts, expectedIds) => {
+        // Read PostgreSQL independently of the route, after each HTTP mutation.
+        const stored = (await isolated.query(
+          "SELECT * FROM sbu_cases WHERE owner_id = $1 ORDER BY updated_at DESC, id DESC", [ownerId],
+        )).rows;
+        const storedCounts = {
+          total: stored.length,
+          draft: stored.filter((item) => item.status === "draf").length,
+          reviewing: stored.filter((item) => item.status === "ditinjau").length,
+          prepared: stored.filter((item) => item.status === "selesai_persiapan").length,
+        };
+        assert.deepEqual(storedCounts, expectedCounts, "Mutasi harus benar-benar tersimpan di PostgreSQL");
+        assert.deepEqual(stored.slice(0, 5).map((item) => item.id), expectedIds);
+        const dashboard = await request(server, ownerId);
+        assert.equal(dashboard.status, 200, dashboard.raw);
+        const { recent, ...counts } = dashboard.body;
+        assert.deepEqual(counts, storedCounts, "Ringkasan harus langsung mengikuti hitungan tersimpan");
+        assert.deepEqual(recent.map((item) => ({
+          id: item.id, companyName: item.companyName, status: item.status, updatedAt: item.updatedAt,
+        })), stored.slice(0, 5).map((item) => ({
+          id: item.id, companyName: item.company_name, status: item.status,
+          updatedAt: item.updated_at.toISOString(),
+        })), "Anggota, urutan, status, dan waktu terbaru harus sesuai data tersimpan");
+        const otherAfter = await request(server, otherOwnerId);
+        assert.equal(otherAfter.status, 200, otherAfter.raw);
+        assert.deepEqual(otherAfter.body, otherDashboard.body, "Dashboard pengguna lain tidak boleh berubah");
+        assert.deepEqual((await isolated.query(
+          "SELECT * FROM sbu_cases WHERE owner_id = $1 ORDER BY id", [otherOwnerId],
+        )).rows, otherRows, "Data pengguna lain juga harus tetap utuh");
+        assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
+          "Mutasi rute harus tetap terbatas pada tabel salinan");
+        return recent;
+      };
+
+      await assertDashboard({ total: 8, draft: 3, reviewing: 3, prepared: 2 }, [100, 206, 205, 204, 203]);
+      const patchStatus = async (id, status) => {
+        const previous = (await isolated.query(
+          "SELECT updated_at FROM sbu_cases WHERE id = $1 AND owner_id = $2", [id, ownerId],
+        )).rows[0];
+        const patched = await request(server, ownerId, `/cases/${id}`, { method: "PATCH", body: { status } });
+        assert.equal(patched.status, 200, patched.raw);
+        assert.equal(patched.body.id, id);
+        assert.equal(patched.body.status, status);
+        assert.ok(new Date(patched.body.updatedAt) > previous.updated_at,
+          "PATCH harus memperbarui waktu permohonan");
+      };
+      const deleteCase = async (id) => {
+        const deleted = await request(server, ownerId, `/cases/${id}`, { method: "DELETE" });
+        assert.equal(deleted.status, 204, deleted.raw);
+        assert.equal(deleted.raw, "");
+        assert.deepEqual((await isolated.query("SELECT id FROM sbu_cases WHERE id = $1", [id])).rows, [],
+          "DELETE harus benar-benar menghapus baris salinan");
+      };
+
+      // Change a current top-five item, then promote an item previously outside it.
+      await patchStatus(100, "ditinjau");
+      await assertDashboard({ total: 8, draft: 2, reviewing: 4, prepared: 2 }, [100, 206, 205, 204, 203]);
+      await patchStatus(202, "selesai_persiapan");
+      const beforeDelete = await assertDashboard(
+        { total: 8, draft: 2, reviewing: 3, prepared: 3 }, [202, 100, 206, 205, 204],
+      );
+
+      // Removing an older item changes counts, but not the five latest members.
+      await deleteCase(900);
+      const afterOutsideDelete = await assertDashboard(
+        { total: 7, draft: 2, reviewing: 3, prepared: 2 }, [202, 100, 206, 205, 204],
+      );
+      assert.deepEqual(afterOutsideDelete, beforeDelete);
+
+      // Removing a top-five item must backfill with the next stored item.
+      await deleteCase(205);
+      await assertDashboard({ total: 6, draft: 2, reviewing: 2, prepared: 2 }, [202, 100, 206, 204, 203]);
+    });
   } finally {
     try {
       if (server) await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
