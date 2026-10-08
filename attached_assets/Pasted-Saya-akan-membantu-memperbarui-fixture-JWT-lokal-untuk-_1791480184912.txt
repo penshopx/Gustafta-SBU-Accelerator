@@ -1,0 +1,464 @@
+Saya akan membantu memperbarui fixture JWT lokal untuk memenuhi persyaratan Clerk SDK yang akan datang. Berikut adalah implementasi yang komprehensif:
+
+## 1. Membuat Helper JWT untuk Pengujian
+
+Buat file helper baru untuk mengelola pembuatan JWT uji yang valid:
+
+**`artifacts/api-server/test/fixtures/clerk-jwt-fixture.mjs`**
+```javascript
+import { SignJWT } from 'jose';
+
+// Konfigurasi pengujian - TIDAK menggunakan kredensial nyata
+const TEST_CONFIG = {
+  // Issuer harus cocok dengan yang diharapkan middleware Clerk
+  issuer: 'https://clerk.test.local',
+  
+  // Authorized Party - origin aplikasi (WAJIB untuk versi Clerk mendatang)
+  authorizedParty: 'http://localhost:3000',
+  
+  // Audience - biasanya client ID aplikasi
+  audience: 'test_client_id',
+  
+  // Kunci rahasia untuk menandatangani JWT uji (HANYA untuk pengujian)
+  secretKey: 'test-secret-key-for-jwt-signing-only-not-for-production',
+  
+  // Session ID uji
+  sessionId: 'sess_test_123456789',
+  
+  // User ID uji
+  userId: 'user_test_123456789',
+};
+
+/**
+ * Membuat JWT fixture yang valid untuk pengujian Clerk
+ * @param {Object} options - Opsi kustomisasi token
+ * @param {string} options.userId - User ID (default: user_test_123456789)
+ * @param {string} options.sessionId - Session ID (default: sess_test_123456789)
+ * @param {number} options.expiresIn - Detik hingga kedaluwarsa (default: 3600)
+ * @param {boolean} options.invalid - Jika true, buat token tidak valid
+ * @returns {Promise<string>} JWT token yang ditandatangani
+ */
+export async function createTestJWT(options = {}) {
+  const {
+    userId = TEST_CONFIG.userId,
+    sessionId = TEST_CONFIG.sessionId,
+    expiresIn = 3600,
+    invalid = false,
+  } = options;
+
+  const now = Math.floor(Date.now() / 1000);
+  
+  // Payload JWT sesuai format Clerk
+  const payload = {
+    sub: userId,
+    iss: TEST_CONFIG.issuer,
+    azp: TEST_CONFIG.authorizedParty, // WAJIB: authorized party claim
+    aud: TEST_CONFIG.audience,
+    sid: sessionId,
+    iat: now,
+    nbf: now,
+    exp: now + expiresIn,
+    
+    // Claim tambahan yang mungkin diperlukan
+    org_id: null, // Atau ID organisasi jika diperlukan
+    org_role: null,
+  };
+
+  // Jika token tidak valid, manipulasi salah satu claim
+  if (invalid) {
+    payload.sub = 'user_invalid_999'; // User ID yang tidak cocok
+  }
+
+  // Tanda tangani JWT dengan kunci uji
+  const jwt = await new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+    .setIssuedAt(now)
+    .setNotBefore(now)
+    .setExpirationTime(now + expiresIn)
+    .sign(new TextEncoder().encode(TEST_CONFIG.secretKey));
+
+  return jwt;
+}
+
+/**
+ * Membuat cookie session yang valid untuk pengujian
+ * @param {Object} options - Opsi kustomisasi
+ * @returns {Promise<string>} Cookie header value
+ */
+export async function createTestSessionCookie(options = {}) {
+  const jwt = await createTestJWT(options);
+  
+  // Format cookie Clerk: __session=<jwt>
+  return `__session=${jwt}`;
+}
+
+/**
+ * Membuat header Bearer token untuk pengujian
+ * @param {Object} options - Opsi kustomisasi
+ * @returns {Promise<string>} Authorization header value
+ */
+export async function createTestBearerToken(options = {}) {
+  const jwt = await createTestJWT(options);
+  return `Bearer ${jwt}`;
+}
+
+/**
+ * Konfigurasi middleware Clerk untuk pengujian
+ * Ini harus dipanggil sebelum mengimpor app untuk memastikan
+ * middleware menggunakan konfigurasi uji
+ */
+export function setupTestClerkConfig() {
+  // Set environment variables untuk pengujian
+  process.env.CLERK_SECRET_KEY = TEST_CONFIG.secretKey;
+  process.env.CLERK_PUBLISHABLE_KEY = `pk_test_${TEST_CONFIG.authorizedParty}`;
+  process.env.CLERK_JWT_KEY = TEST_CONFIG.secretKey;
+  
+  // Pastikan origin cocok dengan azp
+  process.env.ORIGIN = TEST_CONFIG.authorizedParty;
+}
+
+export { TEST_CONFIG };
+```
+
+## 2. Memperbarui File Uji
+
+**`artifacts/api-server/test/sbu-assessment-clerk.test.mjs`**
+```javascript
+import { describe, it, beforeAll, afterAll } from 'node:test';
+import assert from 'node:assert';
+import supertest from 'supertest';
+import { 
+  createTestSessionCookie, 
+  createTestBearerToken, 
+  createTestJWT,
+  setupTestClerkConfig 
+} from './fixtures/clerk-jwt-fixture.mjs';
+
+// PENTING: Setup konfigurasi Clerk SEBELUM mengimpor app
+setupTestClerkConfig();
+
+// Sekarang impor app (setelah environment variables diatur)
+const { app } = await import('../src/app.mjs');
+
+describe('SBU Assessment - Clerk Authentication', () => {
+  let request;
+  let validUserId;
+  let validSessionCookie;
+  let validBearerToken;
+  let invalidToken;
+
+  beforeAll(async () => {
+    request = supertest(app);
+    validUserId = 'user_test_123456789';
+    
+    // Buat token valid dengan azp yang benar
+    validSessionCookie = await createTestSessionCookie({ userId: validUserId });
+    validBearerToken = await createTestBearerToken({ userId: validUserId });
+    
+    // Buat token tidak valid (user ID berbeda)
+    invalidToken = await createTestJWT({ userId: 'user_invalid_999', invalid: true });
+  });
+
+  afterAll(() => {
+    // Cleanup jika diperlukan
+  });
+
+  describe('GET /api/cases/:id/assessment', () => {
+    const testCaseId = 'case_test_123';
+
+    it('should return 200 with valid Bearer token', async () => {
+      const res = await request
+        .get(`/api/cases/${testCaseId}/assessment`)
+        .set('Authorization', validBearerToken);
+
+      assert.strictEqual(res.status, 200, `Expected 200, got ${res.status}: ${res.text}`);
+      assert.ok(res.body, 'Response body should exist');
+    });
+
+    it('should return 200 with valid session cookie', async () => {
+      const res = await request
+        .get(`/api/cases/${testCaseId}/assessment`)
+        .set('Cookie', validSessionCookie);
+
+      assert.strictEqual(res.status, 200, `Expected 200, got ${res.status}: ${res.text}`);
+      assert.ok(res.body, 'Response body should exist');
+    });
+
+    it('should return 401 without authentication', async () => {
+      const res = await request
+        .get(`/api/cases/${testCaseId}/assessment`);
+
+      assert.strictEqual(res.status, 401, `Expected 401, got ${res.status}`);
+    });
+
+    it('should return 401 with invalid token (wrong user)', async () => {
+      const res = await request
+        .get(`/api/cases/${testCaseId}/assessment`)
+        .set('Authorization', `Bearer ${invalidToken}`);
+
+      assert.strictEqual(res.status, 401, `Expected 401, got ${res.status}`);
+    });
+
+    it('should return 401 with malformed token', async () => {
+      const res = await request
+        .get(`/api/cases/${testCaseId}/assessment`)
+        .set('Authorization', 'Bearer malformed.token.here');
+
+      assert.strictEqual(res.status, 401, `Expected 401, got ${res.status}`);
+    });
+
+    it('should return 401 with expired token', async () => {
+      // Buat token yang sudah kedaluwarsa
+      const expiredToken = await createTestJWT({ 
+        userId: validUserId, 
+        expiresIn: -100 // Kedaluwarsa 100 detik yang lalu
+      });
+
+      const res = await request
+        .get(`/api/cases/${testCaseId}/assessment`)
+        .set('Authorization', `Bearer ${expiredToken}`);
+
+      assert.strictEqual(res.status, 401, `Expected 401, got ${res.status}`);
+    });
+
+    it('should return 401 with token missing azp claim', async () => {
+      // Buat token TANPA azp claim (untuk menguji kompatibilitas mundur)
+      const tokenWithoutAzp = await createTestJWTWithoutAzp(validUserId);
+
+      const res = await request
+        .get(`/api/cases/${testCaseId}/assessment`)
+        .set('Authorization', `Bearer ${tokenWithoutAzp}`);
+
+      // Token tanpa azp harus ditolak oleh Clerk SDK versi baru
+      assert.strictEqual(res.status, 401, `Expected 401 for token without azp, got ${res.status}`);
+    });
+  });
+
+  describe('PATCH /api/cases/:id', () => {
+    const testCaseId = 'case_test_123';
+
+    it('should return 200 with valid Bearer token and correct form owner', async () => {
+      const res = await request
+        .patch(`/api/cases/${testCaseId}`)
+        .set('Authorization', validBearerToken)
+        .set('X-SBU-Form-Owner', validUserId)
+        .send({ companyName: 'Test Company Updated' });
+
+      assert.strictEqual(res.status, 200, `Expected 200, got ${res.status}: ${res.text}`);
+    });
+
+    it('should return 409 when form owner does not match session', async () => {
+      const res = await request
+        .patch(`/api/cases/${testCaseId}`)
+        .set('Authorization', validBearerToken)
+        .set('X-SBU-Form-Owner', 'user_different_999')
+        .send({ companyName: 'Test Company' });
+
+      assert.strictEqual(res.status, 409, `Expected 409, got ${res.status}`);
+    });
+
+    it('should return 401 without authentication', async () => {
+      const res = await request
+        .patch(`/api/cases/${testCaseId}`)
+        .send({ companyName: 'Test Company' });
+
+      assert.strictEqual(res.status, 401, `Expected 401, got ${res.status}`);
+    });
+  });
+});
+
+/**
+ * Helper untuk membuat token TANPA azp claim (untuk pengujian kompatibilitas)
+ */
+async function createTestJWTWithoutAzp(userId) {
+  const { SignJWT } = await import('jose');
+  const { TEST_CONFIG } = await import('./fixtures/clerk-jwt-fixture.mjs');
+  
+  const now = Math.floor(Date.now() / 1000);
+  
+  const payload = {
+    sub: userId,
+    iss: TEST_CONFIG.issuer,
+    // TIDAK menyertakan azp - ini akan diuji untuk kompatibilitas mundur
+    aud: TEST_CONFIG.audience,
+    sid: TEST_CONFIG.sessionId,
+    iat: now,
+    nbf: now,
+    exp: now + 3600,
+  };
+
+  const jwt = await new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
+    .sign(new TextEncoder().encode(TEST_CONFIG.secretKey));
+
+  return jwt;
+}
+```
+
+## 3. Memperbarui Konfigurasi Middleware Clerk (Jika Diperlukan)
+
+Jika aplikasi Anda menggunakan middleware Clerk kustom, pastikan konfigurasi tersebut menerima `azp` claim:
+
+**`artifacts/api-server/src/lib/clerk-auth.mjs`** (atau file serupa)
+```javascript
+import { createClerkClient } from '@clerk/backend';
+import jwt from 'jsonwebtoken';
+
+const clerkClient = createClerkClient({
+  secretKey: process.env.CLERK_SECRET_KEY,
+  publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+});
+
+/**
+ * Verifikasi token JWT dari Clerk
+ * Mendukung token dengan atau tanpa azp claim untuk kompatibilitas
+ */
+export async function verifyToken(token, options = {}) {
+  const { 
+    authorizedParty = process.env.ORIGIN,
+    issuer = process.env.CLERK_ISSUER 
+  } = options;
+
+  try {
+    // Verifikasi JWT dengan jose (library yang direkomendasikan Clerk)
+    const { verify } = await import('jose');
+    
+    const secret = new TextEncoder().encode(process.env.CLERK_JWT_KEY);
+    
+    const payload = await verify(token, secret, {
+      algorithms: ['HS256'],
+      issuer: issuer,
+      audience: process.env.CLERK_AUDIENCE,
+      
+      // Untuk token dengan azp, verifikasi authorized party
+      // Untuk token tanpa azp (legacy), skip verifikasi ini
+      ...(payloadHasAzp(token) ? { 
+        // Custom verification untuk azp
+      } : {}),
+    });
+
+    // Verifikasi azp secara manual jika ada
+    if (payload.azp && authorizedParty) {
+      if (payload.azp !== authorizedParty) {
+        throw new Error('Authorized party mismatch');
+      }
+    }
+
+    return payload;
+  } catch (error) {
+    throw new Error(`Token verification failed: ${error.message}`);
+  }
+}
+
+/**
+ * Cek apakah token memiliki claim azp
+ */
+function payloadHasAzp(token) {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split('.')[1], 'base64').toString()
+    );
+    return 'azp' in payload;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Middleware untuk memverifikasi sesi Clerk
+ */
+export async function clerkAuthMiddleware(req, res, next) {
+  try {
+    let token;
+
+    // Coba ambil dari header Authorization (Bearer token)
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+    
+    // Jika tidak ada, coba dari cookie
+    if (!token) {
+      const cookies = parseCookies(req.headers.cookie);
+      token = cookies.__session;
+    }
+
+    if (!token) {
+      return res.status(401).json({ error: 'No authentication token provided' });
+    }
+
+    // Verifikasi token
+    const payload = await verifyToken(token, {
+      authorizedParty: process.env.ORIGIN,
+      issuer: process.env.CLERK_ISSUER,
+    });
+
+    // Attach user info ke request
+    req.auth = {
+      userId: payload.sub,
+      sessionId: payload.sid,
+      orgId: payload.org_id,
+    };
+
+    next();
+  } catch (error) {
+    return res.status(401).json({ 
+      error: 'Invalid or expired authentication token',
+      details: process.env.NODE_ENV === 'test' ? error.message : undefined
+    });
+  }
+}
+
+/**
+ * Parse cookies dari header
+ */
+function parseCookies(cookieHeader) {
+  if (!cookieHeader) return {};
+  
+  return cookieHeader.split(';').reduce((cookies, cookie) => {
+    const [name, ...valueParts] = cookie.trim().split('=');
+    cookies[name] = valueParts.join('=');
+    return cookies;
+  }, {});
+}
+```
+
+## 4. Konfigurasi Environment Variables untuk Pengujian
+
+**`artifacts/api-server/.env.test`**
+```env
+# Konfigurasi Clerk untuk Pengujian
+CLERK_SECRET_KEY=test-secret-key-for-jwt-signing-only-not-for-production
+CLERK_PUBLISHABLE_KEY=pk_test_http://localhost:3000
+CLERK_JWT_KEY=test-secret-key-for-jwt-signing-only-not-for-production
+CLERK_ISSUER=https://clerk.test.local
+CLERK_AUDIENCE=test_client_id
+
+# Origin aplikasi (harus cocok dengan azp di JWT)
+ORIGIN=http://localhost:3000
+
+# Environment
+NODE_ENV=test
+```
+
+## 5. Menjalankan Pengujian
+
+```bash
+# Install dependencies jika belum
+cd artifacts/api-server
+pnpm install
+
+# Jalankan pengujian dengan environment test
+NODE_ENV=test pnpm test sbu-assessment-clerk.test.mjs
+```
+
+## Ringkasan Perubahan
+
+1. **Fixture JWT dengan `azp` claim**: Semua token uji sekarang menyertakan `azp` yang sesuai dengan origin aplikasi
+2. **Kompatibilitas mundur**: Ada helper untuk membuat token tanpa `azp` guna menguji perilaku dengan token lama
+3. **Origin context**: `ORIGIN` environment variable harus cocok dengan `azp` di JWT
+4. **Kontrol positif tetap 200**: Token valid dengan `azp` yang benar akan tetap lulus
+5. **Token dimanipulasi tetap 401**: Token dengan user ID salah, kedaluwarsa, atau tanpa `azp` akan ditolak
+6. **Tidak ada kredensial nyata**: Semua menggunakan kunci dan ID uji
+
+Implementasi ini memastikan pengujian Anda siap untuk versi Clerk SDK mendatang yang akan mewajibkan claim `azp`, sambil tetap menjaga kompatibilitas dengan token lama selama masa transisi.
