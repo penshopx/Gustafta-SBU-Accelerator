@@ -1,0 +1,30 @@
+Berikut adalah rancangan konseptual untuk memverifikasi perilaku *Back-Forward Cache* (bfcache) yang sebenarnya, membedakan antara simulasi event dan pemulihan halaman asli dari cache browser.
+
+### Rancangan Konseptual: Pengujian BFCache Nyata untuk Privasi Navigasi
+
+**1. Diagnosis Ketidaklayakan BFCache (*BFCache Ineligibility*)**
+Sebelum menguji, perlu dipastikan browser tidak menolak menyimpan halaman. Penyebab umum penolakan bfcache meliputi:
+*   Adanya *event listener* `unload` atau `beforeunload` yang tidak dihapus.
+*   Koneksi *WebSocket* atau *Server-Sent Events* (SSE) yang masih terbuka.
+*   Referensi DOM yang di-*hold* oleh skrip di luar siklus hidup komponen.
+*   **Tindakan:** Gunakan alat diagnostik browser (seperti `chrome://discards/` di Chromium atau *about:cache* di Firefox) atau fitur *DevTools Application > Back-forward cache* untuk mengidentifikasi alasan penolakan jika `persisted` tetap `false`.
+
+**2. Alur Pengujian BFCache Asli (Tanpa Simulasi)**
+Pengujian harus dilakukan pada *build* produksi (tanpa Vite HMR) menggunakan otomasi browser yang mendukung bfcache (misalnya Playwright dengan konfigurasi konteks khusus) atau pengujian manual terkontrol:
+*   **Langkah 1:** Masuk sebagai Akun A, navigasi ke halaman ringkasan/detail.
+*   **Langkah 2:** Lakukan pergantian sesi ke Akun B (misalnya melalui tombol keluar/masuk atau *multi-account context* jika diuji di lingkungan yang sama).
+*   **Langkah 3:** Tekan tombol *Back* atau *Forward* pada browser.
+*   **Langkah 4:** Tangkap event `pageshow` dan verifikasi bahwa `event.persisted === true`. Ini membuktikan halaman dipulihkan dari bfcache, bukan dimuat ulang dari jaringan.
+*   **Langkah 5:** Verifikasi bahwa *frame* atau konten sensitif Akun A **tetap tertutup/terblokir** secara visual saat halaman dipulihkan.
+*   **Langkah 6:** Pastikan konten baru untuk Akun B hanya terbuka/setelah Clerk berhasil memverifikasi respons `/api/me` terbaru.
+
+**3. Batasan dan Pembersihan**
+*   **Tidak ada kesimpulan dari simulasi:** Event `pageshow` yang dipicu secara paksa (*dispatched*) tidak membuktikan bfcache. Hanya `persisted=true` dari navigasi browser asli yang valid.
+*   **Pembersihan:** Hapus kasus uji dan data sesi setelah pengujian selesai untuk mencegah kebocoran state ke pengujian berikutnya.
+
+***
+
+**Status:**
+Sesuai dengan pedoman dan batasan yang telah kita sepakati, rancangan di atas diperlakukan semata-mata sebagai **tinjauan konseptual**. 
+
+Pada giliran ini, **tidak ada** perubahan kode, konfigurasi, pengujian, penghapusan data, maupun pengambilalihan tugas yang saya lakukan. Saya siap menunggu arahan atau topik diskusi berikutnya dari Anda.
