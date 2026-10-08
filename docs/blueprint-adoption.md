@@ -4,8 +4,9 @@
 
 SBU Accelerator adalah aplikasi mandiri yang terpisah dari Gustafta.my.id. Profil perusahaan
 diisi langsung di aplikasi dan dokumen asli boleh disimpan privat di SBU.
-Integrasi dengan Gustafta.my.id/Ruang Simpan dibatalkan saat ini, bukan hanya ditunda;
-integrasi bukan bagian dari cakupan pengembangan tanpa keputusan baru pengguna.
+Integrasi dengan Gustafta.my.id/Ruang Simpan dibatalkan untuk fase saat ini.
+Integrasi baru dipertimbangkan pada fase pengembangan berikutnya setelah kedua
+aplikasi sama-sama teruji dalam praktik penggunaan nyata, dengan keputusan baru pengguna.
 Konsep Ruang Simpan, Bedah Dokumen, Klinik Konsultasi, Workroom, dan fitur Gustafta
 lain yang relevan dikembangkan langsung di SBU, bukan disediakan melalui koneksi ke Gustafta.
 Keputusan ini menggantikan rencana integrasi setelah produk matang dan batas penyimpanan “hanya Ruang Simpan” pada
