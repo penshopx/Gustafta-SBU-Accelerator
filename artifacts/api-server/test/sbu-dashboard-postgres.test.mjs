@@ -28,7 +28,7 @@ async function request(server, userId, path = "/dashboard", { method = "GET", bo
   return { status: response.status, body: raw ? JSON.parse(raw) : null, raw };
 }
 
-test("dashboard PostgreSQL menjaga hitungan dan lima terbaru pada data tetap maupun setelah mutasi", async (t) => {
+test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan setelah mutasi", async (t) => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk pengujian integrasi PostgreSQL");
   assert.notEqual(process.env.NODE_ENV, "production", "Pengujian tidak boleh dijalankan dalam mode produksi");
 
@@ -149,8 +149,24 @@ test("dashboard PostgreSQL menjaga hitungan dan lima terbaru pada data tetap mau
     app.use("/api", router);
     server = app.listen(0);
 
+    let firstList;
     let firstRecent;
     for (let attempt = 0; attempt < 5; attempt += 1) {
+      const list = await request(server, ownerId, "/cases");
+      assert.equal(list.status, 200, list.raw);
+      assert.deepEqual(list.body.map((item) => item.id), [100, 206, 205, 204, 203, 202, 201, 900],
+        "Daftar lengkap harus mengikuti updatedAt menurun lalu ID menurun, bukan urutan penyisipan");
+      assert.deepEqual(list.body.map((item) => item.updatedAt),
+        [newerAt, tiedAt, tiedAt, tiedAt, tiedAt, tiedAt, tiedAt, olderAt],
+        "Urutan waktu terbaru tetap utama meskipun ID baris terbaru lebih kecil");
+      assert.ok(!list.raw.includes("Perusahaan Pengguna Lain"),
+        "Permohonan pengguna lain tidak boleh masuk daftar pemilik");
+      if (firstList) {
+        assert.deepEqual(list.body, firstList, "Daftar lengkap harus stabil saat GET diulang");
+      } else {
+        firstList = list.body;
+      }
+
       const { status, body, raw } = await request(server, ownerId);
       assert.equal(status, 200, raw);
       const { recent, ...counts } = body;
@@ -159,6 +175,8 @@ test("dashboard PostgreSQL menjaga hitungan dan lima terbaru pada data tetap mau
       assert.deepEqual(recent.map((item) => item.id), [100, 206, 205, 204, 203],
         "Waktu terbaru harus mendahului waktu seri; ID menurun menentukan batas lima teratas");
       assert.deepEqual(recent.map((item) => item.updatedAt), [newerAt, tiedAt, tiedAt, tiedAt, tiedAt]);
+      assert.deepEqual(recent, list.body.slice(0, 5),
+        "Lima terbaru di dashboard harus identik dengan lima permohonan pertama dalam daftar");
       assert.ok(!raw.includes("Perusahaan Pengguna Lain"),
         "Permohonan pengguna lain yang lebih baru tidak boleh masuk dashboard");
       if (firstRecent) {
@@ -170,7 +188,7 @@ test("dashboard PostgreSQL menjaga hitungan dan lima terbaru pada data tetap mau
     assert.deepEqual((await isolated.query("SELECT * FROM sbu_cases ORDER BY id")).rows, before,
       "GET berulang tidak boleh mengubah permohonan salinan");
     assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
-      "Permintaan dashboard tidak boleh memasukkan data uji ke tabel aplikasi");
+      "Permintaan daftar dan dashboard tidak boleh memasukkan data uji ke tabel aplikasi");
 
     await t.test("PATCH dan DELETE di dalam/luar lima teratas langsung tercermin tanpa mengubah pengguna lain", async () => {
       const otherDashboard = await request(server, otherOwnerId);
