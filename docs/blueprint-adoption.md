@@ -1,11 +1,14 @@
 # Penerapan blueprint SBU Accelerator
 
-## Keputusan produk terbaru — 8 Oktober 2026
+## Keputusan produk terbaru — 9 Oktober 2026
 
-Pengguna memilih SBU Accelerator mandiri terlebih dahulu. Profil perusahaan
+SBU Accelerator adalah aplikasi mandiri yang terpisah dari Gustafta.my.id. Profil perusahaan
 diisi langsung di aplikasi dan dokumen asli boleh disimpan privat di SBU.
-Integrasi Gustafta/Ruang Simpan ditunda, bukan prasyarat alur utama.
-Keputusan ini menggantikan batas penyimpanan “hanya Ruang Simpan” pada
+Integrasi dengan Gustafta.my.id/Ruang Simpan dibatalkan saat ini, bukan hanya ditunda;
+integrasi bukan bagian dari cakupan pengembangan tanpa keputusan baru pengguna.
+Konsep Ruang Simpan, Bedah Dokumen, Klinik Konsultasi, Workroom, dan fitur Gustafta
+lain yang relevan dikembangkan langsung di SBU, bukan disediakan melalui koneksi ke Gustafta.
+Keputusan ini menggantikan rencana integrasi setelah produk matang dan batas penyimpanan “hanya Ruang Simpan” pada
 catatan historis di bawah. Unggahan tidak menjadi bukti terverifikasi atau
 persetujuan sertifikasi. Rincian batas dan pengamanan berlaku di `replit.md`.
 
