@@ -20,11 +20,16 @@ process.env.CLERK_TELEMETRY_DISABLED = "1";
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 process.env.CLERK_JWT_KEY = publicKey.export({ type: "spki", format: "pem" });
 
+// azp identifies the application origin, not the Clerk token issuer. Requests
+// carry the same Origin while their actual connection stays on loopback.
+const testOrigin = "http://sbu.example.test";
+
 function sessionToken(userId, times = {}) {
   const now = Math.floor(Date.now() / 1000);
   const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT", kid: "local-test" })).toString("base64url");
   const payload = Buffer.from(JSON.stringify({
     sub: userId, sid: `session-${userId}`, iss: "https://example.clerk.accounts.dev",
+    azp: testOrigin,
     iat: now, nbf: now - 1, exp: now + 300, ...times,
   })).toString("base64url");
   const input = `${header}.${payload}`;
@@ -93,7 +98,9 @@ const { default: app } = await import(join(temporaryDir, "app.mjs"));
 
 async function request(server, id, headers) {
   const { port } = server.address();
-  const response = await fetch(`http://127.0.0.1:${port}/api/cases/${id}/assessment`, { headers });
+  const response = await fetch(`http://127.0.0.1:${port}/api/cases/${id}/assessment`, {
+    headers: { origin: testOrigin, ...headers },
+  });
   const raw = await response.text();
   return { status: response.status, raw, body: JSON.parse(raw) };
 }
@@ -104,7 +111,7 @@ function requestWithHost(server, id, headers) {
   return new Promise((resolve, reject) => {
     const req = httpRequest({
       hostname: "127.0.0.1", port: server.address().port,
-      path: `/api/cases/${id}/assessment`, headers,
+      path: `/api/cases/${id}/assessment`, headers: { origin: testOrigin, ...headers },
     }, (res) => {
       let raw = "";
       res.setEncoding("utf8");
@@ -137,7 +144,9 @@ test("diagnosis /me membedakan sesi tidak tersedia dari issuer salah tanpa memba
     // The generic verifier rejection is distinct from the explicit issuer guard.
     assert.equal(missingBody.code, "session_not_verified");
     const wrongIssuerToken = sessionToken("owner-a", { iss: "https://other.clerk.accounts.dev" });
-    const mismatch = await fetch(url, { headers: { authorization: `Bearer ${wrongIssuerToken}` } });
+    const mismatch = await fetch(url, {
+      headers: { origin: testOrigin, authorization: `Bearer ${wrongIssuerToken}` },
+    });
     assert.equal(mismatch.status, 401);
     assert.equal(mismatch.headers.get("cache-control"), "private, no-store");
     assert.deepEqual(await mismatch.json(), { error: "Silakan masuk untuk melanjutkan.", code: "session_issuer_mismatch" });
@@ -317,10 +326,12 @@ test("domain Clerk dipilih sesuai host/proxy dan issuer lain ditolak tanpa memba
     for (const scenario of scenarios) {
       await t.test(scenario.label, async () => {
         process.env.CLERK_PUBLISHABLE_KEY = scenario.key;
+        const host = (scenario.headers["x-forwarded-host"] || scenario.headers.host).split(",")[0].trim();
+        const origin = new URL(`http://${host}`).origin;
         // Both legitimate domain issuers must be tried for every host: this
         // catches a key accidentally fixed to one domain or to the last hop.
         for (const issuer of [primaryIssuer, alternateIssuer, developmentIssuer, unrelatedIssuer]) {
-          const token = sessionToken("owner-a", { iss: issuer });
+          const token = sessionToken("owner-a", { iss: issuer, azp: origin });
           const now = Math.floor(Date.now() / 1000);
           const [header, payload, signature] = token.split(".");
           assert.ok(createVerify("RSA-SHA256").update(`${header}.${payload}`).end()
@@ -332,7 +343,7 @@ test("domain Clerk dipilih sesuai host/proxy dan issuer lain ditolak tanpa memba
             globalThis.__clerkTestCaseReads = 0;
             globalThis.__clerkTestEvidenceReads = 0;
             globalThis.__clerkTestDataReads = 0;
-            const response = await requestWithHost(server, 34, { ...scenario.headers, ...authHeaders });
+            const response = await requestWithHost(server, 34, { ...scenario.headers, origin, ...authHeaders });
             const context = `${scenario.label}, ${issuer}, ${Object.keys(authHeaders)[0]}: ${response.raw}`;
             if (issuer === scenario.issuer) {
               assert.equal(response.status, 200, context);
@@ -494,7 +505,7 @@ test("formulir akun lama ditolak untuk semua mutasi dengan cookie Clerk akun bar
         const before = globalThis.__clerkTestDataReads ?? 0;
         const response = await fetch(`http://127.0.0.1:${server.address().port}${path}`, {
           method,
-          headers: { cookie, ...(formOwner === null ? {} : { "X-SBU-Form-Owner": formOwner }) },
+          headers: { origin: testOrigin, cookie, ...(formOwner === null ? {} : { "X-SBU-Form-Owner": formOwner }) },
         });
         assert.equal(response.status, 409, `${method} ${path}: ${await response.text()}`);
         assert.equal(globalThis.__clerkTestDataReads ?? 0, before, "menolak sebelum membaca/menulis database");
@@ -507,7 +518,7 @@ test("formulir akun lama ditolak untuk semua mutasi dengan cookie Clerk akun bar
     assert.equal(signedOut.status, 401);
     // Fresh forms under B pass the guard and reach normal input validation.
     const fresh = await fetch(`http://127.0.0.1:${server.address().port}/api/me`, {
-      method: "PATCH", headers: { cookie, "X-SBU-Form-Owner": "owner-b" },
+      method: "PATCH", headers: { origin: testOrigin, cookie, "X-SBU-Form-Owner": "owner-b" },
     });
     assert.equal(fresh.status, 400, await fresh.text());
   } finally {
@@ -540,6 +551,8 @@ test("sesi yang diverifikasi Clerk hanya membaca penilaian dan bukti milik pemeg
   const server = app.listen(0);
   try {
     const tokenA = sessionToken("owner-a");
+    const claims = JSON.parse(Buffer.from(tokenA.split(".")[1], "base64url").toString("utf8"));
+    assert.equal(claims.azp, testOrigin, "origin aplikasi harus tercantum dalam token sah");
     const headersA = { authorization: `Bearer ${tokenA}` };
     const own = await request(server, 34, headersA);
     assert.equal(own.status, 200, own.raw);
