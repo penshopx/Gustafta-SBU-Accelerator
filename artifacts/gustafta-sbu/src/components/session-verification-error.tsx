@@ -8,6 +8,12 @@ export function sessionFailureMessage(error: unknown): { status: number | null; 
   const status = error && typeof error === 'object' && 'status' in error
     && typeof error.status === 'number' && Number.isInteger(error.status)
     && error.status >= 100 && error.status <= 599 ? error.status : null;
+  const data = error && typeof error === 'object' && 'data' in error ? error.data : null;
+  const apiCode = data && typeof data === 'object' && 'code' in data ? data.code : null;
+  if (status === 401 && apiCode === 'session_issuer_mismatch') return { status, check: 'GET /api/me · HTTP 401 · session_issuer_mismatch', message: 'Penerbit sesi tidak cocok dengan konfigurasi autentikasi server. Konfigurasi perlu diperiksa; masuk ulang saja belum tentu menyelesaikannya. Data privat tetap tertutup.' };
+  if (status === 401 && apiCode === 'session_missing') return { status, check: 'GET /api/me · HTTP 401 · session_missing', message: 'Server belum menerima kredensial sesi. Gunakan halaman Masuk aplikasi; membuka alamat API langsung tidak memulai sesi. Data ruang kerja tidak dihapus.' };
+  if (status === 401 && apiCode === 'session_expired') return { status, check: 'GET /api/me · HTTP 401 · session_expired', message: 'Sesi sudah kedaluwarsa. Keluar dan masuk kembali untuk memperbarui sesi. Data ruang kerja tidak dihapus.' };
+  if (status === 401 && apiCode === 'session_not_verified') return { status, check: 'GET /api/me · HTTP 401 · session_not_verified', message: 'Kredensial sesi belum berhasil diverifikasi server. Keluar dan masuk kembali; jika tetap ditolak, autentikasi server perlu diperiksa. Data privat tetap tertutup.' };
   if (status === 401) return { status, message: 'Server belum mengenali sesi Anda. Keluar dan masuk kembali untuk memperbarui sesi. Data ruang kerja tidak dihapus.' };
   if (status === 403) return { status, message: 'Pemeriksaan identitas ditolak oleh server. Masuk kembali tidak otomatis memberikan izin tambahan.' };
   if (status === 404) return { status, message: 'Layanan pemeriksaan identitas tidak ditemukan. Muat ulang halaman; jika tetap gagal, konfigurasi API perlu diperiksa.' };

@@ -25,7 +25,7 @@ app.use(
         return {
           id: req.id,
           method: req.method,
-          url: req.url?.split("?")[0],
+          url: req.url?.split("?")[0]?.replace(/\/sessions\/[^/]+/g, "/sessions/[redacted]"),
         };
       },
       res(res) {
@@ -53,11 +53,29 @@ app.use(
 // also verify a token whose issuer belongs to a different Clerk instance.
 app.use((req, res, next) => {
   const auth = getAuth(req);
+  const isIdentityCheck = req.method === "GET" && req.path === "/api/me";
+  if (isIdentityCheck) {
+    res.setHeader("Cache-Control", "private, no-store");
+    if (!auth.userId) {
+      const reason = res.getHeader("X-Clerk-Auth-Reason");
+      const code = reason === "session-token-and-uat-missing" || reason === "session-token-missing"
+        ? "session_missing"
+        : reason === "session-token-expired" || reason === "token-expired"
+          ? "session_expired"
+          : "session_not_verified";
+      req.log.warn({ event: "session_verification_denied", code }, "Identity check denied");
+      res.status(401).json({ error: "Silakan masuk untuk melanjutkan.", code });
+      return;
+    }
+  }
   if (auth.userId) {
     const frontendApi = parsePublishableKey(clerkPublishableKey(req))?.frontendApi;
     if (!frontendApi || auth.sessionClaims?.iss !== `https://${frontendApi}`) {
       if (req.path === "/api/ruang-simpan/company-profile") {
         res.status(401).json({ error: "Autentikasi diperlukan", code: "unauthenticated" });
+      } else if (isIdentityCheck) {
+        req.log.warn({ event: "session_verification_denied", code: "session_issuer_mismatch" }, "Identity check denied");
+        res.status(401).json({ error: "Silakan masuk untuk melanjutkan.", code: "session_issuer_mismatch" });
       } else {
         res.status(401).json({ error: "Silakan masuk untuk melanjutkan." });
       }

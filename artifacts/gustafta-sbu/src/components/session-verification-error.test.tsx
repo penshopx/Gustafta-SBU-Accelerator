@@ -26,6 +26,22 @@ test('server, permission, routing and parse errors are not mistaken for expired 
   }
 });
 
+test('only known 401 diagnostic codes are displayed, never arbitrary API content', () => {
+  for (const [code, text] of [
+    ['session_missing', 'Server belum menerima kredensial sesi'],
+    ['session_expired', 'Sesi sudah kedaluwarsa'],
+    ['session_issuer_mismatch', 'Penerbit sesi tidak cocok'],
+    ['session_not_verified', 'Kredensial sesi belum berhasil diverifikasi'],
+  ]) {
+    const html = render({ status: 401, data: { code, error: 'PRIVATE-DIAGNOSTIC' } });
+    assert.match(html, new RegExp(text));
+    assert.match(html, new RegExp(code));
+    assert.doesNotMatch(html, /PRIVATE-DIAGNOSTIC/);
+  }
+  assert.doesNotMatch(render({ status: 401, data: { code: 'PRIVATE-DIAGNOSTIC' } }), /PRIVATE-DIAGNOSTIC/);
+  assert.doesNotMatch(render({ status: 503, data: { code: 'session_issuer_mismatch' } }), /session_issuer_mismatch/);
+});
+
 test('network failure and invalid statuses never display raw diagnostic content', () => {
   for (const error of [new Error('secret-network-detail'), { status: '<script>' }, { status: Infinity }, { status: 700 }, null]) {
     assert.equal(sessionFailureMessage(error).status, null);

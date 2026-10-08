@@ -121,6 +121,32 @@ function requestWithHost(server, id, headers) {
   });
 }
 
+test("diagnosis /me membedakan sesi tidak tersedia dari issuer salah tanpa membaca data", async () => {
+  globalThis.__clerkTestCaseReads = 0;
+  globalThis.__clerkTestEvidenceReads = 0;
+  const server = app.listen(0);
+  try {
+    const url = `http://127.0.0.1:${server.address().port}/api/me`;
+    const missing = await fetch(url);
+    assert.equal(missing.status, 401);
+    assert.equal(missing.headers.get("cache-control"), "private, no-store");
+    const missingBody = await missing.json();
+    // This isolated development fixture has no Clerk dev-browser credentials.
+    // The generic verifier rejection is distinct from the explicit issuer guard.
+    assert.equal(missingBody.code, "session_not_verified");
+    const wrongIssuerToken = sessionToken("owner-a", { iss: "https://other.clerk.accounts.dev" });
+    const mismatch = await fetch(url, { headers: { authorization: `Bearer ${wrongIssuerToken}` } });
+    assert.equal(mismatch.status, 401);
+    assert.equal(mismatch.headers.get("cache-control"), "private, no-store");
+    assert.deepEqual(await mismatch.json(), { error: "Silakan masuk untuk melanjutkan.", code: "session_issuer_mismatch" });
+    assert.equal(globalThis.__clerkTestCaseReads, 0);
+    assert.equal(globalThis.__clerkTestEvidenceReads, 0);
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
 test("cookie dan bearer sesi palsu tidak membuka penilaian melalui middleware Clerk", async () => {
   globalThis.__clerkTestCaseReads = 0;
   globalThis.__clerkTestEvidenceReads = 0;
