@@ -1,0 +1,327 @@
+Dipahami. Karena saya tidak dapat mengunggah berkas ZIP atau mengakses lingkungan Repl SBU secara langsung untuk menjalankan pengujian *live*, saya akan menyediakan **kode implementasi lengkap** dan **templat laporan pengujian** yang siap digunakan oleh agen di Repl SBU Accelerator. 
+
+Agen tersebut dapat menyalin kode ini, menerapkannya, menjalankan pengujian *live*, lalu mengisi laporan hasil pengujian tanpa menyertakan kredensial apa pun.
+
+---
+
+### 1. Instruksi untuk Agen di Repl SBU Accelerator
+
+Silakan terapkan perubahan berikut pada kode SBU Accelerator. Pastikan tidak ada token, secret, atau data pelanggan yang hardcode.
+
+#### A. Konfigurasi Secret (Lakukan di Dashboard Repl/Hosting)
+Tambahkan variabel lingkungan berikut:
+- `RUANG_SIMPAN_API_URL=https://gustafta-apps.replit.app/api/v1/ruang-simpan/company-profile`
+- `RUANG_SIMPAN_CONNECTIONS` (Format JSON string yang memetakan ID akun SBU ke **nama secret**, bukan token):
+  ```json
+  {
+    "sbu_user_id_1": "SECRET_NAME_FOR_USER_1",
+    "sbu_user_id_2": "SECRET_NAME_FOR_USER_2"
+  }
+  ```
+- Tambahkan secret aktual di dashboard dengan nama `SECRET_NAME_FOR_USER_1` dan `SECRET_NAME_FOR_USER_2`, yang berisi token dengan izin `profile:read` saja.
+
+#### B. Backend Helper: `artifacts/api-server/src/lib/ruang-simpan.ts`
+```typescript
+import { z } from 'zod';
+
+// Skema profil kosong yang sah sesuai kontrak
+const emptyProfileSchema = z.object({
+  name: z.string(),
+  nib: z.string(),
+  address: z.string(),
+  revision: z.number(),
+  updated_at: z.null(),
+});
+
+const profileResponseSchema = z.union([
+  emptyProfileSchema,
+  z.object({
+    name: z.string(),
+    nib: z.string(),
+    address: z.string(),
+    revision: z.number(),
+    updated_at: z.string().nullable(),
+    // tambahkan field lain yang sah sesuai kontrak
+  }).passthrough(),
+]);
+
+export async function fetchRuangSimpanProfile(sbuUserId: string, getSecret: (name: string) => string | undefined) {
+  const connectionsEnv = process.env.RUANG_SIMPAN_CONNECTIONS;
+  if (!connectionsEnv) {
+    throw new Error('RUANG_SIMPAN_CONNECTIONS tidak dikonfigurasi');
+  }
+
+  let connections: Record<string, string>;
+  try {
+    connections = JSON.parse(connectionsEnv);
+  } catch {
+    throw new Error('Format RUANG_SIMPAN_CONNECTIONS tidak valid');
+  }
+
+  const secretName = connections[sbuUserId];
+  if (!secretName) {
+    throw new Error('Koneksi tidak ditemukan untuk pengguna ini');
+  }
+
+  const token = getSecret(secretName);
+  if (!token) {
+    // Jangan log secretName atau sbuUserId untuk menjaga privasi
+    throw new Error('Secret tidak ditemukan di lingkungan');
+  }
+
+  const apiUrl = process.env.RUANG_SIMPAN_API_URL;
+  if (!apiUrl) {
+    throw new Error('RUANG_SIMPAN_API_URL tidak dikonfigurasi');
+  }
+
+  const response = await fetch(apiUrl, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    // Terjemahkan 401/403 upstream menjadi 424 di SBU agar tidak disalahartikan sebagai sesi SBU yang habis
+    const err = new Error('Gagal Dependensi: Izin atau token upstream tidak valid');
+    (err as any).status = 424;
+    throw err;
+  }
+
+  if (response.status === 429) {
+    const err = new Error('Batas permintaan tercapai');
+    (err as any).status = 429;
+    throw err;
+  }
+
+  if (response.status === 503) {
+    const err = new Error('Layanan upstream tidak tersedia');
+    (err as any).status = 503;
+    throw err;
+  }
+
+  if (!response.ok) {
+    const err = new Error(`Gagal mengambil profil: ${response.status}`);
+    (err as any).status = response.status;
+    throw err;
+  }
+
+  const data = await response.json();
+  
+  // Validasi struktur respons
+  const parsed = profileResponseSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error('Respons profil tidak sesuai kontrak');
+  }
+
+  return parsed.data;
+}
+```
+
+#### C. Backend Route: `artifacts/api-server/src/routes/ruang-simpan.ts`
+```typescript
+import { Router, Request, Response } from 'express';
+import { fetchRuangSimpanProfile } from '../lib/ruang-simpan';
+
+const router = Router();
+
+// Fungsi helper untuk mengambil secret (sesuaikan dengan cara aplikasi Anda mengelola secret)
+const getSecret = (name: string) => process.env[name];
+
+router.get('/company-profile', async (req: Request, res: Response) => {
+  const sessionUserId = req.auth?.userId; // Sesuaikan dengan cara Anda mendapatkan ID sesi
+  
+  if (!sessionUserId) {
+    return res.status(401).json({ error: 'Sesi tidak valid' });
+  }
+
+  try {
+    const profileData = await fetchRuangSimpanProfile(sessionUserId, getSecret);
+
+    // Tandai cache sebagai turunan baca, larang penyimpanan
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    return res.json(profileData);
+  } catch (error: any) {
+    // Jangan log ID pengguna atau detail sensitif
+    const status = error.status || 500;
+    
+    if (status === 424) {
+      return res.status(424).json({ error: 'Gagal Dependensi: Token atau izin upstream tidak valid' });
+    }
+    if (status === 429) {
+      return res.status(429).json({ error: 'Batas permintaan tercapai' });
+    }
+    if (status === 503) {
+      return res.status(503).json({ error: 'Layanan tidak tersedia' });
+    }
+
+    return res.status(500).json({ error: 'Gagal mengambil profil perusahaan' });
+  }
+});
+
+export default router;
+```
+
+#### D. Frontend: `artifacts/gustafta-sbu/src/components/company-profile-page.tsx`
+```tsx
+import { useState, useEffect, useRef } from 'react';
+
+export function CompanyProfilePage({ currentUserId }: { currentUserId: string }) {
+  const [profile, setProfile] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<{ status: number; message: string } | null>(null);
+  
+  // Gunakan ref untuk melacak ID permintaan terkini dan mengabaikan respons yang terlambat
+  const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    // 1. Reset state sepenuhnya saat akun berganti untuk mencegah kebocoran data lama
+    setProfile(null);
+    setError(null);
+    
+    if (!currentUserId) {
+      setError({ status: 401, message: 'Silakan masuk untuk melihat profil.' });
+      return;
+    }
+
+    // 2. Increment request ID untuk permintaan ini
+    const currentRequestId = ++requestIdRef.current;
+    const controller = new AbortController();
+
+    const fetchProfile = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/ruang-simpan/company-profile', {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Cache-Control': 'no-cache'
+          },
+          signal: controller.signal
+        });
+
+        // 3. Abaikan jika ini bukan permintaan terkini (mencegah race condition)
+        if (currentRequestId !== requestIdRef.current) {
+          return;
+        }
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw { status: res.status, message: errData.error || 'Gagal memuat profil' };
+        }
+
+        const data = await res.json();
+        setProfile(data);
+      } catch (err: any) {
+        if (err.name === 'AbortError') return; // Abaikan jika dibatalkan
+        
+        if (currentRequestId !== requestIdRef.current) return;
+
+        setError({ status: err.status || 500, message: err.message });
+        setProfile(null);
+      } finally {
+        if (currentRequestId === requestIdRef.current) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchProfile();
+
+    // Cleanup: batalkan permintaan jika komponen unmount atau currentUserId berubah sebelum selesai
+    return () => {
+      controller.abort();
+    };
+  }, [currentUserId]);
+
+  if (isLoading) return <div className="p-4 text-gray-600">Memuat profil perusahaan...</div>;
+
+  if (error) {
+    return (
+      <div className="p-4 bg-red-50 text-red-700 rounded border border-red-200">
+        <p className="font-bold">Error {error.status}</p>
+        <p>{error.message}</p>
+        {error.status === 401 && <p className="mt-2 text-sm">Silakan muat ulang halaman atau masuk kembali.</p>}
+        {error.status === 424 && <p className="mt-2 text-sm">Koneksi ke layanan profil tidak dapat diverifikasi.</p>}
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="p-4 bg-gray-50 text-gray-600 rounded border border-gray-200">
+        <p>Belum ada data profil perusahaan yang terhubung.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 border rounded bg-white">
+      <h2 className="text-xl font-bold mb-4">Profil Perusahaan (Live)</h2>
+      <dl className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <div>
+          <dt className="font-medium text-gray-600">Nama Perusahaan</dt>
+          <dd className="mt-1">{profile.name || '-'}</dd>
+        </div>
+        <div>
+          <dt className="font-medium text-gray-600">NIB</dt>
+          <dd className="mt-1">{profile.nib || '-'}</dd>
+        </div>
+        <div className="md:col-span-2">
+          <dt className="font-medium text-gray-600">Alamat</dt>
+          <dd className="mt-1">{profile.address || '-'}</dd>
+        </div>
+        <div>
+          <dt className="font-medium text-gray-600">Revisi</dt>
+          <dd className="mt-1">{profile.revision}</dd>
+        </div>
+        <div>
+          <dt className="font-medium text-gray-600">Diperbarui</dt>
+          <dd className="mt-1">{profile.updated_at ? new Date(profile.updated_at).toLocaleString('id-ID') : 'Belum pernah'}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+```
+
+---
+
+### 2. Templat Laporan Hasil Pengujian (Untuk Diisi Agen)
+
+Setelah menerapkan kode di atas, jalankan pengujian *live* dan isi templat berikut. **Jangan sertakan token, ID pengguna nyata, atau data pelanggan apa pun.**
+
+```markdown
+# Laporan Pengujian Integrasi Ruang Simpan (SBU Accelerator)
+
+## 1. Verifikasi Endpoint Publik Gustafta
+- [ ] Permintaan tanpa token ke `https://gustafta-apps.replit.app/api/v1/ruang-simpan/company-profile` mengembalikan **401**.
+- [ ] Respons berupa **JSON** (bukan HTML).
+- [ ] Header respons mencakup `Cache-Control: private, no-store`.
+
+## 2. Verifikasi Koneksi & Isolasi (Dua Pemilik)
+- [ ] **Pengguna A**: Berhasil mengambil profil. Data yang ditampilkan sesuai dengan pemilik A.
+- [ ] **Pengguna B**: Berhasil mengambil profil. Data yang ditampilkan sesuai dengan pemilik B (terisolasi dari A).
+- [ ] **Pergantian Akun**: Saat beralih dari A ke B di UI, data A tidak muncul sekilas (tidak ada kebocoran state lama).
+
+## 3. Verifikasi Penanganan Error
+- [ ] **Profil Kosong Sah**: Jika upstream mengembalikan struktur kosong yang valid, UI menampilkan "Belum ada data" (bukan error).
+- [ ] **Token Dicabut/Salah**: Mengembalikan **424** di SBU dengan pesan yang jelas, tanpa membocorkan detail upstream.
+- [ ] **Header Cache**: Respons sukses dari `/api/ruang-simpan/company-profile` memiliki header `Cache-Control: private, no-store`.
+
+## 4. Kepatuhan Privasi & Keamanan
+- [ ] Tidak ada token atau PII yang dicetak di log server SBU.
+- [ ] Tidak ada data profil yang ditulis/disalin ke database lokal SBU.
+- [ ] Token hanya disimpan di Secret lingkungan, dipetakan melalui `RUANG_SIMPAN_CONNECTIONS` berdasarkan nama secret.
+
+## Catatan Tambahan (Opsional)
+[Tulis temuan atau kendala di sini, tanpa menyertakan data sensitif]
+```
+
+---
+
+Silakan salin instruksi dan templat ini ke agen di Repl SBU Accelerator. Setelah mereka mengisi dan mengembalikan laporan tersebut, saya akan meninjau hasilnya untuk memastikan integrasi ini dapat dinyatakan **selesai**.

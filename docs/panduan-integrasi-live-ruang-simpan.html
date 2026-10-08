@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panduan integrasi live Ruang Simpan — SBU Accelerator</title>
+<style>
+:root{color-scheme:light;font-family:Arial,Helvetica,sans-serif;color:#18344c;background:#edf4fa}
+*{box-sizing:border-box}body{margin:0;line-height:1.65}main{max-width:960px;margin:auto;padding:32px 24px 64px}
+header{background:#101f32;color:#fff;padding:32px;border-radius:14px}header p{color:#dceaf5}h1{font-size:30px;line-height:1.25}
+h2{font-size:23px;margin-top:0}h3{font-size:18px}section{background:#fff;border:1px solid #c7d9e7;border-radius:12px;padding:28px;margin-top:24px}
+a{color:#145fbd}header a{color:#aad8ff}code{font-size:.92em;overflow-wrap:anywhere}pre{background:#f0f5fa;border:1px solid #c7d9e7;padding:16px;white-space:pre-wrap;overflow-wrap:anywhere}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{border:1px solid #c7d9e7;padding:10px;text-align:left;vertical-align:top}th{background:#e8f2fb}
+.notice{border-left:5px solid #1769d1;background:#e8f4fb;padding:16px}.warning{border-left:5px solid #a66317;background:#fff5e5;padding:16px}
+li{margin:8px 0}.small{font-size:14px;color:#526b81}nav ul{padding-left:20px}
+@media(max-width:600px){main{padding:16px 12px 32px}header,section{padding:20px}h1{font-size:26px}table{font-size:12px}th,td{padding:7px}}
+@media print{body{background:#fff}main{padding:0;max-width:none}header{background:#fff;color:#18344c;border:1px solid #c7d9e7}header p{color:#18344c}
+section{break-inside:auto;border-radius:0}h2,h3{break-after:avoid}tr,pre,.notice,.warning{break-inside:avoid}thead{display:table-header-group}a{color:inherit}}
+</style>
+</head>
+<body><main>
+<header>
+<p>SBU ACCELERATOR · PANDUAN OPERASIONAL</p>
+<h1>Mengaktifkan dan memverifikasi integrasi live Ruang Simpan</h1>
+<p>Untuk publisher Gustafta, operator SBU, dan dua pemilik perusahaan yang menyetujui pengujian.</p>
+<p><strong>Status:</strong> panduan ini bukan laporan keberhasilan. Pemeriksaan terakhir sebelum panduan dibuat masih menemukan HTTP 200 HTML pada endpoint Gustafta. Seluruh hasil live harus diisi setelah benar-benar diuji.</p>
+</header>
+<section>
+<h2>Mulai dari sini</h2>
+<div class="notice"><strong>Urutannya:</strong> aktifkan endpoint Gustafta → periksa 401 JSON + no-store → verifikasi hubungan dua pemilik → masukkan token melalui Secrets → atur pemetaan per lingkungan → uji live → laporkan hasil tanpa data pribadi.</div>
+<nav><ul>
+<li><a href="#peran">1. Pembagian tanggung jawab</a></li>
+<li><a href="#publisher">2. Aktivasi endpoint oleh publisher</a></li>
+<li><a href="#identitas">3. Verifikasi dua pemilik</a></li>
+<li><a href="#secrets">4. Secrets dan pemetaan development/production</a></li>
+<li><a href="#pengujian">5. Pengujian live dan hasil yang diharapkan</a></li>
+<li><a href="#laporan">6. Format laporan dan kriteria selesai</a></li>
+<li><a href="#pemeliharaan">7. Pemulihan dan pemeliharaan koneksi</a></li>
+</ul></nav>
+<p class="warning"><strong>Jangan:</strong> menempelkan token di chat, formulir biasa, frontend, URL, unggahan, source code, terminal yang direkam, atau laporan. Jangan menyalin profil ke database SBU, mengakses dokumen, atau meminta izin tulis.</p>
+</section>
+<section id="peran">
+<h2>1. Pembagian tanggung jawab</h2>
+<table><thead><tr><th>Pihak</th><th>Tanggung jawab</th></tr></thead><tbody>
+<tr><td>Publisher Gustafta</td><td>Memastikan domain menunjuk deployment yang benar, mengaktifkan endpoint sumber, memeriksa token/izin/pemilik aktif, dan menyediakan kondisi uji sumber yang aman.</td></tr>
+<tr><td>Operator SBU</td><td>Memverifikasi hubungan kepemilikan, memasukkan secret server melalui alur aman, mengatur pemetaan akun, dan memeriksa respons lokal SBU.</td></tr>
+<tr><td>Pemilik A dan B</td><td>Menyetujui pengujian, login ke akun masing-masing, mengonfirmasi profil miliknya, serta membuat koneksi terpisah dengan izin terbatas.</td></tr>
+<tr><td>Agen di workspace SBU</td><td>Memeriksa implementasi SBU dan hasil tes; tidak mengubah workspace Gustafta lain, mengarang identitas, atau mengklaim tes sintetis sebagai bukti live.</td></tr>
+</tbody></table>
+<p>Jika tidak ada pihak yang memiliki akses publisher, proses berhenti di langkah 2. Tidak ada pemantauan otomatis atau konfirmasi aktivasi yang diterima agen di luar percakapan ini.</p>
+</section>
+<section id="publisher">
+<h2>2. Aktivasi endpoint oleh publisher</h2>
+<h3>Pesan siap dikirim</h3>
+<blockquote class="notice">Mohon aktifkan GET /api/v1/ruang-simpan/company-profile pada workspace Gustafta yang melayani https://gustafta.my.id. Pemeriksaan terakhir tanpa token menghasilkan 200 text/html dengan private, max-age=0. Respons tanpa token harus 401 JSON dengan Cache-Control: private, no-store. Respons terautentikasi harus objek profil langsung sesuai kontrak; token menentukan pemilik dan hanya izin profile:read yang diperlukan. Mohon konfirmasi setelah versi endpoint tersebut benar-benar dipublikasikan.</blockquote>
+<ol>
+<li>Pastikan workspace dan deployment yang diperiksa memang melayani <code>https://gustafta.my.id</code>. Jangan mengganti domain hanya karena tercantum dalam templat yang belum diverifikasi.</li>
+<li>Periksa penanganan rute API dan routing proxy. HTTP 200 HTML dapat berasal dari fallback halaman web atau routing deployment yang salah; ini perlu diperiksa, bukan diasumsikan.</li>
+<li>Jika ada fallback SPA, rute API harus ditangani sebelum fallback. Rute API yang tidak tersedia tidak boleh diam-diam menjadi halaman HTML.</li>
+<li>Endpoint menerima GET tanpa body dan tanpa parameter identitas pemilik. Server Gustafta menentukan pemilik dari token koneksi, memeriksa izin dan status aktif pemilik.</li>
+<li>Pastikan respons sukses dan gagal memiliki <code>Cache-Control: private, no-store</code>. Publikasikan perubahan dari workspace Gustafta yang benar melalui publisher yang berwenang.</li>
+</ol>
+<h3>Pemeriksaan publik tanpa token</h3>
+<p>Perintah berikut hanya menampilkan status dan header yang diperlukan, tidak mencetak body atau memakai token:</p>
+<pre><code>curl --silent --show-error --max-time 20 --max-redirs 0 \
+  -o /dev/null -D - \
+  -w 'status=%{http_code}\ncontent_type=%{content_type}\n' \
+  https://gustafta.my.id/api/v1/ruang-simpan/company-profile \
+  | grep -Ei '^(HTTP/|content-type:|cache-control:|status=|content_type=)'</code></pre>
+<p><strong>Harus:</strong> HTTP 401, Content-Type application/json (boleh disertai charset), dan Cache-Control private, no-store. Publisher juga perlu memverifikasi body benar-benar JSON melalui pemeriksaan server yang tidak memasukkan data sensitif ke laporan.</p>
+<p class="warning">401 saja belum cukup. HTML, redirect, timeout, atau header tanpa no-store berarti pemeriksaan awal belum lulus. Jangan memasukkan token sampai domain dan kontrak sumber terverifikasi.</p>
+</section>
+<section id="identitas">
+<h2>3. Verifikasi dua pemilik</h2>
+<ol>
+<li>Pilih dua pemilik berbeda, beri label laporan <strong>A</strong> dan <strong>B</strong>. Gunakan akun uji yang disetujui; jangan menghapus profil perusahaan nyata hanya untuk membuat kasus kosong.</li>
+<li>Masing-masing pemilik login ke Gustafta dan menunjukkan secara privat bahwa akun dan profil perusahaan yang akan dibaca memang miliknya.</li>
+<li>Masing-masing login ke SBU di lingkungan yang akan diuji. Operator memperoleh ID Clerk dari sesi terverifikasi melalui sarana administrasi yang berwenang, bukan ID yang dikirim sebagai parameter frontend.</li>
+<li>Operator dan pemilik mengonfirmasi hubungan akun SBU ↔ akun Gustafta ↔ perusahaan secara eksplisit. Email atau nama yang sama bukan bukti hubungan kepemilikan.</li>
+<li>Buat koneksi Gustafta terpisah untuk A dan B dengan <strong>profile:read saja</strong>. Jangan meminta profile:write, files:read, files:write, atau akses dokumen.</li>
+<li>Catat hanya status “hubungan kepemilikan terverifikasi” di laporan. ID nyata hanya digunakan dalam konfigurasi server yang terbatas aksesnya; jangan masukkan ID, nama perusahaan, NIB, alamat, atau token ke laporan.</li>
+</ol>
+<p>Respons profil sumber tidak menyediakan bukti bahwa akun Gustafta setara dengan akun SBU. Pemetaan administratif harus diverifikasi sebelum diaktifkan.</p>
+</section>
+<section id="secrets">
+<h2>4. Secrets dan pemetaan per lingkungan</h2>
+<p>Di Replit SBU, gunakan <strong>Tools → Secrets</strong> atau formulir Secrets resmi yang dibuka agen. Untuk aplikasi terpublikasi, periksa dan atur secret production pada pengaturan publishing; jangan menganggap konfigurasi development otomatis cukup untuk production.</p>
+<h3>Development</h3>
+<ol>
+<li>Buat secret server <code>RUANG_SIMPAN_TOKEN_OWNER_A_DEV</code> dan <code>RUANG_SIMPAN_TOKEN_OWNER_B_DEV</code>. Masukkan token hanya di alur Secrets. Token harus berbeda, bukan satu token yang diberi dua nama.</li>
+<li>Atur variabel server <code>RUANG_SIMPAN_CONNECTIONS</code> untuk development. Contoh di bawah hanya placeholder; ganti dengan ID Clerk development yang telah diverifikasi melalui konfigurasi privat.</li>
+</ol>
+<pre><code>{
+  "ID_CLERK_A_DEVELOPMENT": "RUANG_SIMPAN_TOKEN_OWNER_A_DEV",
+  "ID_CLERK_B_DEVELOPMENT": "RUANG_SIMPAN_TOKEN_OWNER_B_DEV"
+}</code></pre>
+<h3>Production</h3>
+<p>Verifikasi kembali ID Clerk production dan hubungan kepemilikannya. User store Clerk development dan production terpisah. Gunakan secret khusus production dan pemetaan production tersendiri:</p>
+<pre><code>{
+  "ID_CLERK_A_PRODUCTION": "RUANG_SIMPAN_TOKEN_OWNER_A_PROD",
+  "ID_CLERK_B_PRODUCTION": "RUANG_SIMPAN_TOKEN_OWNER_B_PROD"
+}</code></pre>
+<ul>
+<li>Nama secret harus cocok dengan <code>RUANG_SIMPAN_TOKEN_[A-Z0-9_]+</code>.</li>
+<li>Nilai pemetaan adalah <strong>string nama secret</strong>, bukan token dan bukan objek dengan ownerId/token.</li>
+<li>Jangan gunakan pemetaan shared untuk menggantikan pemeriksaan development/production yang terpisah. Operator perlu memeriksa konfigurasi efektif server API pada tiap lingkungan.</li>
+<li>Jangan membuat variabel token dengan awalan VITE_; token tidak boleh masuk bundle frontend.</li>
+<li>Tidak ada fallback ke token bersama. Secret lama <code>RUANG_SIMPAN_TOKEN_SBU</code> tidak membuktikan hubungan dua pemilik.</li>
+<li>Setelah perubahan development, restart workflow API sekali. Perubahan production perlu diterapkan melalui mekanisme publishing yang sesuai dan dikonfirmasi pada deployment yang berjalan. Jangan menerbitkan produksi tanpa persetujuan pemilik.</li>
+</ul>
+<p class="small">Referensi Replit: <a href="https://docs.replit.com/core-concepts/project-editor/app-setup/secrets">Secrets</a>. Jika konfigurasi belum tersedia di server API, hentikan tes live; jangan mencetak environment untuk mencari token.</p>
+</section>
+<section id="pengujian">
+<h2>5. Pengujian live</h2>
+<p>Lakukan pada lingkungan yang disetujui, dengan dua pemilik nyata atau akun uji live yang berwenang. Koneksi, respons, dan akun harus berasal dari sistem yang benar-benar berjalan, bukan stub atau fetch yang diganti mock.</p>
+<h3>A. Profil sumber langsung dan SBU</h3>
+<ol>
+<li>Operator menjalankan pemeriksaan terautentikasi <strong>server-ke-server</strong> untuk A lalu B. Kredensial dibaca oleh server dari Secrets, tanpa dicetak. Jangan menempelkan bearer token pada perintah curl, URL, chat, atau DevTools.</li>
+<li>Verifikasi GET sumber memakai Authorization Bearer, tanpa body/parameter pemilik, dengan penolakan redirect dan tanpa cache.</li>
+<li>Untuk profil terisi, verifikasi HTTP 200 JSON berupa objek langsung dengan field name, nib, address, revision, updated_at. Revision harus bilangan bulat nonnegatif dan updated_at harus timestamp sah atau null sesuai kontrak.</li>
+<li>Bandingkan profil secara privat bersama pemilik. Laporkan hanya “profil sesuai pemilik A/B”, tanpa isi field atau salinan respons.</li>
+<li>Login A ke SBU, buka halaman Profil perusahaan, periksa hasil. Ulangi untuk B. Endpoint lokal adalah <code>GET /api/ruang-simpan/company-profile</code>; responsnya <code>{userId, profile}</code>. Identitas respons harus cocok dengan akun SBU aktif.</li>
+<li>Periksa no-store pada respons sumber maupun lokal. Jangan membagikan HAR, screenshot profil, atau salinan request yang mengandung cookie, token, ID, atau data perusahaan.</li>
+</ol>
+<h3>B. Pemisahan akun, reload, dan respons terlambat</h3>
+<ul>
+<li>A → logout → B: data A tidak boleh muncul, termasuk selama pemuatan. Ulangi B → A.</li>
+<li>Reload saat B aktif: tidak boleh memulihkan profil A. Ulangi untuk A.</li>
+<li>Buka dua tab, ubah akun di tab kedua, lalu kembali ke tab pertama: tampilan privat lama harus disembunyikan dan identitas diperiksa kembali.</li>
+<li>Dengan perlambatan jaringan pada akun uji, mulai membaca profil A lalu ganti akun sebelum respons selesai. Hasil A yang terlambat tidak boleh masuk ke tampilan B.</li>
+<li>Uji Kembali/Maju browser setelah pergantian akun: halaman yang dipulihkan tidak boleh menampilkan profil akun sebelumnya.</li>
+</ul>
+<h3>C. Matriks hasil yang diharapkan</h3>
+<table><thead><tr><th>Kondisi nyata</th><th>Gustafta</th><th>SBU</th><th>Tampilan/keamanan</th></tr></thead><tbody>
+<tr><td>Profil terisi A/B</td><td>200 objek langsung</td><td>200 {userId, profile}</td><td>Hanya profil pemilik aktif; private, no-store.</td></tr>
+<tr><td>Profil belum diisi</td><td>200 bentuk kosong sah</td><td>200 dengan pemilik sesuai</td><td>“Profil sumber belum diisi”; bukan galat.</td></tr>
+<tr><td>Token benar-benar kedaluwarsa</td><td>401</td><td>424 connection_invalid</td><td>Tidak logout sesi SBU dan tidak menampilkan profil lama.</td></tr>
+<tr><td>Token dicabut</td><td>401</td><td>424 connection_invalid</td><td>Sama; uji terpisah dari kedaluwarsa.</td></tr>
+<tr><td>Izin profile:read tidak tersedia</td><td>403</td><td>424 insufficient_scope</td><td>Petunjuk izin terbatas; tanpa data lama.</td></tr>
+<tr><td>Batas permintaan sumber</td><td>429</td><td>429 rate_limited</td><td>Tidak retry otomatis; Retry-After numerik jika tersedia.</td></tr>
+<tr><td>Profil/izin sumber tidak dapat dibaca</td><td>503</td><td>503 source_unavailable</td><td>Galat layanan, bukan profil kosong.</td></tr>
+<tr><td>Sesi SBU tidak sah</td><td>Tidak dipanggil</td><td>401 unauthenticated</td><td>Tidak ada data privat.</td></tr>
+<tr><td>Akun tanpa pemetaan</td><td>Tidak dipanggil</td><td>404 connection_not_configured</td><td>Tidak mengambil token milik akun lain.</td></tr>
+<tr><td>Konfigurasi salah/secret hilang</td><td>Tidak dipanggil</td><td>503 connection_unavailable</td><td>Ditolak dengan aman; jangan cetak konfigurasi.</td></tr>
+</tbody></table>
+<p>Seluruh respons lokal, termasuk kegagalan, harus <code>Cache-Control: private, no-store</code>. Kegagalan setelah sukses tidak boleh menampilkan profil lama sebagai data terbaru.</p>
+<h3>Bentuk profil kosong yang sah</h3>
+<pre><code>{
+  "name": "",
+  "nib": "",
+  "address": "",
+  "revision": 0,
+  "updated_at": null
+}</code></pre>
+<p><code>{}</code>, <code>null</code>, HTML, JSON rusak, atau timeout bukan profil kosong sah.</p>
+<div class="warning"><strong>Pengujian kegagalan perlu persetujuan.</strong>
+<ul>
+<li>Gunakan koneksi uji khusus untuk pencabutan; jangan mencabut koneksi operasional milik pelanggan.</li>
+<li>Kedaluwarsa harus dibuktikan memakai token uji yang benar-benar expired atau dukungan fixture live resmi publisher. Token palsu atau respons mock tidak membuktikan kasus expired.</li>
+<li>Untuk 403, gunakan koneksi uji tanpa profile:read jika didukung publisher; jangan meminta izin dokumen sebagai pengganti.</li>
+<li>Untuk 429, koordinasikan kondisi pembatasan resmi pada lingkungan uji. Jangan membanjiri produksi; batas kontrak adalah 60 permintaan/menit per koneksi dan pemeriksaan token per IP.</li>
+<li>Untuk 503, publisher menyediakan kondisi gagal yang terkendali pada lingkungan live uji tanpa mengganggu pengguna lain. Jangan mematikan layanan produksi atau mengubah seluruh token untuk tes.</li>
+<li>Jika suatu kondisi belum dapat diuji, isi “belum diuji/terhambat”. Jangan menggantinya dengan klaim lulus dari tes sintetis.</li>
+</ul></div>
+<h3>D. Pemeriksaan privasi</h3>
+<p>Pastikan route/helper baca profil tidak menulis profil ke DB dan tidak memanggil endpoint dokumen. Bila memeriksa log/observabilitas, gunakan alat privat yang tersanitasi; jangan mengaktifkan pencatatan body respons, header Authorization, cookie, ID pengguna, NIB, atau alamat.</p>
+</section>
+<section id="laporan">
+<h2>6. Laporan tanpa token atau data perusahaan</h2>
+<p>Isi satu laporan untuk setiap lingkungan yang diuji. Gunakan label A/B saja. Semua baris di bawah <strong>belum dinyatakan lulus</strong>; ini format untuk hasil pemeriksaan berikutnya.</p>
+<pre><code>Lingkungan: development / production
+Waktu pemeriksaan dan zona waktu: [isi]
+Publisher mengonfirmasi deployment yang benar: [ya/tidak]
+
+Pemeriksaan                         Hasil: lulus / gagal / belum diuji
+Tanpa token: 401 JSON + no-store    [isi]
+Hubungan kepemilikan A dan B        [isi]
+Secret terpisah, profile:read saja  [isi]
+Direct upstream A dan B            [isi]
+Profil SBU sesuai pemilik A/B       [isi]
+no-store sukses dan gagal          [isi]
+Profil sumber kosong sah           [isi]
+Token kedaluwarsa: 401 → 424        [isi]
+Token dicabut: 401 → 424            [isi]
+Izin tidak tersedia: 403 → 424      [isi]
+Batas permintaan: 429 → 429         [isi]
+Sumber gagal: 503 → 503             [isi]
+Reload dan switch akun A ↔ B       [isi]
+Respons terlambat, tab, Kembali/Maju[isi]
+Tidak menyalin profil ke DB        [isi]
+Tidak mengakses dokumen            [isi]
+Tidak mencatat token/PII           [isi]
+
+Metode bukti: [pemeriksaan live langsung / tes sintetis]
+Kendala dan tindak lanjut: [tanpa identitas atau data perusahaan]</code></pre>
+<p><strong>Integrasi live baru selesai</strong> bila seluruh persyaratan diuji dan lulus pada lingkungan yang diklaim, termasuk dua pemilik dan seluruh skenario kegagalan. Tes lokal dengan mock tetap berguna, tetapi harus dilaporkan terpisah. Lulus development tidak otomatis berarti lulus production.</p>
+<h3>Berkas acuan di workspace SBU</h3>
+<ul>
+<li><code>docs/ruang-simpan-profile-contract.md</code> — kontrak sumber dan pemetaan status lokal.</li>
+<li><code>docs/ruang-simpan-sbu-setup.md</code> — pemetaan akun ke nama secret.</li>
+<li><code>artifacts/api-server/src/lib/ruang-simpan.ts</code> — koneksi dan validasi sumber.</li>
+<li><code>artifacts/api-server/src/routes/ruang-simpan.ts</code> — route lokal SBU.</li>
+<li><code>artifacts/api-server/src/app.ts</code> — middleware autentikasi dan no-store.</li>
+<li><code>artifacts/gustafta-sbu/src/components/company-profile-page.tsx</code> — tampilan profil.</li>
+<li><code>artifacts/gustafta-sbu/src/components/account-queries.tsx</code> — cache dan perlindungan antar-akun.</li>
+</ul>
+</section>
+<section id="pemeliharaan">
+<h2>7. Pemulihan dan pemeliharaan koneksi</h2>
+<ul>
+<li><strong>Jika kepemilikan meragukan:</strong> jangan aktifkan pemetaan. Jika sudah aktif, nonaktifkan hanya koneksi terkait melalui operator; jangan mengalihkan akun tersebut ke token pemilik lain.</li>
+<li><strong>Jika akses harus dihentikan:</strong> hapus pemetaan terkait dan cabut token di Gustafta. Pastikan konfigurasi yang berjalan sudah diperbarui dan SBU tidak lagi menampilkan profil lama.</li>
+<li><strong>Rotasi:</strong> token berlaku 90 hari menurut kontrak. Buat pengganti profile:read milik pemilik yang sama, masukkan melalui Secrets, verifikasi, lalu cabut token lama. Jangan cetak token lama atau baru.</li>
+<li><strong>Setelah tes:</strong> cabut koneksi uji sementara, pulihkan konfigurasi yang disetujui, dan periksa ulang koneksi A/B yang memang akan digunakan.</li>
+<li><strong>Jika terhambat:</strong> laporkan langkah yang belum dapat dijalankan dan pihak yang perlu bertindak. Jangan menandai integrasi selesai hanya karena panduan atau checklist sudah dibuat.</li>
+</ul>
+</section>
+</main></body></html>

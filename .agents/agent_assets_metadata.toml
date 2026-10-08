@@ -22,3 +22,17 @@ mtime_ms = 1791174488260
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/40e76945-4838-469d-8967-b7f60581171a/b61cf415-2b13-4230-99f3-b0c9aa4fade0"
 storage_version_token = "1791174510100515"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "6auQaTBenxTrHwftwBYY7"
+uri = "file://docs/panduan-integrasi-live-ruang-simpan.html"
+type = "html"
+title = "Panduan integrasi live Ruang Simpan — SBU Accelerator"
+description = "Panduan berbahasa Indonesia untuk publisher dan operator: aktivasi endpoint, verifikasi dua pemilik, Secrets per lingkungan, checklist pengujian live, dan format laporan tanpa token atau data perusahaan. Dapat dibuka di browser dan dicetak."
+logical_id = "1de3189a-8d03-43d9-b1d4-13c2be893acc"
+content_hash = "sha256:a24983f1da5132eefc615fc6492b1bcf507f4fc5b4fc33cc1e7b6794686c8bcf"
+size = 19915
+mtime_ms = 1791199495427
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/1de3189a-8d03-43d9-b1d4-13c2be893acc/551274e7-baa4-41bc-84d5-b635ae71ed38"
+storage_version_token = "1791199519407962"
+content_type = "text/html"
