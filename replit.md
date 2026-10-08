@@ -11,6 +11,12 @@ Ruang kerja persiapan permohonan SBU baru dan perpanjangan untuk ekosistem jasa 
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
 
+### Validasi otomatis sebelum penggabungan
+
+- `api-typecheck-regression`: `pnpm --filter @workspace/api-server test:typecheck` — uji sumber checkout bersih, deklarasi tertinggal, pengulangan incremental, larangan keluaran kode API, dan penolakan kesalahan tipe.
+- `api-typecheck`: `pnpm --filter @workspace/api-server typecheck` — pemeriksaan tipe API beserta project references.
+- Kedua perintah terdaftar sebagai validasi proyek agar kegagalan menghentikan penyelesaian tugas sebelum penggabungan. Jangan menggantinya dengan `test` API biasa: suite tersebut mencakup tes database; gate tipe ini hanya mengompilasi dan memakai fixture sementara tanpa menulis data aplikasi.
+
 ### Batas kepercayaan domain autentikasi
 
 - Domain Clerk hanya dipilih dari Host yang dinormalisasi dan diizinkan. Sumber daftar: domain publik terverifikasi `gustafta-sbu-accelerator.replit.app`, `REPLIT_DOMAINS` dari platform, dan `CLERK_ALLOWED_HOSTS` (hostname tambahan yang disetujui operator, dipisahkan koma; tanpa skema/path/wildcard). Domain alternatif sah harus didaftarkan di salah satu sumber tersebut. Localhost hanya diizinkan di luar produksi.
