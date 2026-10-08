@@ -5,6 +5,8 @@ import { clerkMiddleware, getAuth } from "@clerk/express";
 import { parsePublishableKey, publishableKeyFromHost } from "@clerk/shared/keys";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { clerkRequestOriginMiddleware } from "./middlewares/clerkRequestOrigin";
+import healthRouter from "./routes/health";
 import {
   CLERK_PROXY_PATH,
   clerkProxyMiddleware,
@@ -36,6 +38,9 @@ app.use(
     },
   }),
 );
+// Health probes do not select a Clerk domain or access private data.
+app.use("/api", healthRouter);
+app.use(clerkRequestOriginMiddleware());
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(cors({ credentials: true, origin: true }));
 app.use("/api/ruang-simpan/company-profile", (_req, res, next) => {

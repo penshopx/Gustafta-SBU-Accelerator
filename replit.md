@@ -11,6 +11,13 @@ Ruang kerja persiapan permohonan SBU baru dan perpanjangan untuk ekosistem jasa 
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required env: `DATABASE_URL` — Postgres connection string
 
+### Batas kepercayaan domain autentikasi
+
+- Domain Clerk hanya dipilih dari Host yang dinormalisasi dan diizinkan. Sumber daftar: domain publik terverifikasi `gustafta-sbu-accelerator.replit.app`, `REPLIT_DOMAINS` dari platform, dan `CLERK_ALLOWED_HOSTS` (hostname tambahan yang disetujui operator, dipisahkan koma; tanpa skema/path/wildcard). Domain alternatif sah harus didaftarkan di salah satu sumber tersebut. Localhost hanya diizinkan di luar produksi.
+- `X-Forwarded-Host` dari klien langsung diabaikan, bukan bukti asal proxy. Bawaan tidak mempercayai alamat proxy mana pun. Bila edge mengubah Host menjadi alamat internal, operator harus menetapkan `CLERK_TRUSTED_PROXY_CIDRS` dengan alamat/CIDR peer socket edge yang diketahui, bukan IP dari header. Jangan memakai seluruh jaringan privat, loopback, hitungan hop, atau `0.0.0.0/0` sebagai pengganti identifikasi edge.
+- Proxy yang dipercaya wajib **mengganti**, bukan menambahkan, `X-Forwarded-Host`. Header berantai/duplikat atau domain asing ditolak (421) sebelum SDK Clerk, proxy FAPI, dan akses data. `Host`/`X-Forwarded-Host` diseragamkan, `Forwarded` dihapus, dan protokol Clerk selalu HTTPS. Pemeriksaan kesehatan `/api/healthz` tidak melibatkan Clerk atau data privat.
+- Dokumentasi platform memastikan keberadaan header forwarding, tetapi bukan jaminan provenance ataupun rentang IP edge. Jangan memperluas kepercayaan berdasarkan asumsi tersebut. Perubahan ini tidak mempublikasikan aplikasi atau mengubah konfigurasi produksi.
+
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9

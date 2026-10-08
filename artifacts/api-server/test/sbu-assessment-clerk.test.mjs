@@ -16,6 +16,10 @@ after(() => rm(temporaryDir, { recursive: true, force: true }));
 process.env.CLERK_PUBLISHABLE_KEY = `pk_test_${Buffer.from("example.clerk.accounts.dev$").toString("base64")}`;
 process.env.CLERK_SECRET_KEY = "sk_test_not_a_real_secret";
 process.env.NODE_ENV = "test";
+process.env.CLERK_ALLOWED_HOSTS = "sbu.example.test,penilaian.example.test";
+// A separate loopback address represents the configured edge; ordinary local
+// clients (127.0.0.1) are explicitly NOT trusted.
+process.env.CLERK_TRUSTED_PROXY_CIDRS = "127.0.0.2/32";
 process.env.CLERK_TELEMETRY_DISABLED = "1";
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
 process.env.CLERK_JWT_KEY = publicKey.export({ type: "spki", format: "pem" });
@@ -107,10 +111,11 @@ async function request(server, id, headers) {
 
 // Node fetch replaces a supplied Host with the URL's hostname. Keep the
 // connection local while sending the public Host verbatim for domain tests.
-function requestWithHost(server, id, headers) {
+function requestWithHost(server, id, headers, trusted = false) {
   return new Promise((resolve, reject) => {
     const req = httpRequest({
       hostname: "127.0.0.1", port: server.address().port,
+      localAddress: trusted ? "127.0.0.2" : "127.0.0.1",
       path: `/api/cases/${id}/assessment`, headers: { origin: testOrigin, ...headers },
     }, (res) => {
       let raw = "";
@@ -308,26 +313,36 @@ test("domain Clerk dipilih sesuai host/proxy dan issuer lain ditolak tanpa memba
     { label: "Host huruf besar dengan port", key: productionKey,
       headers: { host: "PENILAIAN.EXAMPLE.TEST:443" }, issuer: alternateIssuer },
     { label: "proxy memilih domain utama di atas Host alternatif", key: productionKey,
-      headers: { host: alternateHost, "x-forwarded-host": primaryHost }, issuer: primaryIssuer },
+      trusted: true, headers: { host: alternateHost, "x-forwarded-host": primaryHost }, issuer: primaryIssuer },
     { label: "proxy memilih domain alternatif di atas Host utama", key: productionKey,
-      headers: { host: primaryHost, "x-forwarded-host": alternateHost }, issuer: alternateIssuer },
-    { label: "hop pertama proxy memilih domain utama", key: productionKey,
-      headers: { host: alternateHost, "x-forwarded-host": ` ${primaryHost}, ${alternateHost}` }, issuer: primaryIssuer },
-    { label: "hop pertama proxy memilih domain alternatif dengan port", key: productionKey,
-      headers: { host: primaryHost, "x-forwarded-host": ` PENILAIAN.EXAMPLE.TEST:443 , ${primaryHost}` }, issuer: alternateIssuer },
+      trusted: true, headers: { host: primaryHost, "x-forwarded-host": alternateHost }, issuer: alternateIssuer },
+    { label: "proxy tepercaya dengan host internal", key: productionKey,
+      trusted: true, headers: { host: "internal.invalid", "x-forwarded-host": " PENILAIAN.EXAMPLE.TEST:443 " }, issuer: alternateIssuer },
+    { label: "klien langsung tidak dapat memilih domain alternatif lewat forwarding", key: productionKey,
+      headers: { host: primaryHost, "x-forwarded-host": alternateHost }, issuer: primaryIssuer },
+    { label: "klien langsung tidak dapat memilih domain utama lewat forwarding", key: productionKey,
+      headers: { host: alternateHost, "x-forwarded-host": primaryHost }, issuer: alternateIssuer },
+    { label: "rantai forwarding dari klien langsung diabaikan", key: productionKey,
+      headers: { host: alternateHost, "x-forwarded-host": `${primaryHost}, ${alternateHost}` }, issuer: alternateIssuer },
+    { label: "host asing ditolak", key: productionKey,
+      headers: { host: "attacker.example.test", "x-forwarded-host": primaryHost }, status: 421 },
+    { label: "host asing melalui proxy ditolak", key: productionKey,
+      trusted: true, headers: { host: primaryHost, "x-forwarded-host": "attacker.example.test" }, status: 421 },
+    { label: "proxy tidak boleh meneruskan rantai dari klien", key: productionKey,
+      trusted: true, headers: { host: alternateHost, "x-forwarded-host": `${primaryHost}, ${alternateHost}` }, status: 421 },
     { label: "proxy kosong kembali ke Host", key: productionKey,
       headers: { host: alternateHost, "x-forwarded-host": "" }, issuer: alternateIssuer },
     { label: "key pengembangan tetap berlaku pada Host alternatif", key: developmentKey,
       headers: { host: alternateHost }, issuer: developmentIssuer },
     { label: "key pengembangan tetap berlaku di belakang proxy", key: developmentKey,
-      headers: { host: primaryHost, "x-forwarded-host": `${alternateHost}, ${primaryHost}` }, issuer: developmentIssuer },
+      trusted: true, headers: { host: primaryHost, "x-forwarded-host": alternateHost }, issuer: developmentIssuer },
   ];
   try {
     for (const scenario of scenarios) {
       await t.test(scenario.label, async () => {
         process.env.CLERK_PUBLISHABLE_KEY = scenario.key;
-        const host = (scenario.headers["x-forwarded-host"] || scenario.headers.host).split(",")[0].trim();
-        const origin = new URL(`http://${host}`).origin;
+        const host = (scenario.trusted && !scenario.status && scenario.headers["x-forwarded-host"]) || scenario.headers.host;
+        const origin = new URL(`http://${host.trim()}`).origin;
         // Both legitimate domain issuers must be tried for every host: this
         // catches a key accidentally fixed to one domain or to the last hop.
         for (const issuer of [primaryIssuer, alternateIssuer, developmentIssuer, unrelatedIssuer]) {
@@ -343,7 +358,7 @@ test("domain Clerk dipilih sesuai host/proxy dan issuer lain ditolak tanpa memba
             globalThis.__clerkTestCaseReads = 0;
             globalThis.__clerkTestEvidenceReads = 0;
             globalThis.__clerkTestDataReads = 0;
-            const response = await requestWithHost(server, 34, { ...scenario.headers, origin, ...authHeaders });
+            const response = await requestWithHost(server, 34, { ...scenario.headers, origin, ...authHeaders }, scenario.trusted);
             const context = `${scenario.label}, ${issuer}, ${Object.keys(authHeaders)[0]}: ${response.raw}`;
             if (issuer === scenario.issuer) {
               assert.equal(response.status, 200, context);
@@ -352,8 +367,10 @@ test("domain Clerk dipilih sesuai host/proxy dan issuer lain ditolak tanpa memba
               assert.equal(globalThis.__clerkTestCaseReads, 1, context);
               assert.equal(globalThis.__clerkTestEvidenceReads, 1, context);
             } else {
-              assert.equal(response.status, 401, context);
-              assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." }, context);
+              assert.equal(response.status, scenario.status ?? 401, context);
+              assert.deepEqual(response.body, scenario.status
+                ? { error: "Domain permintaan tidak diizinkan.", code: "untrusted_host" }
+                : { error: "Silakan masuk untuk melanjutkan." }, context);
               assert.doesNotMatch(response.raw, /companyName|ownerId|caseId|evidence|findings|recordedCount|Perusahaan Sendiri|Bukti sendiri/i, context);
               assert.equal(globalThis.__clerkTestCaseReads, 0, context);
               assert.equal(globalThis.__clerkTestEvidenceReads, 0, context);
