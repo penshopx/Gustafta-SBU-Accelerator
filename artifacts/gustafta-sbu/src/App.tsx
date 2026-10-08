@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from '@clerk/react';
+import { ClerkProvider, SignIn, SignUp, Show, useClerk, useAuth } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { idID } from '@clerk/localizations';
@@ -26,6 +26,9 @@ import { Disclaimer } from '@/components/disclaimer';
 import { WorkspaceFoundation } from '@/components/workspace-foundation';
 import { ErrorState, Loading } from '@/components/request-states';
 import { SessionVerificationError } from '@/components/session-verification-error';
+import { SessionLoadingBoundary } from '@/components/session-loading-boundary';
+import { retrySessionCheck, withSessionDeadline } from '@/lib/session-request';
+import { getMe } from '@workspace/api-client-react';
 import { expiryInputValue, expiryPayload } from '@/lib/case-expiry';
 import { hasVisibleNameCharacter, ProfileNameField } from '@/components/profile-name-field';
 
@@ -176,13 +179,24 @@ function SettingsPage({ profile }: { profile: Profile }) { return <><PageHead ki
 function NotFoundPage() { return <div className="grid min-h-[100dvh] place-items-center bg-[#eaf3fa] px-5"><div className="max-w-md text-center"><div className="mono text-sm text-[#1769d1]">404 / HALAMAN TIDAK DITEMUKAN</div><h1 className="display mt-5 text-4xl font-extrabold">Jalurnya tidak ada di sini.</h1><p className="mt-4 text-sm leading-7 text-[#60798e]">Alamat yang Anda tuju mungkin berubah. Kembali ke awal untuk melanjutkan.</p><Link href="/" data-testid="link-home-404" className="btn btn-primary mt-6">Ke beranda <ArrowRight size={16}/></Link></div></div>; }
 
 function AccountRoutes() {
-  const { isLoaded, user } = useUser();
-  if (!isLoaded) return <div className="mx-auto max-w-3xl p-10"><Loading /></div>;
-  return <AccountQueries key={user?.id ?? 'signed-out'} userId={user?.id ?? null}><CrossTabAccountGate userId={user?.id ?? null}><VerifiedRoutes userId={user?.id ?? null} /></CrossTabAccountGate></AccountQueries>;
+  // Session identity is sufficient here; private views still require /me agreement.
+  // Loading the separate Clerk user profile must not remount the private cache.
+  const { isLoaded, userId } = useAuth();
+  const clerk = useClerk();
+  return <SessionLoadingBoundary resolved={isLoaded} loading={<div className="mx-auto max-w-3xl p-10"><Loading /></div>} reload={() => window.location.reload()} signOut={() => clerk.signOut({ redirectUrl: `${basePath}/sign-in` })}>
+    <AccountQueries key={userId ?? 'signed-out'} userId={userId ?? null}><CrossTabAccountGate userId={userId ?? null}><VerifiedRoutes userId={userId ?? null} /></CrossTabAccountGate></AccountQueries>
+  </SessionLoadingBoundary>;
 }
 function VerifiedRoutes({ userId }: { userId: string | null }) {
   const clerk = useClerk();
-  const me = useGetMe({ query: { enabled: !!userId, queryKey: getGetMeQueryKey() } });
+  const me = useGetMe({ query: {
+    enabled: !!userId,
+    queryKey: getGetMeQueryKey(),
+    queryFn: ({ signal }) => withSessionDeadline((boundedSignal) => getMe({ signal: boundedSignal, cache: 'no-store' }), signal),
+    retry: retrySessionCheck,
+    retryOnMount: false,
+    refetchOnWindowFocus: true,
+  } });
   // Cookies may change before Clerk updates its in-memory user (or vice versa).
   // Never render private queries when the API and Clerk disagree about the owner.
   if (userId && (me.isLoading || !me.data && !me.isError)) return <div className="mx-auto max-w-3xl p-10"><Loading /></div>;

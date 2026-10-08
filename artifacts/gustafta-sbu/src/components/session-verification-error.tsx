@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { CircleAlert } from 'lucide-react';
 
-export function sessionFailureMessage(error: unknown) {
+export function sessionFailureMessage(error: unknown): { status: number | null; message: string; check?: string } {
+  const code = error && typeof error === 'object' && 'code' in error ? error.code : null;
+  if (code === 'session_loading_timeout') return { status: null, check: 'Pemuatan sesi', message: 'Pemuatan sesi terlalu lama. Muat ulang halaman untuk memeriksa sesi kembali. Data privat belum dibuka.' };
+  if (code === 'session_verification_timeout') return { status: null, check: 'GET /api/me · batas waktu terlampaui', message: 'Pemeriksaan identitas terlalu lama. Coba lagi atau muat ulang halaman. Data privat tetap tertutup.' };
   const status = error && typeof error === 'object' && 'status' in error
     && typeof error.status === 'number' && Number.isInteger(error.status)
     && error.status >= 100 && error.status <= 599 ? error.status : null;
@@ -34,7 +37,7 @@ export function SessionVerificationError({ error, retry, reload, signOut }: {
     <CircleAlert className="mx-auto mb-4 text-[#bb5451]" size={26} />
     <h2 className="text-lg font-bold">Identitas sesi belum terverifikasi</h2>
     <p role="alert" className="mt-2 text-sm leading-6 text-[#58708a]">{failure.message}</p>
-    <p className="mt-3 text-xs text-[#58708a]">Pemeriksaan: GET /api/me{failure.status !== null ? ` · HTTP ${failure.status}` : ' · koneksi atau respons gagal'}</p>
+    <p className="mt-3 text-xs text-[#58708a]">Pemeriksaan: {failure.check ?? `GET /api/me${failure.status !== null ? ` · HTTP ${failure.status}` : ' · koneksi atau respons gagal'}`}</p>
     <div className="mt-5 flex flex-wrap justify-center gap-2">
       <button disabled={pending} className="btn btn-outline" data-testid="button-retry-session" onClick={() => void run(retry)}>{pending ? 'Memproses...' : 'Coba lagi'}</button>
       <button disabled={pending} className="btn btn-outline" data-testid="button-reload-session" onClick={reload}>Muat ulang halaman</button>
