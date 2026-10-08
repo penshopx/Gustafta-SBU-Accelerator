@@ -1,0 +1,89 @@
+Berikut adalah rancangan implementasi untuk mengotomatiskan pemeriksaan tipe API sebelum penggabungan (pre-merge/CI), sesuai dengan batasan yang Anda tetapkan (tanpa pengujian database, tanpa perubahan frontend).
+
+### 1. Konfigurasi Skrip di `artifacts/api-server/package.json`
+Pastikan skrip di workspace API secara eksplisit memisahkan pemeriksaan tipe dari pengujian runtime database.
+
+```json
+{
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test:typecheck": "node --test test/typecheck/clean-checkout.test.mjs",
+    "check:strict": "pnpm run typecheck && pnpm run test:typecheck"
+  }
+}
+```
+*Catatan: `check:strict` menggabungkan keduanya agar CI hanya perlu memanggil satu perintah.*
+
+### 2. Agregasi di Root `package.json`
+Tambahkan skrip di root workspace untuk memanggil pemeriksaan API secara spesifik tanpa memicu tes di workspace lain (seperti frontend atau database integration).
+
+```json
+{
+  "scripts": {
+    "pre-merge:api": "pnpm --filter @workspace/api-server check:strict"
+  }
+}
+```
+
+### 3. Integrasi ke Mekanisme Validasi Otomatis (CI / Pre-Merge Hook)
+Pilih salah satu mekanisme yang sudah ada di proyek Anda:
+
+**Opsi A: GitHub Actions (CI Pipeline)**
+Buat atau perbarui file `.github/workflows/api-typecheck.yml`:
+```yaml
+name: API Typecheck Pre-Merge
+
+on:
+  pull_request:
+    paths:
+      - 'artifacts/api-server/**'
+      - 'lib/db/**'
+      - 'lib/api-zod/**'
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'pnpm'
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run API Typecheck & Clean Checkout Tests
+        run: pnpm run pre-merge:api
+```
+
+**Opsi B: Pre-Merge Script Lokal (Husky / Git Hook)**
+Jika menggunakan Husky atau script pre-push lokal, tambahkan ke `.husky/pre-push` atau `scripts/pre-merge.sh`:
+```bash
+#!/bin/sh
+echo "Menjalankan pemeriksaan tipe API yang ketat..."
+pnpm run pre-merge:api
+if [ $? -ne 0 ]; then
+  echo "GAGAL: Pemeriksaan tipe API atau clean-checkout gagal. Perbaiki regresi sebelum merge."
+  exit 1
+fi
+```
+
+### 4. Pemenuhan Kriteria "Selesai Jika"
+
+| Kriteria | Cara Dipenuhi |
+| :--- | :--- |
+| **Terhubung ke pemeriksaan otomatis** | Skrip `pre-merge:api` dipanggil oleh CI (GitHub Actions) atau Git Hook sebelum merge diizinkan. |
+| **Tidak menjalankan tes database** | CI/Hook hanya memanggil `test:typecheck` (yang menjalankan `clean-checkout.test.mjs`), bukan `test` biasa yang mungkin memicu koneksi PostgreSQL. |
+| **Gagal saat skrip kembali ke leaf-only** | `clean-checkout.test.mjs` secara eksplisit mendeteksi jika `tsc` hanya memeriksa file yang berubah (leaf-only) dengan mengandalkan deklarasi lama. Jika terdeteksi, skrip uji mengembalikan `exit code 1`, yang langsung menggagalkan pipeline CI. |
+| **Tidak mencakup frontend/sesi** | Filter `--filter @workspace/api-server` dan `paths` di CI memastikan hanya kode backend API dan library terkait (`lib/db`, `lib/api-zod`) yang diproses. |
+
+### Langkah Eksekusi
+1. Terapkan perubahan `package.json` di root dan `artifacts/api-server`.
+2. Tambahkan konfigurasi CI atau Git Hook sesuai opsi yang dipilih.
+3. Lakukan *dry-run* dengan sengaja membuat regresi tipe (misalnya, menghapus deklarasi di `lib/db`) untuk memastikan pipeline otomatis gagal seperti yang diharapkan.
+
+Tidak ada perubahan pada kode frontend, konfigurasi database, atau pengujian sesi yang dilakukan dalam rancangan ini.
