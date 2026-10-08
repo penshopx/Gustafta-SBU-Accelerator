@@ -5,6 +5,25 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+export type SbuChatInputSpecialist = typeof SbuChatInputSpecialist[keyof typeof SbuChatInputSpecialist];
+
+
+export const SbuChatInputSpecialist = {
+  sbuclaw: 'sbuclaw',
+  skemaclaw: 'skemaclaw',
+  lkutclaw: 'lkutclaw',
+  abuclaw: 'abuclaw',
+  panduansbu: 'panduansbu',
+  pjbuclaw: 'pjbuclaw',
+  keuanganclaw: 'keuanganclaw',
+  lkpmclaw: 'lkpmclaw',
+  ossclaw: 'ossclaw',
+  'pub-lkutclaw': 'pub-lkutclaw',
+  esimpanclaw: 'esimpanclaw',
+  nspknavigatorclaw: 'nspknavigatorclaw',
+  smapclaw: 'smapclaw',
+} as const;
+
 export type SbuChatInputMode = typeof SbuChatInputMode[keyof typeof SbuChatInputMode];
 
 
@@ -35,6 +54,7 @@ export interface SbuChatMessage {
 }
 
 export interface SbuChatInput {
+  specialist?: SbuChatInputSpecialist;
   mode: SbuChatInputMode;
   consent: boolean;
   /**
@@ -43,6 +63,25 @@ export interface SbuChatInput {
      */
   messages: SbuChatMessage[];
 }
+
+export type SbuChatReplySpecialist = typeof SbuChatReplySpecialist[keyof typeof SbuChatReplySpecialist];
+
+
+export const SbuChatReplySpecialist = {
+  sbuclaw: 'sbuclaw',
+  skemaclaw: 'skemaclaw',
+  lkutclaw: 'lkutclaw',
+  abuclaw: 'abuclaw',
+  panduansbu: 'panduansbu',
+  pjbuclaw: 'pjbuclaw',
+  keuanganclaw: 'keuanganclaw',
+  lkpmclaw: 'lkpmclaw',
+  ossclaw: 'ossclaw',
+  'pub-lkutclaw': 'pub-lkutclaw',
+  esimpanclaw: 'esimpanclaw',
+  nspknavigatorclaw: 'nspknavigatorclaw',
+  smapclaw: 'smapclaw',
+} as const;
 
 export type SbuChatReplyMode = typeof SbuChatReplyMode[keyof typeof SbuChatReplyMode];
 
@@ -57,10 +96,39 @@ export const SbuChatReplyMode = {
 } as const;
 
 export interface SbuChatReply {
+  specialist: SbuChatReplySpecialist;
   userId: string;
   mode: SbuChatReplyMode;
   answer: string;
   disclaimer: string;
+}
+
+export type SbuChatSpecialistId = typeof SbuChatSpecialistId[keyof typeof SbuChatSpecialistId];
+
+
+export const SbuChatSpecialistId = {
+  sbuclaw: 'sbuclaw',
+  skemaclaw: 'skemaclaw',
+  lkutclaw: 'lkutclaw',
+  abuclaw: 'abuclaw',
+  panduansbu: 'panduansbu',
+  pjbuclaw: 'pjbuclaw',
+  keuanganclaw: 'keuanganclaw',
+  lkpmclaw: 'lkpmclaw',
+  ossclaw: 'ossclaw',
+  'pub-lkutclaw': 'pub-lkutclaw',
+  esimpanclaw: 'esimpanclaw',
+  nspknavigatorclaw: 'nspknavigatorclaw',
+  smapclaw: 'smapclaw',
+} as const;
+
+export interface SbuChatSpecialist {
+  id: SbuChatSpecialistId;
+  name: string;
+  group: string;
+  description: string;
+  prompts: string[];
+  knowledgeStatus: string;
 }
 
 export interface LocalCompanyProfileInput {

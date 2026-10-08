@@ -10,6 +10,19 @@ tags:
   - name: health
   - name: workspace
 paths:
+  /openai/sbu/specialists:
+    get:
+      operationId: getSbuChatSpecialists
+      tags: [workspace]
+      summary: Standalone SBU specialist catalog, not the Gustafta knowledge base
+      responses:
+        "200":
+          description: Specialist guidance catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SbuChatSpecialist" }
   /openai/sbu/messages:
     post:
       operationId: sendSbuChatMessage
@@ -518,6 +531,10 @@ components:
       type: object
       required: [mode, messages, consent]
       properties:
+        specialist:
+          type: string
+          enum: [sbuclaw, skemaclaw, lkutclaw, abuclaw, panduansbu, pjbuclaw, keuanganclaw, lkpmclaw, ossclaw, pub-lkutclaw, esimpanclaw, nspknavigatorclaw, smapclaw]
+          default: sbuclaw
         mode:
           type: string
           enum: [bujk, pendamping, asesor, lsbu, asosiasi, umum]
@@ -536,12 +553,29 @@ components:
         content: { type: string, minLength: 1, maxLength: 12000 }
     SbuChatReply:
       type: object
-      required: [userId, mode, answer, disclaimer]
+      required: [userId, mode, specialist, answer, disclaimer]
       properties:
+        specialist:
+          type: string
+          enum: [sbuclaw, skemaclaw, lkutclaw, abuclaw, panduansbu, pjbuclaw, keuanganclaw, lkpmclaw, ossclaw, pub-lkutclaw, esimpanclaw, nspknavigatorclaw, smapclaw]
         userId: { type: string }
         mode: { type: string, enum: [bujk, pendamping, asesor, lsbu, asosiasi, umum] }
         answer: { type: string }
         disclaimer: { type: string }
+    SbuChatSpecialist:
+      type: object
+      required: [id, name, group, description, prompts, knowledgeStatus]
+      properties:
+        id:
+          type: string
+          enum: [sbuclaw, skemaclaw, lkutclaw, abuclaw, panduansbu, pjbuclaw, keuanganclaw, lkpmclaw, ossclaw, pub-lkutclaw, esimpanclaw, nspknavigatorclaw, smapclaw]
+        name: { type: string }
+        group: { type: string }
+        description: { type: string }
+        prompts:
+          type: array
+          items: { type: string }
+        knowledgeStatus: { type: string }
     LocalCompanyProfileInput:
       type: object
       additionalProperties: false

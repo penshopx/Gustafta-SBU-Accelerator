@@ -1,4 +1,5 @@
 import { REGULATIONS } from "./sbu-rules";
+import { specialistInstruction, type SpecialistId } from "./sbu-chat-specialists";
 
 export const CHAT_DISCLAIMER = "Bantuan awal AI, bukan keputusan asesor/LSBU, verifikasi dokumen, atau jaminan penerbitan SBU. Tinjau hasil dengan manusia yang kompeten dan sumber resmi.";
 
@@ -12,10 +13,12 @@ export const CHAT_MODES = {
 } as const;
 export type ChatMode = keyof typeof CHAT_MODES;
 
-export function sbuChatSystemPrompt(mode: ChatMode): string {
+export function sbuChatSystemPrompt(mode: ChatMode, specialist: SpecialistId = "sbuclaw"): string {
   const references = REGULATIONS.map(({ title, detail, source }) => ({ title, detail, source }));
   return `Anda adalah Asisten SBU Accelerator, aplikasi mandiri dan tidak terhubung Gustafta, OSS, LPJK atau LSBU.
 Jawab dalam bahasa Indonesia yang jelas, praktis dan singkat. ${CHAT_MODES[mode]}
+${specialistInstruction(specialist)}
+Gabungkan konteks peran dengan fokus spesialis. Nama spesialis tidak berarti agen resmi, model terpisah, sub-agent otonom atau knowledge base khusus yang telah diverifikasi.
 Utamakan struktur: pemahaman konteks, langkah/checklist yang dapat dilakukan, hal yang perlu dikonfirmasi. Jika konteks kurang, tanyakan maksimal tiga hal penting.
 BATAS WAJIB:
 - ${CHAT_DISCLAIMER}

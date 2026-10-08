@@ -6,9 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SbuChatInputMode } from './sbuChatInputMode';
+import type { SbuChatInputSpecialist } from './sbuChatInputSpecialist';
 import type { SbuChatMessage } from './sbuChatMessage';
 
 export interface SbuChatInput {
+  specialist?: SbuChatInputSpecialist;
   mode: SbuChatInputMode;
   consent: boolean;
   /**

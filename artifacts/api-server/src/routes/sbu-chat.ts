@@ -1,18 +1,19 @@
 import { Router, type IRouter } from "express";
 import { getAuth } from "@clerk/express";
-import { SendSbuChatMessageBody, SendSbuChatMessageResponse } from "@workspace/api-zod";
+import { GetSbuChatSpecialistsResponse, SendSbuChatMessageBody, SendSbuChatMessageResponse } from "@workspace/api-zod";
 import { CHAT_DISCLAIMER, sbuChatSystemPrompt, type ChatMode } from "../lib/sbu-chat-policy";
+import { specialistCatalog, type SpecialistId } from "../lib/sbu-chat-specialists";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
-type Generate = (mode: ChatMode, messages: ChatMessage[], signal: AbortSignal) => Promise<string>;
+type Generate = (mode: ChatMode, messages: ChatMessage[], signal: AbortSignal, specialist: SpecialistId) => Promise<string>;
 
-const generate: Generate = async (mode, messages, signal) => {
+const generate: Generate = async (mode, messages, signal, specialist) => {
   // Keep unrelated auth/case routes working when AI is not provisioned in a test environment.
   const { openai } = await import("@workspace/integrations-openai-ai-server");
   const reply = await openai.chat.completions.create({
     model: "gpt-5.6-terra",
     max_completion_tokens: 8192,
-    messages: [{ role: "system", content: sbuChatSystemPrompt(mode) }, ...messages],
+    messages: [{ role: "system", content: sbuChatSystemPrompt(mode, specialist) }, ...messages],
   }, { signal, timeout: 65_000, maxRetries: 1 });
   const answer = reply.choices[0]?.message?.content?.trim();
   if (!answer) throw new Error("empty_ai_response");
@@ -24,6 +25,13 @@ const generate: Generate = async (mode, messages, signal) => {
 export function createSbuChatRouter(answer: Generate = generate): IRouter {
   const router: IRouter = Router();
   const slots = new Map<string, { since: number; count: number; busy: boolean }>();
+  router.get("/openai/sbu/specialists", (req, res) => {
+    res.set("Cache-Control", "private, no-store");
+    if (!getAuth(req).userId) {
+      res.status(401).json({ error: "Silakan masuk untuk melihat spesialis." }); return;
+    }
+    res.json(GetSbuChatSpecialistsResponse.parse(specialistCatalog()));
+  });
   router.post("/openai/sbu/messages", async (req, res): Promise<void> => {
     res.set("Cache-Control", "private, no-store");
     const userId = getAuth(req).userId;
@@ -71,10 +79,10 @@ export function createSbuChatRouter(answer: Generate = generate): IRouter {
       const aborted = new Promise<never>((_resolve, reject) => {
         controller.signal.addEventListener("abort", () => reject(new Error("ai_cancelled")), { once: true });
       });
-      const text = await Promise.race([answer(input.data.mode, messages, controller.signal), aborted]);
+      const text = await Promise.race([answer(input.data.mode, messages, controller.signal, input.data.specialist), aborted]);
       if (!text.trim()) throw new Error("empty_ai_response");
       if (!res.destroyed) res.json(SendSbuChatMessageResponse.parse({
-        userId, mode: input.data.mode, answer: text, disclaimer: CHAT_DISCLAIMER,
+        userId, mode: input.data.mode, specialist: input.data.specialist, answer: text, disclaimer: CHAT_DISCLAIMER,
       }));
     } catch {
       // Never log private prompts, raw provider errors, credentials or response bodies.

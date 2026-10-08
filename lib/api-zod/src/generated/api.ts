@@ -9,8 +9,23 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Standalone SBU specialist catalog, not the Gustafta knowledge base
+ */
+export const GetSbuChatSpecialistsResponseItem = zod.object({
+  "id": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']),
+  "name": zod.string(),
+  "group": zod.string(),
+  "description": zod.string(),
+  "prompts": zod.array(zod.string()),
+  "knowledgeStatus": zod.string()
+})
+export const GetSbuChatSpecialistsResponse = zod.array(GetSbuChatSpecialistsResponseItem)
+
+
+/**
  * @summary Role-focused SBU AI guidance without reading company data or documents
  */
+export const sendSbuChatMessageBodySpecialistDefault = `sbuclaw`;
 export const sendSbuChatMessageBodyMessagesItemContentMax = 12000;
 
 export const sendSbuChatMessageBodyMessagesMax = 20;
@@ -18,6 +33,7 @@ export const sendSbuChatMessageBodyMessagesMax = 20;
 
 
 export const SendSbuChatMessageBody = zod.object({
+  "specialist": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']).default(sendSbuChatMessageBodySpecialistDefault),
   "mode": zod.enum(['bujk', 'pendamping', 'asesor', 'lsbu', 'asosiasi', 'umum']),
   "consent": zod.boolean(),
   "messages": zod.array(zod.object({
@@ -27,6 +43,7 @@ export const SendSbuChatMessageBody = zod.object({
 })
 
 export const SendSbuChatMessageResponse = zod.object({
+  "specialist": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']),
   "userId": zod.string(),
   "mode": zod.enum(['bujk', 'pendamping', 'asesor', 'lsbu', 'asosiasi', 'umum']),
   "answer": zod.string(),

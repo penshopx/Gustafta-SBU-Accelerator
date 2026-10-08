@@ -42,6 +42,7 @@ import type {
   SbuCase,
   SbuChatInput,
   SbuChatReply,
+  SbuChatSpecialist,
   TransitionVerification,
   TransitionVerificationInput,
   Workspace
@@ -73,6 +74,83 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetSbuChatSpecialistsUrl = () => {
+
+
+
+
+  return `/api/openai/sbu/specialists`
+}
+
+/**
+ * @summary Standalone SBU specialist catalog, not the Gustafta knowledge base
+ */
+export const getSbuChatSpecialists = async ( options?: Parameters<typeof customFetch>[1]): Promise<SbuChatSpecialist[]> => {
+
+  return customFetch<SbuChatSpecialist[]>(getGetSbuChatSpecialistsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSbuChatSpecialistsQueryKey = () => {
+    return [
+    `/api/openai/sbu/specialists`
+    ] as const;
+    }
+
+
+export const getGetSbuChatSpecialistsQueryOptions = <TData = Awaited<ReturnType<typeof getSbuChatSpecialists>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSbuChatSpecialists>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSbuChatSpecialistsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSbuChatSpecialists>>> = ({ signal }) => getSbuChatSpecialists({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSbuChatSpecialists>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSbuChatSpecialistsQueryResult = NonNullable<Awaited<ReturnType<typeof getSbuChatSpecialists>>>
+export type GetSbuChatSpecialistsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Standalone SBU specialist catalog, not the Gustafta knowledge base
+ */
+
+export function useGetSbuChatSpecialists<TData = Awaited<ReturnType<typeof getSbuChatSpecialists>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSbuChatSpecialists>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSbuChatSpecialistsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getSendSbuChatMessageUrl = () => {
 
