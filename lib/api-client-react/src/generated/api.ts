@@ -22,17 +22,22 @@ import type {
 import type {
   AddEvidence409,
   Assessment,
+  CaseDocument,
   CaseInput,
   CaseUpdate,
   Dashboard,
+  DocumentUploadInput,
   Evidence,
   EvidenceInput,
   EvidenceUpdate,
   FormOwnerMismatchResponse,
   HealthStatus,
+  LocalCompanyProfile,
+  LocalCompanyProfileInput,
   Profile,
   ProfileInput,
   Regulation,
+  RequestCaseDocumentUpload201,
   RuangSimpanCompanyProfileResponse,
   SbuCase,
   TransitionVerification,
@@ -66,6 +71,535 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetLocalCompanyProfileUrl = () => {
+
+
+
+
+  return `/api/company-profile`
+}
+
+/**
+ * @summary Read the current owner's standalone company profile
+ */
+export const getLocalCompanyProfile = async ( options?: Parameters<typeof customFetch>[1]): Promise<LocalCompanyProfile> => {
+
+  return customFetch<LocalCompanyProfile>(getGetLocalCompanyProfileUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLocalCompanyProfileQueryKey = () => {
+    return [
+    `/api/company-profile`
+    ] as const;
+    }
+
+
+export const getGetLocalCompanyProfileQueryOptions = <TData = Awaited<ReturnType<typeof getLocalCompanyProfile>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLocalCompanyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLocalCompanyProfileQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLocalCompanyProfile>>> = ({ signal }) => getLocalCompanyProfile({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLocalCompanyProfile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLocalCompanyProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getLocalCompanyProfile>>>
+export type GetLocalCompanyProfileQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Read the current owner's standalone company profile
+ */
+
+export function useGetLocalCompanyProfile<TData = Awaited<ReturnType<typeof getLocalCompanyProfile>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLocalCompanyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLocalCompanyProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPutLocalCompanyProfileUrl = () => {
+
+
+
+
+  return `/api/company-profile`
+}
+
+export const putLocalCompanyProfile = async (localCompanyProfileInput: LocalCompanyProfileInput, options?: Parameters<typeof customFetch>[1]): Promise<LocalCompanyProfile> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<LocalCompanyProfile>(getPutLocalCompanyProfileUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(localCompanyProfileInput)
+  }
+);}
+
+
+
+
+
+export const getPutLocalCompanyProfileMutationKey = () => ['putLocalCompanyProfile'] as const;
+
+export const getPutLocalCompanyProfileMutationOptions = <TError = ErrorType<FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putLocalCompanyProfile>>, TError,PutLocalCompanyProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof putLocalCompanyProfile>>, TError,PutLocalCompanyProfileMutationVariables, TContext> => {
+
+const mutationKey = getPutLocalCompanyProfileMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof putLocalCompanyProfile>>, PutLocalCompanyProfileMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  putLocalCompanyProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PutLocalCompanyProfileMutationResult = NonNullable<Awaited<ReturnType<typeof putLocalCompanyProfile>>>
+    export type PutLocalCompanyProfileMutationBody = BodyType<LocalCompanyProfileInput>
+    export type PutLocalCompanyProfileMutationError = ErrorType<FormOwnerMismatchResponse>
+    export type PutLocalCompanyProfileMutationVariables = {data: BodyType<LocalCompanyProfileInput>}
+
+    export const usePutLocalCompanyProfile = <TError = ErrorType<FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putLocalCompanyProfile>>, TError,PutLocalCompanyProfileMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof putLocalCompanyProfile>>,
+        TError,
+        PutLocalCompanyProfileMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPutLocalCompanyProfileMutationOptions(options));
+    }
+
+export const getListCaseDocumentsUrl = (id: number,) => {
+
+
+
+
+  return `/api/cases/${id}/documents`
+}
+
+export const listCaseDocuments = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<CaseDocument[]> => {
+
+  return customFetch<CaseDocument[]>(getListCaseDocumentsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListCaseDocumentsQueryKey = (id: number,) => {
+    return [
+    `/api/cases/${id}/documents`
+    ] as const;
+    }
+
+
+export const getListCaseDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listCaseDocuments>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCaseDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListCaseDocumentsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listCaseDocuments>>> = ({ signal }) => listCaseDocuments(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listCaseDocuments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListCaseDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listCaseDocuments>>>
+export type ListCaseDocumentsQueryError = ErrorType<unknown>
+
+
+
+export function useListCaseDocuments<TData = Awaited<ReturnType<typeof listCaseDocuments>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCaseDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListCaseDocumentsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRequestCaseDocumentUploadUrl = (id: number,) => {
+
+
+
+
+  return `/api/cases/${id}/documents`
+}
+
+export const requestCaseDocumentUpload = async (id: number,
+    documentUploadInput: DocumentUploadInput, options?: Parameters<typeof customFetch>[1]): Promise<RequestCaseDocumentUpload201> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<RequestCaseDocumentUpload201>(getRequestCaseDocumentUploadUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(documentUploadInput)
+  }
+);}
+
+
+
+
+
+export const getRequestCaseDocumentUploadMutationKey = () => ['requestCaseDocumentUpload'] as const;
+
+export const getRequestCaseDocumentUploadMutationOptions = <TError = ErrorType<FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestCaseDocumentUpload>>, TError,RequestCaseDocumentUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestCaseDocumentUpload>>, TError,RequestCaseDocumentUploadMutationVariables, TContext> => {
+
+const mutationKey = getRequestCaseDocumentUploadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestCaseDocumentUpload>>, RequestCaseDocumentUploadMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  requestCaseDocumentUpload(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestCaseDocumentUploadMutationResult = NonNullable<Awaited<ReturnType<typeof requestCaseDocumentUpload>>>
+    export type RequestCaseDocumentUploadMutationBody = BodyType<DocumentUploadInput>
+    export type RequestCaseDocumentUploadMutationError = ErrorType<FormOwnerMismatchResponse>
+    export type RequestCaseDocumentUploadMutationVariables = {id: number;data: BodyType<DocumentUploadInput>}
+
+    export const useRequestCaseDocumentUpload = <TError = ErrorType<FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestCaseDocumentUpload>>, TError,RequestCaseDocumentUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestCaseDocumentUpload>>,
+        TError,
+        RequestCaseDocumentUploadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRequestCaseDocumentUploadMutationOptions(options));
+    }
+
+export const getCompleteCaseDocumentUploadUrl = (id: number,
+    documentId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/documents/${documentId}/complete`
+}
+
+export const completeCaseDocumentUpload = async (id: number,
+    documentId: string, options?: Parameters<typeof customFetch>[1]): Promise<CaseDocument> => {
+
+  return customFetch<CaseDocument>(getCompleteCaseDocumentUploadUrl(id,documentId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCompleteCaseDocumentUploadMutationKey = () => ['completeCaseDocumentUpload'] as const;
+
+export const getCompleteCaseDocumentUploadMutationOptions = <TError = ErrorType<FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeCaseDocumentUpload>>, TError,CompleteCaseDocumentUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeCaseDocumentUpload>>, TError,CompleteCaseDocumentUploadMutationVariables, TContext> => {
+
+const mutationKey = getCompleteCaseDocumentUploadMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeCaseDocumentUpload>>, CompleteCaseDocumentUploadMutationVariables> = (props) => {
+          const {id,documentId} = props ?? {};
+
+          return  completeCaseDocumentUpload(id,documentId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteCaseDocumentUploadMutationResult = NonNullable<Awaited<ReturnType<typeof completeCaseDocumentUpload>>>
+
+    export type CompleteCaseDocumentUploadMutationError = ErrorType<FormOwnerMismatchResponse>
+    export type CompleteCaseDocumentUploadMutationVariables = {id: number;documentId: string}
+
+    export const useCompleteCaseDocumentUpload = <TError = ErrorType<FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeCaseDocumentUpload>>, TError,CompleteCaseDocumentUploadMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeCaseDocumentUpload>>,
+        TError,
+        CompleteCaseDocumentUploadMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCompleteCaseDocumentUploadMutationOptions(options));
+    }
+
+export const getDeleteCaseDocumentUrl = (id: number,
+    documentId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/documents/${documentId}`
+}
+
+export const deleteCaseDocument = async (id: number,
+    documentId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteCaseDocumentUrl(id,documentId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteCaseDocumentMutationKey = () => ['deleteCaseDocument'] as const;
+
+export const getDeleteCaseDocumentMutationOptions = <TError = ErrorType<FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCaseDocument>>, TError,DeleteCaseDocumentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteCaseDocument>>, TError,DeleteCaseDocumentMutationVariables, TContext> => {
+
+const mutationKey = getDeleteCaseDocumentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCaseDocument>>, DeleteCaseDocumentMutationVariables> = (props) => {
+          const {id,documentId} = props ?? {};
+
+          return  deleteCaseDocument(id,documentId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteCaseDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCaseDocument>>>
+
+    export type DeleteCaseDocumentMutationError = ErrorType<FormOwnerMismatchResponse>
+    export type DeleteCaseDocumentMutationVariables = {id: number;documentId: string}
+
+    export const useDeleteCaseDocument = <TError = ErrorType<FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteCaseDocument>>, TError,DeleteCaseDocumentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteCaseDocument>>,
+        TError,
+        DeleteCaseDocumentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteCaseDocumentMutationOptions(options));
+    }
+
+export const getDownloadCaseDocumentUrl = (id: number,
+    documentId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/documents/${documentId}/download`
+}
+
+export const downloadCaseDocument = async (id: number,
+    documentId: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getDownloadCaseDocumentUrl(id,documentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadCaseDocumentQueryKey = (id: number,
+    documentId: string,) => {
+    return [
+    `/api/cases/${id}/documents/${documentId}/download`
+    ] as const;
+    }
+
+
+export const getDownloadCaseDocumentQueryOptions = <TData = Awaited<ReturnType<typeof downloadCaseDocument>>, TError = ErrorType<unknown>>(id: number,
+    documentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadCaseDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadCaseDocumentQueryKey(id,documentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadCaseDocument>>> = ({ signal }) => downloadCaseDocument(id,documentId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && documentId !== null && documentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadCaseDocument>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadCaseDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof downloadCaseDocument>>>
+export type DownloadCaseDocumentQueryError = ErrorType<unknown>
+
+
+
+export function useDownloadCaseDocument<TData = Awaited<ReturnType<typeof downloadCaseDocument>>, TError = ErrorType<unknown>>(
+ id: number,
+    documentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadCaseDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadCaseDocumentQueryOptions(id,documentId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetWorkspaceUrl = () => {
 

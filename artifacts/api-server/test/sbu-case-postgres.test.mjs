@@ -84,7 +84,7 @@ test("PATCH permohonan di PostgreSQL mempertahankan kolom lain dan tidak meminda
       bundle: true,
       platform: "node",
       format: "esm",
-      external: ["express"],
+      external: ["express", "@google-cloud/*"],
       plugins: [{
         name: "isolated-case-db",
         setup(builder) {

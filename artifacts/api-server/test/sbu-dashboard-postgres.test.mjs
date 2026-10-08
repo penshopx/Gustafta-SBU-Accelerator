@@ -113,7 +113,7 @@ test("dashboard PostgreSQL menjaga urutan dan anggota lima terbaru saat enam wak
       bundle: true,
       platform: "node",
       format: "esm",
-      external: ["express"],
+      external: ["express", "@google-cloud/*"],
       plugins: [{
         name: "isolated-dashboard-db",
         setup(builder) {

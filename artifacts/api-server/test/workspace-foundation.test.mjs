@@ -71,7 +71,7 @@ test("workspace migration, owner isolation and atomic audit use isolated real Po
     await build({
       entryPoints: [join(testDir, "../src/routes/sbu.ts")],
       outfile: join(temporaryDir, "route.mjs"),
-      bundle: true, platform: "node", format: "esm", external: ["express"],
+      bundle: true, platform: "node", format: "esm", external: ["express", "@google-cloud/*"],
       plugins: [{
         name: "workspace-fixtures",
         setup(builder) {

@@ -19,6 +19,13 @@ router.get("/ruang-simpan/company-profile", async (req, res): Promise<void> => {
     return;
   }
 
+  // Standalone mode is the default. Keeping the old adapter does not authorize
+  // automatic reads or import company data; integration is an explicit future opt-in.
+  if (process.env.SBU_RUANG_SIMPAN_ENABLED !== "true") {
+    res.status(410).json({ error: "Integrasi Ruang Simpan ditunda. Gunakan profil perusahaan di aplikasi SBU.", code: "integration_deferred" });
+    return;
+  }
+
   if (req.originalUrl.includes("?") || Object.keys(req.query).length > 0 ||
     req.body !== undefined ||
     (Number(req.headers["content-length"] ?? 0) > 0) ||

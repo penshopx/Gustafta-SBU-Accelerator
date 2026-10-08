@@ -40,7 +40,7 @@ await build({
   bundle: true,
   platform: "node",
   format: "esm",
-  external: ["@clerk/*", "express", "pino", "pino-http", "cors", "http-proxy-middleware"],
+  external: ["@clerk/*", "@google-cloud/*", "express", "pino", "pino-http", "cors", "http-proxy-middleware"],
   plugins: [{
     name: "isolated-persistence",
     setup(builder) {
@@ -62,6 +62,8 @@ await build({
           export const evidenceTable = { caseId: "caseId" };
           export const transitionVerificationsTable = { track: "track" };
           export const profilesTable = { userId: "userId" };
+          export const companyProfilesTable = {};
+          export const documentsTable = {};
           export const db = {
             select() {
               globalThis.__clerkTestDataReads = (globalThis.__clerkTestDataReads ?? 0) + 1;

@@ -5,6 +5,69 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+export interface LocalCompanyProfileInput {
+  /** @maxLength 200 */
+  companyName: string;
+  /**
+     * @maxLength 13
+     * @pattern ^(|[0-9]{13})$
+     */
+  nib: string;
+  /** @maxLength 32 */
+  npwp: string;
+  /** @maxLength 2000 */
+  address: string;
+  /** @maxLength 200 */
+  responsiblePerson: string;
+}
+
+export type LocalCompanyProfile = LocalCompanyProfileInput & {
+  ownerId: string;
+  updatedAt: string;
+};
+
+export type DocumentUploadInputContentType = typeof DocumentUploadInputContentType[keyof typeof DocumentUploadInputContentType];
+
+
+export const DocumentUploadInputContentType = {
+  'application/pdf': 'application/pdf',
+  'image/png': 'image/png',
+  'image/jpeg': 'image/jpeg',
+} as const;
+
+export interface DocumentUploadInput {
+  /**
+     * @minLength 1
+     * @maxLength 180
+     */
+  name: string;
+  /**
+     * @minimum 1
+     * @maximum 20971520
+     */
+  size: number;
+  contentType: DocumentUploadInputContentType;
+}
+
+export type CaseDocumentStatus = typeof CaseDocumentStatus[keyof typeof CaseDocumentStatus];
+
+
+export const CaseDocumentStatus = {
+  pending: 'pending',
+  ready: 'ready',
+} as const;
+
+export interface CaseDocument {
+  id: string;
+  caseId: number;
+  ownerId: string;
+  name: string;
+  size: number;
+  contentType: string;
+  status: CaseDocumentStatus;
+  createdAt: string;
+}
+
 export type WorkspaceClientsItem = {
   id: number;
   name: string;
@@ -378,6 +441,11 @@ export interface Regulation {
 
 export type FormOwnerMismatchResponse = {
   error: string;
+};
+
+export type RequestCaseDocumentUpload201 = {
+  document: CaseDocument;
+  uploadURL: string;
 };
 
 export type AddEvidence409 = {

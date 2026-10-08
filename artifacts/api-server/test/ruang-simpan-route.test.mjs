@@ -8,6 +8,7 @@ import express from "express";
 import { build } from "esbuild";
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
+process.env.SBU_RUANG_SIMPAN_ENABLED = "true"; // Exercise the retained optional adapter only.
 const temporaryDir = await mkdtemp(join(testDir, ".ruang-simpan-route-test-"));
 after(() => rm(temporaryDir, { recursive: true, force: true }));
 
@@ -118,6 +119,21 @@ function reset() {
 after(() => {
   reset();
   for (const key of testEnvKeys) delete process.env[key];
+});
+
+test("standalone mode disables upstream integration by default", async () => {
+  configure();
+  globalThis.__ruangSimpanUserId = "owner-one";
+  let calls = 0;
+  installFetch(async () => { calls++; throw new Error("upstream must not run"); });
+  delete process.env.SBU_RUANG_SIMPAN_ENABLED;
+  try {
+    assertError(await request(), 410, "integration_deferred");
+    assert.equal(calls, 0);
+  } finally {
+    process.env.SBU_RUANG_SIMPAN_ENABLED = "true";
+    reset();
+  }
 });
 
 test("isolates two Clerk owners, forwards only their mapped tokens, and strips upstream extras", async () => {

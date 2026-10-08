@@ -9,6 +9,179 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Read the current owner's standalone company profile
+ */
+export const getLocalCompanyProfileResponseOneCompanyNameMax = 200;
+
+export const getLocalCompanyProfileResponseOneNibMax = 13;
+
+
+export const getLocalCompanyProfileResponseOneNibRegExp = new RegExp('^(|[0-9]{13})$');
+export const getLocalCompanyProfileResponseOneNpwpMax = 32;
+
+export const getLocalCompanyProfileResponseOneAddressMax = 2000;
+
+export const getLocalCompanyProfileResponseOneResponsiblePersonMax = 200;
+
+
+
+export const GetLocalCompanyProfileResponse = zod.object({
+  "companyName": zod.string().max(getLocalCompanyProfileResponseOneCompanyNameMax),
+  "nib": zod.string().max(getLocalCompanyProfileResponseOneNibMax).regex(getLocalCompanyProfileResponseOneNibRegExp),
+  "npwp": zod.string().max(getLocalCompanyProfileResponseOneNpwpMax),
+  "address": zod.string().max(getLocalCompanyProfileResponseOneAddressMax),
+  "responsiblePerson": zod.string().max(getLocalCompanyProfileResponseOneResponsiblePersonMax)
+}).and(zod.object({
+  "ownerId": zod.string(),
+  "updatedAt": zod.coerce.date()
+}))
+
+
+export const putLocalCompanyProfileBodyCompanyNameMax = 200;
+
+export const putLocalCompanyProfileBodyNibMax = 13;
+
+
+export const putLocalCompanyProfileBodyNibRegExp = new RegExp('^(|[0-9]{13})$');
+export const putLocalCompanyProfileBodyNpwpMax = 32;
+
+export const putLocalCompanyProfileBodyAddressMax = 2000;
+
+export const putLocalCompanyProfileBodyResponsiblePersonMax = 200;
+
+
+
+export const PutLocalCompanyProfileBody = zod.object({
+  "companyName": zod.string().max(putLocalCompanyProfileBodyCompanyNameMax),
+  "nib": zod.string().max(putLocalCompanyProfileBodyNibMax).regex(putLocalCompanyProfileBodyNibRegExp),
+  "npwp": zod.string().max(putLocalCompanyProfileBodyNpwpMax),
+  "address": zod.string().max(putLocalCompanyProfileBodyAddressMax),
+  "responsiblePerson": zod.string().max(putLocalCompanyProfileBodyResponsiblePersonMax)
+})
+
+export const putLocalCompanyProfileResponseOneCompanyNameMax = 200;
+
+export const putLocalCompanyProfileResponseOneNibMax = 13;
+
+
+export const putLocalCompanyProfileResponseOneNibRegExp = new RegExp('^(|[0-9]{13})$');
+export const putLocalCompanyProfileResponseOneNpwpMax = 32;
+
+export const putLocalCompanyProfileResponseOneAddressMax = 2000;
+
+export const putLocalCompanyProfileResponseOneResponsiblePersonMax = 200;
+
+
+
+export const PutLocalCompanyProfileResponse = zod.object({
+  "companyName": zod.string().max(putLocalCompanyProfileResponseOneCompanyNameMax),
+  "nib": zod.string().max(putLocalCompanyProfileResponseOneNibMax).regex(putLocalCompanyProfileResponseOneNibRegExp),
+  "npwp": zod.string().max(putLocalCompanyProfileResponseOneNpwpMax),
+  "address": zod.string().max(putLocalCompanyProfileResponseOneAddressMax),
+  "responsiblePerson": zod.string().max(putLocalCompanyProfileResponseOneResponsiblePersonMax)
+}).and(zod.object({
+  "ownerId": zod.string(),
+  "updatedAt": zod.coerce.date()
+}))
+
+
+
+
+
+export const ListCaseDocumentsParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const ListCaseDocumentsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "ownerId": zod.string(),
+  "name": zod.string(),
+  "size": zod.number().int(),
+  "contentType": zod.string(),
+  "status": zod.enum(['pending', 'ready']),
+  "createdAt": zod.coerce.date()
+})
+export const ListCaseDocumentsResponse = zod.array(ListCaseDocumentsResponseItem)
+
+
+
+
+
+export const RequestCaseDocumentUploadParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const requestCaseDocumentUploadBodyNameMax = 180;
+
+export const requestCaseDocumentUploadBodySizeMax = 20971520;
+
+
+
+export const RequestCaseDocumentUploadBody = zod.object({
+  "name": zod.string().min(1).max(requestCaseDocumentUploadBodyNameMax),
+  "size": zod.number().int().min(1).max(requestCaseDocumentUploadBodySizeMax),
+  "contentType": zod.enum(['application/pdf', 'image/png', 'image/jpeg'])
+})
+
+export const RequestCaseDocumentUploadResponse = zod.object({
+  "document": zod.object({
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "ownerId": zod.string(),
+  "name": zod.string(),
+  "size": zod.number().int(),
+  "contentType": zod.string(),
+  "status": zod.enum(['pending', 'ready']),
+  "createdAt": zod.coerce.date()
+}),
+  "uploadURL": zod.string()
+})
+
+
+
+
+
+export const CompleteCaseDocumentUploadParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "documentId": zod.coerce.string().uuid()
+})
+
+export const CompleteCaseDocumentUploadResponse = zod.object({
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "ownerId": zod.string(),
+  "name": zod.string(),
+  "size": zod.number().int(),
+  "contentType": zod.string(),
+  "status": zod.enum(['pending', 'ready']),
+  "createdAt": zod.coerce.date()
+})
+
+
+
+
+
+export const DeleteCaseDocumentParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "documentId": zod.coerce.string().uuid()
+})
+
+export const DeleteCaseDocumentResponse = zod.void()
+
+
+
+
+
+export const DownloadCaseDocumentParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "documentId": zod.coerce.string().uuid()
+})
+
+export const DownloadCaseDocumentResponse = zod.unknown()
+
+
+/**
  * @summary Read the current authenticated private workspace
  */
 export const GetWorkspaceResponse = zod.object({

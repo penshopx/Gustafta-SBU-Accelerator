@@ -18,7 +18,7 @@ await build({
   bundle: true,
   platform: "node",
   format: "esm",
-  external: ["express"],
+  external: ["express", "@google-cloud/*"],
   plugins: [{
     name: "test-data",
     setup(build) {
@@ -187,6 +187,8 @@ await build({
               export const evidenceTable = { id: "id", caseId: "caseId", updatedAt: "updatedAt" };
                export const transitionVerificationsTable = { track: "track" };
              export const profilesTable = { userId: "userId" };
+             export const companyProfilesTable = {};
+             export const documentsTable = {};
           `,
            "@clerk/express": `export const getAuth = () => ({ userId: globalThis.__routeUserId === undefined ? "test-user" : globalThis.__routeUserId });`,
           "drizzle-orm": `

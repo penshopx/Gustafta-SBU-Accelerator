@@ -90,7 +90,7 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
       bundle: true,
       platform: "node",
       format: "esm",
-      external: ["express"],
+      external: ["express", "@google-cloud/*"],
       plugins: [{
         name: "isolated-profile-db",
         setup(builder) {

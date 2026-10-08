@@ -18,6 +18,7 @@ import { preparationSummary } from "../lib/preparation-summary";
 import { GetPreparationSummaryParams, GetPreparationSummaryResponse } from "@workspace/api-zod";
 import { GetWorkspaceResponse } from "@workspace/api-zod";
 import { getContext, recordCaseAudit, workspaceDisclaimer } from "../lib/workspace-context";
+import standaloneRouter from "./standalone";
 
 const router: IRouter = Router();
 const requireAuth: RequestHandler = (req, res, next) => {
@@ -45,6 +46,8 @@ router.use((req, res, next) => {
   }
   next();
 });
+
+router.use(standaloneRouter);
 
 function owner(req: Request): string {
   const id = getAuth(req).userId;
@@ -213,12 +216,21 @@ router.delete("/cases/:id", async (req, res): Promise<void> => {
   const params = DeleteCaseParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: "ID tidak valid." }); return; }
   const context = await getContext(req);
-  const item = await db.transaction(async (tx) => {
-    const [deleted] = await tx.delete(casesTable)
-      .where(and(eq(casesTable.id, params.data.id), eq(casesTable.ownerId, context.userId))).returning();
-    if (deleted) await recordCaseAudit(context, "case.deleted", deleted.id, [], tx);
-    return deleted;
-  });
+  let item;
+  try {
+    item = await db.transaction(async (tx) => {
+      const [deleted] = await tx.delete(casesTable)
+        .where(and(eq(casesTable.id, params.data.id), eq(casesTable.ownerId, context.userId))).returning();
+      if (deleted) await recordCaseAudit(context, "case.deleted", deleted.id, [], tx);
+      return deleted;
+    });
+  } catch (error) {
+    const cause = (error as { cause?: { code?: string; constraint?: string } }).cause ?? error as { code?: string; constraint?: string };
+    if (cause.code === "23503" && cause.constraint?.includes("sbu_documents")) {
+      res.status(409).json({ error: "Hapus atau batalkan semua dokumen kasus ini terlebih dahulu sebelum menghapus kasus." }); return;
+    }
+    throw error;
+  }
   if (!item) { res.status(404).json({ error: "Permohonan tidak ditemukan." }); return; }
   res.sendStatus(204);
 });

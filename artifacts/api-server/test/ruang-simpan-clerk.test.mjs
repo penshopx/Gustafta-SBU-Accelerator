@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
+process.env.SBU_RUANG_SIMPAN_ENABLED = "true"; // Exercise the retained optional adapter only.
 const temporaryDir = await mkdtemp(join(testDir, ".ruang-simpan-clerk-test-"));
 after(() => rm(temporaryDir, { recursive: true, force: true }));
 
@@ -71,7 +72,7 @@ await build({
   bundle: true,
   platform: "node",
   format: "esm",
-  external: ["@clerk/*", "express", "cors"],
+  external: ["@clerk/*", "@google-cloud/*", "express", "cors"],
   plugins: [{
     name: "isolated-test-dependencies",
     setup(builder) {
@@ -99,6 +100,8 @@ await build({
           export const evidenceTable = { caseId: "caseId" };
           export const transitionVerificationsTable = { track: "track" };
           export const profilesTable = { userId: "userId" };
+          export const companyProfilesTable = {};
+          export const documentsTable = {};
           export const db = {
             select() {
               return {

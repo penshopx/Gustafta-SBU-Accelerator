@@ -30,7 +30,7 @@ Ruang kerja persiapan permohonan SBU baru dan perpanjangan untuk ekosistem jasa 
 ## Architecture decisions
 
 - Profil peran tidak membuktikan keanggotaan organisasi; data kasus dibatasi ke identitas akun pemilik, tanpa akses lintas akun. Jangan mengklaim fitur kolaborasi asosiasi hingga otorisasi organisasi dibangun.
-- Bukti yang dicatat saat ini berupa deklarasi teks, bukan unggahan atau dokumen terverifikasi. Pemeriksaan adalah panduan persiapan; keputusan tetap pada penyelenggara sertifikasi.
+- Deklarasi bukti tetap berupa catatan teks. Dokumen asli dapat diunggah sebagai lampiran privat, tetapi unggahan tidak otomatis menjadi deklarasi, tidak mengubah status kesiapan, dan tidak berarti terverifikasi. Keputusan tetap pada penyelenggara sertifikasi.
 - Perhitungan tenggat konversi nonaktif secara bawaan. Tanggal hanya muncul pada temuan perpanjangan untuk alur yang punya sumber penerbit resmi berstatus berlaku, disahkan penelaah yang diizinkan, dan ditelaah ahli skema/LSBU yang teridentifikasi. Catatan bukti pemohon tidak dapat melakukan verifikasi ini.
 - Produk independen, tidak terafiliasi atau mewakili Ditjen Bina Konstruksi, LPJK, Kementerian PU maupun LSBU; jangan membangun alur komunikasi dengan instansi atau mengklaim verifikasi SIJK/status regulasi dari mereka. Rujukan resmi hanya dicatat bila tersedia secara independen dan dapat diperiksa.
 
@@ -57,7 +57,10 @@ Empat peran dapat membentuk profil. Kontraktor/konsultan dapat membuat dan menge
 ## Rujukan framework lanjutan
 
 - Framework SBU Accelerator 2.0 melengkapi blueprint; penyesuaian dan batas penerapannya tercatat di `docs/blueprint-adoption.md`. Fitur agentic, OCR, simulator, dan pemantauan pasca-terbit belum diaktifkan.
-- Dokumen asli tetap hanya di Ruang Simpan. Usulan Evidence Vault pada framework tidak mengizinkan unggahan cadangan dokumen asli di SBU.
+- Arah produk yang disetujui pengguna pada 8 Oktober 2026: bangun SBU Accelerator mandiri dahulu, termasuk penyimpanan dokumen asli di aplikasi SBU; integrasi Gustafta/Ruang Simpan ditunda sampai produk matang. Ini menggantikan keputusan sebelumnya bahwa dokumen asli hanya disimpan di Ruang Simpan.
+- Arah pengembangan pengguna: konsep fitur Gustafta yang relevan—Ruang Simpan, Bedah Dokumen, Klinik Konsultasi, Workroom, dan fitur pendukung lain—dibangun di SBU Accelerator terlebih dahulu. Integrasi dilakukan setelah Gustafta matang. Ini adalah arah produk, bukan klaim bahwa seluruh modul telah tersedia; rincian cakupannya tetap perlu ditentukan.
+- Profil perusahaan diisi langsung oleh pemilik dan tidak diimpor otomatis. Adaptor Ruang Simpan dipertahankan untuk masa depan, tetapi nonaktif secara bawaan; jangan mengaktifkan `SBU_RUANG_SIMPAN_ENABLED` tanpa arahan pengguna.
+- Berkas asli disimpan di App Storage privat; database hanya menyimpan metadata. Batas awal: PDF/PNG/JPG, 20 MiB per berkas, 20 dokumen per kasus, 200 MiB per pemilik. Penghapusan dokumen permanen memerlukan konfirmasi. Kasus yang masih mempunyai dokumen harus dikosongkan dokumennya dahulu.
 - Untuk pengembangan lanjutan, aturan berversi yang ditelaah menentukan hasil; AI hanya membantu ekstraksi, penjelasan, dan draf. Contoh aturan dengan placeholder atau sumber belum terverifikasi tidak boleh menjadi aturan aktif.
 
 ## User preferences

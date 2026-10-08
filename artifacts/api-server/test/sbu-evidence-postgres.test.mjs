@@ -117,7 +117,7 @@ test("Rute bukti menjaga kepemilikan, keunikan kategori, dan urutan di PostgreSQ
       bundle: true,
       platform: "node",
       format: "esm",
-      external: ["express"],
+      external: ["express", "@google-cloud/*"],
       plugins: [{
         name: "isolated-evidence-db",
         setup(builder) {

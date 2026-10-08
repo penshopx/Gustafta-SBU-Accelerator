@@ -1,5 +1,14 @@
 # Penerapan blueprint SBU Accelerator
 
+## Keputusan produk terbaru — 8 Oktober 2026
+
+Pengguna memilih SBU Accelerator mandiri terlebih dahulu. Profil perusahaan
+diisi langsung di aplikasi dan dokumen asli boleh disimpan privat di SBU.
+Integrasi Gustafta/Ruang Simpan ditunda, bukan prasyarat alur utama.
+Keputusan ini menggantikan batas penyimpanan “hanya Ruang Simpan” pada
+catatan historis di bawah. Unggahan tidak menjadi bukti terverifikasi atau
+persetujuan sertifikasi. Rincian batas dan pengamanan berlaku di `replit.md`.
+
 ## Hasil penelaahan
 
 Blueprint relevan untuk mengembangkan pencatatan persiapan menjadi workbench

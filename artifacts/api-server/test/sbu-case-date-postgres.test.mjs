@@ -68,7 +68,7 @@ test("PATCH tanggal SBU menjadi null tersimpan sebagai SQL NULL dan tetap null s
       bundle: true,
       platform: "node",
       format: "esm",
-      external: ["express"],
+      external: ["express", "@google-cloud/*"],
       plugins: [{
         name: "isolated-case-date-db",
         setup(builder) {

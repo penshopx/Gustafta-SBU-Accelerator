@@ -10,6 +10,111 @@ tags:
   - name: health
   - name: workspace
 paths:
+  /company-profile:
+    get:
+      operationId: getLocalCompanyProfile
+      tags: [workspace]
+      summary: Read the current owner's standalone company profile
+      responses:
+        "200":
+          description: Private company profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LocalCompanyProfile" }
+    put:
+      operationId: putLocalCompanyProfile
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LocalCompanyProfileInput" }
+      responses:
+        "200":
+          description: Saved private company profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LocalCompanyProfile" }
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
+  /cases/{id}/documents:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    get:
+      operationId: listCaseDocuments
+      tags: [workspace]
+      responses:
+        "200":
+          description: Documents for the current owner's case, including unfinished uploads
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/CaseDocument" }
+    post:
+      operationId: requestCaseDocumentUpload
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DocumentUploadInput" }
+      responses:
+        "201":
+          description: Upload reservation; PUT bytes directly to uploadURL, then complete
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [document, uploadURL]
+                properties:
+                  document: { $ref: "#/components/schemas/CaseDocument" }
+                  uploadURL: { type: string }
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
+  /cases/{id}/documents/{documentId}/complete:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: completeCaseDocumentUpload
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      responses:
+        "200":
+          description: Checked and attached document
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CaseDocument" }
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
+  /cases/{id}/documents/{documentId}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      operationId: deleteCaseDocument
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      responses:
+        "204": { description: Document and stored bytes removed }
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
+  /cases/{id}/documents/{documentId}/download:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: downloadCaseDocument
+      tags: [workspace]
+      responses:
+        "200":
+          description: Private document download; ownership verified on every request
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
   /workspace:
     get:
       operationId: getWorkspace
@@ -382,6 +487,44 @@ components:
       name: X-SBU-Form-Owner
       description: Required mutation precondition containing the Clerk user ID captured when the form opens. This is not authentication; a valid Clerk session is still required. Missing or mismatched values return 409 before any data access. Supply through the generated client's request.headers.
   schemas:
+    LocalCompanyProfileInput:
+      type: object
+      additionalProperties: false
+      required: [companyName, nib, npwp, address, responsiblePerson]
+      properties:
+        companyName: { type: string, maxLength: 200 }
+        nib: { type: string, maxLength: 13, pattern: '^(|[0-9]{13})$' }
+        npwp: { type: string, maxLength: 32 }
+        address: { type: string, maxLength: 2000 }
+        responsiblePerson: { type: string, maxLength: 200 }
+    LocalCompanyProfile:
+      allOf:
+        - { $ref: "#/components/schemas/LocalCompanyProfileInput" }
+        - type: object
+          required: [ownerId, updatedAt]
+          properties:
+            ownerId: { type: string }
+            updatedAt: { type: string, format: date-time }
+    DocumentUploadInput:
+      type: object
+      additionalProperties: false
+      required: [name, size, contentType]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 180 }
+        size: { type: integer, minimum: 1, maximum: 20971520 }
+        contentType: { type: string, enum: [application/pdf, image/png, image/jpeg] }
+    CaseDocument:
+      type: object
+      required: [id, caseId, ownerId, name, size, contentType, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        caseId: { type: integer }
+        ownerId: { type: string }
+        name: { type: string }
+        size: { type: integer }
+        contentType: { type: string }
+        status: { type: string, enum: [pending, ready] }
+        createdAt: { type: string, format: date-time }
     Workspace:
       type: object
       required: [userId, orgId, role, clientIds, clients, disclaimer]
