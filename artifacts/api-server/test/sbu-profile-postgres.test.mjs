@@ -175,6 +175,78 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
       assert.equal(await applicationCount(), 0, "Tabel aplikasi tidak boleh menerima profil pengguna uji");
     });
 
+    for (const ownExists of [false, true]) {
+      for (const otherExists of [false, true]) {
+        await t.test(`PATCH dengan sesi sah ${ownExists ? "memperbarui" : "membuat"} profil sendiri saat userId body ${otherExists ? "sudah ada" : "belum ada"}`, async () => {
+          const ownId = `test-patch-owner-${randomUUID()}`;
+          const otherId = `test-patch-other-${randomUUID()}`;
+          const changes = {
+            role: "konsultan",
+            displayName: "Nama Pemilik Sesi Baru",
+            organizationName: "Organisasi Pemilik Sesi Baru",
+          };
+          const applicationProfiles = async () => (await admin.query(
+            "SELECT * FROM public.sbu_profiles WHERE user_id = ANY($1::text[]) ORDER BY user_id",
+            [[ownId, otherId]],
+          )).rows;
+          const allIsolatedProfiles = async () => (await isolated.query(
+            "SELECT * FROM sbu_profiles ORDER BY user_id",
+          )).rows;
+          assert.deepEqual(await applicationProfiles(), [],
+            "Kedua ID uji harus belum ada di tabel aplikasi");
+
+          if (ownExists) {
+            await isolated.query(
+              "INSERT INTO sbu_profiles (user_id, role, display_name, organization_name) VALUES ($1, $2, $3, $4)",
+              [ownId, "kontraktor", "Nama Pemilik Sesi Lama", "Organisasi Pemilik Sesi Lama"],
+            );
+          }
+          if (otherExists) {
+            await isolated.query(
+              "INSERT INTO sbu_profiles (user_id, role, display_name, organization_name) VALUES ($1, $2, $3, $4)",
+              [otherId, "profesional", "Nama Pengguna Lain Privat", "Organisasi Pengguna Lain Privat"],
+            );
+          }
+          const before = await allIsolatedProfiles();
+          const beforeQueryCount = routeQueryCount;
+          const response = await request(server, ownId, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ userId: otherId, ...changes }),
+          });
+          assert.equal(response.status, 200, response.raw);
+          assert.ok(routeQueryCount > beforeQueryCount,
+            "PATCH harus menjalankan query builder Drizzle terhadap PostgreSQL nyata");
+
+          const after = await allIsolatedProfiles();
+          const ownRows = after.filter((row) => row.user_id === ownId);
+          assert.equal(ownRows.length, 1, "Hanya satu profil pemilik sesi boleh tersimpan");
+          assert.deepEqual({
+            user_id: ownRows[0].user_id,
+            role: ownRows[0].role,
+            display_name: ownRows[0].display_name,
+            organization_name: ownRows[0].organization_name,
+          }, {
+            user_id: ownId,
+            role: changes.role,
+            display_name: changes.displayName,
+            organization_name: changes.organizationName,
+          }, "Perubahan harus tersimpan pada ID sesi, bukan userId dalam body");
+          assert.deepEqual(
+            after.filter((row) => row.user_id !== ownId),
+            before.filter((row) => row.user_id !== ownId),
+            "Semua kolom profil pihak lain harus tetap utuh dan ID palsu tidak boleh dibuat",
+          );
+          assert.equal(after.filter((row) => row.user_id === otherId).length, otherExists ? 1 : 0,
+            "Keberadaan profil pihak lain tidak boleh berubah");
+          assert.equal(after.length, before.length + (ownExists ? 0 : 1),
+            "PATCH hanya boleh menambah baris bila pemilik sesi belum memiliki profil");
+          assert.deepEqual(await applicationProfiles(), [],
+            "Pembuatan maupun pembaruan profil uji tidak boleh menulis ke tabel aplikasi");
+        });
+      }
+    }
+
     const profiles = [
       { userId: `test-a-${randomUUID()}`, role: "kontraktor",
         displayName: "Nama Pertama Privat", organizationName: "Organisasi Pertama Privat" },
