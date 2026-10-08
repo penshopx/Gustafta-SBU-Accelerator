@@ -1,0 +1,30 @@
+Berikut adalah rancangan konseptual untuk memastikan urutan deterministik pada daftar permohonan dan ringkasan dashboard saat `updated_at` identik.
+
+### Rancangan Pengujian Isolasi PostgreSQL
+
+**1. Persiapan Skema Terisolasi (Setup)**
+*   Gunakan helper `restricted-postgres.mjs` untuk membuat skema sementara dan login terbatas.
+*   Sisipkan sejumlah baris uji (misalnya 6 atau 7 baris, untuk menguji batas 5 teratas pada dashboard) ke dalam tabel salinan di skema tersebut.
+*   **Kondisi Kunci:** Semua baris harus memiliki `user_id` yang sama (sesuai sesi login terbatas), nilai `updated_at` yang *persis sama* (misalnya timestamp statis), tetapi `id` (UUID) yang berbeda-beda.
+
+**2. Pengujian Endpoint `GET /api/cases`**
+*   Panggil endpoint menggunakan sesi pengguna yang memiliki data uji.
+*   **Aserasi Urutan:** Verifikasi bahwa respons mengembalikan daftar yang diurutkan secara deterministik: `updated_at` menurun (DESC), diikuti oleh `id` menurun (DESC) sebagai *tie-breaker*.
+*   Panggil endpoint beberapa kali secara berurutan untuk memastikan konsistensi urutan (menghilangkan potensi *flaky test* akibat urutan non-deterministik dari database).
+
+**3. Pengujian Endpoint `GET /api/dashboard`**
+*   Panggil endpoint dashboard.
+*   **Aserasi Batas dan Urutan:** Verifikasi bahwa hanya 5 permohonan terbaru yang dikembalikan, dan urutannya mengikuti aturan yang sama (`updated_at DESC, id DESC`).
+*   Pastikan baris ke-6 dan ke-7 yang disisipkan tidak muncul dalam respons.
+
+**4. Kepatuhan terhadap Batasan**
+*   Semua operasi tulis (INSERT) hanya terjadi pada tabel salinan di skema terisolasi.
+*   Tidak ada penulisan ke tabel utama (`public`) atau sequence aplikasi.
+*   Pola ini meniru isolasi yang sudah ada di `sbu-evidence-postgres.test.mjs`.
+
+***
+
+**Status:**
+Sesuai dengan pedoman yang telah kita sepakati, rancangan di atas diperlakukan semata-mata sebagai **tinjauan konseptual**. 
+
+Pada giliran ini, **tidak ada** perubahan kode, konfigurasi, pengujian, maupun pengambilalihan tugas yang saya lakukan. Saya siap menunggu arahan Anda berikutnya.
