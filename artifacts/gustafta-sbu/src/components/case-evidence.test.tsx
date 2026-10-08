@@ -239,6 +239,135 @@ for (const status of [422, 500]) {
   });
 }
 
+for (const status of [422, 500]) {
+  test(`hapus bukti gagal (${status}) mempertahankan dialog, kartu, catatan, dan cache saat dicoba ulang`, async (t) => {
+    const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
+    const originalFetch = globalThis.fetch;
+    const originalWindow = testGlobals.window;
+    const originalAct = testGlobals.IS_REACT_ACT_ENVIRONMENT;
+    testGlobals.IS_REACT_ACT_ENVIRONMENT = true;
+    testGlobals.window = { addEventListener() {}, removeEventListener() {} } as unknown as Window & typeof globalThis;
+    const rows: Evidence[] = [
+      { id: 11, caseId: 7, code: 'legalitas', title: 'Bukti awal', note: 'Catatan awal', updatedAt: '2026-09-25T12:00:00Z' },
+      { id: 12, caseId: 7, code: 'tenaga', title: 'Bukti lama', note: 'Catatan lama', updatedAt: '2026-09-24T12:00:00Z' },
+    ];
+    const assessment: Assessment = {
+      caseId: 7, ruleset: 'Aturan persiapan', status: 'perlu_tinjauan',
+      recordedCount: 2, requiredCount: 3, disclaimer: 'Deklarasi, bukan verifikasi.',
+      findings: [{
+        code: 'tenaga', title: 'Tenaga kerja konstruksi', status: 'tercatat',
+        detail: 'Catatan lama', source: 'Deklarasi pengguna',
+      }],
+    };
+    const requests: string[] = [];
+    const message = 'Catatan bukti belum dapat dihapus.';
+    let deleteCount = 0;
+    let failDelete!: () => void;
+    globalThis.fetch = async (input, init) => {
+      const path = String(input);
+      const method = init?.method ?? 'GET';
+      requests.push(`${method} ${path}`);
+      if (path.endsWith('/api/cases/7/assessment')) {
+        assert.equal(method, 'GET');
+        return Response.json(assessment);
+      }
+      if (method === 'DELETE') {
+        assert.equal(path, '/api/cases/7/evidence/12', 'percobaan ulang tetap menghapus bukti yang dikonfirmasi');
+        deleteCount++;
+        assert.ok(deleteCount <= 2, 'tidak ada percobaan ulang otomatis');
+        return new Promise<Response>(resolve => {
+          failDelete = () => resolve(Response.json({ error: message }, { status }));
+        });
+      }
+      assert.equal(method, 'GET');
+      assert.equal(path, '/api/cases/7/evidence');
+      return Response.json(rows);
+    };
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const evidenceKey = getListEvidenceQueryKey(7);
+    const assessmentKey = getGetAssessmentQueryKey(7);
+    client.setQueryData(assessmentKey, assessment);
+    const invalidate = t.mock.method(client, 'invalidateQueries');
+    function AssessmentView() {
+      const result = useGetAssessment(7, { query: { queryKey: assessmentKey, staleTime: Infinity } });
+      return createElement('p', { 'data-testid': 'assessment-detail' }, result.data?.findings[0]?.detail);
+    }
+    let renderer: TestRenderer.ReactTestRenderer | undefined;
+    const waitForRender = async (ready: () => boolean) => {
+      for (let attempt = 0; attempt < 100; attempt++) {
+        if (ready()) return;
+        await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+      }
+      assert.fail('Komponen tidak mencapai keadaan yang diharapkan');
+    };
+    try {
+      await act(async () => {
+        renderer = TestRenderer.create(createElement(QueryClientProvider, { client },
+          createElement(CaseEvidence, { id: 7, requestType: 'baru', qualification: 'kecil' }),
+          createElement(AssessmentView)));
+      });
+      const cards = () => renderer!.root.findAll(node => typeof node.props['data-testid'] === 'string' && node.props['data-testid'].startsWith('card-evidence-'));
+      await waitForRender(() => cards().length === 2);
+      const cardSnapshot = () => cards().map(card => ({
+        id: card.props['data-testid'],
+        category: card.findByType('span').children,
+        title: card.findByType('h3').children,
+        paragraphs: card.findAllByType('p').map(p => p.children),
+      }));
+      const originalCards = cardSnapshot();
+      assert.deepEqual(cards().map(card => card.props['data-testid']), ['card-evidence-11', 'card-evidence-12']);
+      const assertUnchanged = () => {
+        assert.deepEqual(cardSnapshot(), originalCards, 'semua kartu, urutan, kategori, judul, catatan, dan tanggal tetap utuh');
+        assert.deepEqual(client.getQueryData(evidenceKey), rows);
+        assert.deepEqual(client.getQueryData(assessmentKey), assessment);
+        assert.equal(client.getQueryState(evidenceKey)?.isInvalidated, false);
+        assert.equal(client.getQueryState(assessmentKey)?.isInvalidated, false);
+        assert.equal(invalidate.mock.callCount(), 0, 'kegagalan tidak memanggil invalidasi, termasuk invalidasi yang langsung selesai');
+        assert.deepEqual(renderer!.root.findByProps({ 'data-testid': 'assessment-detail' }).children, ['Catatan lama']);
+      };
+      await act(async () => {
+        renderer!.root.findByProps({ 'data-testid': 'button-delete-evidence-12' }).props.onClick();
+      });
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        await act(async () => {
+          renderer!.root.findByProps({ 'data-testid': 'button-confirm-delete' }).props.onClick();
+        });
+        await waitForRender(() => deleteCount === attempt
+          && renderer!.root.findByProps({ 'data-testid': 'button-confirm-delete' }).props.disabled === true);
+        assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0, 'pesan kesalahan lama hilang saat dicoba ulang');
+        assert.equal(renderer!.root.findByProps({ role: 'dialog' }).props['aria-label'], 'Hapus catatan bukti?');
+        assertUnchanged();
+        await act(async () => { failDelete(); });
+        await waitForRender(() => renderer!.root.findAllByProps({ role: 'alert' }).length === 1
+          && renderer!.root.findByProps({ 'data-testid': 'button-confirm-delete' }).props.disabled === false);
+        const dialog = renderer!.root.findByProps({ role: 'dialog' });
+        assert.equal(dialog.props['aria-label'], 'Hapus catatan bukti?', 'dialog konfirmasi tetap terbuka setelah gagal');
+        assert.ok(dialog.findByProps({ role: 'alert' }).children.some(child => typeof child === 'string' && child.includes(message)));
+        assert.equal(dialog.findByProps({ 'data-testid': 'button-confirm-delete' }).props.disabled, false, 'tombol hapus dapat dipakai kembali');
+        assert.notEqual(dialog.findByProps({ 'data-testid': 'button-cancel-delete' }).props.disabled, true, 'tombol batal tetap dapat dipakai');
+        assertUnchanged();
+        assert.deepEqual(requests, [
+          'GET /api/cases/7/evidence',
+          ...Array.from({ length: attempt }, () => 'DELETE /api/cases/7/evidence/12'),
+        ], 'kegagalan tidak memicu pembacaan ulang daftar maupun penilaian');
+      }
+      await act(async () => {
+        renderer!.root.findByProps({ 'data-testid': 'button-cancel-delete' }).props.onClick();
+      });
+      assert.equal(renderer!.root.findAllByProps({ role: 'dialog' }).length, 0, 'pengguna tetap dapat membatalkan setelah gagal');
+      assertUnchanged();
+    } finally {
+      await act(async () => { renderer?.unmount(); });
+      client.clear();
+      globalThis.fetch = originalFetch;
+      testGlobals.window = originalWindow;
+      testGlobals.IS_REACT_ACT_ENVIRONMENT = originalAct;
+    }
+  });
+}
+
 test('aksi dari rencana membuka formulir dengan kategori yang disarankan dan menyimpannya', async () => {
   const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
   const originalFetch = globalThis.fetch;
