@@ -3,7 +3,7 @@ import test from 'node:test';
 import { createElement } from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { getListEvidenceQueryKey, getGetAssessmentQueryKey, type Evidence } from '@workspace/api-client-react';
+import { getListEvidenceQueryKey, getGetAssessmentQueryKey, useGetAssessment, type Assessment, type Evidence } from '@workspace/api-client-react';
 import { CaseEvidence } from './case-evidence';
 
 test('mengedit bukti terbawah langsung memindahkan kartu ke atas dan memperbarui catatan', async () => {
@@ -65,32 +65,69 @@ test('mengedit bukti terbawah langsung memindahkan kartu ke atas dan memperbarui
 });
 
 for (const status of [422, 500]) {
-  test(`edit bukti gagal (${status}) mempertahankan formulir, urutan kartu, dan catatan lama`, async () => {
+  test(`edit bukti gagal (${status}) menjaga data lama lalu berhasil setelah ${status === 422 ? 'isian diperbaiki' : 'isian dipertahankan'}`, async () => {
     const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
     const originalFetch = globalThis.fetch;
     const originalWindow = testGlobals.window;
     const originalAct = testGlobals.IS_REACT_ACT_ENVIRONMENT;
     testGlobals.IS_REACT_ACT_ENVIRONMENT = true;
     testGlobals.window = { addEventListener() {}, removeEventListener() {} } as unknown as Window & typeof globalThis;
-    const rows: Evidence[] = [
+    let rows: Evidence[] = [
       { id: 11, caseId: 7, code: 'legalitas', title: 'Bukti awal', note: 'Catatan awal', updatedAt: '2026-09-25T12:00:00Z' },
       { id: 12, caseId: 7, code: 'tenaga', title: 'Bukti lama', note: 'Catatan lama', updatedAt: '2026-09-24T12:00:00Z' },
     ];
+    const originalRows = [...rows];
+    const oldAssessment: Assessment = {
+      caseId: 7, ruleset: 'Aturan persiapan', status: 'perlu_tinjauan',
+      recordedCount: 2, requiredCount: 3, disclaimer: 'Deklarasi, bukan verifikasi.',
+      findings: [{
+        code: 'tenaga', title: 'Tenaga kerja konstruksi', status: 'tercatat',
+        detail: 'Catatan lama', source: 'Deklarasi pengguna',
+      }],
+    };
+    const savedEvidence: Evidence = {
+      ...rows[1], title: 'Judul dari server', note: 'Catatan berhasil dari server',
+      updatedAt: '2026-09-26T12:00:00Z',
+    };
+    const newAssessment: Assessment = {
+      ...oldAssessment,
+      findings: [{ ...oldAssessment.findings[0], detail: savedEvidence.note! }],
+    };
+    let assessment = oldAssessment;
+    const draft = { title: 'Judul terbaru', note: 'Catatan terbaru' };
+    const retryDraft = status === 422
+      ? { title: 'Judul diperbaiki', note: 'Catatan diperbaiki' }
+      : draft;
     const requests: string[] = [];
     const message = 'Perubahan bukti belum dapat disimpan.';
+    let patchCount = 0;
     let rejectPatch!: () => void;
     const patchResponse = new Promise<Response>(resolve => {
       rejectPatch = () => resolve(Response.json({ error: message }, { status }));
+    });
+    let resolveRetry!: () => void;
+    const retryResponse = new Promise<Response>(resolve => {
+      resolveRetry = () => {
+        rows = [savedEvidence, originalRows[0]];
+        assessment = newAssessment;
+        resolve(Response.json(savedEvidence));
+      };
     });
     globalThis.fetch = async (input, init) => {
       const path = String(input);
       const method = init?.method ?? 'GET';
       requests.push(`${method} ${path}`);
+      if (path.endsWith('/api/cases/7/assessment')) {
+        assert.equal(method, 'GET');
+        return Response.json(assessment);
+      }
       assert.match(path, /\/api\/cases\/7\/evidence/);
       if (method === 'PATCH') {
         assert.match(path, /\/12$/);
-        assert.deepEqual(JSON.parse(String(init?.body)), { title: 'Judul terbaru', note: 'Catatan terbaru' });
-        return patchResponse;
+        patchCount++;
+        assert.ok(patchCount <= 2, 'hanya dua PATCH yang diminta pengguna');
+        assert.deepEqual(JSON.parse(String(init?.body)), patchCount === 1 ? draft : retryDraft);
+        return patchCount === 1 ? patchResponse : retryResponse;
       }
       assert.equal(method, 'GET');
       return Response.json(rows);
@@ -100,7 +137,11 @@ for (const status of [422, 500]) {
     });
     const evidenceKey = getListEvidenceQueryKey(7);
     const assessmentKey = getGetAssessmentQueryKey(7);
-    client.setQueryData(assessmentKey, { marker: 'penilaian lama' });
+    client.setQueryData(assessmentKey, oldAssessment);
+    function AssessmentView() {
+      const result = useGetAssessment(7, { query: { queryKey: assessmentKey, staleTime: Infinity } });
+      return createElement('p', { 'data-testid': 'assessment-detail' }, result.data?.findings[0]?.detail);
+    }
     let renderer: TestRenderer.ReactTestRenderer | undefined;
     const waitForRender = async (ready: () => boolean) => {
       for (let attempt = 0; attempt < 100; attempt++) {
@@ -112,7 +153,8 @@ for (const status of [422, 500]) {
     try {
       await act(async () => {
         renderer = TestRenderer.create(createElement(QueryClientProvider, { client },
-          createElement(CaseEvidence, { id: 7, requestType: 'baru', qualification: 'kecil' })));
+          createElement(CaseEvidence, { id: 7, requestType: 'baru', qualification: 'kecil' }),
+          createElement(AssessmentView)));
       });
       const cards = () => renderer!.root.findAll(node => typeof node.props['data-testid'] === 'string' && node.props['data-testid'].startsWith('card-evidence-'));
       await waitForRender(() => cards().length === 2);
@@ -149,7 +191,44 @@ for (const status of [422, 500]) {
       assert.deepEqual(client.getQueryData(evidenceKey), rows, 'cache bukti tidak diganti oleh isian yang gagal');
       assert.equal(client.getQueryState(evidenceKey)?.isInvalidated, false);
       assert.equal(client.getQueryState(assessmentKey)?.isInvalidated, false);
+      assert.deepEqual(client.getQueryData(assessmentKey), oldAssessment);
+      assert.deepEqual(renderer!.root.findByProps({ 'data-testid': 'assessment-detail' }).children, ['Catatan lama']);
       assert.deepEqual(requests.map(request => request.split(' ')[0]), ['GET', 'PATCH'], 'kegagalan tidak memicu pembacaan ulang');
+      if (status === 422) {
+        await act(async () => {
+          renderer!.root.findByProps({ 'data-testid': 'input-evidence-title' }).props.onChange({ target: { value: retryDraft.title } });
+          renderer!.root.findByProps({ 'data-testid': 'input-evidence-note' }).props.onChange({ target: { value: retryDraft.note } });
+        });
+      }
+      await act(async () => {
+        renderer!.root.findByType('form').props.onSubmit({ preventDefault() {} });
+      });
+      await waitForRender(() => patchCount === 2
+        && renderer!.root.findByProps({ 'data-testid': 'button-save-evidence' }).props.disabled === true);
+      assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0, 'kesalahan pertama hilang saat mencoba lagi');
+      assert.equal(renderer!.root.findAllByProps({ role: 'dialog' }).length, 1, 'dialog tetap terbuka saat PATCH kedua berlangsung');
+      assert.equal(renderer!.root.findByProps({ 'data-testid': 'input-evidence-title' }).props.value, retryDraft.title);
+      assert.equal(renderer!.root.findByProps({ 'data-testid': 'input-evidence-note' }).props.value, retryDraft.note);
+      assert.deepEqual(cardSnapshot(), originalCards, 'isian percobaan ulang belum mengganti kartu');
+      assert.deepEqual(client.getQueryData(evidenceKey), originalRows);
+      assert.deepEqual(client.getQueryData(assessmentKey), oldAssessment);
+      await act(async () => { resolveRetry(); });
+      await waitForRender(() => renderer!.root.findAllByProps({ role: 'dialog' }).length === 0
+        && cards()[0]?.findByType('h3').children.includes(savedEvidence.title)
+        && renderer!.root.findByProps({ 'data-testid': 'assessment-detail' }).children.includes(savedEvidence.note!));
+      assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0, 'kesalahan tidak kembali setelah berhasil');
+      assert.deepEqual(cards().map(card => card.props['data-testid']), ['card-evidence-12', 'card-evidence-11']);
+      assert.deepEqual(cards()[0].findByType('h3').children, [savedEvidence.title]);
+      assert.deepEqual(cards()[0].findAllByType('p')[0].children, [savedEvidence.note], 'catatan mengikuti server, bukan draf');
+      assert.deepEqual(cardSnapshot()[1], originalCards[0], 'bukti lain tetap utuh');
+      assert.deepEqual(client.getQueryData(evidenceKey), [savedEvidence, originalRows[0]]);
+      assert.deepEqual(client.getQueryData(assessmentKey), newAssessment, 'penilaian aktif dimuat ulang setelah berhasil');
+      assert.equal(client.getQueryState(assessmentKey)?.isInvalidated, false);
+      assert.equal(patchCount, 2);
+      assert.deepEqual(requests.slice(0, 3).map(request => request.split(' ')[0]), ['GET', 'PATCH', 'PATCH']);
+      assert.deepEqual(requests.slice(3).sort(), [
+        'GET /api/cases/7/assessment', 'GET /api/cases/7/evidence',
+      ], 'keberhasilan memuat ulang bukti dan penilaian tepat sekali');
     } finally {
       await act(async () => { renderer?.unmount(); });
       client.clear();
