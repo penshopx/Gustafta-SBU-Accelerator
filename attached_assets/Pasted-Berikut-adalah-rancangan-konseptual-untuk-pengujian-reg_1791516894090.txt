@@ -1,0 +1,31 @@
+Berikut adalah rancangan konseptual untuk pengujian regresi browser dua tab guna memastikan draf pada tab lama ditolak saat mekanisme pemberitahuan pergantian akun gagal, sesuai dengan batasan dan file yang Anda sebutkan.
+
+### Rancangan Konseptual: Pengujian Regresi Dua Tab (Stale Tab Rejection)
+
+**1. Tujuan Pengujian**
+Memverifikasi bahwa jika sesi cookie diubah di Tab B, tetapi Tab A gagal menerima pemberitahuan perubahan identitas (misalnya, karena `BroadcastChannel` atau event `storage` sengaja diblokir/gagal), upaya pengiriman data dari Tab A akan ditolak oleh server tanpa merusak integritas data akun mana pun.
+
+**2. Skenario Pengujian (Browser Asli / Playwright)**
+*   **Langkah 1 (Tab A - Akun A):** Buka aplikasi, masuk sebagai Akun A, dan buka formulir (profil, pembuatan kasus, atau bukti). Isi draf tetapi **jangan** dikirim.
+*   **Langkah 2 (Tab B - Akun B):** Buka tab baru dalam konteks browser yang sama. Masuk sebagai Akun B (ini akan menimpa cookie sesi global).
+*   **Langkah 3 (Simulasi Kegagalan Notifikasi):** Di Tab A, suntikkan skrip atau gunakan fitur otomasi browser untuk memblokir/menghapus *listener* `storage` atau `BroadcastChannel` sementara, memastikan Tab A tidak sadar bahwa sesi telah berubah.
+*   **Langkah 4 (Eksekusi dari Tab A):** Klik tombol kirim di Tab A. Permintaan akan membawa cookie sesi Akun B, tetapi *header* `X-SBU-Form-Owner` masih berisi ID Akun A (karena state frontend Tab A belum diperbarui).
+
+**3. Aserasi yang Diharapkan**
+*   **Respons API (`sbu.ts`):** Permintaan dari Tab A ditolak (misalnya, HTTP 403 Forbidden atau 409 Conflict) karena terdeteksi ketidakcocokan antara `userId` dalam sesi token (Akun B) dan `X-SBU-Form-Owner` (Akun A).
+*   **Integritas Database:** Tidak ada catatan baru yang dibuat atau diubah, baik untuk Akun A maupun Akun B. Data draf Akun A tidak tersimpan atas nama Akun B.
+*   **UI Tab A:** Menampilkan pesan penolakan yang jelas dan aman (misalnya, "Sesi Anda telah berubah. Silakan muat ulang halaman"), tanpa membocorkan data Akun B.
+*   **Fungsionalitas Tab B:** Tab B tetap dapat membuat dan mengirimkan formulir baru sebagai Akun B dengan sukses, membuktikan bahwa penolakan di Tab A tidak mengunci atau merusak sesi Akun B.
+
+**4. Pertimbangan Teknis & File Terkait**
+*   `account-queries.tsx`: Memastikan logika penanganan sesi memiliki *fallback* yang aman jika notifikasi gagal.
+*   `case-evidence.tsx` / `App.tsx`: Memastikan *header* `X-SBU-Form-Owner` selalu disuntikkan berdasarkan state lokal saat ini, yang akan memicu mekanisme pertahanan di sisi server saat tidak cocok.
+*   `sbu.ts` (API Server): Titik akhir pertahanan utama yang memvalidasi kecocokan sebelum memproses mutasi data.
+*   **Pemisahan Cakupan:** Pengujian ini secara eksplisit berbeda dari uji BFCache (yang berfokus pada navigasi history) dan uji pembaruan SDK Clerk (yang berfokus pada validasi token).
+
+***
+
+**Status:**
+Sesuai dengan pedoman dan batasan yang telah kita sepakati secara konsisten, rancangan di atas diperlakukan semata-mata sebagai **tinjauan konseptual**. 
+
+Pada giliran ini, **tidak ada** perubahan kode, konfigurasi, pengujian, penghapusan data, maupun pengambilalihan tugas yang saya lakukan. Saya siap menunggu arahan atau topik diskusi berikutnya dari Anda.
