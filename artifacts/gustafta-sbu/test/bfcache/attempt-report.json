@@ -1,0 +1,159 @@
+{
+  "status": "passed",
+  "purpose": "Verify Gustafta private-surface concealment and account isolation on real BFCache Back/Forward restorations.",
+  "productionBundle": {
+    "builtAndServed": true,
+    "viteClientPresent": false,
+    "asset": "/assets/index-D2tJHbiT.js"
+  },
+  "browser": {
+    "engine": "Chromium",
+    "version": "152.0.7977.64",
+    "launch": "browserType.launch with /repl/tools/bin/chromium",
+    "disableBackForwardCacheArgumentPresent": false,
+    "headless": true
+  },
+  "testSetup": {
+    "accounts": "Two fresh synthetic Clerk accounts in one shared browser context",
+    "accountSwitch": "While A was frozen, the sibling tab changed to B using the Clerk helper redirect to /api/me; the sibling did not mount the Gustafta app or its BroadcastChannel publisher.",
+    "privateFixture": "Two independent runs, each with two fresh synthetic accounts and one new A-owned case: the detail/Forward-failure run and the dashboard-summary continuation. All identifying values omitted."
+  },
+  "trustedLifecycleObservations": {
+    "method": "Native browser history traversal; no pageshow/pagehide events were dispatched or network requests intercepted.",
+    "back": {
+      "pageshowIsTrusted": true,
+      "pageshowPersisted": true,
+      "gateWrapperAtPageshow": "display:none",
+      "privateMarkerAtPageshow": false,
+      "firstAnimationFrameWrapper": "display:none",
+      "privateMarkerAtFirstAnimationFrame": false,
+      "afterGuardReload": {
+        "freshMeResponse": 200,
+        "identityMatchedB": true,
+        "AOwnedCaseVisible": false,
+        "observedResult": "B identity shown; A detail reports that the case cannot be found or loaded."
+      }
+    },
+    "forward": {
+      "pageshowIsTrusted": true,
+      "pageshowPersisted": true,
+      "gateWrapperAtPageshow": "display:none",
+      "privateMarkerAtPageshow": false,
+      "firstAnimationFrameWrapper": "display:none",
+      "privateMarkerAtFirstAnimationFrame": false,
+      "freshMeResponse": 503,
+      "observedResult": "The production app displayed the session-verification error for GET /api/me · HTTP 503 and stated private data remains closed; the A marker was absent."
+    }
+  },
+  "accountIsolation": {
+    "siblingApiOnlyBSession": "Verified /api/me profile and stored identity matched B; no app shell was mounted in the sibling.",
+    "ADataUnderB": "Not visible after the persisted Back restore and fresh B identity check.",
+    "AOwnedCaseUnderB": "Denied by the UI with the case-not-found/load state; no A marker appeared."
+  },
+  "dashboardSummaryContinuation": {
+    "scope": "A-owned /dashboard summary only; the previously passing detail and API-503 failure cases were not repeated.",
+    "productionBuildCommand": "PORT=26110 BASE_PATH=/ NODE_ENV=production pnpm --filter @workspace/gustafta-sbu run build",
+    "productionBundle": {
+      "builtAndServed": true,
+      "viteClientPresent": false
+    },
+    "trustedLifecycle": {
+      "pagehide": {
+        "observationPhase": "Early capture listener before the app's pagehide conceal handler; this record is not the post-handler saved frame.",
+        "path": "/dashboard",
+        "performanceMs": 14186,
+        "isTrusted": true,
+        "persisted": true,
+        "gateWrapper": "contents",
+        "privateMarkerPresent": true
+      },
+      "pageshow": {
+        "path": "/dashboard",
+        "performanceMs": 39221,
+        "isTrusted": true,
+        "persisted": true,
+        "gateWrapper": "none",
+        "privateMarkerPresent": false,
+        "privateShellPresent": false
+      },
+      "firstAnimationFrame": {
+        "performanceMs": 39227,
+        "gateWrapper": "none",
+        "privateMarkerPresent": false,
+        "privateShellPresent": false
+      }
+    },
+    "heldRequest": {
+      "bClerkMatchedWhilePending": true,
+      "freshMeRequestPending": true,
+      "sidebarVisible": false,
+      "aMarkerVisible": false,
+      "releaseEndpointStatus": 200,
+      "releasedRequestCount": 1
+    },
+    "freshMeAndDashboard": {
+      "meStatus": 200,
+      "identityMatchedB": true,
+      "profileNameMatchedB": true,
+      "clerkMatchedB": true,
+      "apiResponseEventUnixMs": 1791503147445,
+      "resourceTimingResponseStatus": 200,
+      "resourceTimingResponseEndMs": 14246.4,
+      "sidebarMatchedB": true,
+      "aMarkerVisible": false,
+      "observedOrder": "The fresh /api/me response was awaited and its B identity checked before waiting for the sidebar locator; that locator then resolved with B's sidebar and no A marker.",
+      "firstShellEventTimestampMs": null,
+      "timestampGap": "The dashboard-shell observer did not emit a first-shell timestamp in this run; the response-before-sidebar order was captured by the response waiter followed by the awaited sidebar locator."
+    }
+  },
+  "failureFixture": {
+    "method": "Temporary opt-in API-server-only fixture returned HTTP 503 for GET /api/me while the production frontend remained online.",
+    "result": "The Forward restore reloaded the production app and rendered the closed identity-verification state.",
+    "cleanup": "Fixture code and env override removed; API Server restarted normally."
+  },
+  "offlineAttempt": {
+    "observed": "A separate offline Forward produced Chromium ERR_INTERNET_DISCONNECTED on the top-level reload, not the app error component.",
+    "interpretation": "Not counted as the in-app failure verification; the online API 503 fixture supplied that verification."
+  },
+  "cleanup": {
+    "clerkSyntheticUsersDeleted": 2,
+    "clerkDeleteFailures": 0,
+    "databaseRowsDeleted": {
+      "cases": 1,
+      "profiles": 2,
+      "workspaces": 2,
+      "clients": 2,
+      "auditRows": 1,
+      "documents": 0,
+      "companyProfiles": 0
+    },
+    "matchingSyntheticProfilesRemaining": 0,
+    "isolatedBrowserContextClosed": true
+  },
+  "dashboardFollowupCleanup": {
+    "clerkSyntheticUsersDeleted": 2,
+    "clerkDeleteFailures": 0,
+    "databaseRowsDeleted": {
+      "cases": 1,
+      "profiles": 2,
+      "workspaces": 2,
+      "clients": 2,
+      "auditRows": 0,
+      "documents": 0,
+      "evidence": 0,
+      "companyProfiles": 0
+    },
+    "matchingSyntheticProfilesRemaining": 0,
+    "isolatedBrowserContextClosed": true
+  },
+  "workflow": {
+    "apiServer": "Temporary fixture removed; restarted without test env override.",
+    "gustaftaWeb": "Original Vite dev script restored and web workflow restarted."
+  },
+  "verificationGaps": [
+    "Firefox and WebKit were not exercised.",
+    "The dashboard follow-up's first B-shell timestamp was not emitted by the original observer. The real ordering was still verified by awaiting the fresh /api/me 200/B response before the B sidebar locator resolved; the runner now includes a reset-on-document-start observer with a polling fallback.",
+    "The request/response ordering was verified through the fresh /api/me result, rendered account/error state, and the VerifiedRoutes gate; no network interception was used."
+  ],
+  "runner": "runner-notebook.md"
+}

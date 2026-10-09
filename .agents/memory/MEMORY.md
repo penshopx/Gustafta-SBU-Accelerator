@@ -14,3 +14,4 @@
 - [Print invocation verification](print-invocation-verification.md) — valid PDF pagination does not prove the app's native print action works; verify both separately.
 - [Commercial audit evidence](commercial-audit-evidence.md) — separate implementation, testing, and live validation; missing evidence does not prove a feature is absent.
 - [Document validation boundaries](document-validation-boundaries.md) — a PDF header is not proof of readable structure; format validation is not malware or evidence verification.
+- [Native BFCache verification](native-bfcache-verification.md) — launch flags and cross-tab broadcasts can prevent genuine restores; require trusted persisted events, not simulated lifecycle events.
