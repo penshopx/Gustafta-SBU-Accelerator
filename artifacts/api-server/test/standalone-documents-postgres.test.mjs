@@ -26,11 +26,25 @@ test("standalone profiles/documents isolate owners and preserve records after st
     await bootstrap.query("CREATE TABLE sbu_profiles (LIKE public.sbu_profiles INCLUDING ALL)");
     await bootstrap.query("CREATE TABLE sbu_cases (LIKE public.sbu_cases INCLUDING ALL)");
     await bootstrap.query(await readFile(new URL("../../../lib/db/migrations/standalone-documents.sql", import.meta.url), "utf8"));
+    await bootstrap.query(`ALTER TABLE sbu_documents
+      ADD COLUMN category text NOT NULL DEFAULT 'lainnya',
+      ADD COLUMN description text NOT NULL DEFAULT '',
+      ADD COLUMN series_id uuid,
+      ADD COLUMN version integer NOT NULL DEFAULT 1`);
+    await bootstrap.query("CREATE TABLE sbu_document_analyses (LIKE public.sbu_document_analyses INCLUDING ALL)");
     await bootstrap.query("RESET search_path");
     restricted = await createRestrictedRoutePool(admin, schema);
     globalThis.__standalonePool = restricted.pool;
     globalThis.__standaloneStorageCalls = [];
     globalThis.__standaloneStorageFailure = false;
+    globalThis.__standaloneGenerateCalls = 0;
+    globalThis.__standaloneAnalysisFailure = false;
+    globalThis.__standaloneGenerate = async () => {
+      globalThis.__standaloneGenerateCalls++;
+      if (globalThis.__standaloneAnalysisFailure) throw new Error("synthetic provider error");
+      return { summary: "Synthetic preliminary review", extracted: [], concerns: [],
+        missingInformation: ["Not visible in this synthetic document"], nextSteps: ["Human review"] };
+    };
     await restricted.pool.query("INSERT INTO sbu_profiles(user_id) VALUES ('test-owner-a'), ('test-owner-b')");
     const { rows: [a, b] } = await restricted.pool.query(`INSERT INTO sbu_cases(id, owner_id, company_name, request_type, qualification, classification)
       VALUES (1,'test-owner-a','Isolated A','baru','kecil','konstruksi'), (2,'test-owner-b','Isolated B','baru','kecil','konstruksi') RETURNING id`);
@@ -42,6 +56,8 @@ test("standalone profiles/documents isolate owners and preserve records after st
         setup(builder) {
           builder.onResolve({ filter: /^@workspace\/db$/ }, () => ({ path: "db", namespace: "fixture" }));
           builder.onResolve({ filter: /^@clerk\/express$/ }, () => ({ path: "auth", namespace: "fixture" }));
+          builder.onResolve({ filter: /^\.\/document-analysis$/ }, (args) =>
+            args.importer.endsWith("/routes/sbu.ts") ? { path: "analysis-router", namespace: "fixture" } : undefined);
           builder.onResolve({ filter: /\/document-storage$/ }, () => ({ path: "storage", namespace: "fixture" }));
           builder.onResolve({ filter: /\/workspace-context$/ }, () => ({ path: join(dir, "helpers/workspace-context-fixture.mjs") }));
           builder.onLoad({ filter: /.*/, namespace: "fixture" }, ({ path }) => ({
@@ -49,13 +65,19 @@ test("standalone profiles/documents isolate owners and preserve records after st
               import { drizzle } from "drizzle-orm/node-postgres";
               export * from ${JSON.stringify(fileURLToPath(new URL("../../../lib/db/src/schema/index.ts", import.meta.url)))};
               export const db = drizzle(globalThis.__standalonePool);
-            ` : path === "auth" ? `export const getAuth = req => ({ userId: req.get("x-test-user") ?? null });` : `
+            ` : path === "auth" ? `export const getAuth = req => ({ userId: req.get("x-test-user") ?? null });`
+              : path === "analysis-router" ? `
+              import {createDocumentAnalysisRouter} from ${JSON.stringify(join(dir, "../src/routes/document-analysis.ts"))};
+              export default createDocumentAnalysisRouter(globalThis.__standaloneGenerate);
+            ` : `
               export class DocumentValidationError extends Error {}
               export const documentStorage = {
                 reserve: async () => { globalThis.__standaloneStorageCalls.push("reserve"); return {uploadURL:"https://invalid.test/synthetic-upload", objectPath:"/objects/uploads/synthetic-"+Date.now()}; },
                 seal: async (path,id) => { globalThis.__standaloneStorageCalls.push("seal"); if(globalThis.__standaloneStorageFailure) throw new DocumentValidationError(); return "/objects/documents/"+id; },
                 remove: async path => { globalThis.__standaloneStorageCalls.push("remove"); if(globalThis.__standaloneStorageFailure) throw new Error("storage failure"); },
-                file: async () => { globalThis.__standaloneStorageCalls.push("file"); throw new Error("not part of this fixture"); }
+                file: async () => { globalThis.__standaloneStorageCalls.push("file");
+                  if(globalThis.__standaloneStorageFailure) throw new Error("storage failure");
+                  return {getMetadata:async()=>[{size:"22",contentType:"application/pdf"}],download:async()=>[Buffer.alloc(22)]}; }
               };
             `, loader: "ts", resolveDir: dir,
           }));
@@ -111,6 +133,56 @@ test("standalone profiles/documents isolate owners and preserve records after st
     const seals = globalThis.__standaloneStorageCalls.filter(c => c === "seal").length;
     assert.equal((await call("POST", `/cases/${a.id}/documents/${documentId}/complete`)).body.status, "ready");
     assert.equal(globalThis.__standaloneStorageCalls.filter(c => c === "seal").length, seals, "completion is idempotent");
+    const vault = await call("GET", "/documents?category=lainnya&page=1");
+    assert.equal(vault.status, 200);
+    assert.equal(vault.cache, "private, no-store");
+    assert.equal(vault.body.userId, "test-owner-a");
+    assert.equal(vault.body.total, 1);
+    assert.equal(vault.body.documents[0].version, 1);
+    assert.equal(vault.body.documents[0].seriesId, documentId);
+    assert.equal("objectPath" in vault.body.documents[0], false);
+    assert.equal((await call("GET", "/documents", null)).status, 401);
+    assert.equal((await call("GET", "/documents", "test-owner-b")).body.total, 0);
+    assert.equal((await call("GET", "/documents?page=-1")).status, 400);
+    const labels = { name: "Renamed.pdf", category: "keuangan", description: "Financial synthetic notes" };
+    const path = `/cases/${a.id}/documents/${documentId}`;
+    assert.equal((await call("PATCH", path, "test-owner-b", labels)).status, 404);
+    assert.equal((await call("PATCH", path, "test-owner-a", labels, "test-owner-b")).status, 409);
+    assert.equal((await call("PATCH", path, "test-owner-a", { ...labels, objectPath: "forged" })).status, 400);
+    assert.equal((await call("PATCH", path, "test-owner-a", labels)).body.category, "keuangan");
+    assert.equal((await call("GET", "/documents?q=synthetic&category=keuangan")).body.total, 1);
+    assert.equal((await call("GET", "/documents?q=absent")).body.total, 0);
+    assert.equal((await call("POST", `${path}/analyses`, "test-owner-a", { consent: false, focus: "keuangan" })).status, 400);
+    assert.equal((await call("POST", `${path}/analyses`, "test-owner-b", { consent: true, focus: "keuangan" })).status, 404);
+    assert.equal((await call("POST", `${path}/analyses`, "test-owner-a", { consent: true, focus: "keuangan" }, "test-owner-b")).status, 409);
+    assert.deepEqual((await call("GET", `${path}/analyses`)).body, []);
+    assert.equal((await call("GET", `${path}/analyses`, "test-owner-b")).status, 404);
+    assert.equal(globalThis.__standaloneGenerateCalls, 0, "no unauthorized or unconsented request reaches AI");
+    globalThis.__standaloneAnalysisFailure = true;
+    assert.equal((await call("POST", `${path}/analyses`, "test-owner-a", { consent: true, focus: "keuangan" })).status, 503);
+    assert.equal((await call("GET", `${path}/analyses`)).body.length, 0, "provider failure is not a saved result");
+    globalThis.__standaloneAnalysisFailure = false;
+    const analyzed = await call("POST", `${path}/analyses`, "test-owner-a", { consent: true, focus: "keuangan" });
+    assert.equal(analyzed.status, 201);
+    assert.equal(analyzed.cache, "private, no-store");
+    assert.equal(analyzed.body.ownerId, "test-owner-a");
+    assert.equal(analyzed.body.documentId, documentId);
+    assert.equal((await call("GET", `${path}/analyses`)).body.length, 1);
+    const resultPath = `${path}/analyses/${analyzed.body.id}`;
+    assert.equal((await call("DELETE", resultPath, "test-owner-b")).status, 404);
+    assert.equal((await call("DELETE", resultPath, "test-owner-a", undefined, "test-owner-b")).status, 409);
+    assert.equal((await call("DELETE", resultPath)).status, 204);
+    assert.equal((await call("GET", `${path}/analyses`)).body.length, 0);
+    assert.equal((await call("GET", "/documents")).body.total, 1, "removing analysis does not remove document");
+    const next = await call("POST", `/cases/${a.id}/documents`, "test-owner-a", { ...metadata, versionOf: documentId });
+    assert.equal(next.status, 201);
+    assert.equal(next.body.document.seriesId, documentId);
+    assert.equal(next.body.document.version, 2);
+    assert.equal(next.body.document.category, "keuangan");
+    assert.notEqual(next.body.document.id, documentId);
+    assert.equal((await call("GET", "/documents")).body.total, 2, "old version is not overwritten");
+    assert.equal((await call("POST", `/cases/${b.id}/documents`, "test-owner-b", { ...metadata, versionOf: documentId })).status, 404);
+    assert.equal((await call("DELETE", `/cases/${a.id}/documents/${next.body.document.id}`)).status, 204);
     assert.equal((await call("DELETE", `/cases/${a.id}`)).status, 409, "case cannot orphan original documents");
     globalThis.__standaloneStorageFailure = true;
     assert.equal((await call("DELETE", `/cases/${a.id}/documents/${documentId}`)).status, 503);
@@ -123,6 +195,9 @@ test("standalone profiles/documents isolate owners and preserve records after st
   } finally {
     if (server) await new Promise(resolve => server.close(resolve));
     delete globalThis.__standalonePool;
+    delete globalThis.__standaloneGenerate;
+    delete globalThis.__standaloneGenerateCalls;
+    delete globalThis.__standaloneAnalysisFailure;
     if (restricted) await restricted.close();
     await bootstrap.query("RESET search_path").catch(() => {});
     await bootstrap.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);

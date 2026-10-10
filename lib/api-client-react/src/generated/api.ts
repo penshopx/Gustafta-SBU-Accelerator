@@ -26,12 +26,17 @@ import type {
   CaseInput,
   CaseUpdate,
   Dashboard,
+  DocumentAnalysis,
+  DocumentAnalysisInput,
+  DocumentMetadataInput,
   DocumentUploadInput,
   Evidence,
   EvidenceInput,
   EvidenceUpdate,
   FormOwnerMismatchResponse,
   HealthStatus,
+  ListDocumentVault200,
+  ListDocumentVaultParams,
   LocalCompanyProfile,
   LocalCompanyProfileInput,
   Profile,
@@ -74,6 +79,317 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListDocumentVaultUrl = (params?: ListDocumentVaultParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/documents?${stringifiedParams}` : `/api/documents`
+}
+
+export const listDocumentVault = async (params?: ListDocumentVaultParams, options?: Parameters<typeof customFetch>[1]): Promise<ListDocumentVault200> => {
+
+  return customFetch<ListDocumentVault200>(getListDocumentVaultUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDocumentVaultQueryKey = (params?: ListDocumentVaultParams,) => {
+    return [
+    `/api/documents`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListDocumentVaultQueryOptions = <TData = Awaited<ReturnType<typeof listDocumentVault>>, TError = ErrorType<unknown>>(params?: ListDocumentVaultParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentVault>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDocumentVaultQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDocumentVault>>> = ({ signal }) => listDocumentVault(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDocumentVault>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDocumentVaultQueryResult = NonNullable<Awaited<ReturnType<typeof listDocumentVault>>>
+export type ListDocumentVaultQueryError = ErrorType<unknown>
+
+
+
+export function useListDocumentVault<TData = Awaited<ReturnType<typeof listDocumentVault>>, TError = ErrorType<unknown>>(
+ params?: ListDocumentVaultParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentVault>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDocumentVaultQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListDocumentAnalysesUrl = (id: number,
+    documentId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/documents/${documentId}/analyses`
+}
+
+export const listDocumentAnalyses = async (id: number,
+    documentId: string, options?: Parameters<typeof customFetch>[1]): Promise<DocumentAnalysis[]> => {
+
+  return customFetch<DocumentAnalysis[]>(getListDocumentAnalysesUrl(id,documentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDocumentAnalysesQueryKey = (id: number,
+    documentId: string,) => {
+    return [
+    `/api/cases/${id}/documents/${documentId}/analyses`
+    ] as const;
+    }
+
+
+export const getListDocumentAnalysesQueryOptions = <TData = Awaited<ReturnType<typeof listDocumentAnalyses>>, TError = ErrorType<unknown>>(id: number,
+    documentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentAnalyses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDocumentAnalysesQueryKey(id,documentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDocumentAnalyses>>> = ({ signal }) => listDocumentAnalyses(id,documentId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && documentId !== null && documentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDocumentAnalyses>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDocumentAnalysesQueryResult = NonNullable<Awaited<ReturnType<typeof listDocumentAnalyses>>>
+export type ListDocumentAnalysesQueryError = ErrorType<unknown>
+
+
+
+export function useListDocumentAnalyses<TData = Awaited<ReturnType<typeof listDocumentAnalyses>>, TError = ErrorType<unknown>>(
+ id: number,
+    documentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentAnalyses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDocumentAnalysesQueryOptions(id,documentId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAnalyzeCaseDocumentUrl = (id: number,
+    documentId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/documents/${documentId}/analyses`
+}
+
+export const analyzeCaseDocument = async (id: number,
+    documentId: string,
+    documentAnalysisInput: DocumentAnalysisInput, options?: Parameters<typeof customFetch>[1]): Promise<DocumentAnalysis> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<DocumentAnalysis>(getAnalyzeCaseDocumentUrl(id,documentId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(documentAnalysisInput)
+  }
+);}
+
+
+
+
+
+export const getAnalyzeCaseDocumentMutationKey = () => ['analyzeCaseDocument'] as const;
+
+export const getAnalyzeCaseDocumentMutationOptions = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeCaseDocument>>, TError,AnalyzeCaseDocumentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof analyzeCaseDocument>>, TError,AnalyzeCaseDocumentMutationVariables, TContext> => {
+
+const mutationKey = getAnalyzeCaseDocumentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof analyzeCaseDocument>>, AnalyzeCaseDocumentMutationVariables> = (props) => {
+          const {id,documentId,data} = props ?? {};
+
+          return  analyzeCaseDocument(id,documentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AnalyzeCaseDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof analyzeCaseDocument>>>
+    export type AnalyzeCaseDocumentMutationBody = BodyType<DocumentAnalysisInput>
+    export type AnalyzeCaseDocumentMutationError = ErrorType<void | FormOwnerMismatchResponse>
+    export type AnalyzeCaseDocumentMutationVariables = {id: number;documentId: string;data: BodyType<DocumentAnalysisInput>}
+
+    export const useAnalyzeCaseDocument = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeCaseDocument>>, TError,AnalyzeCaseDocumentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof analyzeCaseDocument>>,
+        TError,
+        AnalyzeCaseDocumentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAnalyzeCaseDocumentMutationOptions(options));
+    }
+
+export const getDeleteDocumentAnalysisUrl = (id: number,
+    documentId: string,
+    analysisId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/documents/${documentId}/analyses/${analysisId}`
+}
+
+export const deleteDocumentAnalysis = async (id: number,
+    documentId: string,
+    analysisId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteDocumentAnalysisUrl(id,documentId,analysisId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteDocumentAnalysisMutationKey = () => ['deleteDocumentAnalysis'] as const;
+
+export const getDeleteDocumentAnalysisMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDocumentAnalysis>>, TError,DeleteDocumentAnalysisMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteDocumentAnalysis>>, TError,DeleteDocumentAnalysisMutationVariables, TContext> => {
+
+const mutationKey = getDeleteDocumentAnalysisMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteDocumentAnalysis>>, DeleteDocumentAnalysisMutationVariables> = (props) => {
+          const {id,documentId,analysisId} = props ?? {};
+
+          return  deleteDocumentAnalysis(id,documentId,analysisId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteDocumentAnalysisMutationResult = NonNullable<Awaited<ReturnType<typeof deleteDocumentAnalysis>>>
+
+    export type DeleteDocumentAnalysisMutationError = ErrorType<void>
+    export type DeleteDocumentAnalysisMutationVariables = {id: number;documentId: string;analysisId: string}
+
+    export const useDeleteDocumentAnalysis = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteDocumentAnalysis>>, TError,DeleteDocumentAnalysisMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteDocumentAnalysis>>,
+        TError,
+        DeleteDocumentAnalysisMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteDocumentAnalysisMutationOptions(options));
+    }
 
 export const getGetSbuChatSpecialistsUrl = () => {
 
@@ -621,6 +937,91 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCompleteCaseDocumentUploadMutationOptions(options));
+    }
+
+export const getUpdateCaseDocumentMetadataUrl = (id: number,
+    documentId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/documents/${documentId}`
+}
+
+export const updateCaseDocumentMetadata = async (id: number,
+    documentId: string,
+    documentMetadataInput: DocumentMetadataInput, options?: Parameters<typeof customFetch>[1]): Promise<CaseDocument> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<CaseDocument>(getUpdateCaseDocumentMetadataUrl(id,documentId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(documentMetadataInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateCaseDocumentMetadataMutationKey = () => ['updateCaseDocumentMetadata'] as const;
+
+export const getUpdateCaseDocumentMetadataMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCaseDocumentMetadata>>, TError,UpdateCaseDocumentMetadataMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCaseDocumentMetadata>>, TError,UpdateCaseDocumentMetadataMutationVariables, TContext> => {
+
+const mutationKey = getUpdateCaseDocumentMetadataMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCaseDocumentMetadata>>, UpdateCaseDocumentMetadataMutationVariables> = (props) => {
+          const {id,documentId,data} = props ?? {};
+
+          return  updateCaseDocumentMetadata(id,documentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCaseDocumentMetadataMutationResult = NonNullable<Awaited<ReturnType<typeof updateCaseDocumentMetadata>>>
+    export type UpdateCaseDocumentMetadataMutationBody = BodyType<DocumentMetadataInput>
+    export type UpdateCaseDocumentMetadataMutationError = ErrorType<void>
+    export type UpdateCaseDocumentMetadataMutationVariables = {id: number;documentId: string;data: BodyType<DocumentMetadataInput>}
+
+    export const useUpdateCaseDocumentMetadata = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCaseDocumentMetadata>>, TError,UpdateCaseDocumentMetadataMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateCaseDocumentMetadata>>,
+        TError,
+        UpdateCaseDocumentMetadataMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateCaseDocumentMetadataMutationOptions(options));
     }
 
 export const getDeleteCaseDocumentUrl = (id: number,

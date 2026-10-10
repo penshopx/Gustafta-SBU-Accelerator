@@ -1,10 +1,11 @@
 // Test-only CLI; not mounted by the app. Accept fixtures on stdin, never secrets.
 import { clerkClient } from "@clerk/express";
 import { pool } from "@workspace/db";
+import { documentStorage } from "../../src/lib/document-storage";
 
 const emailPattern = /^draft-[ab]-\d+-(profile|case-create|evidence-create|evidence-edit)-[a-z0-9]+@example\.com$/;
 
-export async function cleanupFormOwnerFixtures(fixtures) {
+export async function cleanupFormOwnerFixtures(fixtures, { removeTestDocuments = false } = {}) {
   if (!Array.isArray(fixtures)) throw new Error("Expected a fixture array");
   const allowedEmails = new Set();
   const suppliedIds = new Set();
@@ -46,7 +47,15 @@ export async function cleanupFormOwnerFixtures(fixtures) {
   const connection = await pool.connect();
   try {
     await connection.query("BEGIN");
-    // These fixtures never upload bytes; refuse to orphan any unexpected object.
+    // Default remains fail-closed. Vault tests must explicitly opt into removing
+    // objects AFTER exact synthetic Clerk emails and IDs have been verified.
+    if (removeTestDocuments) {
+      const files = await connection.query(
+        "SELECT object_path FROM sbu_documents WHERE owner_id = ANY($1::text[]) FOR UPDATE", [ids],
+      );
+      for (const file of files.rows) await documentStorage.remove(file.object_path);
+      await connection.query("DELETE FROM sbu_documents WHERE owner_id = ANY($1::text[])", [ids]);
+    }
     const documents = await connection.query(
       "SELECT 1 FROM sbu_documents WHERE owner_id = ANY($1::text[]) LIMIT 1", [ids],
     );
@@ -82,7 +91,9 @@ if (process.argv.includes("--stdin")) {
   try {
     let input = "";
     for await (const chunk of process.stdin) input += chunk;
-    console.log(JSON.stringify(await cleanupFormOwnerFixtures(JSON.parse(input))));
+    console.log(JSON.stringify(await cleanupFormOwnerFixtures(JSON.parse(input), {
+      removeTestDocuments: process.argv.includes("--remove-test-documents"),
+    })));
   } catch {
     // Avoid SDK errors that might embed account identifiers in saved logs.
     console.error("Scoped form-owner fixture cleanup failed; keep fixtures in memory and investigate.");

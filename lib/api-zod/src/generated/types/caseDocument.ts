@@ -5,9 +5,15 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+import type { CaseDocumentCategory } from './caseDocumentCategory';
 import type { CaseDocumentStatus } from './caseDocumentStatus';
 
 export interface CaseDocument {
+  category?: CaseDocumentCategory;
+  description?: string;
+  seriesId?: string;
+  /** @minimum 1 */
+  version?: number;
   id: string;
   caseId: number;
   ownerId: string;

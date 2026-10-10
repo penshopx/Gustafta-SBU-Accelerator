@@ -19,3 +19,15 @@ tests. The notebook can stage a private temporary fixture payload, then the
 host-side CLI performs its own single-connection database transaction and
 Clerk cleanup. Keep cleanup failure separate from the primary test failure,
 remove the private payload after success, and report only sanitized counts.
+
+Before creating accounts, execute the cleanup entrypoint with an empty fixture
+list to confirm the adapter actually loads in its execution environment; checking
+that a runner exists is not enough.
+
+**Why:** A cleanup adapter can fail before reaching its scoped checks because a
+TypeScript runner is unavailable or a bundled script cannot resolve dependencies
+from its output directory. Discovering that after seeding leaves avoidable fixtures.
+
+**How to apply:** Treat the empty run as a dependency-loading check, not proof of
+Clerk delete permissions or successful cleanup. Real scoped cleanup still needs
+its own result and remaining-fixture checks.

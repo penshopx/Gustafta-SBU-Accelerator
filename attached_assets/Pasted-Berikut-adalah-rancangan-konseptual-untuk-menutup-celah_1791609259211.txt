@@ -1,0 +1,24 @@
+Berikut adalah rancangan konseptual untuk menutup celah privasi pada jalur baca (GET) saat terjadi keterlambatan respons atau kegagalan notifikasi lintas-tab.
+
+### Rancangan Konseptual: Pengamanan Jalur Baca dari Kebocoran Data Lintas Akun
+
+**1. Identifikasi Celah**
+Mutasi (PATCH/POST/DELETE) sudah memiliki prakondisi `X-SBU-Form-Owner` atau pemeriksaan kepemilikan yang ketat. Namun, endpoint baca (GET untuk daftar kasus, detail, dan bukti) saat ini hanya mengandalkan sesi cookie. Jika cookie sudah berganti ke Akun B, tetapi state frontend (Clerk) di Tab A masih Akun A, Tab A berisiko menerima, menyimpan di cache, dan menampilkan data Akun B.
+
+**2. Mitigasi Sisi Server (Enforcement)**
+*   **Scoping Ketat Berbasis Sesi:** Endpoint GET (terutama daftar dan detail) harus secara ketat membatasi (scope) data yang dikembalikan berdasarkan `userId` yang terverifikasi dari token/cookie sesi, bukan berdasarkan parameter yang dikirim klien.
+*   **Penolakan Ketidakcocokan:** Jika permintaan GET menyertakan parameter atau header yang menyiratkan pemilik tertentu (misalnya ID kasus milik Akun A) tetapi dieksekusi dengan sesi Akun B, server harus menolak permintaan tersebut (HTTP 403 atau 404), bukan mengembalikan data Akun B.
+
+**3. Mitigasi Sisi Klien (Cache & State)**
+*   **Cache Key Berbasis Identitas:** Kunci cache untuk kueri baca (misalnya di React Query/TanStack Query) harus secara eksplisit menyertakan `userId` aktif dari Clerk. Ini memastikan data Akun B tidak akan pernah tertimpa ke dalam entri cache milik Akun A.
+*   **Verifikasi Payload Sebelum Commit:** Sebelum respons GET disimpan ke cache atau dirender ke UI, lapisan data (data layer) harus memverifikasi bahwa field `owner_id` atau `userId` di dalam payload respons cocok dengan `userId` sesi Clerk yang aktif saat itu. Jika tidak cocok, respons harus dibuang (discard) dan tidak diproses lebih lanjut.
+
+**4. Penanganan Respons Tertunda (Stale Response)**
+*   Jika respons GET dari Akun B tiba di Tab A setelah sesi Clerk di Tab A secara manual disegarkan kembali ke Akun A, verifikasi payload (poin 3) akan menggagalkan pemrosesan data tersebut, mencegah "kilasan" atau penyimpanan data yang salah.
+
+***
+
+**Status:**
+Sesuai dengan pedoman dan batasan yang telah kita sepakati secara konsisten, rancangan di atas diperlakukan semata-mata sebagai **tinjauan konseptual**. 
+
+Pada giliran ini, **tidak ada** perubahan kode, konfigurasi, pengujian, penghapusan data, maupun pengambilalihan tugas yang saya lakukan. Saya siap menunggu arahan atau topik diskusi berikutnya dari Anda.

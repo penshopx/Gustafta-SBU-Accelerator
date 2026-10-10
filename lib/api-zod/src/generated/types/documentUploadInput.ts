@@ -5,9 +5,14 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+import type { DocumentUploadInputCategory } from './documentUploadInputCategory';
 import type { DocumentUploadInputContentType } from './documentUploadInputContentType';
 
 export interface DocumentUploadInput {
+  category?: DocumentUploadInputCategory;
+  /** @maxLength 2000 */
+  description?: string;
+  versionOf?: string;
   /**
      * @minLength 1
      * @maxLength 180

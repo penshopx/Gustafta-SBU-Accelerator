@@ -12,6 +12,7 @@ import {
 } from "@workspace/api-zod";
 import { documentStorage, DocumentValidationError } from "../lib/document-storage";
 import { ObjectNotFoundError } from "../lib/objectStorage";
+import { publicDocument } from "../lib/document-metadata";
 
 // Mounted inside the SBU router, AFTER its real Clerk authentication and
 // immutable form-owner precondition. No token supplied by the browser grants access.
@@ -28,10 +29,6 @@ const owner = (req: Parameters<typeof getAuth>[0]) => {
 async function ownsCase(caseId: number, userId: string) {
   const [row] = await db.select().from(casesTable).where(and(eq(casesTable.id, caseId), eq(casesTable.ownerId, userId)));
   return row;
-}
-function publicDocument(row: persistence.DocumentRow) {
-  const { objectPath: _objectPath, ...safe } = row;
-  return safe;
 }
 router.get("/company-profile", async (req, res): Promise<void> => {
   const userId = owner(req);
@@ -66,7 +63,7 @@ router.post("/cases/:id/documents", async (req, res): Promise<void> => {
   const params = RequestCaseDocumentUploadParams.safeParse(req.params);
   const input = RequestCaseDocumentUploadBody.safeParse(req.body);
   if (!params.success || !input.success || !input.data.name.trim() || /[\/\\\x00-\x1f\x7f]/.test(input.data.name) ||
-    Object.keys(req.body ?? {}).some((k) => !["name", "size", "contentType"].includes(k))) {
+    Object.keys(req.body ?? {}).some((k) => !["name", "size", "contentType", "category", "description", "versionOf"].includes(k))) {
     res.status(400).json({ error: "Berkas tidak valid. Gunakan PDF, PNG, atau JPG, maksimal 20 MB." }); return;
   }
   const userId = owner(req);
@@ -79,13 +76,24 @@ router.post("/cases/:id/documents", async (req, res): Promise<void> => {
         .where(and(eq(casesTable.id, params.data.id), eq(casesTable.ownerId, userId))).for("update");
       if (!owned) return { status: 404, error: "Kasus tidak ditemukan." } as const;
       const rows = await tx.select().from(documents).where(eq(documents.ownerId, userId));
+      const previous = input.data.versionOf ? rows.find((row) =>
+        row.id === input.data.versionOf && row.caseId === params.data.id && row.status === "ready") : undefined;
+      if (input.data.versionOf && !previous) return { status: 404, error: "Versi sumber tidak ditemukan pada kasus ini." } as const;
+      const documentId = randomUUID();
+      const seriesId = previous ? previous.seriesId ?? previous.id : documentId;
+      const version = previous ? Math.max(...rows.filter((row) =>
+        (row.seriesId ?? row.id) === seriesId).map((row) => row.version ?? 1)) + 1 : 1;
       if (rows.filter((r) => r.caseId === params.data.id).length >= 20 ||
         rows.reduce((s, r) => s + r.size, 0) + input.data.size > 200 * 1024 * 1024) {
         return { status: 409, error: "Batas penyimpanan tercapai: 20 dokumen per kasus atau 200 MB per akun. Hapus dokumen yang tidak diperlukan." } as const;
       }
       const reservation = await documentStorage.reserve();
       const [row] = await tx.insert(documents).values({
-        id: randomUUID(), ownerId: userId, caseId: params.data.id, ...input.data,
+        id: documentId, ownerId: userId, caseId: params.data.id,
+        size: input.data.size, contentType: input.data.contentType,
+        category: input.data.category ?? previous?.category ?? "lainnya",
+        description: input.data.description?.trim() ?? previous?.description ?? "",
+        seriesId, version,
         name: input.data.name.trim(), objectPath: reservation.objectPath,
       }).returning();
       return { status: 201, row, uploadURL: reservation.uploadURL } as const;

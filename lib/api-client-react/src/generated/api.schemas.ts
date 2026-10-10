@@ -152,6 +152,19 @@ export type LocalCompanyProfile = LocalCompanyProfileInput & {
   updatedAt: string;
 };
 
+export type DocumentUploadInputCategory = typeof DocumentUploadInputCategory[keyof typeof DocumentUploadInputCategory];
+
+
+export const DocumentUploadInputCategory = {
+  legalitas: 'legalitas',
+  keuangan: 'keuangan',
+  personel: 'personel',
+  peralatan: 'peralatan',
+  pengalaman: 'pengalaman',
+  smap: 'smap',
+  lainnya: 'lainnya',
+} as const;
+
 export type DocumentUploadInputContentType = typeof DocumentUploadInputContentType[keyof typeof DocumentUploadInputContentType];
 
 
@@ -162,6 +175,10 @@ export const DocumentUploadInputContentType = {
 } as const;
 
 export interface DocumentUploadInput {
+  category?: DocumentUploadInputCategory;
+  /** @maxLength 2000 */
+  description?: string;
+  versionOf?: string;
   /**
      * @minLength 1
      * @maxLength 180
@@ -175,6 +192,19 @@ export interface DocumentUploadInput {
   contentType: DocumentUploadInputContentType;
 }
 
+export type CaseDocumentCategory = typeof CaseDocumentCategory[keyof typeof CaseDocumentCategory];
+
+
+export const CaseDocumentCategory = {
+  legalitas: 'legalitas',
+  keuangan: 'keuangan',
+  personel: 'personel',
+  peralatan: 'peralatan',
+  pengalaman: 'pengalaman',
+  smap: 'smap',
+  lainnya: 'lainnya',
+} as const;
+
 export type CaseDocumentStatus = typeof CaseDocumentStatus[keyof typeof CaseDocumentStatus];
 
 
@@ -184,6 +214,11 @@ export const CaseDocumentStatus = {
 } as const;
 
 export interface CaseDocument {
+  category?: CaseDocumentCategory;
+  description?: string;
+  seriesId?: string;
+  /** @minimum 1 */
+  version?: number;
   id: string;
   caseId: number;
   ownerId: string;
@@ -192,6 +227,107 @@ export interface CaseDocument {
   contentType: string;
   status: CaseDocumentStatus;
   createdAt: string;
+}
+
+export type DocumentMetadataInputCategory = typeof DocumentMetadataInputCategory[keyof typeof DocumentMetadataInputCategory];
+
+
+export const DocumentMetadataInputCategory = {
+  legalitas: 'legalitas',
+  keuangan: 'keuangan',
+  personel: 'personel',
+  peralatan: 'peralatan',
+  pengalaman: 'pengalaman',
+  smap: 'smap',
+  lainnya: 'lainnya',
+} as const;
+
+export interface DocumentMetadataInput {
+  /**
+     * @minLength 1
+     * @maxLength 180
+     */
+  name: string;
+  category: DocumentMetadataInputCategory;
+  /** @maxLength 2000 */
+  description: string;
+}
+
+export type DocumentAnalysisInputFocus = typeof DocumentAnalysisInputFocus[keyof typeof DocumentAnalysisInputFocus];
+
+
+export const DocumentAnalysisInputFocus = {
+  kesiapan_sbu: 'kesiapan_sbu',
+  legalitas: 'legalitas',
+  keuangan: 'keuangan',
+  personel: 'personel',
+  pengalaman: 'pengalaman',
+  smap: 'smap',
+} as const;
+
+export interface DocumentAnalysisInput {
+  consent: boolean;
+  focus: DocumentAnalysisInputFocus;
+  /** @maxLength 2000 */
+  question?: string;
+}
+
+export type DocumentAnalysisResultExtractedItem = {
+  /** @maxLength 200 */
+  label: string;
+  /** @maxLength 1500 */
+  value: string;
+  /** @maxLength 200 */
+  location: string;
+};
+
+export interface DocumentAnalysisResult {
+  /**
+     * @minLength 1
+     * @maxLength 3000
+     */
+  summary: string;
+  /** @maxItems 12 */
+  extracted: DocumentAnalysisResultExtractedItem[];
+  /**
+     * @maxItems 8
+     * @items.maxLength 1500
+     */
+  concerns: string[];
+  /**
+     * @maxItems 8
+     * @items.maxLength 1500
+     */
+  missingInformation: string[];
+  /**
+     * @maxItems 8
+     * @items.maxLength 1500
+     */
+  nextSteps: string[];
+}
+
+export type DocumentAnalysisFocus = typeof DocumentAnalysisFocus[keyof typeof DocumentAnalysisFocus];
+
+
+export const DocumentAnalysisFocus = {
+  kesiapan_sbu: 'kesiapan_sbu',
+  legalitas: 'legalitas',
+  keuangan: 'keuangan',
+  personel: 'personel',
+  pengalaman: 'pengalaman',
+  smap: 'smap',
+} as const;
+
+export interface DocumentAnalysis {
+  id: string;
+  documentId: string;
+  caseId: number;
+  ownerId: string;
+  focus: DocumentAnalysisFocus;
+  result: DocumentAnalysisResult;
+  model: string;
+  createdAt: string;
+  disclaimer: string;
 }
 
 export type WorkspaceClientsItem = {
@@ -567,6 +703,48 @@ export interface Regulation {
 
 export type FormOwnerMismatchResponse = {
   error: string;
+};
+
+export type ListDocumentVaultParams = {
+/**
+ * @maxLength 100
+ */
+q?: string;
+category?: ListDocumentVaultCategory;
+/**
+ * @minimum 1
+ */
+caseId?: number;
+/**
+ * @minimum 1
+ * @maximum 10000
+ */
+page?: number;
+};
+
+export type ListDocumentVaultCategory = typeof ListDocumentVaultCategory[keyof typeof ListDocumentVaultCategory];
+
+
+export const ListDocumentVaultCategory = {
+  legalitas: 'legalitas',
+  keuangan: 'keuangan',
+  personel: 'personel',
+  peralatan: 'peralatan',
+  pengalaman: 'pengalaman',
+  smap: 'smap',
+  lainnya: 'lainnya',
+} as const;
+
+export type ListDocumentVault200DocumentsItem = CaseDocument & {
+  caseName: string;
+};
+
+export type ListDocumentVault200 = {
+  userId: string;
+  documents: ListDocumentVault200DocumentsItem[];
+  total: number;
+  page: number;
+  pageSize: number;
 };
 
 export type RequestCaseDocumentUpload201 = {

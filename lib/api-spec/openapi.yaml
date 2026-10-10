@@ -10,6 +10,85 @@ tags:
   - name: health
   - name: workspace
 paths:
+  /documents:
+    get:
+      operationId: listDocumentVault
+      tags: [workspace]
+      parameters:
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: category, in: query, schema: { type: string, enum: [legalitas, keuangan, personel, peralatan, pengalaman, smap, lainnya] } }
+        - { name: caseId, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 10000, default: 1 } }
+      responses:
+        "200":
+          description: Private paginated document vault
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [userId, documents, total, page, pageSize]
+                properties:
+                  userId: { type: string }
+                  documents:
+                    type: array
+                    items:
+                      allOf:
+                        - { $ref: "#/components/schemas/CaseDocument" }
+                        - type: object
+                          required: [caseName]
+                          properties:
+                            caseName: { type: string }
+                  total: { type: integer }
+                  page: { type: integer }
+                  pageSize: { type: integer }
+  /cases/{id}/documents/{documentId}/analyses:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: listDocumentAnalyses
+      tags: [workspace]
+      responses:
+        "200":
+          description: Preliminary analyses for this owner's selected document
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DocumentAnalysis" }
+    post:
+      operationId: analyzeCaseDocument
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DocumentAnalysisInput" }
+      responses:
+        "201":
+          description: Persisted preliminary analysis, not verified evidence
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DocumentAnalysis" }
+        "400": { description: Invalid input or missing consent }
+        "404": { description: Document unavailable }
+        "409": { $ref: "#/components/responses/FormOwnerMismatch" }
+        "422": { description: File exceeds analysis limits or cannot be read }
+        "429": { description: Analysis limit reached }
+        "503": { description: AI unavailable or result could not be stored }
+  /cases/{id}/documents/{documentId}/analyses/{analysisId}:
+    delete:
+      operationId: deleteDocumentAnalysis
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+        - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: analysisId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Selected analysis removed }
+        "404": { description: Analysis unavailable }
   /openai/sbu/specialists:
     get:
       operationId: getSbuChatSpecialists
@@ -131,6 +210,25 @@ paths:
         "409":
           $ref: "#/components/responses/FormOwnerMismatch"
   /cases/{id}/documents/{documentId}:
+    patch:
+      operationId: updateCaseDocumentMetadata
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+        - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DocumentMetadataInput" }
+      responses:
+        "200":
+          description: Updated labels; document bytes and ownership unchanged
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CaseDocument" }
+        "404": { description: Document unavailable }
     parameters:
       - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
       - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
@@ -599,6 +697,9 @@ components:
       additionalProperties: false
       required: [name, size, contentType]
       properties:
+        category: { type: string, enum: [legalitas, keuangan, personel, peralatan, pengalaman, smap, lainnya] }
+        description: { type: string, maxLength: 2000 }
+        versionOf: { type: string, format: uuid }
         name: { type: string, minLength: 1, maxLength: 180 }
         size: { type: integer, minimum: 1, maximum: 20971520 }
         contentType: { type: string, enum: [application/pdf, image/png, image/jpeg] }
@@ -606,6 +707,10 @@ components:
       type: object
       required: [id, caseId, ownerId, name, size, contentType, status, createdAt]
       properties:
+        category: { type: string, enum: [legalitas, keuangan, personel, peralatan, pengalaman, smap, lainnya] }
+        description: { type: string }
+        seriesId: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
         id: { type: string, format: uuid }
         caseId: { type: integer }
         ownerId: { type: string }
@@ -614,6 +719,63 @@ components:
         contentType: { type: string }
         status: { type: string, enum: [pending, ready] }
         createdAt: { type: string, format: date-time }
+    DocumentMetadataInput:
+      type: object
+      additionalProperties: false
+      required: [name, category, description]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 180 }
+        category: { type: string, enum: [legalitas, keuangan, personel, peralatan, pengalaman, smap, lainnya] }
+        description: { type: string, maxLength: 2000 }
+    DocumentAnalysisInput:
+      type: object
+      additionalProperties: false
+      required: [consent, focus]
+      properties:
+        consent: { type: boolean }
+        focus: { type: string, enum: [kesiapan_sbu, legalitas, keuangan, personel, pengalaman, smap] }
+        question: { type: string, maxLength: 2000 }
+    DocumentAnalysisResult:
+      type: object
+      additionalProperties: false
+      required: [summary, extracted, concerns, missingInformation, nextSteps]
+      properties:
+        summary: { type: string, minLength: 1, maxLength: 3000 }
+        extracted:
+          type: array
+          maxItems: 12
+          items:
+            type: object
+            required: [label, value, location]
+            properties:
+              label: { type: string, maxLength: 200 }
+              value: { type: string, maxLength: 1500 }
+              location: { type: string, maxLength: 200 }
+        concerns:
+          type: array
+          maxItems: 8
+          items: { type: string, maxLength: 1500 }
+        missingInformation:
+          type: array
+          maxItems: 8
+          items: { type: string, maxLength: 1500 }
+        nextSteps:
+          type: array
+          maxItems: 8
+          items: { type: string, maxLength: 1500 }
+    DocumentAnalysis:
+      type: object
+      required: [id, documentId, caseId, ownerId, focus, result, model, createdAt, disclaimer]
+      properties:
+        id: { type: string, format: uuid }
+        documentId: { type: string, format: uuid }
+        caseId: { type: integer }
+        ownerId: { type: string }
+        focus: { type: string, enum: [kesiapan_sbu, legalitas, keuangan, personel, pengalaman, smap] }
+        result: { $ref: "#/components/schemas/DocumentAnalysisResult" }
+        model: { type: string }
+        createdAt: { type: string, format: date-time }
+        disclaimer: { type: string }
     Workspace:
       type: object
       required: [userId, orgId, role, clientIds, clients, disclaimer]

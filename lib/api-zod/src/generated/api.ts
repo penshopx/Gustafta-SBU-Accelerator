@@ -8,6 +8,181 @@
 import * as zod from 'zod';
 
 
+export const listDocumentVaultQueryQMax = 100;
+
+
+export const listDocumentVaultQueryPageDefault = 1;
+export const listDocumentVaultQueryPageMax = 10000;
+
+
+
+export const ListDocumentVaultQueryParams = zod.object({
+  "q": zod.coerce.string().max(listDocumentVaultQueryQMax).optional(),
+  "category": zod.enum(['legalitas', 'keuangan', 'personel', 'peralatan', 'pengalaman', 'smap', 'lainnya']).optional(),
+  "caseId": zod.coerce.number().int().min(1).optional(),
+  "page": zod.coerce.number().int().min(1).max(listDocumentVaultQueryPageMax).default(listDocumentVaultQueryPageDefault)
+})
+
+
+
+
+export const ListDocumentVaultResponse = zod.object({
+  "userId": zod.string(),
+  "documents": zod.array(zod.object({
+  "category": zod.enum(['legalitas', 'keuangan', 'personel', 'peralatan', 'pengalaman', 'smap', 'lainnya']).optional(),
+  "description": zod.string().optional(),
+  "seriesId": zod.string().uuid().optional(),
+  "version": zod.number().int().min(1).optional(),
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "ownerId": zod.string(),
+  "name": zod.string(),
+  "size": zod.number().int(),
+  "contentType": zod.string(),
+  "status": zod.enum(['pending', 'ready']),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "caseName": zod.string()
+}))),
+  "total": zod.number().int(),
+  "page": zod.number().int(),
+  "pageSize": zod.number().int()
+})
+
+
+
+
+
+export const ListDocumentAnalysesParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "documentId": zod.coerce.string().uuid()
+})
+
+export const listDocumentAnalysesResponseResultSummaryMax = 3000;
+
+export const listDocumentAnalysesResponseResultExtractedItemLabelMax = 200;
+
+export const listDocumentAnalysesResponseResultExtractedItemValueMax = 1500;
+
+export const listDocumentAnalysesResponseResultExtractedItemLocationMax = 200;
+
+export const listDocumentAnalysesResponseResultExtractedMax = 12;
+
+export const listDocumentAnalysesResponseResultConcernsItemMax = 1500;
+
+export const listDocumentAnalysesResponseResultConcernsMax = 8;
+
+export const listDocumentAnalysesResponseResultMissingInformationItemMax = 1500;
+
+export const listDocumentAnalysesResponseResultMissingInformationMax = 8;
+
+export const listDocumentAnalysesResponseResultNextStepsItemMax = 1500;
+
+export const listDocumentAnalysesResponseResultNextStepsMax = 8;
+
+
+
+export const ListDocumentAnalysesResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "documentId": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "ownerId": zod.string(),
+  "focus": zod.enum(['kesiapan_sbu', 'legalitas', 'keuangan', 'personel', 'pengalaman', 'smap']),
+  "result": zod.object({
+  "summary": zod.string().min(1).max(listDocumentAnalysesResponseResultSummaryMax),
+  "extracted": zod.array(zod.object({
+  "label": zod.string().max(listDocumentAnalysesResponseResultExtractedItemLabelMax),
+  "value": zod.string().max(listDocumentAnalysesResponseResultExtractedItemValueMax),
+  "location": zod.string().max(listDocumentAnalysesResponseResultExtractedItemLocationMax)
+})).max(listDocumentAnalysesResponseResultExtractedMax),
+  "concerns": zod.array(zod.string().max(listDocumentAnalysesResponseResultConcernsItemMax)).max(listDocumentAnalysesResponseResultConcernsMax),
+  "missingInformation": zod.array(zod.string().max(listDocumentAnalysesResponseResultMissingInformationItemMax)).max(listDocumentAnalysesResponseResultMissingInformationMax),
+  "nextSteps": zod.array(zod.string().max(listDocumentAnalysesResponseResultNextStepsItemMax)).max(listDocumentAnalysesResponseResultNextStepsMax)
+}),
+  "model": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "disclaimer": zod.string()
+})
+export const ListDocumentAnalysesResponse = zod.array(ListDocumentAnalysesResponseItem)
+
+
+
+
+
+export const AnalyzeCaseDocumentParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "documentId": zod.coerce.string().uuid()
+})
+
+export const analyzeCaseDocumentBodyQuestionMax = 2000;
+
+
+
+export const AnalyzeCaseDocumentBody = zod.object({
+  "consent": zod.boolean(),
+  "focus": zod.enum(['kesiapan_sbu', 'legalitas', 'keuangan', 'personel', 'pengalaman', 'smap']),
+  "question": zod.string().max(analyzeCaseDocumentBodyQuestionMax).optional()
+})
+
+export const analyzeCaseDocumentResponseResultSummaryMax = 3000;
+
+export const analyzeCaseDocumentResponseResultExtractedItemLabelMax = 200;
+
+export const analyzeCaseDocumentResponseResultExtractedItemValueMax = 1500;
+
+export const analyzeCaseDocumentResponseResultExtractedItemLocationMax = 200;
+
+export const analyzeCaseDocumentResponseResultExtractedMax = 12;
+
+export const analyzeCaseDocumentResponseResultConcernsItemMax = 1500;
+
+export const analyzeCaseDocumentResponseResultConcernsMax = 8;
+
+export const analyzeCaseDocumentResponseResultMissingInformationItemMax = 1500;
+
+export const analyzeCaseDocumentResponseResultMissingInformationMax = 8;
+
+export const analyzeCaseDocumentResponseResultNextStepsItemMax = 1500;
+
+export const analyzeCaseDocumentResponseResultNextStepsMax = 8;
+
+
+
+export const AnalyzeCaseDocumentResponse = zod.object({
+  "id": zod.string().uuid(),
+  "documentId": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "ownerId": zod.string(),
+  "focus": zod.enum(['kesiapan_sbu', 'legalitas', 'keuangan', 'personel', 'pengalaman', 'smap']),
+  "result": zod.object({
+  "summary": zod.string().min(1).max(analyzeCaseDocumentResponseResultSummaryMax),
+  "extracted": zod.array(zod.object({
+  "label": zod.string().max(analyzeCaseDocumentResponseResultExtractedItemLabelMax),
+  "value": zod.string().max(analyzeCaseDocumentResponseResultExtractedItemValueMax),
+  "location": zod.string().max(analyzeCaseDocumentResponseResultExtractedItemLocationMax)
+})).max(analyzeCaseDocumentResponseResultExtractedMax),
+  "concerns": zod.array(zod.string().max(analyzeCaseDocumentResponseResultConcernsItemMax)).max(analyzeCaseDocumentResponseResultConcernsMax),
+  "missingInformation": zod.array(zod.string().max(analyzeCaseDocumentResponseResultMissingInformationItemMax)).max(analyzeCaseDocumentResponseResultMissingInformationMax),
+  "nextSteps": zod.array(zod.string().max(analyzeCaseDocumentResponseResultNextStepsItemMax)).max(analyzeCaseDocumentResponseResultNextStepsMax)
+}),
+  "model": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "disclaimer": zod.string()
+})
+
+
+
+
+
+export const DeleteDocumentAnalysisParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "documentId": zod.coerce.string().uuid(),
+  "analysisId": zod.coerce.string().uuid()
+})
+
+export const DeleteDocumentAnalysisResponse = zod.void()
+
+
 /**
  * @summary Standalone SBU specialist catalog, not the Gustafta knowledge base
  */
@@ -135,7 +310,14 @@ export const ListCaseDocumentsParams = zod.object({
   "id": zod.coerce.number().int().min(1)
 })
 
+
+
+
 export const ListCaseDocumentsResponseItem = zod.object({
+  "category": zod.enum(['legalitas', 'keuangan', 'personel', 'peralatan', 'pengalaman', 'smap', 'lainnya']).optional(),
+  "description": zod.string().optional(),
+  "seriesId": zod.string().uuid().optional(),
+  "version": zod.number().int().min(1).optional(),
   "id": zod.string().uuid(),
   "caseId": zod.number().int(),
   "ownerId": zod.string(),
@@ -155,6 +337,8 @@ export const RequestCaseDocumentUploadParams = zod.object({
   "id": zod.coerce.number().int().min(1)
 })
 
+export const requestCaseDocumentUploadBodyDescriptionMax = 2000;
+
 export const requestCaseDocumentUploadBodyNameMax = 180;
 
 export const requestCaseDocumentUploadBodySizeMax = 20971520;
@@ -162,13 +346,23 @@ export const requestCaseDocumentUploadBodySizeMax = 20971520;
 
 
 export const RequestCaseDocumentUploadBody = zod.object({
+  "category": zod.enum(['legalitas', 'keuangan', 'personel', 'peralatan', 'pengalaman', 'smap', 'lainnya']).optional(),
+  "description": zod.string().max(requestCaseDocumentUploadBodyDescriptionMax).optional(),
+  "versionOf": zod.string().uuid().optional(),
   "name": zod.string().min(1).max(requestCaseDocumentUploadBodyNameMax),
   "size": zod.number().int().min(1).max(requestCaseDocumentUploadBodySizeMax),
   "contentType": zod.enum(['application/pdf', 'image/png', 'image/jpeg'])
 })
 
+
+
+
 export const RequestCaseDocumentUploadResponse = zod.object({
   "document": zod.object({
+  "category": zod.enum(['legalitas', 'keuangan', 'personel', 'peralatan', 'pengalaman', 'smap', 'lainnya']).optional(),
+  "description": zod.string().optional(),
+  "seriesId": zod.string().uuid().optional(),
+  "version": zod.number().int().min(1).optional(),
   "id": zod.string().uuid(),
   "caseId": zod.number().int(),
   "ownerId": zod.string(),
@@ -190,7 +384,53 @@ export const CompleteCaseDocumentUploadParams = zod.object({
   "documentId": zod.coerce.string().uuid()
 })
 
+
+
+
 export const CompleteCaseDocumentUploadResponse = zod.object({
+  "category": zod.enum(['legalitas', 'keuangan', 'personel', 'peralatan', 'pengalaman', 'smap', 'lainnya']).optional(),
+  "description": zod.string().optional(),
+  "seriesId": zod.string().uuid().optional(),
+  "version": zod.number().int().min(1).optional(),
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "ownerId": zod.string(),
+  "name": zod.string(),
+  "size": zod.number().int(),
+  "contentType": zod.string(),
+  "status": zod.enum(['pending', 'ready']),
+  "createdAt": zod.coerce.date()
+})
+
+
+
+
+
+export const UpdateCaseDocumentMetadataParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "documentId": zod.coerce.string().uuid()
+})
+
+export const updateCaseDocumentMetadataBodyNameMax = 180;
+
+export const updateCaseDocumentMetadataBodyDescriptionMax = 2000;
+
+
+
+export const UpdateCaseDocumentMetadataBody = zod.object({
+  "name": zod.string().min(1).max(updateCaseDocumentMetadataBodyNameMax),
+  "category": zod.enum(['legalitas', 'keuangan', 'personel', 'peralatan', 'pengalaman', 'smap', 'lainnya']),
+  "description": zod.string().max(updateCaseDocumentMetadataBodyDescriptionMax)
+})
+
+
+
+
+export const UpdateCaseDocumentMetadataResponse = zod.object({
+  "category": zod.enum(['legalitas', 'keuangan', 'personel', 'peralatan', 'pengalaman', 'smap', 'lainnya']).optional(),
+  "description": zod.string().optional(),
+  "seriesId": zod.string().uuid().optional(),
+  "version": zod.number().int().min(1).optional(),
   "id": zod.string().uuid(),
   "caseId": zod.number().int(),
   "ownerId": zod.string(),

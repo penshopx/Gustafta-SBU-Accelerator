@@ -1,0 +1,114 @@
+Berikut adalah **Blueprint Adaptasi Fitur Gustafta untuk SBU Accelerator**. Blueprint ini dirancang sebagai peta jalan konseptual untuk membangun SBU Accelerator sebagai aplikasi mandiri, dengan mengadopsi pola dan konsep terbaik dari Gustafta tanpa melakukan *copy-paste* logika bisnis yang tidak relevan.
+
+---
+
+# BLUEPRINT ADAPTASI FITUR: GUSTAFTA KE SBU ACCELERATOR
+**Versi:** 1.0 (Konseptual)  
+**Tujuan:** Membangun SBU Accelerator sebagai aplikasi mandiri yang lengkap untuk persiapan SBU, dengan mengadaptasi pola arsitektur dan UX dari Gustafta.
+
+## 1. Prinsip Dasar Arsitektur (The 4 Pillars)
+1. **Modularitas Ketat:** Setiap modul (Ruang Simpan, Workroom, dll) memiliki batas tanggung jawab yang jelas.
+2. **Identitas Dokumen Stabil:** Dokumen menggunakan UUID/ID stabil sejak diunggah, terlepas dari status kasus.
+3. **AI sebagai Asisten, Bukan Otoritas:** Hasil "Bedah Dokumen" selalu berstatus *draft/rekomendasi* dan memerlukan persetujuan manusia.
+4. **Integrasi Opt-in (Masa Depan):** Arsitektur siap untuk koneksi eksternal di masa depan, tetapi saat ini 100% mandiri.
+
+---
+
+## 2. Peta Modul dan Adaptasi Fitur
+
+### Modul 1: Ruang Simpan SBU (Document Vault)
+*Fungsi: Mengelola dokumen perusahaan, personel, peralatan, dan pengalaman.*
+* **Adaptasi dari Gustafta:** Pola *upload*, kategorisasi, dan manajemen masa berlaku dokumen.
+* **Penyesuaian untuk SBU:** 
+  * Menambahkan kategori khusus SBU (Keuangan, Personel, Peralatan, Pengalaman).
+  * Menambahkan field "Masa Berlaku" dan "Notifikasi Kedaluwarsa".
+  * **Skema Data:** Tabel `documents` (id, owner_id, category, file_url, expiry_date, version) dan `document_tags`.
+* **Komponen UI yang Diadopsi:** *File uploader*, *document card*, *expiry badge*.
+
+### Modul 2: Workroom SBU (Case Workspace)
+*Fungsi: Tempat mengerjakan satu permohonan SBU (daftar pekerjaan, temuan, progres).*
+* **Adaptasi dari Gustafta:** Alur kerja kasus (*case workflow*) dan status pelacakan.
+* **Penyesuaian untuk SBU:**
+  * Fokus pada sub-klasifikasi SBU (misal: BG001).
+  * Menghubungkan dokumen dari *Ruang Simpan* ke *Workroom* tanpa memindahkan file (hanya referensi ID).
+  * **Skema Data:** Tabel `cases` (id, owner_id, sub_classification, status) dan `case_evidence` (case_id, document_id, status).
+* **Komponen UI yang Diadopsi:** *Kanban board* atau *checklist tracker*, *case detail layout*.
+
+### Modul 3: Bedah Dokumen (AI Document Analysis)
+*Fungsi: Membaca dokumen, menemukan isian yang kurang/tidak konsisten.*
+* **Adaptasi dari Gustafta:** Pemrosesan AI dan *highlighting* pada dokumen.
+* **Penyesuaian untuk SBU:**
+  * AI hanya menyoroti potensi masalah (misal: "Neraca keuangan tidak seimbang", "Sertifikat personel hampir kedaluwarsa").
+  * Wajib ada tombol "Terapkan" atau "Abaikan" untuk setiap temuan AI (Prinsip *Human-in-the-loop*).
+* **Komponen UI yang Diadopsi:** *PDF viewer with annotation overlay*, *AI suggestion sidebar*.
+
+### Modul 4: Pustaka Regulasi (Regulation Library)
+*Fungsi: Rujukan persyaratan yang berversi dan dapat ditelusuri.*
+* **Adaptasi dari Gustafta:** *Rule engine* dan pusat regulasi.
+* **Penyesuaian untuk SBU:**
+  * Memisahkan aturan "Resmi" (Permen PUPR) dan "Internal/Draf".
+  * Setiap temuan di *Bedah Dokumen* harus bisa di-*link* ke pasal spesifik di Pustaka Regulasi.
+* **Komponen UI yang Diadopsi:** *Searchable regulation list*, *version history view*.
+
+### Modul 5: Klinik Konsultasi (Consultation Hub)
+*Fungsi: Pertanyaan dan pembahasan berdasarkan kasus.*
+* **Adaptasi dari Gustafta:** Fitur chat/konsultasi.
+* **Penyesuaian untuk SBU:**
+  * Konteks chat terikat pada *Workroom* tertentu.
+  * Membedakan dengan jelas antara "Jawaban AI" dan "Catatan Konsultan Manusia".
+* **Komponen UI yang Diadopsi:** *Threaded chat interface*, *context-aware prompt input*.
+
+### Modul 6: Pengingat dan Laporan (Reminders & Reports)
+*Fungsi: Pengingat masa berlaku, pekerjaan belum selesai, ringkasan persiapan.*
+* **Adaptasi dari Gustafta:** Dashboard ringkasan dan notifikasi.
+* **Penyesuaian untuk SBU:**
+  * Laporan khusus "Kesiapan SBU" (Readiness Report) yang bisa diekspor ke PDF untuk dibawa ke LSBU.
+* **Komponen UI yang Diadopsi:** *Dashboard widgets*, *notification bell*, *export to PDF button*.
+
+---
+
+## 3. Strategi Pembangunan Teknis (Technical Strategy)
+
+### A. Berbagi Kode (Code Sharing)
+Karena kita tidak melakukan *copy-paste* logika bisnis, kita hanya akan berbagi **Aset Generik**:
+*   **UI Components:** Tombol, Input, Modal, Card (bisa diekstrak ke `packages/ui` jika monorepo, atau disalin ke folder `components/ui` SBU).
+*   **Utilities:** Format tanggal, format angka, validasi dasar.
+*   **API Client Wrapper:** Pola *fetch* dengan *interceptor* error dan *retry logic*.
+
+### B. Struktur Database (Standalone)
+SBU Accelerator akan memiliki skema database sendiri (misal menggunakan Drizzle ORM dengan PostgreSQL).
+*   **Aturan Emas:** Tidak ada *foreign key* yang menunjuk langsung ke tabel database Gustafta. Semua data SBU berdiri sendiri.
+
+### C. Keamanan dan Otorisasi
+*   Menggunakan pola yang sama dengan Gustafta: Pemeriksaan `owner_id` di setiap *endpoint* backend.
+*   Header `X-SBU-Form-Owner` untuk mencegah *stale tab* menulis data ke akun yang salah.
+
+---
+
+## 4. Rencana Implementasi Bertahap (Phased Rollout)
+
+**Fase 1: Fondasi (Bulan 1)**
+*   Membangun **Ruang Simpan SBU** (Upload, Kategori, Masa Berlaku).
+*   Membangun **Workroom SBU** dasar (Buat kasus, pilih sub-klasifikasi, lampirkan dokumen dari Ruang Simpan).
+*   *Output:* Pengguna bisa mengumpulkan dokumen dan membuat draf permohonan.
+
+**Fase 2: Inteligensi (Bulan 2)**
+*   Membangun **Bedah Dokumen** (Integrasi AI untuk cek kelengkapan dasar).
+*   Membangun **Pustaka Regulasi** (Database aturan SBU dasar).
+*   *Output:* Pengguna mendapat rekomendasi temuan awal.
+
+**Fase 3: Kolaborasi & Ekspor (Bulan 3)**
+*   Membangun **Klinik Konsultasi** (Chat berkonteks kasus).
+*   Membangun **Pengingat dan Laporan** (Ekspor PDF Kesiapan SBU).
+*   *Output:* Pengguna bisa berdiskusi dan mengekspor hasil persiapan.
+
+**Fase 4: Pemolesan & Pilot (Bulan 4)**
+*   Pengujian BFCache, isolasi data, dan UX refinement.
+*   Pilot terbatas dengan pendampingan.
+
+---
+
+**Status Blueprint:**
+Dokumen ini adalah **peta jalan konseptual dan desain**. Tidak ada perubahan kode, konfigurasi database, atau implementasi fitur yang dilakukan pada giliran ini. Blueprint ini siap digunakan sebagai acuan saat Anda atau tim pengembang mulai membangun modul per modul di SBU Accelerator.
+
+Apakah ada bagian dari blueprint ini (misalnya skema data untuk Ruang Simpan atau alur Bedah Dokumen) yang ingin kita perdalam secara konseptual sebelum masuk ke tahap pembangunan?

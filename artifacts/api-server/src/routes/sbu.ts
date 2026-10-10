@@ -20,6 +20,8 @@ import { GetWorkspaceResponse } from "@workspace/api-zod";
 import { getContext, recordCaseAudit, workspaceDisclaimer } from "../lib/workspace-context";
 import standaloneRouter from "./standalone";
 import sbuChatRouter from "./sbu-chat";
+import documentVaultRouter from "./document-vault";
+import documentAnalysisRouter from "./document-analysis";
 
 const router: IRouter = Router();
 const requireAuth: RequestHandler = (req, res, next) => {
@@ -50,6 +52,8 @@ router.use((req, res, next) => {
 
 router.use(standaloneRouter);
 router.use(sbuChatRouter);
+router.use(documentVaultRouter);
+router.use(documentAnalysisRouter);
 
 function owner(req: Request): string {
   const id = getAuth(req).userId;

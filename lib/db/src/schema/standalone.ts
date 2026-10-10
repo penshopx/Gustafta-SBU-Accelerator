@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, uuid, index } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, uuid, index, uniqueIndex, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { casesTable, profilesTable } from "./sbu";
 
@@ -20,8 +20,25 @@ export const documentsTable = pgTable("sbu_documents", {
   size: integer("size").notNull(),
   objectPath: text("object_path").notNull(),
   status: text("status").notNull().default("pending"),
+  category: text("category").notNull().default("lainnya"),
+  description: text("description").notNull().default(""),
+  seriesId: uuid("series_id"),
+  version: integer("version").notNull().default(1),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [index("sbu_documents_owner_case_idx").on(t.ownerId, t.caseId)]);
+}, (t) => [
+  index("sbu_documents_owner_case_idx").on(t.ownerId, t.caseId),
+  uniqueIndex("sbu_documents_series_version_idx").on(t.ownerId, t.seriesId, t.version),
+]);
+export const documentAnalysesTable = pgTable("sbu_document_analyses", {
+  id: uuid("id").primaryKey(),
+  documentId: uuid("document_id").notNull().references(() => documentsTable.id, { onDelete: "cascade" }),
+  caseId: integer("case_id").notNull().references(() => casesTable.id, { onDelete: "restrict" }),
+  ownerId: text("owner_id").notNull().references(() => profilesTable.userId),
+  focus: text("focus").notNull(),
+  result: jsonb("result").notNull(),
+  model: text("model").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("sbu_analyses_owner_document_idx").on(t.ownerId, t.documentId)]);
 export const insertCompanyProfileSchema = createInsertSchema(companyProfilesTable);
 export const insertDocumentSchema = createInsertSchema(documentsTable);
 export type CompanyProfileRow = typeof companyProfilesTable.$inferSelect;
