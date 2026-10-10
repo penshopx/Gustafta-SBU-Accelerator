@@ -1,0 +1,79 @@
+{
+  "kit_version": "1.0.0",
+  "document_date": "2026-10-10",
+  "application": {
+    "name": "SBU Accelerator",
+    "purpose": "Persiapan kasus SBU konstruksi secara mandiri; bukan penerbitan atau jaminan sertifikasi",
+    "sector": "Jasa konstruksi",
+    "target_repository": "proyek SBU Accelerator yang menerima unggahan"
+  },
+  "adoption_mode": "mapping_only",
+  "mapping_confirmed": true,
+  "implementation_authorized": false,
+  "deployment_target": "desktop_web",
+  "integration_mode": "local",
+  "data_authority": "target_application",
+  "preset": null,
+  "selected_modules": [
+    "F01", "F02", "F03", "F04", "F05", "F07", "F08",
+    "F11", "F12", "F13", "F15", "F16", "F20", "F21"
+  ],
+  "selection_confirmed": false,
+  "selection_meaning": "Rekomendasi cakupan inti untuk peta adaptasi, bukan persetujuan memasang seluruh modul",
+  "dependency_modules": ["F01", "F02", "F03", "F04", "F05", "F12"],
+  "resolved_modules": [
+    "F01", "F02", "F03", "F04", "F05", "F07", "F08",
+    "F11", "F12", "F13", "F15", "F16", "F20", "F21"
+  ],
+  "deferred_modules": ["F06"],
+  "excluded_modules": ["F09", "F10", "F14", "F17", "F18", "F19", "F22"],
+  "domain_extensions": [
+    {
+      "id": "SBU-BEDAH",
+      "name": "Bedah Dokumen",
+      "relationship": "Adaptasi khusus SBU yang memakai Ruang Simpan dan provider AI; bukan F09 Dialog menuju Blueprint",
+      "status": "Implementasi awal sudah ada; penguatan tidak diotorisasi oleh dokumen ini"
+    },
+    {
+      "id": "SBU-KLINIK",
+      "name": "Klinik Konsultasi per kasus",
+      "relationship": "Pengembangan domain di atas kasus dan bantuan F08; konsultasi manusia lintas pengguna memerlukan kebijakan akses tersendiri",
+      "status": "Peta kebutuhan, bukan klaim tersedia"
+    }
+  ],
+  "identity_mode": "reuse_existing",
+  "organization_mode": "existing_private_owner_workspaces",
+  "branding": {
+    "preserve_existing": true,
+    "application_name": "SBU Accelerator",
+    "copy_new_gustafta_assets": false
+  },
+  "providers": {
+    "ai": "reuse_existing_replit_openai_with_explicit_consent",
+    "storage": "reuse_existing_private_app_storage",
+    "email": null,
+    "whatsapp": null,
+    "payment": null
+  },
+  "implementation": {
+    "respect_existing_stack": true,
+    "replace_database": false,
+    "copy_production_data": false,
+    "activate_gustafta_integration": false,
+    "take_over_queued_tasks": false,
+    "publish_automatically": false
+  },
+  "acceptance": {
+    "two_owner_isolation": true,
+    "persistent_data": true,
+    "no_mock_production": true,
+    "status": "Kriteria rencana; tidak ada pengujian aplikasi baru untuk pembuatan peta"
+  },
+  "source": {
+    "archive": "attached_assets/GUSTAFTA_FEATURE_KIT_v1_1791612665179.zip",
+    "main_specification": "GUSTAFTA_FEATURE_KIT/GUSTAFTA_FEATURE_KIT_UPLOAD.md",
+    "manifest_hashes_match": true,
+    "verification_boundary": "Kesamaan hash terhadap manifest dalam ZIP, bukan tanda tangan penerbit, audit runtime, atau bukti produksi"
+  },
+  "notes": "Pengguna memilih peta adaptasi saja. Modul yang direkomendasikan belum menjadi izin implementasi. Integrasi Gustafta tetap dibatalkan untuk fase saat ini; tidak ada pemindahan data atau sinkronisasi."
+}

@@ -36,3 +36,17 @@ mtime_ms = 1791199495427
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/1de3189a-8d03-43d9-b1d4-13c2be893acc/551274e7-baa4-41bc-84d5-b635ae71ed38"
 storage_version_token = "1791199519407962"
 content_type = "text/html"
+
+[[outputs]]
+id = "ZFTpws7ycWDR2wShSiD_4"
+uri = "file://docs/feature-kit-mapping.md"
+type = "text"
+title = "Peta Adaptasi Fitur Gustafta untuk SBU Accelerator"
+description = "Pemetaan 22 modul, status implementasi, kekurangan, dependensi, dan urutan pengembangan. Dokumentasi saja; integrasi Gustafta tetap tidak diaktifkan."
+logical_id = "728c263a-4d9e-455a-a906-c45d8828fdff"
+content_hash = "sha256:86ed02e588b8f0eea413563bb897e00fc3e88e808183538a0b0c37762f577610"
+size = 17263
+mtime_ms = 1791613147859
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/728c263a-4d9e-455a-a906-c45d8828fdff/bb38211b-edd9-41cf-b239-c059a774a394"
+storage_version_token = "1791613220397913"
+content_type = "text/markdown"
