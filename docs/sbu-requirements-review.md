@@ -66,8 +66,14 @@ Ekstraksi teks membantu pencarian, tetapi tabel dan kode di atas dibaca visual.
 
 ## Sisa telaah sebelum aturan aktif
 
-- Ambang kemampuan keuangan/penjualan, jumlah serta jenjang personel, dan
-  ketentuan peralatan pada Lampiran I A.3 beserta tabel yang relevan.
+- Telaah lanjutan terbatas **BG001 pada BUJKN** tersedia dalam
+  [Matriks draf BG001 — BUJKN](bg001-bujkn-requirements-draft.md):
+  nilai penjualan/keuangan K1/K2/K3/M/B, jumlah dan jenjang per peran,
+  ketentuan minimum/penyediaan alat, locator PDF serta halaman tercetak
+  telah dibandingkan visual. Gap tafsir/bukti dan status operasional
+  tetap terbuka; hasil ini bukan aturan aktif atau skor final.
+- Ambang dan ketentuan seluruh subklasifikasi/bentuk BUJK lain belum
+  ditelaah; jangan memperluas temuan BG001 BUJKN ke katalog keseluruhan.
 - Kelanjutan baris PP I.H.8 untuk cakupan Besar/asing, serta kelanjutan
   prosedur Permen halaman 20. Matriks di atas tidak mengklaim jalur itu lengkap.
 - Hubungan ketentuan peralihan dengan skema yang berlaku untuk suatu kasus.
