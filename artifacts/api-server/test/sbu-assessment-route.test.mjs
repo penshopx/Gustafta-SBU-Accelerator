@@ -1,12 +1,27 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
 import { build } from "esbuild";
+import Ajv2020 from "ajv/dist/2020.js";
+import addFormats from "ajv-formats";
+import { parse } from "yaml";
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
+// Read the source contract, independently of generated Zod schemas and fixtures.
+const openapi = parse(await readFile(join(testDir, "../../../lib/api-spec/openapi.yaml"), "utf8"));
+const profileRef = "#/components/schemas/Profile";
+function createProfileValidator(schemas = openapi.components.schemas) {
+  const ajv = new Ajv2020({ allErrors: true });
+  addFormats(ajv);
+  for (const [name, schema] of Object.entries(schemas)) {
+    ajv.addSchema(schema, `#/components/schemas/${name}`);
+  }
+  return { ajv, validate: ajv.compile({ $ref: profileRef }) };
+}
+const { ajv: profileAjv, validate: validateProfile } = createProfileValidator();
 const temporaryDir = await mkdtemp(join(testDir, ".sbu-route-test-"));
 after(() => rm(temporaryDir, { recursive: true, force: true }));
 
@@ -213,6 +228,7 @@ app.use(express.json());
 app.use("/api", router);
 
 async function request(server, path, options) {
+  const sessionOwner = globalThis.__routeUserId === undefined ? "test-user" : globalThis.__routeUserId;
   const { port } = server.address();
   const response = await fetch(`http://127.0.0.1:${port}${path}`, {
     ...options,
@@ -222,8 +238,61 @@ async function request(server, path, options) {
     },
   });
   const raw = await response.text();
-  return { status: response.status, body: raw && response.headers.get("content-type")?.includes("application/json") ? JSON.parse(raw) : null, raw, headers: response.headers };
+  const body = raw && response.headers.get("content-type")?.includes("application/json") ? JSON.parse(raw) : null;
+  if (path === "/api/me" && response.status === 200) {
+    const method = (options?.method ?? "GET").toLowerCase();
+    assert.equal(openapi.paths["/me"][method].responses["200"].content["application/json"].schema.$ref,
+      profileRef, `${method.toUpperCase()} /api/me harus menggunakan kontrak Profile`);
+    assert.ok(validateProfile(body),
+      `${method.toUpperCase()} /api/me tidak sesuai OpenAPI Profile: ${profileAjv.errorsText(validateProfile.errors)}`);
+    // Schema validity alone cannot prove that a response belongs to this session.
+    assert.equal(body.userId, sessionOwner, "respons profil harus milik pemilik sesi");
+  }
+  return { status: response.status, body, raw, headers: response.headers };
 }
+
+test("validasi Profile dari OpenAPI menangkap field wajib, tipe, enum dan perubahan kontrak", () => {
+  const valid = {
+    userId: "contract-owner", role: "belum_dipilih", displayName: "", organizationName: "",
+  };
+  assert.ok(validateProfile(valid), profileAjv.errorsText(validateProfile.errors));
+  assert.equal(validateProfile(null), false, "respons null bukan Profile");
+  assert.equal(validateProfile([]), false, "respons array bukan Profile");
+
+  for (const field of openapi.components.schemas.Profile.required) {
+    const missing = structuredClone(valid);
+    delete missing[field];
+    assert.equal(validateProfile(missing), false, `field wajib ${field} tidak boleh hilang`);
+    assert.ok(validateProfile.errors.some((error) =>
+      error.keyword === "required" && error.params.missingProperty === field));
+  }
+  for (const [field, schema] of Object.entries(openapi.components.schemas.Profile.properties)) {
+    if (schema.type !== "string") continue;
+    for (const wrongType of [null, 123, true, [], {}]) {
+      assert.equal(validateProfile({ ...valid, [field]: wrongType }), false,
+        `${field} tidak boleh menerima ${JSON.stringify(wrongType)}`);
+      assert.ok(validateProfile.errors.some((error) =>
+        error.keyword === "type" && error.instancePath === `/${field}`));
+    }
+  }
+  assert.equal(validateProfile({ ...valid, role: "peran-tidak-dikenal" }), false);
+  assert.ok(validateProfile.errors.some((error) => error.keyword === "enum"));
+
+  // A newly required field or changed type must fail even if generated code and
+  // manually maintained HTTP expectations still describe the previous contract.
+  const addedField = structuredClone(openapi.components.schemas);
+  addedField.Profile.required.push("contractRevision");
+  addedField.Profile.properties.contractRevision = { type: "integer" };
+  const addedValidator = createProfileValidator(addedField).validate;
+  assert.equal(addedValidator(valid), false, "field wajib baru harus terdeteksi");
+  assert.ok(addedValidator({ ...valid, contractRevision: 1 }));
+
+  const changedType = structuredClone(openapi.components.schemas);
+  changedType.Profile.properties.organizationName = { type: "integer" };
+  const changedValidator = createProfileValidator(changedType).validate;
+  assert.equal(changedValidator(valid), false, "perubahan tipe dalam spesifikasi harus terdeteksi");
+  assert.ok(changedValidator({ ...valid, organizationName: 1 }));
+});
 
 test("ringkasan privat memeriksa pemilik, mengambil snapshot terbaru dan tidak menyalin klaim tenggat dari catatan", async () => {
   globalThis.__routeUserId = "summary-owner";
