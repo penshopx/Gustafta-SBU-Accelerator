@@ -95,9 +95,59 @@ test('tanggal transisi hanya tampil bila temuan terverifikasi oleh server', () =
   assert.doesNotMatch(approved, /Tanggal transisi terverifikasi: 15 Apr 2027/);
 });
 
+test('tanggal pembaruan detail kasus mengikuti zona waktu penonton tanpa mengubah tanggal SBU', () => {
+  const expectedByZone: Record<string, string[]> = {
+    UTC: ['1 Jan 2027', '31 Des 2026', '31 Des 2026', '31 Des 2026', '1 Jan 2027'],
+    'America/Los_Angeles': ['31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026'],
+    'Asia/Jakarta': ['1 Jan 2027', '1 Jan 2027', '31 Des 2026', '1 Jan 2027', '1 Jan 2027'],
+    'Asia/Tokyo': ['1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027'],
+  };
+  if (!process.env.CASE_DETAIL_TZ_CHILD) {
+    // TZ must be set before importing the module-scoped local formatter.
+    for (const tz of Object.keys(expectedByZone)) {
+      const result = spawnSync(process.execPath, [
+        '--import', 'tsx', '--test',
+        '--test-name-pattern', 'tanggal pembaruan detail kasus mengikuti zona waktu',
+        fileURLToPath(import.meta.url),
+      ], {
+        env: { ...process.env, TZ: tz, CASE_DETAIL_TZ_CHILD: '1' },
+        encoding: 'utf8',
+      });
+      assert.equal(result.status, 0, `${tz}: ${result.stdout}\n${result.stderr}`);
+    }
+    return;
+  }
+
+  const zone = process.env.TZ!;
+  assert.equal(new Intl.DateTimeFormat().resolvedOptions().timeZone, zone);
+  const expected = expectedByZone[zone];
+  assert.ok(expected, `zona pengujian dikenal: ${zone}`);
+  const updates = [
+    '2027-01-01T00:30:00.000Z',
+    '2026-12-31T23:30:00.000Z',
+    '2026-12-31T16:30:00.000Z', // Jakarta is still December; Tokyo is January.
+    '2026-12-31T17:30:00.000Z', // Jakarta has now crossed midnight.
+    '2027-01-01T07:30:00.000+07:00', // Same instant as the first value.
+  ];
+  for (const [index, updatedAt] of updates.entries()) {
+    for (const expiry of ['2027-01-01', '2027-01-01T00:00:00.000Z']) {
+      const summary = renderToStaticMarkup(createElement(CaseSummary, {
+        sbuCase: {
+          ...sbuCase, createdAt: '2026-08-01T12:00:00.000Z',
+          updatedAt, existingSbuExpiresOn: expiry,
+        },
+      }));
+      assert.ok(summary.includes(`Dibuat 1 Agu 2026 · Diperbarui ${expected[index]}</div>`),
+        `${updatedAt} di ${zone} harus menampilkan pembaruan ${expected[index]}`);
+      assert.match(summary, /Berlaku hingga[\s\S]*?1 Jan 2027/);
+      assert.doesNotMatch(summary, /Diperbarui 1 Agu 2026/);
+    }
+  }
+});
+
 test('tanggal berlaku tetap tanggal kalender yang sama saat ditampilkan di berbagai zona waktu', () => {
   if (!process.env.CALENDAR_TZ_CHILD) {
-    for (const tz of ['UTC', 'America/Los_Angeles', 'Asia/Tokyo']) {
+    for (const tz of ['UTC', 'America/Los_Angeles', 'Asia/Jakarta', 'Asia/Tokyo']) {
       const result = spawnSync(process.execPath, ['--import', 'tsx', '--test', fileURLToPath(import.meta.url)], {
         env: { ...process.env, TZ: tz, CALENDAR_TZ_CHILD: '1' },
         encoding: 'utf8',

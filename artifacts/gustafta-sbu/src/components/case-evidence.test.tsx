@@ -1,10 +1,75 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import TestRenderer, { act } from 'react-test-renderer';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { getListEvidenceQueryKey, getGetAssessmentQueryKey, useGetAssessment, type Assessment, type Evidence } from '@workspace/api-client-react';
 import { CaseEvidence } from './case-evidence';
+
+test('tanggal pembaruan kartu bukti mengikuti zona waktu penonton', () => {
+  const expectedByZone: Record<string, string[]> = {
+    UTC: ['1 Jan 2027', '31 Des 2026', '31 Des 2026', '31 Des 2026', '1 Jan 2027'],
+    'America/Los_Angeles': ['31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026'],
+    'Asia/Jakarta': ['1 Jan 2027', '1 Jan 2027', '31 Des 2026', '1 Jan 2027', '1 Jan 2027'],
+    'Asia/Tokyo': ['1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027'],
+  };
+  if (!process.env.EVIDENCE_TZ_CHILD) {
+    // A fresh process constructs the local formatter after TZ has been set.
+    for (const tz of Object.keys(expectedByZone)) {
+      const result = spawnSync(process.execPath, [
+        '--import', 'tsx', '--test',
+        '--test-name-pattern', 'tanggal pembaruan kartu bukti mengikuti zona waktu',
+        fileURLToPath(import.meta.url),
+      ], {
+        env: { ...process.env, TZ: tz, EVIDENCE_TZ_CHILD: '1' },
+        encoding: 'utf8',
+      });
+      assert.equal(result.status, 0, `${tz}: ${result.stdout}\n${result.stderr}`);
+    }
+    return;
+  }
+
+  const zone = process.env.TZ!;
+  assert.equal(new Intl.DateTimeFormat().resolvedOptions().timeZone, zone);
+  const expected = expectedByZone[zone];
+  assert.ok(expected, `zona pengujian dikenal: ${zone}`);
+  // Evidence's API contract has no createdAt. Include a distinct extra value
+  // to catch an accidental fallback to a creation timestamp at runtime.
+  const rows: (Evidence & { createdAt: string })[] = [
+    '2027-01-01T00:30:00.000Z',
+    '2026-12-31T23:30:00.000Z',
+    '2026-12-31T16:30:00.000Z',
+    '2026-12-31T17:30:00.000Z',
+    '2027-01-01T07:30:00.000+07:00',
+  ].map((updatedAt, index) => ({
+    id: index + 1, caseId: 7, code: 'legalitas',
+    title: `Bukti ${index + 1}`, note: 'Catatan pengguna',
+    createdAt: '2026-08-01T12:00:00.000Z', updatedAt,
+  }));
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  client.setQueryData(getListEvidenceQueryKey(7), rows);
+  try {
+    const html = renderToStaticMarkup(createElement(QueryClientProvider, { client },
+      createElement(CaseEvidence, { id: 7, requestType: 'perpanjangan', qualification: 'kecil' })));
+    assert.equal(html.match(/data-testid="card-evidence-\d+"/g)?.length, rows.length);
+    for (const [index, row] of rows.entries()) {
+      const card = html.match(new RegExp(
+        `data-testid="card-evidence-${row.id}"[\\s\\S]*?<p[^>]*>Diperbarui ([^<]*)</p>`,
+      ));
+      assert.ok(card, `kartu bukti ${row.id} tampil di ${zone}`);
+      assert.equal(card[1], `${expected[index]} · Dideklarasikan pengguna`,
+        `${row.updatedAt} di ${zone}`);
+    }
+    assert.doesNotMatch(html, /Diperbarui 1 Agu 2026/);
+  } finally {
+    client.clear();
+  }
+});
 
 test('mengedit bukti terbawah langsung memindahkan kartu ke atas dan memperbarui catatan', async () => {
   const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
