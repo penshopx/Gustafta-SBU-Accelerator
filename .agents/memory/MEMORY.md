@@ -15,3 +15,4 @@
 - [Commercial audit evidence](commercial-audit-evidence.md) — separate implementation, testing, and live validation; missing evidence does not prove a feature is absent.
 - [Document validation boundaries](document-validation-boundaries.md) — a PDF header is not proof of readable structure; format validation is not malware or evidence verification.
 - [Native BFCache verification](native-bfcache-verification.md) — launch flags and cross-tab broadcasts can prevent genuine restores; require trusted persisted events, not simulated lifecycle events.
+- [Browser test cleanup bridge](browser-test-cleanup-bridge.md) — notebook sign-in does not imply a Clerk cleanup client; establish scoped host-side cleanup before creating synthetic accounts.

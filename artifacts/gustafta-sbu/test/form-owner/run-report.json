@@ -1,0 +1,82 @@
+{
+  "status": "passed",
+  "date": "2026-10-09",
+  "browserVersion": "Chromium 140.0.7339.16",
+  "scenarios": [
+    {
+      "scenario": "profile",
+      "rejectionStatus": 409,
+      "staleOwnerHeaderVerified": true,
+      "staleDocumentRetained": true,
+      "visibleReloadInstruction": true,
+      "databaseUnchanged": true,
+      "blockedNotifications": {
+        "storage": 2,
+        "channel": 3
+      },
+      "freshBStatus": 200,
+      "freshBVisibleAndPersisted": true,
+      "rejectionScreenshot": "rejection-1.png"
+    },
+    {
+      "scenario": "case-create",
+      "rejectionStatus": 409,
+      "staleOwnerHeaderVerified": true,
+      "staleDocumentRetained": true,
+      "visibleReloadInstruction": true,
+      "databaseUnchanged": true,
+      "blockedNotifications": {
+        "storage": 2,
+        "channel": 3
+      },
+      "freshBStatus": 201,
+      "freshBVisibleAndPersisted": true,
+      "rejectionScreenshot": "rejection-2.png"
+    },
+    {
+      "scenario": "evidence-create",
+      "rejectionStatus": 409,
+      "staleOwnerHeaderVerified": true,
+      "staleDocumentRetained": true,
+      "visibleReloadInstruction": true,
+      "databaseUnchanged": true,
+      "blockedNotifications": {
+        "storage": 2,
+        "channel": 3
+      },
+      "freshBStatus": 201,
+      "freshBVisibleAndPersisted": true,
+      "rejectionScreenshot": "rejection-3.png"
+    },
+    {
+      "scenario": "evidence-edit",
+      "rejectionStatus": 409,
+      "staleOwnerHeaderVerified": true,
+      "staleDocumentRetained": true,
+      "visibleReloadInstruction": true,
+      "databaseUnchanged": true,
+      "blockedNotifications": {
+        "storage": 2,
+        "channel": 3
+      },
+      "freshBStatus": 200,
+      "freshBVisibleAndPersisted": true,
+      "rejectionScreenshot": "rejection-4.png"
+    }
+  ],
+  "profileSuccessStatusNote": "The transient 'Profil berhasil disimpan.' confirmation is not asserted. Updating profile values changes the SettingsPage ProfileForm key, remounting the form and clearing isSuccess. The fresh B sidebar/input and GET /api/me persistence checks passed.",
+  "cleanup": {
+    "status": "success",
+    "accountsDeleted": 8,
+    "remainingProfiles": 0,
+    "privateFixturePayloadRemoved": true
+  },
+  "artifacts": [
+    "missed-notifications.notebook.md",
+    "rejection-1.png",
+    "rejection-2.png",
+    "rejection-3.png",
+    "rejection-4.png",
+    "run-report.json"
+  ]
+}
