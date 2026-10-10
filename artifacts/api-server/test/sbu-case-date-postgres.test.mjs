@@ -13,7 +13,7 @@ import { createRestrictedRoutePool } from "./helpers/restricted-postgres.mjs";
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const { Pool } = createRequire(new URL("../../../lib/db/package.json", import.meta.url))("pg");
 
-test("PATCH tanggal SBU menjadi null tersimpan sebagai SQL NULL dan tetap null saat GET ulang", async () => {
+test("PATCH tanggal SBU terisi → null → tanggal baru tersimpan dan terbaca lewat GET tanpa mengubah kolom lain", async () => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk pengujian integrasi PostgreSQL");
   assert.notEqual(process.env.NODE_ENV, "production", "Pengujian tidak boleh dijalankan dalam mode produksi");
 
@@ -83,8 +83,8 @@ test("PATCH tanggal SBU menjadi null tersimpan sebagai SQL NULL dan tetap null s
           builder.onLoad({ filter: /.*/, namespace: "case-date-test" }, (args) => ({
             contents: args.path === "auth"
               ? `export const getAuth = (req) => ({ userId: req.get("x-test-user-id") });`
-              : `export { profilesTable, casesTable, evidenceTable, transitionVerificationsTable } from ${
-                JSON.stringify(join(testDir, "../../../lib/db/src/schema/sbu.ts"))
+              : `export * from ${
+                JSON.stringify(join(testDir, "../../../lib/db/src/schema/index.ts"))
               }; export const db = globalThis.__caseDateTestDb;`,
             loader: "js",
             resolveDir: testDir,
@@ -139,6 +139,40 @@ test("PATCH tanggal SBU menjadi null tersimpan sebagai SQL NULL dan tetap null s
     assert.deepEqual(reopened, {
       ...before, existingSbuExpiresOn: null, updatedAt: reopened.updatedAt,
     }, "Isian API lainnya tidak boleh berubah");
+
+    const newDate = "2028-02-29";
+    const expectedWireDate = `${newDate}T00:00:00.000Z`;
+    const restored = await request({
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ existingSbuExpiresOn: newDate }),
+    });
+    assert.equal(restored.existingSbuExpiresOn, expectedWireDate,
+      "PATCH harus mengembalikan tanggal baru pada tengah malam UTC sesuai kontrak kalender API");
+    const { rows: [restoredRow] } = await isolated.query(
+      "SELECT * FROM sbu_cases WHERE id = $1", [original.id],
+    );
+    const { rows: [restoredDate] } = await isolated.query(
+      "SELECT existing_sbu_expires_on::text AS calendar_date FROM sbu_cases WHERE id = $1",
+      [original.id],
+    );
+    assert.equal(restoredDate.calendar_date, newDate,
+      "Kolom DATE harus menyimpan tanggal kalender baru secara tepat, termasuk hari kabisat");
+    assert.ok(restoredRow.updated_at >= saved.updated_at,
+      "Waktu pembaruan tidak boleh mundur setelah tanggal diisi kembali");
+    assert.deepEqual(restoredRow, {
+      ...original,
+      existing_sbu_expires_on: restoredRow.existing_sbu_expires_on,
+      updated_at: restoredRow.updated_at,
+    }, "Pengisian ulang tanggal tidak boleh mengubah kolom database lainnya");
+
+    const reopenedRestored = await request();
+    assert.equal(reopenedRestored.existingSbuExpiresOn, expectedWireDate,
+      "GET ulang harus mengembalikan tanggal baru, bukan null atau tanggal awal");
+    assert.deepEqual(reopenedRestored, restored, "GET harus sesuai dengan PATCH pengisian ulang");
+    assert.deepEqual(reopenedRestored, {
+      ...before, existingSbuExpiresOn: expectedWireDate, updatedAt: reopenedRestored.updatedAt,
+    }, "Pengisian ulang tanggal tidak boleh mengubah isian API lainnya");
 
     for (const table of ["sbu_profiles", "sbu_cases"]) {
       const column = table === "sbu_profiles" ? "user_id" : "owner_id";
