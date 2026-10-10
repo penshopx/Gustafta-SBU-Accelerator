@@ -1,6 +1,10 @@
 import { PDFDocument } from "pdf-lib";
 
 export const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
+export const DOCUMENT_COMPLETION_WINDOW_MS = 30 * 60_000;
+// Longer than the 15-minute PUT URL, completion window, and slow uploads.
+// Never lower this based solely on the age of a database reservation.
+export const DOCUMENT_CLEANUP_GRACE_MS = 48 * 60 * 60_000;
 export class DocumentValidationError extends Error {}
 
 export function validDocumentSignature(bytes: Uint8Array, contentType: string) {

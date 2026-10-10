@@ -1,10 +1,59 @@
 import { ObjectNotFoundError, ObjectStorageService, objectStorageClient } from "./objectStorage";
 import { setObjectAclPolicy } from "./objectAcl";
 import { DocumentValidationError, MAX_DOCUMENT_BYTES, validateDocumentBytes, validDocumentSignature } from "./document-validation";
+import { isManagedDocumentPath, type CleanupObject } from "./document-cleanup";
 
 const storage = new ObjectStorageService();
+function cleanupBucket() {
+  const parts = storage.getPrivateObjectDir().replace(/^\/|\/$/g, "").split("/");
+  return { bucket: objectStorageClient.bucket(parts[0]), prefix: `${parts.slice(1).join("/")}/` };
+}
+function cleanupSnapshot(path: string, metadata: { generation?: string | number; updated?: string; timeCreated?: string }): CleanupObject {
+  return { path, generation: metadata.generation === undefined ? "" : String(metadata.generation),
+    updatedAt: Math.max(Date.parse(metadata.updated ?? ""), Date.parse(metadata.timeCreated ?? "")) };
+}
+export interface CleanupCursor { namespace: "uploads" | "documents"; pageToken?: string }
 export { DocumentValidationError, MAX_DOCUMENT_BYTES, validDocumentSignature } from "./document-validation";
 export const documentStorage = {
+  // Restrict GC to the two application-owned UUID namespaces, never the bucket
+  // root/public assets. GCS pagination is bounded and continued next tick.
+  async listCleanupObjects(cursor: CleanupCursor) {
+    const { bucket, prefix } = cleanupBucket();
+    const [files, next] = await bucket.getFiles({
+      prefix: `${prefix}${cursor.namespace}/`, autoPaginate: false, maxResults: 1000, pageToken: cursor.pageToken,
+    });
+    const objects = files.map((file) => cleanupSnapshot(`/objects/${file.name.slice(prefix.length)}`, file.metadata))
+      .filter((object) => isManagedDocumentPath(object.path));
+    const nextCursor: CleanupCursor = next?.pageToken
+      ? { namespace: cursor.namespace, pageToken: next.pageToken }
+      : { namespace: cursor.namespace === "uploads" ? "documents" : "uploads" };
+    return { objects, nextCursor };
+  },
+  async inspect(path: string): Promise<CleanupObject | undefined> {
+    if (!isManagedDocumentPath(path)) throw new Error("Unmanaged cleanup path");
+    const { bucket, prefix } = cleanupBucket();
+    try {
+      const [metadata] = await bucket.file(`${prefix}${path.slice("/objects/".length)}`).getMetadata();
+      return cleanupSnapshot(path, metadata);
+    } catch (error) {
+      if ((error as { code?: number }).code === 404) return undefined;
+      throw error;
+    }
+  },
+  async removeGeneration(object: CleanupObject) {
+    if (!isManagedDocumentPath(object.path) || !object.generation) throw new Error("Unsafe cleanup object");
+    const { bucket, prefix } = cleanupBucket();
+    try {
+      await bucket.file(`${prefix}${object.path.slice("/objects/".length)}`).delete({
+        ifGenerationMatch: object.generation,
+      });
+      return true;
+    } catch (error) {
+      if ((error as { code?: number }).code === 404) return true;
+      if ((error as { code?: number }).code === 412) return false;
+      throw error;
+    }
+  },
   async reserve() {
     const uploadURL = await storage.getObjectEntityUploadURL();
     return { uploadURL, objectPath: storage.normalizeObjectEntityPath(uploadURL) };

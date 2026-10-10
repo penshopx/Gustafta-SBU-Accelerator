@@ -96,6 +96,9 @@ Empat peran dapat membentuk profil. Kontraktor/konsultan dapat membuat dan menge
 
 - Setelah mengubah OpenAPI, jalankan `pnpm --filter @workspace/api-spec run codegen`.
 - Jangan mengubah status “kasus selesai persiapan” menjadi klaim SBU diterbitkan.
+- Pembersihan dokumen privat berjalan saat startup API dan tiap jam dalam workflow API yang sudah ada. `SBU_DOCUMENT_CLEANUP_MODE`: `delete` (bawaan), `dry-run` (hanya inspeksi/jumlah calon), atau `off`; nilai lain menghentikan startup. Masa tenggang tetap 48 jam berdasarkan metadata reservasi **dan** usia generasi objek, bukan sekadar kedaluwarsa URL PUT 15 menit. Penyelesaian unggahan tetap maksimal 30 menit.
+- Semua mutasi dokumen mengambil shared transaction advisory lock sebelum row lock; pembersih mengambil exclusive try-lock dan melewati putaran jika ada mutasi aktif. Jangan menambahkan penulis metadata/salinan final yang melewati protokol ini. Dokumen ready yang dirujuk tidak pernah menjadi calon hapus. Penghapusan objek bersyarat generation; kegagalan/replay mempertahankan metadata pending untuk dicoba lagi. Pembersihan hanya namespace UUID `uploads/` dan `documents/` privat, dengan halaman maksimal 1.000 objek dan 200 reservasi per putaran.
+- Log pembersihan hanya jumlah, tanpa error payload/identitas/path/nama/token/URL/isi. Uji regresi terfokus: `pnpm --filter @workspace/api-server exec node --test test/document-cleanup.test.mjs test/document-validation.test.mjs test/standalone-documents-postgres.test.mjs`. Uji memakai storage sintetis dan skema PostgreSQL terisolasi, tidak menghapus objek aplikasi nyata. Timer dalam proses membutuhkan API tetap berjalan; startup berikutnya melanjutkan pembersihan setelah downtime.
 
 ## Pointers
 

@@ -27,6 +27,7 @@ export const documentsTable = pgTable("sbu_documents", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   index("sbu_documents_owner_case_idx").on(t.ownerId, t.caseId),
+  index("sbu_documents_status_created_idx").on(t.status, t.createdAt),
   uniqueIndex("sbu_documents_series_version_idx").on(t.ownerId, t.seriesId, t.version),
 ]);
 export const documentAnalysesTable = pgTable("sbu_document_analyses", {

@@ -13,6 +13,8 @@ import {
 import { documentStorage, DocumentValidationError } from "../lib/document-storage";
 import { ObjectNotFoundError } from "../lib/objectStorage";
 import { publicDocument } from "../lib/document-metadata";
+import { documentActivityLock } from "../lib/document-lifecycle-lock";
+import { DOCUMENT_COMPLETION_WINDOW_MS } from "../lib/document-validation";
 
 // Mounted inside the SBU router, AFTER its real Clerk authentication and
 // immutable form-owner precondition. No token supplied by the browser grants access.
@@ -70,6 +72,7 @@ router.post("/cases/:id/documents", async (req, res): Promise<void> => {
   if (!await ownsCase(params.data.id, userId)) { res.status(404).json({ error: "Kasus tidak ditemukan." }); return; }
   try {
     const result = await db.transaction(async (tx) => {
+      await tx.execute(documentActivityLock);
       // Serialize quota reservations for this owner, not only for one case.
       await tx.select().from(profilesTable).where(eq(profilesTable.userId, userId)).for("update");
       const [owned] = await tx.select().from(casesTable)
@@ -112,14 +115,14 @@ router.post("/cases/:id/documents/:documentId/complete", async (req, res): Promi
   if (!await ownsCase(params.data.id, userId)) { res.status(404).json({ error: "Kasus tidak ditemukan." }); return; }
   let sealedPath: string | undefined;
   let stagedPath: string | undefined;
-  let committed = false;
   try {
     const row = await db.transaction(async (tx) => {
+      await tx.execute(documentActivityLock);
       const [item] = await tx.select().from(documents).where(and(eq(documents.id, params.data.documentId),
         eq(documents.caseId, params.data.id), eq(documents.ownerId, userId))).for("update");
       if (!item) return undefined;
       if (item.status === "ready") return item;
-      if (Date.now() - item.createdAt.getTime() > 30 * 60_000) throw new DocumentValidationError();
+      if (Date.now() - item.createdAt.getTime() > DOCUMENT_COMPLETION_WINDOW_MS) throw new DocumentValidationError();
       stagedPath = item.objectPath;
       sealedPath = await documentStorage.seal(item.objectPath, item.id, userId, item.contentType, item.size);
       const [completed] = await tx.update(documents).set({ status: "ready", objectPath: sealedPath })
@@ -127,7 +130,6 @@ router.post("/cases/:id/documents/:documentId/complete", async (req, res): Promi
       CompleteCaseDocumentUploadResponse.parse(publicDocument(completed));
       return completed;
     });
-    committed = true;
     if (!row) { res.status(404).json({ error: "Dokumen tidak ditemukan." }); return; }
     // Cleanup is not part of declaring success; a failed cleanup never removes
     // the immutable ready object. Stage URLs expire after fifteen minutes.
@@ -136,7 +138,8 @@ router.post("/cases/:id/documents/:documentId/complete", async (req, res): Promi
     });
     res.json(CompleteCaseDocumentUploadResponse.parse(publicDocument(row)));
   } catch (error) {
-    if (sealedPath && !committed) await documentStorage.remove(sealedPath).catch(() => {});
+    // Commit failures can be ambiguous; a concurrent retry may already refer
+    // to the sealed file. Only locked reconciliation may reclaim this orphan.
     if (error instanceof DocumentValidationError) {
       res.status(422).json({ error: "Isi, ukuran, atau jenis berkas tidak cocok, atau unggahan sudah kedaluwarsa. Batalkan unggahan lalu unggah ulang." }); return;
     }
@@ -151,6 +154,7 @@ router.delete("/cases/:id/documents/:documentId", async (req, res): Promise<void
   if (!await ownsCase(params.data.id, userId)) { res.status(404).json({ error: "Kasus tidak ditemukan." }); return; }
   try {
     const removed = await db.transaction(async (tx) => {
+      await tx.execute(documentActivityLock);
       const [item] = await tx.select().from(documents).where(and(eq(documents.id, params.data.documentId),
         eq(documents.caseId, params.data.id), eq(documents.ownerId, userId))).for("update");
       if (!item) return false;

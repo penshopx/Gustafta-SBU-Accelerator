@@ -20,4 +20,5 @@ CREATE TABLE IF NOT EXISTS sbu_documents (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS sbu_documents_owner_case_idx ON sbu_documents(owner_id, case_id);
+CREATE INDEX IF NOT EXISTS sbu_documents_status_created_idx ON sbu_documents(status, created_at);
 COMMIT;
