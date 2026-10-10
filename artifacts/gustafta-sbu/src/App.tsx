@@ -80,7 +80,7 @@ const roleOptions = [
   { value: 'profesional', title: 'Profesional', text: 'Kenali alur dan rujukan regulasi. Ruang kerja kasus belum tersedia untuk peran ini.' },
   { value: 'asosiasi', title: 'Asosiasi', text: 'Akses ringkasan regulasi. Akses bersama anggota belum tersedia.' },
 ] as const;
-function ProfileForm({ profile, onboarding = false }: { profile?: Profile; onboarding?: boolean }) {
+export function ProfileForm({ profile, onboarding = false }: { profile?: Profile; onboarding?: boolean }) {
   const qc = useQueryClient(); const [, navigate] = useLocation();
   const [role, setRole] = useState<ProfileInput['role']>(profile?.role !== 'belum_dipilih' && profile?.role ? profile.role : 'kontraktor');
   const [name, setName] = useState(profile?.displayName || '');
