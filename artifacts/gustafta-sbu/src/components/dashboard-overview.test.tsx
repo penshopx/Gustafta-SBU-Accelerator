@@ -8,7 +8,7 @@ import { createRoot } from 'react-dom/client';
 import { Window as HappyWindow } from 'happy-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Router } from 'wouter';
-import { useGetDashboard, type Dashboard } from '@workspace/api-client-react';
+import { getGetDashboardQueryKey, useGetDashboard, type Dashboard } from '@workspace/api-client-react';
 import { DashboardOverview, DashboardResult } from './dashboard-overview';
 import { formatCalendarDate } from '../lib/display-date';
 
@@ -134,6 +134,108 @@ test(failures === 1
   }
 });
 }
+
+test('refetch ringkasan yang gagal tidak menyembunyikan error di balik cache dan coba lagi menampilkan angka terbaru', async () => {
+  const globals = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = {
+    window: globals.window, document: globals.document, fetch: globals.fetch,
+    actEnvironment: globals.IS_REACT_ACT_ENVIRONMENT,
+  };
+  const window = new HappyWindow();
+  globals.window = window as unknown as Window & typeof globalThis;
+  globals.document = window.document as unknown as Document;
+  globals.IS_REACT_ACT_ENVIRONMENT = true;
+  const initial: Dashboard = { total: 6, draft: 3, reviewing: 2, prepared: 1, recent: [] };
+  const latest: Dashboard = { total: 12, draft: 5, reviewing: 4, prepared: 3, recent: [] };
+  let requests = 0;
+  globals.fetch = async (input) => {
+    assert.equal(input, '/api/dashboard');
+    requests++;
+    assert.ok(requests <= 3, 'tidak ada permintaan tambahan atau percobaan ulang otomatis');
+    if (requests === 2) {
+      return new Response(JSON.stringify({ message: 'Pembaruan gagal' }), {
+        status: 503, headers: { 'content-type': 'application/json' },
+      });
+    }
+    return Response.json(requests === 1 ? initial : latest);
+  };
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
+  const queryKey = getGetDashboardQueryKey();
+  const container = window.document.createElement('div');
+  window.document.body.appendChild(container);
+  const root = createRoot(container as unknown as HTMLElement);
+  const waitForResult = async (ready: () => boolean, description: string) => {
+    const deadline = Date.now() + 1000;
+    while (!ready() || client.isFetching() > 0) {
+      assert.ok(Date.now() < deadline, description);
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+    }
+  };
+  const assertMetrics = (dashboard: Dashboard) => {
+    for (const [index, value] of [
+      dashboard.total, dashboard.draft, dashboard.reviewing, dashboard.prepared,
+    ].entries()) {
+      assert.equal(container.querySelector(`[data-testid="text-dashboard-${index}"]`)?.textContent, String(value));
+    }
+    assert.equal(container.querySelectorAll('[data-testid^="text-dashboard-"]').length, 4);
+  };
+
+  try {
+    await act(async () => {
+      root.render(createElement(QueryClientProvider, { client },
+        createElement(Router, {
+          hook: (): [string, (path: string) => void] => ['/dashboard', () => {}],
+          children: createElement(DashboardWithQuery),
+        }),
+      ));
+    });
+    await waitForResult(() => !!container.querySelector('[data-testid="text-dashboard-0"]'),
+      'data awal harus tampil');
+    assert.equal(requests, 1);
+    assertMetrics(initial);
+    assert.deepEqual(client.getQueryData(queryKey), initial);
+    assert.equal(client.getQueryState(queryKey)?.status, 'success');
+    assert.doesNotMatch(container.textContent, /Data belum dapat ditampilkan|Koneksi sedang terganggu/);
+    assert.equal(container.querySelector('[data-testid="button-retry"]'), null);
+
+    // Refetch biasa pada query aktif, bukan kegagalan awal atau invalidasi setelah mutasi.
+    await act(async () => { await client.refetchQueries({ queryKey, exact: true }); });
+    await waitForResult(() => !!container.querySelector('[data-testid="button-retry"]'),
+      'error pembaruan harus tampil meski cache masih berisi data awal');
+    assert.equal(requests, 2);
+    assert.equal(client.getQueryState(queryKey)?.status, 'error');
+    assert.deepEqual(client.getQueryData(queryKey), initial, 'data lama benar-benar tetap berada di cache');
+    assert.match(container.textContent, /Data belum dapat ditampilkan/);
+    assert.match(container.textContent, /Koneksi sedang terganggu\. Coba muat ulang data\./);
+    assertNoEmptySummary(container.innerHTML);
+    assert.equal(container.querySelector('[aria-label="Memuat data"]'), null);
+
+    const retry = container.querySelector('[data-testid="button-retry"]');
+    assert.ok(retry instanceof window.HTMLButtonElement);
+    assert.equal(retry.textContent, 'Coba lagi');
+    assert.equal(retry.disabled, false, 'tombol tetap dapat diklik setelah refetch gagal');
+    await act(async () => { retry.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); });
+
+    await waitForResult(() => container.querySelector('[data-testid="text-dashboard-0"]')?.textContent === '12',
+      'klik coba lagi harus menampilkan angka terbaru');
+    assert.equal(requests, 3, 'klik coba lagi mengirim tepat satu permintaan berikutnya');
+    assertMetrics(latest);
+    assert.deepEqual(client.getQueryData(queryKey), latest);
+    assert.equal(client.getQueryState(queryKey)?.status, 'success');
+    assert.doesNotMatch(container.textContent, /Data belum dapat ditampilkan|Koneksi sedang terganggu/);
+    assert.equal(container.querySelector('[data-testid="button-retry"]'), null);
+    assert.equal(container.querySelector('[aria-label="Memuat data"]'), null);
+  } finally {
+    await act(async () => { root.unmount(); });
+    client.clear();
+    container.remove();
+    await window.happyDOM.abort();
+    globals.window = previous.window;
+    globals.document = previous.document;
+    globals.fetch = previous.fetch;
+    globals.IS_REACT_ACT_ENVIRONMENT = previous.actEnvironment;
+  }
+});
 
 test('ringkasan pengguna baru menampilkan empat nol dan keadaan kasus kosong', () => {
   // Respons dashboard untuk pemilik baru tetap kosong meski pemilik lain memiliki kasus.
