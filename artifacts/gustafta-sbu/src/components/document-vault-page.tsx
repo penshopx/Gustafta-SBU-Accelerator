@@ -7,7 +7,7 @@ import {
   getListDocumentVaultQueryKey, getListCaseDocumentsQueryKey, getListCasesQueryKey,
   type ListDocumentVault200DocumentsItem, type ListDocumentVaultCategory,
 } from '@workspace/api-client-react';
-import { useFormMutationOptions } from './account-queries';
+import { useFormMutationOptions, useAccountReadOptions } from './account-queries';
 import { CaseDocuments, documentError, saveDocumentBlob, sizeLabel } from './case-documents';
 import { DocumentAnalysisPanel } from './document-analysis-panel';
 import { DocumentMetadataDialog, SimpleModal, categoryKeys, categoryLabels } from './document-metadata-dialog';
@@ -17,6 +17,7 @@ import { ErrorState, Loading } from './request-states';
 export function DocumentVaultPage({ expectedUserId, canOwnCases }: { expectedUserId: string; canOwnCases: boolean }) {
   const qc = useQueryClient();
   const options = useFormMutationOptions();
+  const readOptions = useAccountReadOptions();
   const del = useDeleteCaseDocument(options);
   const [q, setQ] = useState(''); const [dq, setDq] = useState('');
   const [category, setCategory] = useState(''); const [caseId, setCaseId] = useState(''); const [page, setPage] = useState(1);
@@ -29,9 +30,9 @@ export function DocumentVaultPage({ expectedUserId, canOwnCases }: { expectedUse
   const [delError, setDelError] = useState<string | null>(null);
   useEffect(() => { const t = setTimeout(() => { setDq(q.trim()); setPage(1); }, 350); return () => clearTimeout(t); }, [q]);
 
-  const cases = useListCases({ query: { enabled: canOwnCases, queryKey: getListCasesQueryKey() } });
+  const cases = useListCases({ ...readOptions, query: { enabled: canOwnCases, queryKey: getListCasesQueryKey() } });
   const params = { ...(dq ? { q: dq } : {}), ...(category ? { category: category as ListDocumentVaultCategory } : {}), ...(caseId ? { caseId: Number(caseId) } : {}), page };
-  const vault = useListDocumentVault(params, { query: { queryKey: getListDocumentVaultQueryKey(params), retry: false } });
+  const vault = useListDocumentVault(params, { ...readOptions, query: { queryKey: getListDocumentVaultQueryKey(params), retry: false } });
   const data = vault.data;
   const foreign = !!data && (data.userId !== expectedUserId || !Array.isArray(data.documents) || data.documents.some(d => d.ownerId !== expectedUserId));
   const totalPages = data ? Math.max(1, Math.ceil(data.total / (data.pageSize || 50))) : 1;
@@ -40,7 +41,7 @@ export function DocumentVaultPage({ expectedUserId, canOwnCases }: { expectedUse
 
   const download = async (d: ListDocumentVault200DocumentsItem) => {
     setNote(null);
-    try { await saveDocumentBlob(d.caseId, d); } catch (e) { setNote(documentError(e, 'Dokumen belum dapat diunduh. Silakan coba lagi.')); }
+    try { await saveDocumentBlob(d.caseId, d, readOptions.request); } catch (e) { setNote(documentError(e, 'Dokumen belum dapat diunduh. Silakan coba lagi.')); }
   };
   const remove = () => {
     if (!confirm) return; const t = confirm; setDelError(null);

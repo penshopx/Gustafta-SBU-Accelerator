@@ -66,6 +66,9 @@ await build({
           export const eq = (field, value) => (row) => row[field] === value;
           export const and = (...predicates) => (row) => predicates.every((predicate) => predicate(row));
           export const desc = () => { throw new Error("unexpected ordering"); };
+          export const ilike = () => { throw new Error("unexpected vault query"); };
+          export const or = () => { throw new Error("unexpected vault query"); };
+          export const sql = () => { throw new Error("unexpected document query"); };
         ` : `
           export const casesTable = { id: "id", ownerId: "ownerId" };
           export const evidenceTable = { caseId: "caseId" };
@@ -73,6 +76,7 @@ await build({
           export const profilesTable = { userId: "userId" };
           export const companyProfilesTable = {};
           export const documentsTable = {};
+          export const documentAnalysesTable = {};
           export const db = {
             select() {
               globalThis.__clerkTestDataReads = (globalThis.__clerkTestDataReads ?? 0) + 1;
@@ -100,10 +104,56 @@ await build({
 
 const { default: app } = await import(join(temporaryDir, "app.mjs"));
 
+test("GET privat tab A ditolak dengan cookie B atau tanpa prakondisi sebelum query apa pun", async () => {
+  const server = app.listen(0);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (input, init) => {
+    const url = new URL(typeof input === "string" ? input : input.url);
+    assert.equal(url.hostname, "127.0.0.1", "fixture tidak boleh menghubungi layanan luar");
+    return originalFetch(input, init);
+  };
+  const token = sessionToken("owner-b");
+  const cookie = `__session=${token}; __client_uat=${Math.floor(Date.now() / 1000) - 1}; __clerk_db_jwt=local-dev-browser`;
+  const paths = [
+    "/me", "/workspace", "/dashboard", "/company-profile", "/cases",
+    "/cases/35", "/cases/35/evidence", "/cases/35/assessment",
+    "/cases/35/preparation-summary", "/cases/35/documents",
+    "/cases/35/documents/1/download", "/transition-verifications",
+    "/documents", "/cases/35/documents/1/analyses",
+  ];
+  try {
+    for (const path of paths) {
+      for (const expectedOwner of [undefined, "", "owner-a"]) {
+        globalThis.__clerkTestDataReads = 0;
+        const response = await fetch(`http://127.0.0.1:${server.address().port}/api${path}`, {
+          headers: { origin: testOrigin, cookie,
+            ...(expectedOwner === undefined ? {} : { "X-SBU-Form-Owner": expectedOwner }) },
+        });
+        const raw = await response.text();
+        assert.equal(response.status, 409, `${path}: ${raw}`);
+        assert.equal(response.headers.get("cache-control"), "private, no-store");
+        assert.equal(globalThis.__clerkTestDataReads, 0, path);
+        assert.doesNotMatch(raw, /owner-b|companyName|caseId|findings|recordedCount/);
+      }
+    }
+    // HEAD must not bypass the GET precondition.
+    const head = await fetch(`http://127.0.0.1:${server.address().port}/api/cases/35`, {
+      method: "HEAD", headers: { origin: testOrigin, cookie, "X-SBU-Form-Owner": "owner-a" },
+    });
+    assert.equal(head.status, 409);
+    assert.equal(globalThis.__clerkTestDataReads, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    server.closeAllConnections();
+    await new Promise(resolve => server.close(resolve));
+    delete globalThis.__clerkTestDataReads;
+  }
+});
+
 async function request(server, id, headers) {
   const { port } = server.address();
   const response = await fetch(`http://127.0.0.1:${port}/api/cases/${id}/assessment`, {
-    headers: { origin: testOrigin, ...headers },
+    headers: { origin: testOrigin, "X-SBU-Form-Owner": "owner-a", ...headers },
   });
   const raw = await response.text();
   return { status: response.status, raw, body: JSON.parse(raw) };
@@ -116,7 +166,7 @@ function requestWithHost(server, id, headers, trusted = false) {
     const req = httpRequest({
       hostname: "127.0.0.1", port: server.address().port,
       localAddress: trusted ? "127.0.0.2" : "127.0.0.1",
-      path: `/api/cases/${id}/assessment`, headers: { origin: testOrigin, ...headers },
+      path: `/api/cases/${id}/assessment`, headers: { origin: testOrigin, "X-SBU-Form-Owner": "owner-a", ...headers },
     }, (res) => {
       let raw = "";
       res.setEncoding("utf8");
@@ -598,7 +648,7 @@ test("sesi yang diverifikasi Clerk hanya membaca penilaian dan bukti milik pemeg
     assert.doesNotMatch(own.raw + other.raw + otherCookie.raw,
       /Perusahaan Rahasia|Bukti rahasia|owner-b|"caseId":35/);
 
-    const secondOwner = await request(server, 35, { authorization: `Bearer ${sessionToken("owner-b")}` });
+    const secondOwner = await request(server, 35, { authorization: `Bearer ${sessionToken("owner-b")}`, "X-SBU-Form-Owner": "owner-b" });
     assert.equal(secondOwner.status, 200, secondOwner.raw);
     assert.equal(secondOwner.body.caseId, 35);
     assert.equal(secondOwner.body.findings.find((finding) => finding.code === "penjualan").status, "tercatat");

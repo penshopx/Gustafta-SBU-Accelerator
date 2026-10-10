@@ -13,6 +13,7 @@ paths:
   /documents:
     get:
       operationId: listDocumentVault
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       parameters:
         - { name: q, in: query, schema: { type: string, maxLength: 100 } }
@@ -20,6 +21,8 @@ paths:
         - { name: caseId, in: query, schema: { type: integer, minimum: 1 } }
         - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 10000, default: 1 } }
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Private paginated document vault
           content:
@@ -47,8 +50,11 @@ paths:
       - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
     get:
       operationId: listDocumentAnalyses
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Preliminary analyses for this owner's selected document
           content:
@@ -132,9 +138,12 @@ paths:
   /company-profile:
     get:
       operationId: getLocalCompanyProfile
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       summary: Read the current owner's standalone company profile
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Private company profile
           content:
@@ -162,8 +171,11 @@ paths:
       - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
     get:
       operationId: listCaseDocuments
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Documents for the current owner's case, including unfinished uploads
           content:
@@ -246,8 +258,11 @@ paths:
       - { name: documentId, in: path, required: true, schema: { type: string, format: uuid } }
     get:
       operationId: downloadCaseDocument
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Private document download; ownership verified on every request
           content:
@@ -256,9 +271,12 @@ paths:
   /workspace:
     get:
       operationId: getWorkspace
+      security: [{ FormOwner: [] }]
       tags: [sbu]
       summary: Read the current authenticated private workspace
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Private workspace and legacy case container
           content:
@@ -281,8 +299,11 @@ paths:
   /me:
     get:
       operationId: getMe
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Current profile
           content:
@@ -339,8 +360,11 @@ paths:
   /dashboard:
     get:
       operationId: getDashboard
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Current user's case summary
           content:
@@ -350,8 +374,11 @@ paths:
   /cases:
     get:
       operationId: listCases
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Cases owned by current user
           content:
@@ -388,8 +415,11 @@ paths:
           type: integer
     get:
       operationId: getCase
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Case detail
           content:
@@ -433,8 +463,11 @@ paths:
           type: integer
     get:
       operationId: listEvidence
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Evidence declarations for case
           content:
@@ -546,8 +579,11 @@ paths:
           type: integer
     get:
       operationId: getAssessment
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Preliminary checklist, not a certification decision
           content:
@@ -570,9 +606,12 @@ paths:
   /transition-verifications:
     get:
       operationId: listTransitionVerifications
+      security: [{ FormOwner: [] }]
       tags: [workspace]
       description: Restricted to configured official-source reviewers.
       responses:
+        "409":
+          $ref: "#/components/responses/FormOwnerMismatch"
         "200":
           description: Current verification record for each reviewed track
           content:
@@ -610,7 +649,7 @@ paths:
 components:
   responses:
     FormOwnerMismatch:
-      description: Missing form owner or the authenticated Clerk account no longer matches the form's original account. No data is read or written. Reload before retrying.
+      description: Missing initiating account or the authenticated Clerk account no longer matches the tab or form's original account. Applies to private reads and writes. No data is read or written. Reload before retrying.
       content:
         application/json:
           schema:
@@ -623,7 +662,7 @@ components:
       type: apiKey
       in: header
       name: X-SBU-Form-Owner
-      description: Required mutation precondition containing the Clerk user ID captured when the form opens. This is not authentication; a valid Clerk session is still required. Missing or mismatched values return 409 before any data access. Supply through the generated client's request.headers.
+      description: Required account precondition for private reads and writes. Capture the tab/cache or form owner, not the current cookie. This is not authentication; ownership is always derived from the verified Clerk session. Missing or mismatched values return 409 before private data access. Private reads use Cache-Control private, no-store.
   schemas:
     SbuChatInput:
       type: object

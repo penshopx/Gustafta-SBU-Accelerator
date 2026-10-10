@@ -5,7 +5,7 @@ import {
   getGetLocalCompanyProfileQueryKey, useGetLocalCompanyProfile, usePutLocalCompanyProfile,
   type LocalCompanyProfile, type LocalCompanyProfileInput,
 } from '@workspace/api-client-react';
-import { useFormMutationOptions } from './account-queries';
+import { useFormMutationOptions, useAccountReadOptions } from './account-queries';
 import { ErrorState, Loading } from './request-states';
 
 const fields: { key: keyof LocalCompanyProfileInput; label: string; max: number; area?: boolean; hint?: string }[] = [
@@ -44,7 +44,7 @@ export function LocalCompanyProfileForm({ expectedUserId, initial }: { expectedU
 }
 
 export function LocalCompanyProfilePage({ expectedUserId }: { expectedUserId: string }) {
-  const query = useGetLocalCompanyProfile({ query: { queryKey: getGetLocalCompanyProfileQueryKey(), retry: false } });
+  const query = useGetLocalCompanyProfile({ ...useAccountReadOptions(), query: { queryKey: getGetLocalCompanyProfileQueryKey(), retry: false } });
   const status = (query.error as { status?: number } | null)?.status;
   const mismatch = !!query.data && query.data.ownerId !== expectedUserId;
   let body;

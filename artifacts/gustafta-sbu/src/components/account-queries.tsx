@@ -15,6 +15,19 @@ export function useFormMutationOptions() {
   return options;
 }
 
+// Capture the mounted cache owner's identity, never the latest cookie or /me.
+// Every private GET (including /me itself) must carry this precondition.
+export function useAccountReadOptions() {
+  const owner = useContext(FormOwnerContext);
+  const [options] = useState(() => ({
+    request: {
+      headers: { 'X-SBU-Form-Owner': owner ?? '' },
+      cache: 'no-store' as const,
+    },
+  }));
+  return options;
+}
+
 // Clerk can keep a tab's in-memory user while another tab changes the shared
 // session cookie. Hide the old tree immediately, then reload Clerk from disk.
 export function CrossTabAccountGate({ userId, children }: { userId: string | null; children: ReactNode }) {

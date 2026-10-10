@@ -33,6 +33,23 @@ const requireAuth: RequestHandler = (req, res, next) => {
 };
 router.use(requireAuth);
 
+// Bind each private read to the identity of the tab that started it. This runs
+// before workspace initialization or any subrouter/database access. The header
+// is only a precondition; Clerk remains the authority for resource ownership.
+router.use((req, res, next) => {
+  if (!["GET", "HEAD"].includes(req.method) ||
+      !/^\/(?:me|workspace|dashboard|cases|documents|company-profile|transition-verifications)(?:\/|$)/.test(req.path)) {
+    next();
+    return;
+  }
+  res.set("Cache-Control", "private, no-store");
+  if (req.get("X-SBU-Form-Owner") !== owner(req)) {
+    res.status(409).json({ error: "Sesi akun berubah. Muat ulang halaman sebelum membaca data privat." });
+    return;
+  }
+  next();
+});
+
 // The cookie can change in another tab before an old form hears about it.
 // This is a precondition, not authentication: ownership always comes from Clerk.
 router.use((req, res, next) => {

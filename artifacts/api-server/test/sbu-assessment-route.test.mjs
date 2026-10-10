@@ -189,12 +189,16 @@ await build({
              export const profilesTable = { userId: "userId" };
              export const companyProfilesTable = {};
              export const documentsTable = {};
+             export const documentAnalysesTable = {};
           `,
            "@clerk/express": `export const getAuth = () => ({ userId: globalThis.__routeUserId === undefined ? "test-user" : globalThis.__routeUserId });`,
           "drizzle-orm": `
             export const eq = (column, value) => (row) => row[column] === value;
             export const and = (...predicates) => (row) => predicates.every((predicate) => predicate(row));
              export const desc = (column) => ({ column, direction: "desc" });
+             export const ilike = () => { throw new Error("unexpected vault query"); };
+             export const or = () => { throw new Error("unexpected vault query"); };
+             export const sql = () => { throw new Error("unexpected document query"); };
           `,
         })[args.path],
         loader: "js",
@@ -256,7 +260,12 @@ test("ringkasan privat memeriksa pemilik, mengambil snapshot terbaru dan tidak m
     assert.match(first.raw, /<thead><tr><td><div class="page-notice">Data adalah deklarasi pengguna/);
     assert.match(first.raw, /Usaha &lt;script&gt;/);
     assert.match(first.raw, /legalitas — 1 catatan deklarasi/);
-    assert.doesNotMatch(first.raw, /<script|rahasia-judul|rahasia-catatan|private.invalid|2026-10-10|summary-owner/);
+    // The legitimate snapshot timestamp may fall on the injected deadline.
+    // Exclude only that timestamp, not the preparation content being checked.
+    const withoutSnapshotTime = raw => raw
+      .replace(/Dibuat: [^<]+ \(UTC\)\./, "Dibuat: (UTC).")
+      .replace(/Snapshot [^<]+ \(UTC\)/, "Snapshot (UTC)");
+    assert.doesNotMatch(withoutSnapshotTime(first.raw), /<script|rahasia-judul|rahasia-catatan|private.invalid|2026-10-10|summary-owner/);
     globalThis.__routeCaseRows[0].companyName = "Perusahaan terbaru";
     globalThis.__routeEvidenceRows = [];
     globalThis.__routeVerificationRows = [{
@@ -274,7 +283,7 @@ test("ringkasan privat memeriksa pemilik, mengambil snapshot terbaru dan tidak m
     assert.match(updated.raw, /Tanggal transisi dari sumber terverifikasi: 2026-10-10/);
     globalThis.__routeVerificationRows[0].documentStatus = "dicabut";
     const revoked = await request(server, path);
-    assert.doesNotMatch(revoked.raw, /2026-10-10|Nomor sumber terkini|Tanggal transisi dari sumber terverifikasi/);
+    assert.doesNotMatch(withoutSnapshotTime(revoked.raw), /2026-10-10|Nomor sumber terkini|Tanggal transisi dari sumber terverifikasi/);
     globalThis.__routeCaseRows = [];
     assert.equal((await request(server, path)).status, 404);
   } finally {

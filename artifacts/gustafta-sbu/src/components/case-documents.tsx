@@ -6,7 +6,7 @@ import {
   requestCaseDocumentUpload, completeCaseDocumentUpload, deleteCaseDocument, downloadCaseDocument,
   type CaseDocument, type DocumentUploadInput,
 } from '@workspace/api-client-react';
-import { useFormMutationOptions } from './account-queries';
+import { useFormMutationOptions, useAccountReadOptions } from './account-queries';
 import { Empty } from './dashboard-overview';
 import { ErrorState, Loading } from './request-states';
 import { DocumentMetadataDialog, categoryKeys, categoryLabels } from './document-metadata-dialog';
@@ -40,8 +40,8 @@ const withTimeout = (ms: number, parent?: AbortSignal) => {
   return { signal: ctl.signal, done: () => { clearTimeout(t); parent?.removeEventListener('abort', onAbort); } };
 };
 
-export async function saveDocumentBlob(caseId: number, d: { id: string; name: string }) {
-  const blob = await downloadCaseDocument(caseId, d.id, { responseType: 'blob' });
+export async function saveDocumentBlob(caseId: number, d: { id: string; name: string }, request: RequestInit) {
+  const blob = await downloadCaseDocument(caseId, d.id, { ...request, responseType: 'blob' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url; a.download = d.name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -50,8 +50,9 @@ export async function saveDocumentBlob(caseId: number, d: { id: string; name: st
 export function CaseDocuments({ id, expectedUserId, versionRequest }: { id: number; expectedUserId: string; versionRequest?: { docId: string; nonce: number } }) {
   const qc = useQueryClient();
   const options = useFormMutationOptions();
+  const readOptions = useAccountReadOptions();
   const del = useDeleteCaseDocument(options);
-  const list = useListCaseDocuments(id, { query: { queryKey: getListCaseDocumentsQueryKey(id), retry: false } });
+  const list = useListCaseDocuments(id, { ...readOptions, query: { queryKey: getListCaseDocumentsQueryKey(id), retry: false } });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [failed, setFailed] = useState<File | null>(null);
@@ -115,7 +116,7 @@ export function CaseDocuments({ id, expectedUserId, versionRequest }: { id: numb
   const download = async (d: CaseDocument) => {
     setMessage(null);
     try {
-      await saveDocumentBlob(id, d);
+      await saveDocumentBlob(id, d, readOptions.request);
     } catch (e) { if (alive.current) setMessage(documentError(e, 'Dokumen belum dapat diunduh. Silakan coba lagi.')); }
   };
 

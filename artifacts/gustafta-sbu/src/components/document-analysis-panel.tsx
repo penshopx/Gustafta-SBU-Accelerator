@@ -6,7 +6,7 @@ import {
   getListDocumentAnalysesQueryKey, getListCaseDocumentsQueryKey, getListDocumentVaultQueryKey,
   type CaseDocument, type DocumentAnalysis, type DocumentAnalysisInput,
 } from '@workspace/api-client-react';
-import { useFormMutationOptions } from './account-queries';
+import { useFormMutationOptions, useAccountReadOptions } from './account-queries';
 import { SimpleModal, categoryLabels } from './document-metadata-dialog';
 import { Loading, ErrorState } from './request-states';
 
@@ -39,7 +39,7 @@ export function DocumentAnalysisPanel({ doc, expectedUserId, close }: { doc: Cas
   const owner = options.request;
   const caseId = doc.caseId; const documentId = doc.id;
   const key = getListDocumentAnalysesQueryKey(caseId, documentId);
-  const list = useListDocumentAnalyses(caseId, documentId, { query: { queryKey: key, retry: false } });
+  const list = useListDocumentAnalyses(caseId, documentId, { ...useAccountReadOptions(), query: { queryKey: key, retry: false } });
   const del = useDeleteDocumentAnalysis(options);
   const [consent, setConsent] = useState(false);
   const [focus, setFocus] = useState<DocumentAnalysisInput['focus']>('kesiapan_sbu');

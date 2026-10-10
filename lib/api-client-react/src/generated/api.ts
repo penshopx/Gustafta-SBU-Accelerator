@@ -117,7 +117,7 @@ export const getListDocumentVaultQueryKey = (params?: ListDocumentVaultParams,) 
     }
 
 
-export const getListDocumentVaultQueryOptions = <TData = Awaited<ReturnType<typeof listDocumentVault>>, TError = ErrorType<unknown>>(params?: ListDocumentVaultParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentVault>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListDocumentVaultQueryOptions = <TData = Awaited<ReturnType<typeof listDocumentVault>>, TError = ErrorType<FormOwnerMismatchResponse>>(params?: ListDocumentVaultParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentVault>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -136,11 +136,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListDocumentVaultQueryResult = NonNullable<Awaited<ReturnType<typeof listDocumentVault>>>
-export type ListDocumentVaultQueryError = ErrorType<unknown>
+export type ListDocumentVaultQueryError = ErrorType<FormOwnerMismatchResponse>
 
 
 
-export function useListDocumentVault<TData = Awaited<ReturnType<typeof listDocumentVault>>, TError = ErrorType<unknown>>(
+export function useListDocumentVault<TData = Awaited<ReturnType<typeof listDocumentVault>>, TError = ErrorType<FormOwnerMismatchResponse>>(
  params?: ListDocumentVaultParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentVault>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -191,7 +191,7 @@ export const getListDocumentAnalysesQueryKey = (id: number,
     }
 
 
-export const getListDocumentAnalysesQueryOptions = <TData = Awaited<ReturnType<typeof listDocumentAnalyses>>, TError = ErrorType<unknown>>(id: number,
+export const getListDocumentAnalysesQueryOptions = <TData = Awaited<ReturnType<typeof listDocumentAnalyses>>, TError = ErrorType<FormOwnerMismatchResponse>>(id: number,
     documentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentAnalyses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
@@ -211,11 +211,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListDocumentAnalysesQueryResult = NonNullable<Awaited<ReturnType<typeof listDocumentAnalyses>>>
-export type ListDocumentAnalysesQueryError = ErrorType<unknown>
+export type ListDocumentAnalysesQueryError = ErrorType<FormOwnerMismatchResponse>
 
 
 
-export function useListDocumentAnalyses<TData = Awaited<ReturnType<typeof listDocumentAnalyses>>, TError = ErrorType<unknown>>(
+export function useListDocumentAnalyses<TData = Awaited<ReturnType<typeof listDocumentAnalyses>>, TError = ErrorType<FormOwnerMismatchResponse>>(
  id: number,
     documentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDocumentAnalyses>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
@@ -589,7 +589,7 @@ export const getGetLocalCompanyProfileQueryKey = () => {
     }
 
 
-export const getGetLocalCompanyProfileQueryOptions = <TData = Awaited<ReturnType<typeof getLocalCompanyProfile>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLocalCompanyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetLocalCompanyProfileQueryOptions = <TData = Awaited<ReturnType<typeof getLocalCompanyProfile>>, TError = ErrorType<FormOwnerMismatchResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLocalCompanyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -608,14 +608,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetLocalCompanyProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getLocalCompanyProfile>>>
-export type GetLocalCompanyProfileQueryError = ErrorType<unknown>
+export type GetLocalCompanyProfileQueryError = ErrorType<FormOwnerMismatchResponse>
 
 
 /**
  * @summary Read the current owner's standalone company profile
  */
 
-export function useGetLocalCompanyProfile<TData = Awaited<ReturnType<typeof getLocalCompanyProfile>>, TError = ErrorType<unknown>>(
+export function useGetLocalCompanyProfile<TData = Awaited<ReturnType<typeof getLocalCompanyProfile>>, TError = ErrorType<FormOwnerMismatchResponse>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLocalCompanyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -745,7 +745,7 @@ export const getListCaseDocumentsQueryKey = (id: number,) => {
     }
 
 
-export const getListCaseDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listCaseDocuments>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCaseDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListCaseDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listCaseDocuments>>, TError = ErrorType<FormOwnerMismatchResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCaseDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -764,11 +764,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListCaseDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listCaseDocuments>>>
-export type ListCaseDocumentsQueryError = ErrorType<unknown>
+export type ListCaseDocumentsQueryError = ErrorType<FormOwnerMismatchResponse>
 
 
 
-export function useListCaseDocuments<TData = Awaited<ReturnType<typeof listCaseDocuments>>, TError = ErrorType<unknown>>(
+export function useListCaseDocuments<TData = Awaited<ReturnType<typeof listCaseDocuments>>, TError = ErrorType<FormOwnerMismatchResponse>>(
  id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCaseDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -1127,7 +1127,7 @@ export const getDownloadCaseDocumentQueryKey = (id: number,
     }
 
 
-export const getDownloadCaseDocumentQueryOptions = <TData = Awaited<ReturnType<typeof downloadCaseDocument>>, TError = ErrorType<unknown>>(id: number,
+export const getDownloadCaseDocumentQueryOptions = <TData = Awaited<ReturnType<typeof downloadCaseDocument>>, TError = ErrorType<FormOwnerMismatchResponse>>(id: number,
     documentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadCaseDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
@@ -1147,11 +1147,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type DownloadCaseDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof downloadCaseDocument>>>
-export type DownloadCaseDocumentQueryError = ErrorType<unknown>
+export type DownloadCaseDocumentQueryError = ErrorType<FormOwnerMismatchResponse>
 
 
 
-export function useDownloadCaseDocument<TData = Awaited<ReturnType<typeof downloadCaseDocument>>, TError = ErrorType<unknown>>(
+export function useDownloadCaseDocument<TData = Awaited<ReturnType<typeof downloadCaseDocument>>, TError = ErrorType<FormOwnerMismatchResponse>>(
  id: number,
     documentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadCaseDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
@@ -1203,7 +1203,7 @@ export const getGetWorkspaceQueryKey = () => {
     }
 
 
-export const getGetWorkspaceQueryOptions = <TData = Awaited<ReturnType<typeof getWorkspace>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetWorkspaceQueryOptions = <TData = Awaited<ReturnType<typeof getWorkspace>>, TError = ErrorType<void | FormOwnerMismatchResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1222,14 +1222,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetWorkspaceQueryResult = NonNullable<Awaited<ReturnType<typeof getWorkspace>>>
-export type GetWorkspaceQueryError = ErrorType<void>
+export type GetWorkspaceQueryError = ErrorType<void | FormOwnerMismatchResponse>
 
 
 /**
  * @summary Read the current authenticated private workspace
  */
 
-export function useGetWorkspace<TData = Awaited<ReturnType<typeof getWorkspace>>, TError = ErrorType<void>>(
+export function useGetWorkspace<TData = Awaited<ReturnType<typeof getWorkspace>>, TError = ErrorType<void | FormOwnerMismatchResponse>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -1348,7 +1348,7 @@ export const getGetMeQueryKey = () => {
     }
 
 
-export const getGetMeQueryOptions = <TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetMeQueryOptions = <TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<FormOwnerMismatchResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1367,11 +1367,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetMeQueryResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
-export type GetMeQueryError = ErrorType<unknown>
+export type GetMeQueryError = ErrorType<FormOwnerMismatchResponse>
 
 
 
-export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<unknown>>(
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<FormOwnerMismatchResponse>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -1575,7 +1575,7 @@ export const getGetDashboardQueryKey = () => {
     }
 
 
-export const getGetDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getDashboard>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetDashboardQueryOptions = <TData = Awaited<ReturnType<typeof getDashboard>>, TError = ErrorType<FormOwnerMismatchResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1594,11 +1594,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetDashboardQueryResult = NonNullable<Awaited<ReturnType<typeof getDashboard>>>
-export type GetDashboardQueryError = ErrorType<unknown>
+export type GetDashboardQueryError = ErrorType<FormOwnerMismatchResponse>
 
 
 
-export function useGetDashboard<TData = Awaited<ReturnType<typeof getDashboard>>, TError = ErrorType<unknown>>(
+export function useGetDashboard<TData = Awaited<ReturnType<typeof getDashboard>>, TError = ErrorType<FormOwnerMismatchResponse>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDashboard>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -1646,7 +1646,7 @@ export const getListCasesQueryKey = () => {
     }
 
 
-export const getListCasesQueryOptions = <TData = Awaited<ReturnType<typeof listCases>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListCasesQueryOptions = <TData = Awaited<ReturnType<typeof listCases>>, TError = ErrorType<FormOwnerMismatchResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1665,11 +1665,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListCasesQueryResult = NonNullable<Awaited<ReturnType<typeof listCases>>>
-export type ListCasesQueryError = ErrorType<unknown>
+export type ListCasesQueryError = ErrorType<FormOwnerMismatchResponse>
 
 
 
-export function useListCases<TData = Awaited<ReturnType<typeof listCases>>, TError = ErrorType<unknown>>(
+export function useListCases<TData = Awaited<ReturnType<typeof listCases>>, TError = ErrorType<FormOwnerMismatchResponse>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listCases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -1799,7 +1799,7 @@ export const getGetCaseQueryKey = (id: number,) => {
     }
 
 
-export const getGetCaseQueryOptions = <TData = Awaited<ReturnType<typeof getCase>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCase>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetCaseQueryOptions = <TData = Awaited<ReturnType<typeof getCase>>, TError = ErrorType<FormOwnerMismatchResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCase>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1818,11 +1818,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetCaseQueryResult = NonNullable<Awaited<ReturnType<typeof getCase>>>
-export type GetCaseQueryError = ErrorType<unknown>
+export type GetCaseQueryError = ErrorType<FormOwnerMismatchResponse>
 
 
 
-export function useGetCase<TData = Awaited<ReturnType<typeof getCase>>, TError = ErrorType<unknown>>(
+export function useGetCase<TData = Awaited<ReturnType<typeof getCase>>, TError = ErrorType<FormOwnerMismatchResponse>>(
  id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getCase>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -2021,7 +2021,7 @@ export const getListEvidenceQueryKey = (id: number,) => {
     }
 
 
-export const getListEvidenceQueryOptions = <TData = Awaited<ReturnType<typeof listEvidence>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListEvidenceQueryOptions = <TData = Awaited<ReturnType<typeof listEvidence>>, TError = ErrorType<FormOwnerMismatchResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -2040,11 +2040,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListEvidenceQueryResult = NonNullable<Awaited<ReturnType<typeof listEvidence>>>
-export type ListEvidenceQueryError = ErrorType<unknown>
+export type ListEvidenceQueryError = ErrorType<FormOwnerMismatchResponse>
 
 
 
-export function useListEvidence<TData = Awaited<ReturnType<typeof listEvidence>>, TError = ErrorType<unknown>>(
+export function useListEvidence<TData = Awaited<ReturnType<typeof listEvidence>>, TError = ErrorType<FormOwnerMismatchResponse>>(
  id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -2401,7 +2401,7 @@ export const getGetAssessmentQueryKey = (id: number,) => {
     }
 
 
-export const getGetAssessmentQueryOptions = <TData = Awaited<ReturnType<typeof getAssessment>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAssessment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetAssessmentQueryOptions = <TData = Awaited<ReturnType<typeof getAssessment>>, TError = ErrorType<FormOwnerMismatchResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAssessment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -2420,11 +2420,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetAssessmentQueryResult = NonNullable<Awaited<ReturnType<typeof getAssessment>>>
-export type GetAssessmentQueryError = ErrorType<unknown>
+export type GetAssessmentQueryError = ErrorType<FormOwnerMismatchResponse>
 
 
 
-export function useGetAssessment<TData = Awaited<ReturnType<typeof getAssessment>>, TError = ErrorType<unknown>>(
+export function useGetAssessment<TData = Awaited<ReturnType<typeof getAssessment>>, TError = ErrorType<FormOwnerMismatchResponse>>(
  id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAssessment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
@@ -2546,7 +2546,7 @@ export const getListTransitionVerificationsQueryKey = () => {
     }
 
 
-export const getListTransitionVerificationsQueryOptions = <TData = Awaited<ReturnType<typeof listTransitionVerifications>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTransitionVerifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListTransitionVerificationsQueryOptions = <TData = Awaited<ReturnType<typeof listTransitionVerifications>>, TError = ErrorType<FormOwnerMismatchResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTransitionVerifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -2565,11 +2565,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListTransitionVerificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listTransitionVerifications>>>
-export type ListTransitionVerificationsQueryError = ErrorType<unknown>
+export type ListTransitionVerificationsQueryError = ErrorType<FormOwnerMismatchResponse>
 
 
 
-export function useListTransitionVerifications<TData = Awaited<ReturnType<typeof listTransitionVerifications>>, TError = ErrorType<unknown>>(
+export function useListTransitionVerifications<TData = Awaited<ReturnType<typeof listTransitionVerifications>>, TError = ErrorType<FormOwnerMismatchResponse>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTransitionVerifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {

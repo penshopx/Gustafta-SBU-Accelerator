@@ -1,4 +1,4 @@
-import { useFormMutationOptions } from './account-queries';
+import { useFormMutationOptions, useAccountReadOptions } from './account-queries';
 import React, { useState, type FormEvent, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, CircleAlert, ClipboardCheck, FileText, LockKeyhole, Pencil, RefreshCw, ShieldAlert, ShieldCheck, X } from 'lucide-react';
@@ -167,7 +167,7 @@ function VerificationForm({
 
 export function TransitionVerificationsPage() {
   const queryClient = useQueryClient();
-  const result = useListTransitionVerifications({ query: { queryKey: getListTransitionVerificationsQueryKey(), retry: false, refetchOnWindowFocus: true } });
+  const result = useListTransitionVerifications({ ...useAccountReadOptions(), query: { queryKey: getListTransitionVerificationsQueryKey(), retry: false, refetchOnWindowFocus: true } });
   const [selected, setSelected] = useState<Track>('transisi');
   const [editing, setEditing] = useState(false);
   const [notice, setNotice] = useState('');

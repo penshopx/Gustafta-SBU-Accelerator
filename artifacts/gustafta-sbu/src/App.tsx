@@ -23,7 +23,7 @@ import { CasePreparationExport } from '@/components/case-preparation-export';
 import { LocalCompanyProfilePage } from '@/components/local-company-profile-page';
 import { CaseDocuments } from '@/components/case-documents';
 import { DocumentVaultPage } from '@/components/document-vault-page';
-import { AccountQueries, CrossTabAccountGate, useFormMutationOptions } from '@/components/account-queries';
+import { AccountQueries, CrossTabAccountGate, useFormMutationOptions, useAccountReadOptions } from '@/components/account-queries';
 import { CaseRows, DashboardResult, Empty, Status, statusLabels } from '@/components/dashboard-overview';
 import { Disclaimer } from '@/components/disclaimer';
 import { WorkspaceFoundation } from '@/components/workspace-foundation';
@@ -109,28 +109,28 @@ function AuthPage({ mode }: { mode: 'in' | 'up' }) { return <div className="grid
 function Shell({ children, profile }: { children: ReactNode; profile: Profile }) {
   const [location] = useLocation(); const { signOut } = useClerk(); const [mobile, setMobile] = useState(false);
   // The server's protected GET is the permission probe; profile roles never confer review access.
-  const reviewer = useListTransitionVerifications({ query: { queryKey: getListTransitionVerificationsQueryKey(), retry: false, refetchOnWindowFocus: true } });
+  const reviewer = useListTransitionVerifications({ ...useAccountReadOptions(), query: { queryKey: getListTransitionVerificationsQueryKey(), retry: false, refetchOnWindowFocus: true } });
   const links = [{ href: '/dashboard', label: 'Ringkasan', icon: LayoutDashboard }, ...(canCreate(profile) ? [{ href: '/cases', label: 'Kasus SBU', icon: BriefcaseBusiness }] : []), { href: '/company-profile', label: 'Profil perusahaan', icon: Building2 }, { href: '/documents', label: 'Ruang Simpan', icon: Folder }, { href: '/regulations', label: 'Pusat regulasi', icon: BookOpen }, { href: '/assistant', label: 'Asisten peran', icon: MessagesSquare }, ...(reviewer.isSuccess ? [{ href: '/transition-verifications', label: 'Telaah sumber transisi', icon: ShieldCheck }] : []), { href: '/settings', label: 'Pengaturan', icon: Settings2 }];
   return <div className="min-h-[100dvh] bg-[#f1f6fa] lg:flex"><aside className={`fixed inset-y-0 left-0 z-40 flex w-[256px] flex-col bg-[#101f32] text-[#dceaf5] transition-transform duration-200 lg:sticky lg:top-0 lg:h-[100dvh] lg:translate-x-0 ${mobile ? 'translate-x-0' : '-translate-x-full'}`}><div className="border-b border-[#2b435b] px-6 py-7"><Brand inverse /></div><div className="px-4 pt-8"><div className="eyebrow mb-3 px-3 text-[#779bb9]">RUANG KERJA</div><nav className="space-y-1">{links.map(({ href, label, icon: Icon }) => <Link key={href} href={href} onClick={() => setMobile(false)} data-testid={`link-nav-${href.slice(1)}`} className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-semibold transition-colors ${location === href || href === '/cases' && location.startsWith('/cases/') ? 'bg-[#275381] text-white' : 'text-[#acc3d7] hover:bg-[#1b334b] hover:text-white'}`}><Icon size={17}/>{label}{location === href && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#83c7ff]" />}</Link>)}</nav></div><div className="mt-auto border-t border-[#2b435b] px-5 py-5"><div className="mb-4 flex items-center gap-3"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-[#315a7f] text-xs font-bold text-white">{profile.displayName.slice(0,2).toUpperCase()}</div><div className="min-w-0"><div data-testid="text-sidebar-name" className="truncate text-sm font-bold text-white">{profile.displayName}</div><div className="text-[11px] text-[#93adc4]">{roleLabels[profile.role]}</div></div></div><button data-testid="button-sign-out" onClick={() => signOut({ redirectUrl: basePath || '/' })} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-[#b3ccdf] hover:bg-[#1b334b] hover:text-white"><LogOut size={15}/> Keluar akun</button></div></aside>{mobile && <button aria-label="Tutup navigasi" data-testid="button-close-menu" onClick={() => setMobile(false)} className="fixed inset-0 z-30 bg-[#07142499] lg:hidden" />}
   <div className="min-w-0 flex-1"><header className="flex h-[74px] items-center justify-between border-b border-[#d6e3ec] bg-[#f9fcfe] px-5 md:px-10"><div className="flex items-center gap-3"><button data-testid="button-open-menu" onClick={() => setMobile(true)} aria-label="Buka navigasi" className="p-2 lg:hidden"><Menu size={22}/></button><span className="eyebrow hidden text-[#678096] sm:block">GUSTAFTA / {location.split('/')[1]?.toUpperCase() || 'WORKSPACE'}</span></div><div className="flex items-center gap-3"><span className="hidden text-xs text-[#698199] sm:block">Ruang kerja pribadi</span><span className="h-2 w-2 rounded-full bg-[#4eb7a2]" /></div></header><main className="mx-auto max-w-[1370px] px-5 py-8 md:px-10 md:py-10">{children}</main></div></div>;
 }
 function Protected({ children }: { children: (profile: Profile) => ReactNode }) {
-  const me = useGetMe(); if (me.isLoading) return <div className="mx-auto max-w-3xl p-10"><Loading /></div>;
+  const me = useGetMe(useAccountReadOptions()); if (me.isLoading) return <div className="mx-auto max-w-3xl p-10"><Loading /></div>;
   if (me.isError) return <div className="mx-auto max-w-xl p-10"><ErrorState retry={() => me.refetch()} /></div>;
   if (!me.data || me.data.role === 'belum_dipilih') return <Redirect to="/onboarding" />;
   return <Shell profile={me.data}>{children(me.data)}</Shell>;
 }
 function ReviewerRoute() {
-  const me = useGetMe();
+  const me = useGetMe(useAccountReadOptions());
   if (me.isLoading) return <div className="mx-auto max-w-3xl p-10"><Loading /></div>;
   if (me.isError || !me.data) return <div className="mx-auto max-w-xl p-10"><ErrorState retry={() => me.refetch()} /></div>;
   // A trusted reviewer is identified by the server allowlist, not by their self-selected profile role.
   return <Shell profile={me.data}><TransitionVerificationsPage /></Shell>;
 }
-function Onboarding() { const me = useGetMe(); if (me.isLoading) return <div className="p-10"><Loading /></div>; if (me.isError) return <div className="mx-auto max-w-xl p-10"><ErrorState retry={() => me.refetch()} /></div>; if (me.data?.role !== 'belum_dipilih') return <Redirect to="/dashboard" />; return <div className="min-h-[100dvh] bg-[#eaf3fa]"><header className="border-b border-[#cddde9] bg-[#f9fcfe] px-5 py-5 md:px-10"><Brand /></header><main className="mx-auto max-w-[780px] px-5 py-12"><div className="eyebrow text-[#1769d1]">LANGKAH 01 / 01</div><h1 className="display mt-3 text-4xl font-extrabold">Kenali ruang kerja Anda.</h1><p className="mt-3 max-w-xl text-sm leading-7 text-[#547088]">Pilih peran yang sesuai agar Anda melihat fungsi yang memang tersedia. Anda dapat mengubah profil nanti di pengaturan.</p><div className="surface mt-8 p-6 sm:p-8"><ProfileForm profile={me.data} onboarding /></div></main></div>; }
+function Onboarding() { const me = useGetMe(useAccountReadOptions()); if (me.isLoading) return <div className="p-10"><Loading /></div>; if (me.isError) return <div className="mx-auto max-w-xl p-10"><ErrorState retry={() => me.refetch()} /></div>; if (me.data?.role !== 'belum_dipilih') return <Redirect to="/dashboard" />; return <div className="min-h-[100dvh] bg-[#eaf3fa]"><header className="border-b border-[#cddde9] bg-[#f9fcfe] px-5 py-5 md:px-10"><Brand /></header><main className="mx-auto max-w-[780px] px-5 py-12"><div className="eyebrow text-[#1769d1]">LANGKAH 01 / 01</div><h1 className="display mt-3 text-4xl font-extrabold">Kenali ruang kerja Anda.</h1><p className="mt-3 max-w-xl text-sm leading-7 text-[#547088]">Pilih peran yang sesuai agar Anda melihat fungsi yang memang tersedia. Anda dapat mengubah profil nanti di pengaturan.</p><div className="surface mt-8 p-6 sm:p-8"><ProfileForm profile={me.data} onboarding /></div></main></div>; }
 
 function DashboardPage({ profile }: { profile: Profile }) {
-  const data = useGetDashboard({ query: { enabled: canCreate(profile), queryKey: getGetDashboardQueryKey() } });
+  const data = useGetDashboard({ ...useAccountReadOptions(), query: { enabled: canCreate(profile), queryKey: getGetDashboardQueryKey() } });
   if (!canCreate(profile)) return <><PageHead kicker="RUANG KERJA / PENGANTAR" title={`Halo, ${profile.displayName.split(' ')[0]}.`} description={`Anda terdaftar sebagai ${roleLabels[profile.role]}. Berikut fungsi yang tersedia untuk peran Anda saat ini.`}/><div className="grid gap-6 lg:grid-cols-[1.2fr_.8fr]"><div className="rounded-2xl bg-[#142c46] p-8 text-white"><BookOpen className="text-[#85c8fa]" size={28}/><h2 className="display mt-10 text-3xl font-extrabold">Mulai dari sumber yang jelas.</h2><p className="mt-3 max-w-lg leading-7 text-[#b9d1e3]">Jelajahi ringkasan regulasi dan catatan transisi sebagai titik awal. Selalu periksa sumber primer sebelum mengambil keputusan.</p><Link data-testid="link-regulations-intro" href="/regulations" className="btn mt-7 bg-[#8bccff] text-[#102438]">Buka pusat regulasi <ArrowRight size={16}/></Link></div><div className="surface p-8"><div className="eyebrow text-[#1769d1]">BATAS AKSES</div><h3 className="display mt-4 text-xl font-extrabold">Belum ada ruang kasus untuk peran ini.</h3><p className="mt-3 text-sm leading-7 text-[#58718a]">{profile.role === 'profesional' ? 'Peran profesional saat ini dapat membaca rujukan regulasi. Pencatatan kredensial atau akses ke berkas perusahaan belum tersedia.' : 'Peran asosiasi saat ini dapat membaca rujukan regulasi. Dashboard anggota dan akses kasus bersama belum tersedia.'}</p><Link data-testid="link-role-settings" href="/settings" className="mt-6 inline-flex items-center gap-1 text-sm font-bold text-[#1769d1]">Tinjau profil <ArrowRight size={15}/></Link></div></div></>;
   return <><PageHead kicker="RUANG KERJA / RINGKASAN" title={`Selamat datang, ${profile.displayName.split(' ')[0]}.`} description="Gambaran terkini persiapan kasus SBU Anda. Semua status di sini merujuk pada pekerjaan persiapan, bukan keputusan sertifikasi." action={<Link href="/cases" data-testid="link-all-cases" className="btn btn-primary">Lihat semua kasus <ArrowRight size={15}/></Link>}/><DashboardResult result={data}/></>;
 }
@@ -148,7 +148,7 @@ function CaseForm({ initial, onDone, close }: { initial?: SbuCase; onDone: () =>
 }
 function CasesPage({ profile }: { profile: Profile }) {
   const [, navigate] = useLocation(); const [createOpen, setCreateOpen] = useState(false); const [query, setQuery] = useState(''); const [filter, setFilter] = useState('semua');
-  const result = useListCases({ query: { enabled: canCreate(profile), queryKey: getListCasesQueryKey() } });
+  const result = useListCases({ ...useAccountReadOptions(), query: { enabled: canCreate(profile), queryKey: getListCasesQueryKey() } });
   if (!canCreate(profile)) return <Redirect to="/dashboard" />;
   const filtered = (result.data || []).filter(c => (filter === 'semua' || c.status === filter) && `${c.companyName} ${c.classification}`.toLowerCase().includes(query.toLowerCase()));
   return <><PageHead kicker="RUANG KERJA / KASUS SBU" title="Daftar kasus" description="Kelola catatan persiapan permohonan. Setiap kasus tersimpan di ruang kerja pribadi Anda." action={<button data-testid="button-create-case" onClick={() => setCreateOpen(true)} className="btn btn-primary"><Plus size={16}/> Kasus baru</button>}/><div className="mb-5 flex flex-col gap-3 sm:flex-row"><div className="relative flex-1"><Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8298aa]"/><input data-testid="input-search-cases" className="field !pl-11" value={query} onChange={e => setQuery(e.target.value)} placeholder="Cari nama usaha atau klasifikasi" /></div><select data-testid="select-filter-status" className="field sm:!w-[205px]" value={filter} onChange={e => setFilter(e.target.value)}><option value="semua">Semua status</option><option value="draf">Draf</option><option value="ditinjau">Dalam peninjauan</option><option value="selesai_persiapan">Persiapan selesai</option></select></div>{result.isLoading ? <Loading rows={4}/> : result.isError ? <ErrorState retry={() => result.refetch()}/> : filtered.length ? <><div className="mb-3 text-xs text-[#6b8296]">{filtered.length} dari {result.data?.length || 0} kasus</div><CaseRows cases={filtered}/></> : <Empty title={result.data?.length ? 'Tidak ada hasil yang cocok' : 'Mulai kasus pertama Anda'} detail={result.data?.length ? 'Coba kata kunci atau status lain untuk menemukan kasus.' : 'Catat identitas perusahaan dan klasifikasi untuk memulai persiapan SBU.'} action={!result.data?.length && <button data-testid="button-create-empty-case" onClick={() => setCreateOpen(true)} className="btn btn-primary"><Plus size={16}/> Buat kasus</button>} />}{createOpen && <Modal title="Buat kasus SBU" close={() => setCreateOpen(false)}><CaseForm close={() => setCreateOpen(false)} onDone={() => { setCreateOpen(false); navigate('/cases'); }} /></Modal>}</>;
@@ -156,8 +156,9 @@ function CasesPage({ profile }: { profile: Profile }) {
 
 function CaseDetailPage({ profile }: { profile: Profile }) {
   const { id: rawId } = useParams<{ id: string }>(); const id = Number(rawId); const valid = Number.isSafeInteger(id) && id > 0; const [, navigate] = useLocation(); const qc = useQueryClient();
-  const item = useGetCase(id, { query: { enabled: valid && canCreate(profile), queryKey: getGetCaseQueryKey(id) } });
-  const assessment = useGetAssessment(id, { query: { enabled: valid && canCreate(profile), queryKey: getGetAssessmentQueryKey(id) } });
+  const readOptions = useAccountReadOptions();
+  const item = useGetCase(id, { ...readOptions, query: { enabled: valid && canCreate(profile), queryKey: getGetCaseQueryKey(id) } });
+  const assessment = useGetAssessment(id, { ...readOptions, query: { enabled: valid && canCreate(profile), queryKey: getGetAssessmentQueryKey(id) } });
   const options = useFormMutationOptions(); const update = useUpdateCase(options); const remove = useDeleteCase(options);
   const [editOpen, setEditOpen] = useState(false); const [confirm, setConfirm] = useState(false); const [tab, setTab] = useState<'evidence' | 'assessment'>('evidence');
   const [suggestion, setSuggestion] = useState<string | null>(null);
@@ -192,10 +193,11 @@ function AccountRoutes() {
 }
 function VerifiedRoutes({ userId }: { userId: string | null }) {
   const clerk = useClerk();
+  const { request } = useAccountReadOptions();
   const me = useGetMe({ query: {
     enabled: !!userId,
     queryKey: getGetMeQueryKey(),
-    queryFn: ({ signal }) => withSessionDeadline((boundedSignal) => getMe({ signal: boundedSignal, cache: 'no-store' }), signal),
+    queryFn: ({ signal }) => withSessionDeadline((boundedSignal) => getMe({ ...request, signal: boundedSignal }), signal),
     retry: retrySessionCheck,
     retryOnMount: false,
     refetchOnWindowFocus: true,

@@ -1,4 +1,4 @@
-import { useFormMutationOptions } from './account-queries';
+import { useFormMutationOptions, useAccountReadOptions } from './account-queries';
 import React, { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowRight, Pencil, Plus, Trash2, X } from 'lucide-react';
@@ -72,7 +72,7 @@ function EvidenceForm({ id, initial, suggestedCode = '', close, requestType, qua
 
 export function CaseEvidence({ id, requestType, qualification, suggestion, onSuggestionClose }: { id: number; requestType: SbuCase['requestType']; qualification: SbuCase['qualification']; suggestion?: string | null; onSuggestionClose?: () => void }) {
   const qc = useQueryClient();
-  const evidence = useListEvidence(id, { query: { queryKey: getListEvidenceQueryKey(id) } });
+  const evidence = useListEvidence(id, { ...useAccountReadOptions(), query: { queryKey: getListEvidenceQueryKey(id) } });
   const remove = useDeleteEvidence(useFormMutationOptions());
   const [open, setOpen] = useState(suggestion !== null && suggestion !== undefined);
   const [editing, setEditing] = useState<Evidence>();

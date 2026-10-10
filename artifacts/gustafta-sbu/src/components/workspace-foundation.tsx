@@ -1,10 +1,10 @@
 import React from 'react';
 import { Box, ShieldCheck } from 'lucide-react';
 import { useGetWorkspace } from '@workspace/api-client-react';
+import { useAccountReadOptions } from './account-queries';
 import { ErrorState, Loading } from '@/components/request-states';
 import type { Workspace } from '@workspace/api-client-react';
 
-const noStore = { cache: 'no-store' as RequestCache };
 
 export function WorkspaceFoundationView({ workspace }: { workspace: Workspace }) {
   const def = workspace.clients.find(c => c.isDefault) ?? workspace.clients[0];
@@ -19,7 +19,7 @@ export function WorkspaceFoundationView({ workspace }: { workspace: Workspace })
 }
 
 export function WorkspaceFoundation({ expectedUserId }: { expectedUserId: string }) {
-  const q = useGetWorkspace({ request: noStore });
+  const q = useGetWorkspace(useAccountReadOptions());
   let body;
   if (q.isLoading) body = <Loading rows={2} />;
   else if (q.isError) body = <ErrorState retry={() => q.refetch()} message="Status wadah kasus belum dapat dimuat." />;
