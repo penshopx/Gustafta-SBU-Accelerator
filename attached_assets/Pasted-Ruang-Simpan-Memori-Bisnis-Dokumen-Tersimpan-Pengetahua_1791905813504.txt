@@ -1,0 +1,190 @@
+Ruang Simpan
+·
+Memori Bisnis
+Dokumen Tersimpan. Pengetahuan Hidup.
+Google Drive menyimpan file. Gustafta memahami isinya — lalu menjadikannya pengetahuan yang bisa dicari, ditanya, dan digunakan oleh semua AI Anda.
+
+8.8 MB
+/
+15 MB gratis
+59%
+5 file
+·
+5 siap AI
+Selamat datang di Memori Bisnis Anda
+Baru
+Selama ini dokumen perusahaan Anda tersimpan — tapi sulit ditemukan saat dibutuhkan. Gustafta tidak hanya menyimpan file, melainkan memahami isinya sehingga bisa dicari, ditanya, dan digunakan oleh semua AI Anda.
+
+Cari isi dokumen, bukan cuma nama file
+AI menjawab berdasarkan dokumen Anda
+Semua file otomatis jadi konteks AI
+💡 Mulai dengan upload satu dokumen — misalnya portofolio proyek, SOP, atau SKK tenaga ahli.
+
+
+Data Resmi & Akses Aplikasi
+Profil di sini adalah acuan perusahaan. Aplikasi Gustafta lain dan aplikasi tepercaya dapat memakai data yang sama melalui izin terbatas.
+
+Pemilik akun
+Profil resmi perusahaan
+Gunakan satu profil ini sebagai acuan bersama antaraplikasi. Perubahan disimpan dengan pemeriksaan versi agar pembaruan tidak saling menimpa.
+
+Nama badan usaha
+PT SKI
+NIB
+Nomor Induk Berusaha
+Alamat perusahaan
+Depok Bogor
+Simpan profil
+Versi data 1
+Hubungkan aplikasi eksternal
+Buat izin terpisah untuk setiap aplikasi. Hanya hubungkan aplikasi yang Anda percayai; rahasiakan token dan simpan hanya di server aplikasi, jangan di browser atau kode publik.
+
+Nama aplikasi
+Contoh: Portal Proyek
+Izin profil perusahaan
+
+Baca — aplikasi dapat membaca profil resmi.
+
+Ubah — aplikasi dapat memperbarui profil resmi. Berikan hanya bila diperlukan.
+Izin dokumen (tidak diberikan secara otomatis)
+Baca metadata dan unduh file yang dipilih
+Unggah ke folder yang dipilih
+Buat token akses
+Token berlaku 90 hari. Simpan hanya di server aplikasi. Akses file dibatasi pada pilihan di atas.
+
+Aplikasi yang terhubung
+1 aktif
+LPSE
+Aktif
+Izin: Ubah profil, Unggah dokumen, Baca profil
+
+0 file · 3 folder dipilih
+
+Dibuat 04 Okt 2026 · Berakhir 02 Jan 2027
+
+Pilih dokumen
+Cabut akses
+LPSE
+Dicabut
+Izin: Ubah profil
+
+Dibuat 03 Okt 2026 · Berakhir 01 Jan 2027
+
+LPSE
+Dicabut
+Izin: Baca profil
+
+Dibuat 03 Okt 2026 · Berakhir 01 Jan 2027
+
+LPSE
+Dicabut
+Izin: Baca profil
+
+Dibuat 03 Okt 2026 · Berakhir 01 Jan 2027
+
+Upload FileImport dari Link
+
+Semua File
+5
+
+Legalitas
+0
+
+Teknis
+0
+
+Penawaran & RAB
+0
+
+SDM & Sertifikasi
+0
+
+Tender
+0
+
+Proyek
+0
+
+Umum
+1
+Folder Baru
+
+Buat AI Asisten
+AI Asisten Saya
+
+AI Assistant Saya
+
+Chat
+Kelola
+
+AI Assistant Saya
+
+Chat
+Kelola
+
+AI Assistant Saya
+
+Chat
+Kelola
+
+AI Assistant Saya
+
+Chat
+Kelola
+
+AI Assistant Saya
+
+Chat
+Kelola
+
+AI Assistant Saya
+
+Chat
+Kelola
+
+AI Assistant Trilogi
+
+Chat
+Kelola
+
+AI Assistant Saya
+
+Chat
+Kelola
+
+Konteks AI
+Dokumen dengan badge AI Siap dapat digunakan sebagai konteks oleh fitur Klinik, Bedah Dokumen, Brain Project, dan lainnya.
+
+Cari file atau isi dokumen…
+
+Surat Penawaran SMAP ALat dan TKK PT MJP.pdf
+
+PDF
+1.7 MB
+
+AI Siap ·13
+Aktif
+11 Agu 2026
+1. Pak Panani Bu Indri Pak Joko_Konsep Standar Skema Sertifikasi_Mei 2026_V3 (Hal 52-98).pdf
+
+PDF
+2.4 MB
+
+AI Siap ·29
+Aktif
+28 Jul 2026
+3. Pak Rivaldo LPJK_Lamprian 20 Data dan Dokumen Pendaftaran.pdf
+
+PDF
+775 KB
+
+AI Siap ·18
+Aktif
+28 Jul 2026
+2. Ksd Usaha_Pengaruh Perubahan Pengaturan Sertifikasi BUJK.pdf
+
+PDF
+2.3 MB
+
+AI Siap ·29
+Aktif
