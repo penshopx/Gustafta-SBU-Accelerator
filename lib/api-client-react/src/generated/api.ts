@@ -43,7 +43,6 @@ import type {
   ProfileInput,
   Regulation,
   RequestCaseDocumentUpload201,
-  RuangSimpanCompanyProfileResponse,
   SbuCase,
   SbuChatInput,
   SbuChatReply,
@@ -1470,80 +1469,6 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getUpdateMeMutationOptions(options));
     }
-
-export const getGetRuangSimpanCompanyProfileUrl = () => {
-
-
-
-
-  return `/api/ruang-simpan/company-profile`
-}
-
-/**
- * Read the authenticated SBU owner's company profile using their server-managed Gustafta connection. No owner parameters or token input.
- */
-export const getRuangSimpanCompanyProfile = async ( options?: Parameters<typeof customFetch>[1]): Promise<RuangSimpanCompanyProfileResponse> => {
-
-  return customFetch<RuangSimpanCompanyProfileResponse>(getGetRuangSimpanCompanyProfileUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetRuangSimpanCompanyProfileQueryKey = () => {
-    return [
-    `/api/ruang-simpan/company-profile`
-    ] as const;
-    }
-
-
-export const getGetRuangSimpanCompanyProfileQueryOptions = <TData = Awaited<ReturnType<typeof getRuangSimpanCompanyProfile>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRuangSimpanCompanyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetRuangSimpanCompanyProfileQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRuangSimpanCompanyProfile>>> = ({ signal }) => getRuangSimpanCompanyProfile({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRuangSimpanCompanyProfile>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetRuangSimpanCompanyProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getRuangSimpanCompanyProfile>>>
-export type GetRuangSimpanCompanyProfileQueryError = ErrorType<void>
-
-
-
-export function useGetRuangSimpanCompanyProfile<TData = Awaited<ReturnType<typeof getRuangSimpanCompanyProfile>>, TError = ErrorType<void>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRuangSimpanCompanyProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetRuangSimpanCompanyProfileQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
 
 export const getGetDashboardUrl = () => {
 

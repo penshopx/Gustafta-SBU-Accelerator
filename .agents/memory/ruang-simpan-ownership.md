@@ -12,6 +12,14 @@ Pengguna menyatakan: “integrasi dengan gutafta dibatalkan”.
 
 **How to apply:** Jangan melanjutkan provisioning, pemetaan koneksi, atau pengujian live integrasi Gustafta/Ruang Simpan kecuali pengguna secara eksplisit meminta melanjutkannya. Pembatalan pekerjaan tidak dengan sendirinya mengizinkan penghapusan kode atau kredensial yang sudah ada.
 
+## Cleanup boundary
+
+Pembersihan integrasi lama tidak mencakup halaman `/company-profile` lokal atau penyimpanan dokumen mandiri, walaupun fitur dokumen juga bernama “Ruang Simpan”.
+
+**Why:** Pengguna meminta hanya jalur integrasi Gustafta yang dibatalkan dinonaktifkan; kesamaan nama tidak berarti fitur penyimpanan dokumen lokal ikut dibatalkan.
+
+**How to apply:** Pisahkan adapter/pemanggil Gustafta dari profil dan dokumen mandiri. Pencabutan token dan pembersihan konfigurasi kredensial merupakan pekerjaan terpisah, bukan izin tersirat dari pembersihan kode.
+
 ## Resolving an owner-supplied email
 
 An owner-supplied email may locate the local SBU account only after explicit confirmation of entitlement to the token's company profile. Require exactly one matching account with a verified email in the selected authentication environment, and map its Clerk user ID, never the email.

@@ -364,24 +364,6 @@ export interface Workspace {
   disclaimer: string;
 }
 
-export interface RuangSimpanCompanyProfile {
-  name: string;
-  nib: string;
-  address: string;
-  /** @minimum 0 */
-  revision: number;
-  /**
-     * ISO timestamp from Gustafta; null when no profile has been entered
-     * @nullable
-     */
-  updated_at: string | null;
-}
-
-export interface RuangSimpanCompanyProfileResponse {
-  userId: string;
-  profile: RuangSimpanCompanyProfile;
-}
-
 export interface HealthStatus {
   status: string;
 }

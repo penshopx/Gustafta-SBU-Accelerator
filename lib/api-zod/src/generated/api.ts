@@ -527,25 +527,6 @@ export const UpdateMeResponse = zod.object({
 })
 
 
-/**
- * Read the authenticated SBU owner's company profile using their server-managed Gustafta connection. No owner parameters or token input.
- */
-export const getRuangSimpanCompanyProfileResponseProfileRevisionMin = 0;
-
-
-
-export const GetRuangSimpanCompanyProfileResponse = zod.object({
-  "userId": zod.string(),
-  "profile": zod.object({
-  "name": zod.string(),
-  "nib": zod.string(),
-  "address": zod.string(),
-  "revision": zod.number().int().min(getRuangSimpanCompanyProfileResponseProfileRevisionMin),
-  "updated_at": zod.string().nullable().describe('ISO timestamp from Gustafta; null when no profile has been entered')
-})
-})
-
-
 export const GetDashboardResponse = zod.object({
   "total": zod.number().int(),
   "draft": zod.number().int(),
