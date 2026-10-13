@@ -10,6 +10,56 @@ tags:
   - name: health
   - name: workspace
 paths:
+  /cases/{id}/workroom:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    get:
+      operationId: getWorkroom
+      responses:
+        "200":
+          description: Private case workroom
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Workroom" }
+    post:
+      operationId: createWorkroomItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkroomItemInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkroomItem" }
+  /cases/{id}/workroom/{itemId}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      - { name: itemId, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      operationId: updateWorkroomItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkroomItemUpdate" }
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WorkroomItem" }
+    delete:
+      operationId: deleteWorkroomItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkroomItemDeletion" }
+      responses:
+        "204": { description: Deleted }
   /personnel:
     get:
       operationId: listPersonnel
@@ -831,6 +881,54 @@ components:
       name: X-SBU-Form-Owner
       description: Required account precondition for private reads and writes. Capture the tab/cache or form owner, not the current cookie. This is not authentication; ownership is always derived from the verified Clerk session. Missing or mismatched values return 409 before private data access. Private reads use Cache-Control private, no-store.
   schemas:
+    WorkroomItemDeletion:
+      type: object
+      required: [revision]
+      properties:
+        revision: { type: integer, minimum: 0 }
+    Workroom:
+      type: object
+      required: [caseId, items]
+      properties:
+        caseId: { type: integer }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/WorkroomItem" }
+    WorkroomItemInput:
+      type: object
+      required: [kind, title]
+      properties:
+        kind: { type: string, enum: [checklist, action, journal] }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        body: { type: string, maxLength: 10000 }
+        status: { type: string, enum: [todo, doing, done] }
+        assignee: { type: string, maxLength: 200 }
+        dueOn: { type: ["string", "null"], pattern: '^\d{4}-\d{2}-\d{2}$' }
+    WorkroomItemUpdate:
+      type: object
+      required: [revision]
+      properties:
+        revision: { type: integer, minimum: 0 }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        body: { type: string, maxLength: 10000 }
+        status: { type: string, enum: [todo, doing, done] }
+        assignee: { type: string, maxLength: 200 }
+        dueOn: { type: ["string", "null"], pattern: '^\d{4}-\d{2}-\d{2}$' }
+    WorkroomItem:
+      type: object
+      required: [id, caseId, kind, title, body, status, assignee, dueOn, revision, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        caseId: { type: integer }
+        kind: { type: string, enum: [checklist, action, journal] }
+        title: { type: string }
+        body: { type: string }
+        status: { type: string, enum: [todo, doing, done] }
+        assignee: { type: string }
+        dueOn: { type: ["string", "null"] }
+        revision: { type: integer }
+        createdAt: { type: string }
+        updatedAt: { type: string }
     CalendarDay:
       type: [string, "null"]
       pattern: '^\d{4}-\d{2}-\d{2}$'

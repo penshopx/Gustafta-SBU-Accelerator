@@ -59,6 +59,11 @@ import type {
   SkkCertificateUpdate,
   TransitionVerification,
   TransitionVerificationInput,
+  Workroom,
+  WorkroomItem,
+  WorkroomItemDeletion,
+  WorkroomItemInput,
+  WorkroomItemUpdate,
   Workspace
 } from './api.schemas';
 
@@ -88,6 +93,330 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetWorkroomUrl = (id: number,) => {
+
+
+
+
+  return `/api/cases/${id}/workroom`
+}
+
+export const getWorkroom = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<Workroom> => {
+
+  return customFetch<Workroom>(getGetWorkroomUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWorkroomQueryKey = (id: number,) => {
+    return [
+    `/api/cases/${id}/workroom`
+    ] as const;
+    }
+
+
+export const getGetWorkroomQueryOptions = <TData = Awaited<ReturnType<typeof getWorkroom>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkroom>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWorkroomQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkroom>>> = ({ signal }) => getWorkroom(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorkroom>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWorkroomQueryResult = NonNullable<Awaited<ReturnType<typeof getWorkroom>>>
+export type GetWorkroomQueryError = ErrorType<unknown>
+
+
+
+export function useGetWorkroom<TData = Awaited<ReturnType<typeof getWorkroom>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkroom>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWorkroomQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateWorkroomItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/cases/${id}/workroom`
+}
+
+export const createWorkroomItem = async (id: number,
+    workroomItemInput: WorkroomItemInput, options?: Parameters<typeof customFetch>[1]): Promise<WorkroomItem> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<WorkroomItem>(getCreateWorkroomItemUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(workroomItemInput)
+  }
+);}
+
+
+
+
+
+export const getCreateWorkroomItemMutationKey = () => ['createWorkroomItem'] as const;
+
+export const getCreateWorkroomItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWorkroomItem>>, TError,CreateWorkroomItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWorkroomItem>>, TError,CreateWorkroomItemMutationVariables, TContext> => {
+
+const mutationKey = getCreateWorkroomItemMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWorkroomItem>>, CreateWorkroomItemMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createWorkroomItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWorkroomItemMutationResult = NonNullable<Awaited<ReturnType<typeof createWorkroomItem>>>
+    export type CreateWorkroomItemMutationBody = BodyType<WorkroomItemInput>
+    export type CreateWorkroomItemMutationError = ErrorType<unknown>
+    export type CreateWorkroomItemMutationVariables = {id: number;data: BodyType<WorkroomItemInput>}
+
+    export const useCreateWorkroomItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWorkroomItem>>, TError,CreateWorkroomItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWorkroomItem>>,
+        TError,
+        CreateWorkroomItemMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateWorkroomItemMutationOptions(options));
+    }
+
+export const getUpdateWorkroomItemUrl = (id: number,
+    itemId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/workroom/${itemId}`
+}
+
+export const updateWorkroomItem = async (id: number,
+    itemId: string,
+    workroomItemUpdate: WorkroomItemUpdate, options?: Parameters<typeof customFetch>[1]): Promise<WorkroomItem> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<WorkroomItem>(getUpdateWorkroomItemUrl(id,itemId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(workroomItemUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateWorkroomItemMutationKey = () => ['updateWorkroomItem'] as const;
+
+export const getUpdateWorkroomItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWorkroomItem>>, TError,UpdateWorkroomItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWorkroomItem>>, TError,UpdateWorkroomItemMutationVariables, TContext> => {
+
+const mutationKey = getUpdateWorkroomItemMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWorkroomItem>>, UpdateWorkroomItemMutationVariables> = (props) => {
+          const {id,itemId,data} = props ?? {};
+
+          return  updateWorkroomItem(id,itemId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWorkroomItemMutationResult = NonNullable<Awaited<ReturnType<typeof updateWorkroomItem>>>
+    export type UpdateWorkroomItemMutationBody = BodyType<WorkroomItemUpdate>
+    export type UpdateWorkroomItemMutationError = ErrorType<unknown>
+    export type UpdateWorkroomItemMutationVariables = {id: number;itemId: string;data: BodyType<WorkroomItemUpdate>}
+
+    export const useUpdateWorkroomItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWorkroomItem>>, TError,UpdateWorkroomItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWorkroomItem>>,
+        TError,
+        UpdateWorkroomItemMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateWorkroomItemMutationOptions(options));
+    }
+
+export const getDeleteWorkroomItemUrl = (id: number,
+    itemId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/workroom/${itemId}`
+}
+
+export const deleteWorkroomItem = async (id: number,
+    itemId: string,
+    workroomItemDeletion: WorkroomItemDeletion, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getDeleteWorkroomItemUrl(id,itemId),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(workroomItemDeletion)
+  }
+);}
+
+
+
+
+
+export const getDeleteWorkroomItemMutationKey = () => ['deleteWorkroomItem'] as const;
+
+export const getDeleteWorkroomItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkroomItem>>, TError,DeleteWorkroomItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWorkroomItem>>, TError,DeleteWorkroomItemMutationVariables, TContext> => {
+
+const mutationKey = getDeleteWorkroomItemMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWorkroomItem>>, DeleteWorkroomItemMutationVariables> = (props) => {
+          const {id,itemId,data} = props ?? {};
+
+          return  deleteWorkroomItem(id,itemId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteWorkroomItemMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWorkroomItem>>>
+    export type DeleteWorkroomItemMutationBody = BodyType<WorkroomItemDeletion>
+    export type DeleteWorkroomItemMutationError = ErrorType<unknown>
+    export type DeleteWorkroomItemMutationVariables = {id: number;itemId: string;data: BodyType<WorkroomItemDeletion>}
+
+    export const useDeleteWorkroomItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkroomItem>>, TError,DeleteWorkroomItemMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteWorkroomItem>>,
+        TError,
+        DeleteWorkroomItemMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteWorkroomItemMutationOptions(options));
+    }
 
 export const getListPersonnelUrl = () => {
 

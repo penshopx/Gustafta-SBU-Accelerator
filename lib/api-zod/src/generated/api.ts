@@ -8,6 +8,133 @@
 import * as zod from 'zod';
 
 
+
+
+
+export const GetWorkroomParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const GetWorkroomResponse = zod.object({
+  "caseId": zod.number().int(),
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "kind": zod.enum(['checklist', 'action', 'journal']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "status": zod.enum(['todo', 'doing', 'done']),
+  "assignee": zod.string(),
+  "dueOn": zod.string().nullable(),
+  "revision": zod.number().int(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+})
+
+
+
+
+
+export const CreateWorkroomItemParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const createWorkroomItemBodyTitleMax = 200;
+
+export const createWorkroomItemBodyBodyMax = 10000;
+
+export const createWorkroomItemBodyAssigneeMax = 200;
+
+export const createWorkroomItemBodyDueOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const CreateWorkroomItemBody = zod.object({
+  "kind": zod.enum(['checklist', 'action', 'journal']),
+  "title": zod.string().min(1).max(createWorkroomItemBodyTitleMax),
+  "body": zod.string().max(createWorkroomItemBodyBodyMax).optional(),
+  "status": zod.enum(['todo', 'doing', 'done']).optional(),
+  "assignee": zod.string().max(createWorkroomItemBodyAssigneeMax).optional(),
+  "dueOn": zod.string().regex(createWorkroomItemBodyDueOnRegExp).nullish()
+})
+
+export const CreateWorkroomItemResponse = zod.object({
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "kind": zod.enum(['checklist', 'action', 'journal']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "status": zod.enum(['todo', 'doing', 'done']),
+  "assignee": zod.string(),
+  "dueOn": zod.string().nullable(),
+  "revision": zod.number().int(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+
+
+
+export const UpdateWorkroomItemParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "itemId": zod.coerce.string().uuid()
+})
+
+export const updateWorkroomItemBodyRevisionMin = 0;
+
+export const updateWorkroomItemBodyTitleMax = 200;
+
+export const updateWorkroomItemBodyBodyMax = 10000;
+
+export const updateWorkroomItemBodyAssigneeMax = 200;
+
+export const updateWorkroomItemBodyDueOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const UpdateWorkroomItemBody = zod.object({
+  "revision": zod.number().int().min(updateWorkroomItemBodyRevisionMin),
+  "title": zod.string().min(1).max(updateWorkroomItemBodyTitleMax).optional(),
+  "body": zod.string().max(updateWorkroomItemBodyBodyMax).optional(),
+  "status": zod.enum(['todo', 'doing', 'done']).optional(),
+  "assignee": zod.string().max(updateWorkroomItemBodyAssigneeMax).optional(),
+  "dueOn": zod.string().regex(updateWorkroomItemBodyDueOnRegExp).nullish()
+})
+
+export const UpdateWorkroomItemResponse = zod.object({
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "kind": zod.enum(['checklist', 'action', 'journal']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "status": zod.enum(['todo', 'doing', 'done']),
+  "assignee": zod.string(),
+  "dueOn": zod.string().nullable(),
+  "revision": zod.number().int(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+
+
+
+export const DeleteWorkroomItemParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "itemId": zod.coerce.string().uuid()
+})
+
+export const deleteWorkroomItemBodyRevisionMin = 0;
+
+
+
+export const DeleteWorkroomItemBody = zod.object({
+  "revision": zod.number().int().min(deleteWorkroomItemBodyRevisionMin)
+})
+
+export const DeleteWorkroomItemResponse = zod.void()
+
+
 export const listPersonnelResponseAsOfDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const listPersonnelResponseCertificatesItemIssuedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const listPersonnelResponseCertificatesItemExpiresOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');

@@ -5,6 +5,115 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+export interface WorkroomItemDeletion {
+  /** @minimum 0 */
+  revision: number;
+}
+
+export type WorkroomItemKind = typeof WorkroomItemKind[keyof typeof WorkroomItemKind];
+
+
+export const WorkroomItemKind = {
+  checklist: 'checklist',
+  action: 'action',
+  journal: 'journal',
+} as const;
+
+export type WorkroomItemStatus = typeof WorkroomItemStatus[keyof typeof WorkroomItemStatus];
+
+
+export const WorkroomItemStatus = {
+  todo: 'todo',
+  doing: 'doing',
+  done: 'done',
+} as const;
+
+export interface WorkroomItem {
+  id: string;
+  caseId: number;
+  kind: WorkroomItemKind;
+  title: string;
+  body: string;
+  status: WorkroomItemStatus;
+  assignee: string;
+  /** @nullable */
+  dueOn: string | null;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Workroom {
+  caseId: number;
+  items: WorkroomItem[];
+}
+
+export type WorkroomItemInputKind = typeof WorkroomItemInputKind[keyof typeof WorkroomItemInputKind];
+
+
+export const WorkroomItemInputKind = {
+  checklist: 'checklist',
+  action: 'action',
+  journal: 'journal',
+} as const;
+
+export type WorkroomItemInputStatus = typeof WorkroomItemInputStatus[keyof typeof WorkroomItemInputStatus];
+
+
+export const WorkroomItemInputStatus = {
+  todo: 'todo',
+  doing: 'doing',
+  done: 'done',
+} as const;
+
+export interface WorkroomItemInput {
+  kind: WorkroomItemInputKind;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  /** @maxLength 10000 */
+  body?: string;
+  status?: WorkroomItemInputStatus;
+  /** @maxLength 200 */
+  assignee?: string;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  dueOn?: string | null;
+}
+
+export type WorkroomItemUpdateStatus = typeof WorkroomItemUpdateStatus[keyof typeof WorkroomItemUpdateStatus];
+
+
+export const WorkroomItemUpdateStatus = {
+  todo: 'todo',
+  doing: 'doing',
+  done: 'done',
+} as const;
+
+export interface WorkroomItemUpdate {
+  /** @minimum 0 */
+  revision: number;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title?: string;
+  /** @maxLength 10000 */
+  body?: string;
+  status?: WorkroomItemUpdateStatus;
+  /** @maxLength 200 */
+  assignee?: string;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  dueOn?: string | null;
+}
+
 /**
  * Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.
  * @nullable

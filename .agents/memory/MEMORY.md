@@ -8,6 +8,7 @@
 - [HTTP Host test transport](http-host-test-transport.md) — Node fetch replaces explicit Host headers; use the HTTP client for loopback tests of public-host routing.
 - [Clerk cross-tab sessions](clerk-cross-tab-session.md) — mounted Clerk identity can lag shared cookies; verify API and client owner agree before showing private views.
 - [OpenAPI Unicode patterns](openapi-unicode-patterns.md) — Orval generates unflagged JavaScript RegExp for OpenAPI patterns; Unicode property escapes cannot be used directly.
+- [Orval parameter names](orval-parameter-names.md) — path and inline query parameters can produce colliding Zod exports; generation success alone is insufficient.
 - [Ruang Simpan scope and ownership](ruang-simpan-ownership.md) — user cancelled the Gustafta integration; earlier ownership constraints apply only if explicitly resumed.
 - [Calendar dates across API boundaries](calendar-date-wire-format.md) — generated date parsers may turn date-only strings into ISO timestamps; test the JSON wire response, not just raw rule output.
 - [Form owner preconditions](form-owner-preconditions.md) — old drafts need an immutable account precondition checked by the server; cross-tab notifications alone cannot protect writes.
