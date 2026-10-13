@@ -25,6 +25,10 @@ import type {
   CaseDocument,
   CaseInput,
   CaseUpdate,
+  Consultation,
+  ConsultationMessageInput,
+  ConsultationSummary,
+  CreateConsultationInput,
   Dashboard,
   DocumentAnalysis,
   DocumentAnalysisInput,
@@ -42,6 +46,7 @@ import type {
   Profile,
   ProfileInput,
   Regulation,
+  RenameConsultationInput,
   RequestCaseDocumentUpload201,
   SbuCase,
   SbuChatInput,
@@ -78,6 +83,464 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListConsultationsUrl = () => {
+
+
+
+
+  return `/api/consultations`
+}
+
+export const listConsultations = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConsultationSummary[]> => {
+
+  return customFetch<ConsultationSummary[]>(getListConsultationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListConsultationsQueryKey = () => {
+    return [
+    `/api/consultations`
+    ] as const;
+    }
+
+
+export const getListConsultationsQueryOptions = <TData = Awaited<ReturnType<typeof listConsultations>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConsultations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListConsultationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listConsultations>>> = ({ signal }) => listConsultations({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listConsultations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListConsultationsQueryResult = NonNullable<Awaited<ReturnType<typeof listConsultations>>>
+export type ListConsultationsQueryError = ErrorType<unknown>
+
+
+
+export function useListConsultations<TData = Awaited<ReturnType<typeof listConsultations>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listConsultations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListConsultationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateConsultationUrl = () => {
+
+
+
+
+  return `/api/consultations`
+}
+
+export const createConsultation = async (createConsultationInput: CreateConsultationInput, options?: Parameters<typeof customFetch>[1]): Promise<Consultation> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Consultation>(getCreateConsultationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(createConsultationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateConsultationMutationKey = () => ['createConsultation'] as const;
+
+export const getCreateConsultationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createConsultation>>, TError,CreateConsultationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createConsultation>>, TError,CreateConsultationMutationVariables, TContext> => {
+
+const mutationKey = getCreateConsultationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createConsultation>>, CreateConsultationMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createConsultation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateConsultationMutationResult = NonNullable<Awaited<ReturnType<typeof createConsultation>>>
+    export type CreateConsultationMutationBody = BodyType<CreateConsultationInput>
+    export type CreateConsultationMutationError = ErrorType<unknown>
+    export type CreateConsultationMutationVariables = {data: BodyType<CreateConsultationInput>}
+
+    export const useCreateConsultation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createConsultation>>, TError,CreateConsultationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createConsultation>>,
+        TError,
+        CreateConsultationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateConsultationMutationOptions(options));
+    }
+
+export const getGetConsultationUrl = (id: string,) => {
+
+
+
+
+  return `/api/consultations/${id}`
+}
+
+export const getConsultation = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Consultation> => {
+
+  return customFetch<Consultation>(getGetConsultationUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsultationQueryKey = (id: string,) => {
+    return [
+    `/api/consultations/${id}`
+    ] as const;
+    }
+
+
+export const getGetConsultationQueryOptions = <TData = Awaited<ReturnType<typeof getConsultation>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsultation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsultationQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsultation>>> = ({ signal }) => getConsultation(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsultation>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsultationQueryResult = NonNullable<Awaited<ReturnType<typeof getConsultation>>>
+export type GetConsultationQueryError = ErrorType<unknown>
+
+
+
+export function useGetConsultation<TData = Awaited<ReturnType<typeof getConsultation>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsultation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsultationQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRenameConsultationUrl = (id: string,) => {
+
+
+
+
+  return `/api/consultations/${id}`
+}
+
+export const renameConsultation = async (id: string,
+    renameConsultationInput: RenameConsultationInput, options?: Parameters<typeof customFetch>[1]): Promise<Consultation> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Consultation>(getRenameConsultationUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(renameConsultationInput)
+  }
+);}
+
+
+
+
+
+export const getRenameConsultationMutationKey = () => ['renameConsultation'] as const;
+
+export const getRenameConsultationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof renameConsultation>>, TError,RenameConsultationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof renameConsultation>>, TError,RenameConsultationMutationVariables, TContext> => {
+
+const mutationKey = getRenameConsultationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof renameConsultation>>, RenameConsultationMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  renameConsultation(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RenameConsultationMutationResult = NonNullable<Awaited<ReturnType<typeof renameConsultation>>>
+    export type RenameConsultationMutationBody = BodyType<RenameConsultationInput>
+    export type RenameConsultationMutationError = ErrorType<unknown>
+    export type RenameConsultationMutationVariables = {id: string;data: BodyType<RenameConsultationInput>}
+
+    export const useRenameConsultation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof renameConsultation>>, TError,RenameConsultationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof renameConsultation>>,
+        TError,
+        RenameConsultationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRenameConsultationMutationOptions(options));
+    }
+
+export const getDeleteConsultationUrl = (id: string,) => {
+
+
+
+
+  return `/api/consultations/${id}`
+}
+
+export const deleteConsultation = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteConsultationUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteConsultationMutationKey = () => ['deleteConsultation'] as const;
+
+export const getDeleteConsultationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteConsultation>>, TError,DeleteConsultationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteConsultation>>, TError,DeleteConsultationMutationVariables, TContext> => {
+
+const mutationKey = getDeleteConsultationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteConsultation>>, DeleteConsultationMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteConsultation(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteConsultationMutationResult = NonNullable<Awaited<ReturnType<typeof deleteConsultation>>>
+
+    export type DeleteConsultationMutationError = ErrorType<unknown>
+    export type DeleteConsultationMutationVariables = {id: string}
+
+    export const useDeleteConsultation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteConsultation>>, TError,DeleteConsultationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteConsultation>>,
+        TError,
+        DeleteConsultationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteConsultationMutationOptions(options));
+    }
+
+export const getSendConsultationMessageUrl = (id: string,) => {
+
+
+
+
+  return `/api/consultations/${id}/messages`
+}
+
+export const sendConsultationMessage = async (id: string,
+    consultationMessageInput: ConsultationMessageInput, options?: Parameters<typeof customFetch>[1]): Promise<Consultation> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Consultation>(getSendConsultationMessageUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(consultationMessageInput)
+  }
+);}
+
+
+
+
+
+export const getSendConsultationMessageMutationKey = () => ['sendConsultationMessage'] as const;
+
+export const getSendConsultationMessageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendConsultationMessage>>, TError,SendConsultationMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendConsultationMessage>>, TError,SendConsultationMessageMutationVariables, TContext> => {
+
+const mutationKey = getSendConsultationMessageMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendConsultationMessage>>, SendConsultationMessageMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  sendConsultationMessage(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendConsultationMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sendConsultationMessage>>>
+    export type SendConsultationMessageMutationBody = BodyType<ConsultationMessageInput>
+    export type SendConsultationMessageMutationError = ErrorType<unknown>
+    export type SendConsultationMessageMutationVariables = {id: string;data: BodyType<ConsultationMessageInput>}
+
+    export const useSendConsultationMessage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendConsultationMessage>>, TError,SendConsultationMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendConsultationMessage>>,
+        TError,
+        SendConsultationMessageMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSendConsultationMessageMutationOptions(options));
+    }
 
 export const getListDocumentVaultUrl = (params?: ListDocumentVaultParams,) => {
   const normalizedParams = new URLSearchParams();

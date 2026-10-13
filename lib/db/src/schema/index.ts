@@ -20,3 +20,4 @@
 export * from "./sbu";
 export * from "./workspace";
 export * from "./standalone";
+export * from "./consultations";

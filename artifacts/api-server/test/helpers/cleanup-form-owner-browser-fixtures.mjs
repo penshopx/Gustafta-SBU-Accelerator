@@ -60,6 +60,7 @@ export async function cleanupFormOwnerFixtures(fixtures, { removeTestDocuments =
       "SELECT 1 FROM sbu_documents WHERE owner_id = ANY($1::text[]) LIMIT 1", [ids],
     );
     if (documents.rowCount) throw new Error("Unexpected document attachment; explicit storage cleanup required");
+    await connection.query("DELETE FROM sbu_consultations WHERE owner_id = ANY($1::text[])", [ids]);
     await connection.query("DELETE FROM sbu_evidence WHERE case_id IN (SELECT id FROM sbu_cases WHERE owner_id = ANY($1::text[]))", [ids]);
     await connection.query("DELETE FROM sbu_cases WHERE owner_id = ANY($1::text[])", [ids]);
     await connection.query("DELETE FROM sbu_company_profiles WHERE owner_id = ANY($1::text[])", [ids]);

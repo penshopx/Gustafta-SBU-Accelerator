@@ -20,6 +20,7 @@ import { GetWorkspaceResponse } from "@workspace/api-zod";
 import { getContext, recordCaseAudit, workspaceDisclaimer } from "../lib/workspace-context";
 import standaloneRouter from "./standalone";
 import sbuChatRouter from "./sbu-chat";
+import consultationsRouter from "./consultations";
 import documentVaultRouter from "./document-vault";
 import documentAnalysisRouter from "./document-analysis";
 
@@ -69,6 +70,7 @@ router.use((req, res, next) => {
 
 router.use(standaloneRouter);
 router.use(sbuChatRouter);
+router.use(consultationsRouter);
 router.use(documentVaultRouter);
 router.use(documentAnalysisRouter);
 

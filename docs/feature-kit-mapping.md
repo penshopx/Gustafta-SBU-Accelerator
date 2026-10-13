@@ -90,11 +90,12 @@ lokasi yang disebut AI dengan kutipan yang telah diverifikasi manusia.
 Batas awal yang sudah didokumentasikan: 4 MiB, PDF maksimal 10 halaman; penyimpanan
 berkas asli tetap maksimal 20 MiB per berkas.
 
-**Klinik Konsultasi:** chatbot peran bukan otomatis klinik per kasus.
-Dialog tersimpan yang memilih konteks kasus secara eksplisit dapat direncanakan
-di atas F08/F11. Konsultan manusia lintas akun memerlukan kebijakan undangan dan
-izin baru, termasuk pertimbangan F06/F02. Jangan mengirim profil atau semua dokumen
-otomatis hanya karena pengguna membuka chat.
+**Klinik Konsultasi — pembaruan setelah peta awal:** dialog AI privat dengan riwayat
+tersimpan sekarang tersedia. Pengguna dapat menautkan kasus dan, secara terpisah,
+menyetujui cuplikan lima atribut kasus yang diperlihatkan sebelum disimpan serta
+dikirim bersama pertanyaan. Pemilihan hasil Bedah Dokumen sebagai konteks belum
+tersedia. Konsultan manusia lintas akun memerlukan kebijakan undangan dan izin baru,
+termasuk pertimbangan F06/F02. Dokumen dan profil tidak dikirim otomatis.
 
 ## 5. Pilihan dan dependensi
 

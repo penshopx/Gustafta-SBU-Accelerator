@@ -10,6 +10,86 @@ tags:
   - name: health
   - name: workspace
 paths:
+  /consultations:
+    get:
+      operationId: listConsultations
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      responses:
+        "200":
+          description: Private consultation list, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ConsultationSummary" }
+    post:
+      operationId: createConsultation
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateConsultationInput" }
+      responses:
+        "201":
+          description: Created consultation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Consultation" }
+  /consultations/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: getConsultation
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      responses:
+        "200":
+          description: Owner's consultation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Consultation" }
+    patch:
+      operationId: renameConsultation
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RenameConsultationInput" }
+      responses:
+        "200":
+          description: Renamed consultation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Consultation" }
+    delete:
+      operationId: deleteConsultation
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      responses:
+        "204": { description: Deleted }
+  /consultations/{id}/messages:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: sendConsultationMessage
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConsultationMessageInput" }
+      responses:
+        "200":
+          description: Persisted answer and conversation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Consultation" }
   /documents:
     get:
       operationId: listDocumentVault
@@ -636,6 +716,73 @@ components:
       name: X-SBU-Form-Owner
       description: Required account precondition for private reads and writes. Capture the tab/cache or form owner, not the current cookie. This is not authentication; ownership is always derived from the verified Clerk session. Missing or mismatched values return 409 before private data access. Private reads use Cache-Control private, no-store.
   schemas:
+    ConsultationMessage:
+      type: object
+      required: [id, role, content, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        role: { type: string, enum: [user, assistant] }
+        content: { type: string }
+        createdAt: { type: string, format: date-time }
+        requestId: { type: string, format: uuid }
+    ConsultationSummary:
+      type: object
+      required: [id, title, mode, specialist, revision, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        mode: { type: string, enum: [bujk, pendamping, asesor, lsbu, asosiasi, umum] }
+        specialist: { type: string, enum: [sbuclaw, skemaclaw, lkutclaw, abuclaw, panduansbu, pjbuclaw, keuanganclaw, lkpmclaw, ossclaw, pub-lkutclaw, esimpanclaw, nspknavigatorclaw, smapclaw] }
+        caseId: { type: integer, nullable: true }
+        revision: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Consultation:
+      allOf:
+        - { $ref: "#/components/schemas/ConsultationSummary" }
+        - type: object
+          required: [context, messages, disclaimer]
+          properties:
+            context: { type: string }
+            messages:
+              type: array
+              items: { $ref: "#/components/schemas/ConsultationMessage" }
+            disclaimer: { type: string }
+    CreateConsultationInput:
+      type: object
+      additionalProperties: false
+      required: [mode, specialist, title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+        mode: { type: string, enum: [bujk, pendamping, asesor, lsbu, asosiasi, umum] }
+        specialist: { type: string, enum: [sbuclaw, skemaclaw, lkutclaw, abuclaw, panduansbu, pjbuclaw, keuanganclaw, lkpmclaw, ossclaw, pub-lkutclaw, esimpanclaw, nspknavigatorclaw, smapclaw] }
+        caseId: { type: integer, minimum: 1 }
+        includeCaseContext: { type: boolean }
+        expectedCaseContext:
+          type: object
+          additionalProperties: false
+          required: [companyName, requestType, classification, qualification, status]
+          properties:
+            companyName: { type: string }
+            requestType: { type: string }
+            classification: { type: string }
+            qualification: { type: string }
+            status: { type: string }
+    RenameConsultationInput:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 120 }
+    ConsultationMessageInput:
+      type: object
+      additionalProperties: false
+      required: [content, consent, revision, requestId]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 4000 }
+        consent: { type: boolean, enum: [true] }
+        revision: { type: integer, minimum: 0 }
+        requestId: { type: string, format: uuid }
     SbuChatInput:
       type: object
       required: [mode, messages, consent]

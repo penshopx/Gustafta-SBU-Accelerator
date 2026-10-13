@@ -5,6 +5,143 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+export type ConsultationMessageRole = typeof ConsultationMessageRole[keyof typeof ConsultationMessageRole];
+
+
+export const ConsultationMessageRole = {
+  user: 'user',
+  assistant: 'assistant',
+} as const;
+
+export interface ConsultationMessage {
+  id: string;
+  role: ConsultationMessageRole;
+  content: string;
+  createdAt: string;
+  requestId?: string;
+}
+
+export type ConsultationSummaryMode = typeof ConsultationSummaryMode[keyof typeof ConsultationSummaryMode];
+
+
+export const ConsultationSummaryMode = {
+  bujk: 'bujk',
+  pendamping: 'pendamping',
+  asesor: 'asesor',
+  lsbu: 'lsbu',
+  asosiasi: 'asosiasi',
+  umum: 'umum',
+} as const;
+
+export type ConsultationSummarySpecialist = typeof ConsultationSummarySpecialist[keyof typeof ConsultationSummarySpecialist];
+
+
+export const ConsultationSummarySpecialist = {
+  sbuclaw: 'sbuclaw',
+  skemaclaw: 'skemaclaw',
+  lkutclaw: 'lkutclaw',
+  abuclaw: 'abuclaw',
+  panduansbu: 'panduansbu',
+  pjbuclaw: 'pjbuclaw',
+  keuanganclaw: 'keuanganclaw',
+  lkpmclaw: 'lkpmclaw',
+  ossclaw: 'ossclaw',
+  'pub-lkutclaw': 'pub-lkutclaw',
+  esimpanclaw: 'esimpanclaw',
+  nspknavigatorclaw: 'nspknavigatorclaw',
+  smapclaw: 'smapclaw',
+} as const;
+
+export interface ConsultationSummary {
+  id: string;
+  title: string;
+  mode: ConsultationSummaryMode;
+  specialist: ConsultationSummarySpecialist;
+  caseId?: number | null;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type Consultation = ConsultationSummary & {
+  context: string;
+  messages: ConsultationMessage[];
+  disclaimer: string;
+};
+
+export type CreateConsultationInputMode = typeof CreateConsultationInputMode[keyof typeof CreateConsultationInputMode];
+
+
+export const CreateConsultationInputMode = {
+  bujk: 'bujk',
+  pendamping: 'pendamping',
+  asesor: 'asesor',
+  lsbu: 'lsbu',
+  asosiasi: 'asosiasi',
+  umum: 'umum',
+} as const;
+
+export type CreateConsultationInputSpecialist = typeof CreateConsultationInputSpecialist[keyof typeof CreateConsultationInputSpecialist];
+
+
+export const CreateConsultationInputSpecialist = {
+  sbuclaw: 'sbuclaw',
+  skemaclaw: 'skemaclaw',
+  lkutclaw: 'lkutclaw',
+  abuclaw: 'abuclaw',
+  panduansbu: 'panduansbu',
+  pjbuclaw: 'pjbuclaw',
+  keuanganclaw: 'keuanganclaw',
+  lkpmclaw: 'lkpmclaw',
+  ossclaw: 'ossclaw',
+  'pub-lkutclaw': 'pub-lkutclaw',
+  esimpanclaw: 'esimpanclaw',
+  nspknavigatorclaw: 'nspknavigatorclaw',
+  smapclaw: 'smapclaw',
+} as const;
+
+export type CreateConsultationInputExpectedCaseContext = {
+  companyName: string;
+  requestType: string;
+  classification: string;
+  qualification: string;
+  status: string;
+};
+
+export interface CreateConsultationInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title: string;
+  mode: CreateConsultationInputMode;
+  specialist: CreateConsultationInputSpecialist;
+  /** @minimum 1 */
+  caseId?: number;
+  includeCaseContext?: boolean;
+  expectedCaseContext?: CreateConsultationInputExpectedCaseContext;
+}
+
+export interface RenameConsultationInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title: string;
+}
+
+export interface ConsultationMessageInput {
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
+  content: string;
+  consent: true;
+  /** @minimum 0 */
+  revision: number;
+  requestId: string;
+}
+
 export type SbuChatInputSpecialist = typeof SbuChatInputSpecialist[keyof typeof SbuChatInputSpecialist];
 
 

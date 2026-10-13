@@ -8,6 +8,167 @@
 import * as zod from 'zod';
 
 
+export const ListConsultationsResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "mode": zod.enum(['bujk', 'pendamping', 'asesor', 'lsbu', 'asosiasi', 'umum']),
+  "specialist": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']),
+  "caseId": zod.number().int().nullish(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListConsultationsResponse = zod.array(ListConsultationsResponseItem)
+
+
+export const createConsultationBodyTitleMax = 120;
+
+
+
+
+export const CreateConsultationBody = zod.object({
+  "title": zod.string().min(1).max(createConsultationBodyTitleMax),
+  "mode": zod.enum(['bujk', 'pendamping', 'asesor', 'lsbu', 'asosiasi', 'umum']),
+  "specialist": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']),
+  "caseId": zod.number().int().min(1).optional(),
+  "includeCaseContext": zod.boolean().optional(),
+  "expectedCaseContext": zod.object({
+  "companyName": zod.string(),
+  "requestType": zod.string(),
+  "classification": zod.string(),
+  "qualification": zod.string(),
+  "status": zod.string()
+}).optional()
+})
+
+export const CreateConsultationResponse = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "mode": zod.enum(['bujk', 'pendamping', 'asesor', 'lsbu', 'asosiasi', 'umum']),
+  "specialist": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']),
+  "caseId": zod.number().int().nullish(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).and(zod.object({
+  "context": zod.string(),
+  "messages": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "requestId": zod.string().uuid().optional()
+})),
+  "disclaimer": zod.string()
+}))
+
+
+export const GetConsultationParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const GetConsultationResponse = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "mode": zod.enum(['bujk', 'pendamping', 'asesor', 'lsbu', 'asosiasi', 'umum']),
+  "specialist": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']),
+  "caseId": zod.number().int().nullish(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).and(zod.object({
+  "context": zod.string(),
+  "messages": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "requestId": zod.string().uuid().optional()
+})),
+  "disclaimer": zod.string()
+}))
+
+
+export const RenameConsultationParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const renameConsultationBodyTitleMax = 120;
+
+
+
+export const RenameConsultationBody = zod.object({
+  "title": zod.string().min(1).max(renameConsultationBodyTitleMax)
+})
+
+export const RenameConsultationResponse = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "mode": zod.enum(['bujk', 'pendamping', 'asesor', 'lsbu', 'asosiasi', 'umum']),
+  "specialist": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']),
+  "caseId": zod.number().int().nullish(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).and(zod.object({
+  "context": zod.string(),
+  "messages": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "requestId": zod.string().uuid().optional()
+})),
+  "disclaimer": zod.string()
+}))
+
+
+export const DeleteConsultationParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const DeleteConsultationResponse = zod.void()
+
+
+export const SendConsultationMessageParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const sendConsultationMessageBodyContentMax = 4000;
+
+export const sendConsultationMessageBodyRevisionMin = 0;
+
+
+
+export const SendConsultationMessageBody = zod.object({
+  "content": zod.string().min(1).max(sendConsultationMessageBodyContentMax),
+  "consent": zod.literal(true),
+  "revision": zod.number().int().min(sendConsultationMessageBodyRevisionMin),
+  "requestId": zod.string().uuid()
+})
+
+export const SendConsultationMessageResponse = zod.object({
+  "id": zod.string().uuid(),
+  "title": zod.string(),
+  "mode": zod.enum(['bujk', 'pendamping', 'asesor', 'lsbu', 'asosiasi', 'umum']),
+  "specialist": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']),
+  "caseId": zod.number().int().nullish(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}).and(zod.object({
+  "context": zod.string(),
+  "messages": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "requestId": zod.string().uuid().optional()
+})),
+  "disclaimer": zod.string()
+}))
+
+
 export const listDocumentVaultQueryQMax = 100;
 
 
