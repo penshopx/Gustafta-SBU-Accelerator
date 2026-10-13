@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { after, test } from "node:test";
+import { after, afterEach, test } from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { createSign, createVerify, generateKeyPairSync } from "node:crypto";
 import { request as httpRequest } from "node:http";
@@ -7,6 +7,39 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { logger as clerkLogger } from "@clerk/shared/logger";
+
+function guardOutboundFetch(target = globalThis) {
+  const originalFetch = target.fetch;
+  const attempts = [];
+  target.fetch = async (input, init) => {
+    const url = new URL(input instanceof URL ? input.href
+      : typeof input === "string" ? input : input.url);
+    // Literal loopback addresses only; do not resolve arbitrary DNS names.
+    const isLoopback = /^127(?:\.\d{1,3}){3}$/.test(url.hostname)
+      || url.hostname === "[::1]";
+    if (!isLoopback || !["http:", "https:"].includes(url.protocol)) {
+      attempts.push(url.origin);
+      throw new Error(`Unexpected outbound request: ${url.origin}`);
+    }
+    // Native fetch follows redirects internally without re-entering this
+    // wrapper. Do not let a loopback response redirect to an external service.
+    return originalFetch.call(target, input, { ...init, redirect: "error" });
+  };
+  return {
+    assertNoOutbound() {
+      assert.equal(attempts.length, 0,
+        `Fixture tidak boleh menghubungi layanan luar:\n${attempts.join("\n")}`);
+    },
+    restore() {
+      target.fetch = originalFetch;
+    },
+  };
+}
+
+// Install once before async setup and app imports. SDKs can catch fetch errors,
+// so both per-test and suite assertions inspect the persistent attempt log.
+const outboundFetch = guardOutboundFetch();
+afterEach(() => outboundFetch.assertNoOutbound());
 
 // Match session-fixture compatibility warnings, not normal development-key or
 // dev-browser diagnostics. Do not pin the guard to only today's missing-azp text.
@@ -81,16 +114,23 @@ function checkSessionWarningGuard() {
 }
 
 // Install before importing the app or making any real middleware requests.
-// Always restore the logger, even when another assertion or this guard fails.
+// Restore all instrumentation and temporary files before asserting: a failing
+// root after hook can prevent later after hooks from running.
 const sessionWarnings = captureSessionCompatibilityWarnings();
-after(() => {
+let temporaryDir;
+after(async () => {
+  outboundFetch.restore();
   sessionWarnings.restore();
-  sessionWarnings.assertCompatible();
+  try {
+    if (temporaryDir) await rm(temporaryDir, { recursive: true, force: true });
+  } finally {
+    outboundFetch.assertNoOutbound();
+    sessionWarnings.assertCompatible();
+  }
 });
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
-const temporaryDir = await mkdtemp(join(testDir, ".sbu-clerk-test-"));
-after(() => rm(temporaryDir, { recursive: true, force: true }));
+temporaryDir = await mkdtemp(join(testDir, ".sbu-clerk-test-"));
 
 // Never use the workspace's real Clerk credentials, even when they are present.
 // This key is only a syntactically valid test key; no Clerk account is involved.
@@ -197,14 +237,46 @@ const { default: app } = await import(join(temporaryDir, "app.mjs"));
 // while the bundle is still being built and restore the guard prematurely.
 test("penjaga fixture menolak peringatan kompatibilitas, bukan peringatan development", checkSessionWarningGuard);
 
+test("penjaga outbound mengizinkan loopback dan mencatat kegagalan yang ditangkap SDK", async () => {
+  const forwarded = [];
+  const target = { fetch: async (...args) => {
+    forwarded.push(args);
+    return "local-response";
+  } };
+  const originalFetch = target.fetch;
+  const guard = guardOutboundFetch(target);
+  try {
+    for (const input of [
+      "http://127.0.0.1:1234/api/me",
+      new URL("http://127.0.0.2:1234/api/me"),
+      new Request("http://[::1]:1234/api/me"),
+    ]) {
+      const init = { headers: { "X-Test": "loopback" } };
+      assert.equal(await target.fetch(input, init), "local-response");
+      assert.equal(forwarded.at(-1)[0], input);
+      assert.deepEqual(forwarded.at(-1)[1], { ...init, redirect: "error" });
+    }
+    guard.assertNoOutbound();
+    for (const input of [
+      "https://example.clerk.accounts.dev/v1/jwks",
+      new URL("https://api.clerk.com/v1/sessions"),
+      new Request("https://127.0.0.1.example.test/api/me"),
+      "http://localhost/api/me",
+    ]) {
+      // Model an SDK returning an unauthenticated result after catching a
+      // network failure. The guard must still reject that apparent success.
+      await target.fetch(input).catch(() => undefined);
+      assert.throws(() => guard.assertNoOutbound(), /Fixture tidak boleh menghubungi layanan luar/);
+    }
+    assert.equal(forwarded.length, 3, "koneksi keluar tidak diteruskan ke fetch asli");
+  } finally {
+    guard.restore();
+  }
+  assert.equal(target.fetch, originalFetch, "fetch tetap dipulihkan setelah penolakan");
+});
+
 test("GET privat tab A ditolak dengan cookie B atau tanpa prakondisi sebelum query apa pun", async () => {
   const server = app.listen(0);
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = (input, init) => {
-    const url = new URL(typeof input === "string" ? input : input.url);
-    assert.equal(url.hostname, "127.0.0.1", "fixture tidak boleh menghubungi layanan luar");
-    return originalFetch(input, init);
-  };
   const token = sessionToken("owner-b");
   const cookie = `__session=${token}; __client_uat=${Math.floor(Date.now() / 1000) - 1}; __clerk_db_jwt=local-dev-browser`;
   const paths = [
@@ -236,7 +308,6 @@ test("GET privat tab A ditolak dengan cookie B atau tanpa prakondisi sebelum que
     assert.equal(head.status, 409);
     assert.equal(globalThis.__clerkTestDataReads, 0);
   } finally {
-    globalThis.fetch = originalFetch;
     server.closeAllConnections();
     await new Promise(resolve => server.close(resolve));
     delete globalThis.__clerkTestDataReads;
@@ -342,12 +413,6 @@ test("sesi bertanda tangan yang kedaluwarsa atau belum aktif ditolak sebelum mem
   globalThis.__clerkTestCaseReads = 0;
   globalThis.__clerkTestEvidenceReads = 0;
 
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = (input, init) => {
-    const url = new URL(typeof input === "string" ? input : input.url);
-    if (url.hostname !== "127.0.0.1") throw new Error(`Unexpected outbound request: ${url.hostname}`);
-    return originalFetch(input, init);
-  };
   const server = app.listen(0);
   try {
     const now = Math.floor(Date.now() / 1000);
@@ -368,7 +433,6 @@ test("sesi bertanda tangan yang kedaluwarsa atau belum aktif ditolak sebelum mem
       }
     }
   } finally {
-    globalThis.fetch = originalFetch;
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__clerkTestCases;
     delete globalThis.__clerkTestEvidence;
@@ -394,12 +458,6 @@ test("sesi bertanda tangan dengan penerbit berbeda ditolak sebelum membaca data"
   assert.equal(claims.iss, "https://other.clerk.accounts.dev");
   assert.ok(claims.nbf <= now && claims.exp > now, "token masih berlaku");
 
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = (input, init) => {
-    const url = new URL(typeof input === "string" ? input : input.url);
-    if (url.hostname !== "127.0.0.1") throw new Error(`Unexpected outbound request: ${url.hostname}`);
-    return originalFetch(input, init);
-  };
   const server = app.listen(0);
   try {
     for (const headers of [
@@ -414,7 +472,6 @@ test("sesi bertanda tangan dengan penerbit berbeda ditolak sebelum membaca data"
       assert.equal(globalThis.__clerkTestEvidenceReads, 0, "bukti tidak boleh dibaca");
     }
   } finally {
-    globalThis.fetch = originalFetch;
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__clerkTestCases;
     delete globalThis.__clerkTestEvidence;
@@ -425,7 +482,6 @@ test("sesi bertanda tangan dengan penerbit berbeda ditolak sebelum membaca data"
 
 test("domain Clerk dipilih sesuai host/proxy dan issuer lain ditolak tanpa membaca data", async (t) => {
   const developmentKey = process.env.CLERK_PUBLISHABLE_KEY;
-  const originalFetch = globalThis.fetch;
   globalThis.__clerkTestCases = [
     { id: 34, ownerId: "owner-a", companyName: "Perusahaan Sendiri", requestType: "baru",
       qualification: "kecil", classification: "gedung", status: "draf", existingSbuExpiresOn: null },
@@ -433,11 +489,6 @@ test("domain Clerk dipilih sesuai host/proxy dan issuer lain ditolak tanpa memba
   globalThis.__clerkTestEvidence = [
     { id: 1, caseId: 34, code: "legalitas", title: "Legalitas", note: "Bukti sendiri" },
   ];
-  globalThis.fetch = (input, init) => {
-    const url = new URL(typeof input === "string" ? input : input.url);
-    if (url.hostname !== "127.0.0.1") throw new Error(`Unexpected outbound request: ${url.hostname}`);
-    return originalFetch(input, init);
-  };
   const server = app.listen(0);
   const primaryHost = "sbu.example.test";
   const alternateHost = "penilaian.example.test";
@@ -525,7 +576,6 @@ test("domain Clerk dipilih sesuai host/proxy dan issuer lain ditolak tanpa memba
     }
   } finally {
     process.env.CLERK_PUBLISHABLE_KEY = developmentKey;
-    globalThis.fetch = originalFetch;
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__clerkTestCases;
     delete globalThis.__clerkTestEvidence;
@@ -554,12 +604,6 @@ test("payload pemilik yang diubah setelah ditandatangani ditolak sebelum membaca
   assert.notEqual(alteredPayload, encodedPayload);
   const tamperedToken = `${header}.${alteredPayload}.${signature}`;
 
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = (input, init) => {
-    const url = new URL(typeof input === "string" ? input : input.url);
-    if (url.hostname !== "127.0.0.1") throw new Error(`Unexpected outbound request: ${url.hostname}`);
-    return originalFetch(input, init);
-  };
   const server = app.listen(0);
   try {
     for (const headers of [
@@ -574,7 +618,6 @@ test("payload pemilik yang diubah setelah ditandatangani ditolak sebelum membaca
       assert.equal(globalThis.__clerkTestEvidenceReads, 0, "bukti tidak boleh dibaca");
     }
   } finally {
-    globalThis.fetch = originalFetch;
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__clerkTestCases;
     delete globalThis.__clerkTestEvidence;
@@ -610,12 +653,6 @@ test("header token yang diubah setelah ditandatangani ditolak sebelum membaca da
   assert.equal(createVerify("RSA-SHA256").update(`${alteredHeader}.${encodedPayload}`).end()
     .verify(publicKey, Buffer.from(signature, "base64url")), false, "header baru tidak ditandatangani ulang");
 
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = (input, init) => {
-    const url = new URL(typeof input === "string" ? input : input.url);
-    if (url.hostname !== "127.0.0.1") throw new Error(`Unexpected outbound request: ${url.hostname}`);
-    return originalFetch(input, init);
-  };
   const server = app.listen(0);
   try {
     for (const headers of [
@@ -630,7 +667,6 @@ test("header token yang diubah setelah ditandatangani ditolak sebelum membaca da
       assert.equal(globalThis.__clerkTestEvidenceReads, 0, "bukti tidak boleh dibaca");
     }
   } finally {
-    globalThis.fetch = originalFetch;
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__clerkTestCases;
     delete globalThis.__clerkTestEvidence;
@@ -653,12 +689,6 @@ test("formulir akun lama ditolak untuk semua mutasi dengan cookie Clerk akun bar
   ];
   const tokenB = sessionToken("owner-b");
   const cookie = `__session=${tokenB}; __client_uat=${Math.floor(Date.now() / 1000) - 1}; __clerk_db_jwt=local-dev-browser`;
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = (input, init) => {
-    const url = new URL(typeof input === "string" ? input : input.url);
-    if (url.hostname !== "127.0.0.1") throw new Error(`Unexpected outbound request: ${url.hostname}`);
-    return originalFetch(input, init);
-  };
   try {
     for (const [method, path] of writes) {
       for (const formOwner of ["owner-a", "", null]) {
@@ -682,7 +712,6 @@ test("formulir akun lama ditolak untuk semua mutasi dengan cookie Clerk akun bar
     });
     assert.equal(fresh.status, 400, await fresh.text());
   } finally {
-    globalThis.fetch = originalFetch;
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   }
 });
@@ -701,13 +730,6 @@ test("sesi yang diverifikasi Clerk hanya membaca penilaian dan bukti milik pemeg
   globalThis.__clerkTestCaseReads = 0;
   globalThis.__clerkTestEvidenceReads = 0;
 
-  // Fail closed on unexpected network traffic (including Clerk API/JWKS).
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = (input, init) => {
-    const url = new URL(typeof input === "string" ? input : input.url);
-    if (url.hostname !== "127.0.0.1") throw new Error(`Unexpected outbound request: ${url.hostname}`);
-    return originalFetch(input, init);
-  };
   const server = app.listen(0);
   try {
     const tokenA = sessionToken("owner-a");
@@ -746,7 +768,6 @@ test("sesi yang diverifikasi Clerk hanya membaca penilaian dan bukti milik pemeg
     assert.equal(secondOwner.body.caseId, 35);
     assert.equal(secondOwner.body.findings.find((finding) => finding.code === "penjualan").status, "tercatat");
   } finally {
-    globalThis.fetch = originalFetch;
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__clerkTestCases;
     delete globalThis.__clerkTestEvidence;
