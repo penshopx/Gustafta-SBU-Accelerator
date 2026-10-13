@@ -6,6 +6,87 @@ import { request as httpRequest } from "node:http";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { logger as clerkLogger } from "@clerk/shared/logger";
+
+// Match session-fixture compatibility warnings, not normal development-key or
+// dev-browser diagnostics. Do not pin the guard to only today's missing-azp text.
+function isSessionCompatibilityWarning(message) {
+  return /\bClerk\b/i.test(message)
+    && /\bsession[\s-]*(?:token|jwt)\b/i.test(message)
+    && /missing\b.*\bclaim\b|future (?:version|release)|deprecat|outdated|legacy|unsupported|incompatib|invalid\b.*\bversion\b/i.test(message);
+}
+
+function captureSessionCompatibilityWarnings(logger = clerkLogger, warningConsole = console) {
+  const warnings = new Set();
+  const originalWarnOnce = logger.warnOnce;
+  const originalWarn = warningConsole.warn;
+  const collect = (args) => {
+    const message = args.map(String).join(" ");
+    if (isSessionCompatibilityWarning(message)) warnings.add(message);
+  };
+  // Observe before Clerk's warnOnce deduplication: an earlier request must not
+  // hide an incompatible fixture from the assertions for later requests.
+  logger.warnOnce = function (...args) {
+    collect(args);
+    return originalWarnOnce.apply(this, args);
+  };
+  warningConsole.warn = function (...args) {
+    collect(args);
+    return originalWarn.apply(this, args);
+  };
+  return {
+    assertCompatible() {
+      assert.equal(warnings.size, 0,
+        `Fixture sesi Clerk perlu diperbarui:\n${[...warnings].join("\n")}`);
+    },
+    restore() {
+      logger.warnOnce = originalWarnOnce;
+      warningConsole.warn = originalWarn;
+    },
+  };
+}
+
+function checkSessionWarningGuard() {
+  const forwarded = [];
+  const warningConsole = { warn: (...args) => forwarded.push(args) };
+  // Model an already-deduplicated Clerk logger; capture must still see it.
+  const logger = { warnOnce() {} };
+  const originalWarnOnce = logger.warnOnce;
+  const originalWarn = warningConsole.warn;
+  const guard = captureSessionCompatibilityWarnings(logger, warningConsole);
+  try {
+    warningConsole.warn("Clerk has been loaded with development keys.");
+    logger.warnOnce("Clerk: Missing dev browser token.");
+    warningConsole.warn("Application: legacy session token fixture.");
+    guard.assertCompatible();
+    assert.equal(forwarded.length, 2, "peringatan konsol tetap diteruskan");
+
+    logger.warnOnce("Clerk: Session token from cookie is missing the azp claim. In a future version of Clerk, this token will be considered invalid.");
+    assert.throws(() => guard.assertCompatible(), /Fixture sesi Clerk perlu diperbarui:[\s\S]*azp/);
+  } finally {
+    guard.restore();
+  }
+  assert.equal(logger.warnOnce, originalWarnOnce);
+  assert.equal(warningConsole.warn, originalWarn);
+
+  const futureGuard = captureSessionCompatibilityWarnings(logger, warningConsole);
+  try {
+    warningConsole.warn("Clerk:", "Session token v1 is deprecated; migrate to v2.");
+    assert.throws(() => futureGuard.assertCompatible(), /Session token v1 is deprecated/);
+  } finally {
+    futureGuard.restore();
+  }
+  assert.equal(logger.warnOnce, originalWarnOnce);
+  assert.equal(warningConsole.warn, originalWarn);
+}
+
+// Install before importing the app or making any real middleware requests.
+// Always restore the logger, even when another assertion or this guard fails.
+const sessionWarnings = captureSessionCompatibilityWarnings();
+after(() => {
+  sessionWarnings.restore();
+  sessionWarnings.assertCompatible();
+});
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const temporaryDir = await mkdtemp(join(testDir, ".sbu-clerk-test-"));
@@ -68,7 +149,15 @@ await build({
           export const desc = () => { throw new Error("unexpected ordering"); };
           export const ilike = () => { throw new Error("unexpected vault query"); };
           export const or = () => { throw new Error("unexpected vault query"); };
-          export const sql = () => { throw new Error("unexpected document query"); };
+          // Document lock constants are constructed at import time, not run.
+          // Permit only those declarations; all other SQL remains forbidden.
+          export const sql = (strings, ...values) => {
+            if (values.length === 0 && strings.length === 1 && [
+              "SELECT pg_advisory_xact_lock_shared(137, 1)",
+              "SELECT pg_try_advisory_xact_lock(137, 1) AS acquired",
+            ].includes(strings[0])) return Object.freeze({ isolatedLock: strings[0] });
+            throw new Error("unexpected document query");
+          };
         ` : `
           export const casesTable = { id: "id", ownerId: "ownerId" };
           export const evidenceTable = { caseId: "caseId" };
@@ -103,6 +192,10 @@ await build({
 });
 
 const { default: app } = await import(join(temporaryDir, "app.mjs"));
+
+// Register tests only after async setup finishes, so root teardown cannot run
+// while the bundle is still being built and restore the guard prematurely.
+test("penjaga fixture menolak peringatan kompatibilitas, bukan peringatan development", checkSessionWarningGuard);
 
 test("GET privat tab A ditolak dengan cookie B atau tanpa prakondisi sebelum query apa pun", async () => {
   const server = app.listen(0);
