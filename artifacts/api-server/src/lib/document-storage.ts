@@ -2,8 +2,10 @@ import { ObjectNotFoundError, ObjectStorageService, objectStorageClient } from "
 import { setObjectAclPolicy } from "./objectAcl";
 import { DocumentValidationError, MAX_DOCUMENT_BYTES, validateDocumentBytes, validDocumentSignature } from "./document-validation";
 import { isManagedDocumentPath, type CleanupObject } from "./document-cleanup";
+import { scanDocument } from "./document-malware";
 
 const storage = new ObjectStorageService();
+let scanReadActive = false;
 function cleanupBucket() {
   const parts = storage.getPrivateObjectDir().replace(/^\/|\/$/g, "").split("/");
   return { bucket: objectStorageClient.bucket(parts[0]), prefix: `${parts.slice(1).join("/")}/` };
@@ -93,7 +95,36 @@ export const documentStorage = {
       if (!(error instanceof ObjectNotFoundError)) throw error;
     }
   },
-  async file(objectPath: string) {
-    return storage.getObjectEntityFile(objectPath);
+  async scan(objectPath: string, expectedSize: number) {
+    // Bound the complete read+scan path, not only the native subprocess.
+    if (scanReadActive) return { verdict: "error" as const, generation: null };
+    scanReadActive = true;
+    try {
+      const source = await storage.getObjectEntityFile(objectPath);
+      const [metadata] = await source.getMetadata();
+      if (!metadata.generation || Number(metadata.size) !== expectedSize || expectedSize > MAX_DOCUMENT_BYTES) {
+        return { verdict: "error" as const, generation: null };
+      }
+      const file = source.bucket.file(source.name, { generation: metadata.generation });
+      const stream = file.createReadStream();
+      const timer = setTimeout(() => stream.destroy(new Error("Scan read timeout")), 10_000);
+      const chunks: Buffer[] = [];
+      let size = 0;
+      try {
+        for await (const chunk of stream) {
+          size += chunk.length;
+          if (size > expectedSize) throw new Error("Scan size exceeded");
+          chunks.push(Buffer.from(chunk));
+        }
+      } finally { clearTimeout(timer); stream.destroy(); }
+      if (size !== expectedSize) return { verdict: "error" as const, generation: null };
+      const verdict = await scanDocument(Buffer.concat(chunks));
+      return { verdict, generation: String(metadata.generation) };
+    } catch { return { verdict: "error" as const, generation: null }; }
+    finally { scanReadActive = false; }
+  },
+  async file(objectPath: string, generation?: string | null) {
+    const file = await storage.getObjectEntityFile(objectPath);
+    return generation ? file.bucket.file(file.name, { generation }) : file;
   },
 };

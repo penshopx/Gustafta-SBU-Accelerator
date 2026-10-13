@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CaseDocumentCategory } from './caseDocumentCategory';
+import type { CaseDocumentScanStatus } from './caseDocumentScanStatus';
 import type { CaseDocumentStatus } from './caseDocumentStatus';
 
 export interface CaseDocument {
@@ -21,5 +22,9 @@ export interface CaseDocument {
   size: number;
   contentType: string;
   status: CaseDocumentStatus;
+  /** Only clean documents may be downloaded or analyzed. A scan is not evidence or regulatory verification. */
+  scanStatus: CaseDocumentScanStatus;
+  /** @nullable */
+  scannedAt?: Date | null;
   createdAt: Date;
 }

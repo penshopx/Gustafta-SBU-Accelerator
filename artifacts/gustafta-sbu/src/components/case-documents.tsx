@@ -11,12 +11,13 @@ import { Empty } from './dashboard-overview';
 import { ErrorState, Loading } from './request-states';
 import { DocumentMetadataDialog, categoryKeys, categoryLabels } from './document-metadata-dialog';
 import { DocumentAnalysisPanel } from './document-analysis-panel';
+import { DocumentScanStatus } from './document-scan-status';
 
 export const MAX_BYTES = 20 * 1024 * 1024;
 export const MAX_DOCS = 20;
 export const ALLOWED_TYPES = ['application/pdf', 'image/png', 'image/jpeg'] as const;
 const UPLOAD_TIMEOUT = 120000;
-const API_TIMEOUT = 30000;
+const API_TIMEOUT = 420000;
 
 export function validateFile(file: { size: number; type: string }): string | null {
   if (!(ALLOWED_TYPES as readonly string[]).includes(file.type)) return 'Hanya PDF, PNG, atau JPEG yang dapat diunggah.';
@@ -52,7 +53,7 @@ export function CaseDocuments({ id, expectedUserId, versionRequest }: { id: numb
   const options = useFormMutationOptions();
   const readOptions = useAccountReadOptions();
   const del = useDeleteCaseDocument(options);
-  const list = useListCaseDocuments(id, { ...readOptions, query: { queryKey: getListCaseDocumentsQueryKey(id), retry: false } });
+  const list = useListCaseDocuments(id, { ...readOptions, query: { queryKey: getListCaseDocumentsQueryKey(id), retry: false, refetchInterval: 15000 } });
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [failed, setFailed] = useState<File | null>(null);
@@ -96,14 +97,19 @@ export function CaseDocuments({ id, expectedUserId, versionRequest }: { id: numb
         const res = await fetch(created.uploadURL, { method: 'PUT', body: file, headers: { 'Content-Type': file.type }, signal: b.signal });
         if (!res.ok) throw new Error('put');
       } finally { b.done(); }
+      // After PUT, completion may already have sealed the private original.
+      // Never auto-delete it on an ambiguous completion/scan error.
+      const completionId = pendingId;
+      pendingId = null;
+      if (alive.current) setMessage('Unggahan tersimpan sementara. Memindai malware secara lokal; unduhan diblokir sampai hasil bersih.');
       const c = withTimeout(API_TIMEOUT, run.signal);
       try {
-        const completed = await completeCaseDocumentUpload(id, pendingId, { ...owner, signal: c.signal });
+        const completed = await completeCaseDocumentUpload(id, completionId, { ...owner, signal: c.signal });
         if (completed.ownerId !== expectedUserId || completed.caseId !== id) throw new Error('owner');
       } finally { c.done(); }
       pendingId = null;
       if (alive.current) { setVersionOf(null); setUploadNote(''); }
-      if (alive.current) setMessage('Dokumen asli tersimpan. Ini bukan bukti terverifikasi dan tidak mengubah catatan bukti atau status persiapan.');
+      if (alive.current) setMessage('Dokumen asli tersimpan privat. Lihat hasil pemindaian di daftar; hanya hasil bersih yang boleh diunduh. Pemindaian bukan verifikasi bukti atau regulasi.');
     } catch (e) {
       if (pendingId) { try { await deleteCaseDocument(id, pendingId, { ...owner }); } catch { /* pending record can be removed manually */ } }
       if (alive.current) { setFailed(file); setMessage(documentError(e, 'Unggahan belum dapat dikonfirmasi. Periksa daftar dokumen sebelum mencoba kembali.')); }
@@ -139,7 +145,27 @@ export function CaseDocuments({ id, expectedUserId, versionRequest }: { id: numb
     {versionOf && <div data-testid="banner-new-version" className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#b9d5e9] bg-[#eaf4ff] p-3 text-xs text-[#173d5d]"><span className="min-w-0 flex-1 break-words">Unggahan berikutnya menjadi versi baru dari <b>{versionOf.name}</b> (v{versionOf.version ?? 1}). Versi lama tetap tersimpan.</span><button className="btn btn-outline !min-h-[34px]" onClick={() => setVersionOf(null)}>Batal versi baru</button></div>}
     {message && <p role="status" data-testid="text-document-message" className="mb-3 rounded-lg border border-[#c7deef] bg-[#eff7fd] p-3 text-sm text-[#365a76]">{message}{failed && !busy && <button data-testid="button-retry-upload" className="ml-3 font-bold underline" onClick={() => void upload(failed)}>Coba lagi</button>}</p>}
     {busy && <button data-testid="button-cancel-upload" className="btn btn-outline mb-3" onClick={() => ctl.current?.abort()}><X size={14}/> Batalkan unggahan</button>}
-    {list.isLoading ? <Loading rows={2}/> : list.isError || foreign ? <ErrorState retry={() => { void list.refetch(); }} message="Daftar dokumen belum dapat dimuat." /> : docs?.length ? <div className="space-y-3">{docs.map(d => <div key={d.id} data-testid={`card-document-${d.id}`} className="surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center"><FileText size={20} className="shrink-0 text-[#1769d1]"/><div className="min-w-0 flex-1"><div className="truncate font-bold">{d.name}</div><div className="mt-0.5 flex flex-wrap gap-1.5"><span className="rounded-full bg-[#e6f1fc] px-2 py-0.5 text-[10px] font-bold text-[#1769d1]">{categoryLabels[d.category ?? 'lainnya']}</span><span className="rounded-full bg-[#eef2f6] px-2 py-0.5 text-[10px] font-bold text-[#445d74]">v{d.version ?? 1}</span></div>{d.description && <div className="mt-1 break-words text-xs text-[#58708a]">{d.description}</div>}<div className="text-[11px] text-[#8195a5]">{sizeLabel(d.size)} · {d.contentType} · {d.status === 'ready' ? 'Tersimpan, belum diverifikasi' : 'Unggahan belum selesai'}</div></div><div className="flex flex-wrap gap-1">{d.status === 'ready' && <><button data-testid={`button-bedah-${d.id}`} aria-label={`Bedah Dokumen ${d.name}`} onClick={() => setAnalyzing(d)} className="rounded-lg p-2 text-[#1769d1] hover:bg-[#eaf4fc]"><ScanSearch size={16}/></button><button data-testid={`button-edit-document-${d.id}`} aria-label={`Ubah keterangan ${d.name}`} onClick={() => setEditing(d)} className="rounded-lg p-2 text-[#456986] hover:bg-[#eaf4fc]"><Pencil size={16}/></button><button data-testid={`button-new-version-${d.id}`} aria-label={`Unggah versi baru ${d.name}`} onClick={() => { setVersionOf(d); setUploadCategory(d.category ?? 'lainnya'); }} className="rounded-lg p-2 text-[#456986] hover:bg-[#eaf4fc]"><Layers size={16}/></button></>}{d.status === 'ready' && <button data-testid={`button-download-document-${d.id}`} aria-label={`Unduh ${d.name}`} onClick={() => void download(d)} className="rounded-lg p-2 text-[#456986] hover:bg-[#eaf4fc]"><Download size={16}/></button>}<button data-testid={`button-delete-document-${d.id}`} aria-label={d.status === 'ready' ? `Hapus ${d.name}` : `Batalkan ${d.name}`} onClick={() => { setDelError(null); setConfirm(d); }} className="rounded-lg p-2 text-[#ad4a48] hover:bg-[#fff0ef]"><Trash2 size={16}/></button></div></div>)}</div> : <Empty title="Belum ada dokumen asli" detail="Unggah salinan dokumen untuk disimpan bersama kasus ini. Dokumen tidak dibaca atau diverifikasi." />}
+    {list.isLoading ? <Loading rows={2}/> : list.isError || foreign ? <ErrorState retry={() => { void list.refetch(); }} message="Daftar dokumen belum dapat dimuat." /> : docs?.length ? <div className="space-y-3">{docs.map(d => <div key={d.id} data-testid={`card-document-${d.id}`} className="surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+      <FileText size={20} className="shrink-0 text-[#1769d1]"/>
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-bold">{d.name}</div>
+        <div className="mt-0.5 flex flex-wrap gap-1.5"><span className="rounded-full bg-[#e6f1fc] px-2 py-0.5 text-[10px] font-bold text-[#1769d1]">{categoryLabels[d.category ?? 'lainnya']}</span><span className="rounded-full bg-[#eef2f6] px-2 py-0.5 text-[10px] font-bold text-[#445d74]">v{d.version ?? 1}</span></div>
+        {d.description && <div className="mt-1 break-words text-xs text-[#58708a]">{d.description}</div>}
+        <div className="text-[11px] text-[#8195a5]">{sizeLabel(d.size)} · {d.contentType}</div>
+        <DocumentScanStatus doc={d} expectedUserId={expectedUserId}/>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {d.status === 'ready' && d.scanStatus === 'clean' && <>
+          <button data-testid={`button-bedah-${d.id}`} aria-label={`Bedah Dokumen ${d.name}`} onClick={() => setAnalyzing(d)} className="rounded-lg p-2 text-[#1769d1] hover:bg-[#eaf4fc]"><ScanSearch size={16}/></button>
+          <button data-testid={`button-download-document-${d.id}`} aria-label={`Unduh ${d.name}`} onClick={() => void download(d)} className="rounded-lg p-2 text-[#456986] hover:bg-[#eaf4fc]"><Download size={16}/></button>
+        </>}
+        {d.status === 'ready' && <>
+          <button data-testid={`button-edit-document-${d.id}`} aria-label={`Ubah keterangan ${d.name}`} onClick={() => setEditing(d)} className="rounded-lg p-2 text-[#456986] hover:bg-[#eaf4fc]"><Pencil size={16}/></button>
+          <button data-testid={`button-new-version-${d.id}`} aria-label={`Unggah versi baru ${d.name}`} onClick={() => { setVersionOf(d); setUploadCategory(d.category ?? 'lainnya'); }} className="rounded-lg p-2 text-[#456986] hover:bg-[#eaf4fc]"><Layers size={16}/></button>
+        </>}
+        <button data-testid={`button-delete-document-${d.id}`} aria-label={d.status === 'ready' ? `Hapus ${d.name}` : `Batalkan ${d.name}`} onClick={() => { setDelError(null); setConfirm(d); }} className="rounded-lg p-2 text-[#ad4a48] hover:bg-[#fff0ef]"><Trash2 size={16}/></button>
+      </div>
+    </div>)}</div> : <Empty title="Belum ada dokumen asli" detail="Unggah salinan dokumen untuk disimpan privat dan dipindai malware. Pemindaian tidak memverifikasi bukti atau regulasi." />}
     {confirm && <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d1b2ad9] p-4"><section role="dialog" aria-modal="true" aria-label="Hapus dokumen" className="surface w-full max-w-[480px] p-6"><h2 className="display text-xl font-extrabold">{confirm.status === 'ready' ? 'Hapus dokumen?' : 'Batalkan unggahan?'}</h2><p className="mt-3 text-sm leading-7 text-[#567088]">Berkas akan dihapus permanen dari penyimpanan dan tidak dapat dipulihkan. Analisis tersimpan untuk versi ini juga ikut terhapus.</p>{delError && <p role="alert" className="mt-3 text-sm text-[#b34442]">{delError}</p>}<div className="mt-6 flex justify-end gap-2"><button data-testid="button-cancel-delete-document" className="btn btn-outline" onClick={() => setConfirm(null)}>Batal</button><button data-testid="button-confirm-delete-document" disabled={del.isPending} className="btn btn-danger" onClick={remove}>{del.isPending ? 'Menghapus...' : 'Ya, hapus permanen'}</button></div></section></div>}
     {editing && <DocumentMetadataDialog key={editing.id} doc={editing} expectedUserId={expectedUserId} close={() => setEditing(null)} />}
     {analyzing && <DocumentAnalysisPanel key={analyzing.id} doc={analyzing} expectedUserId={expectedUserId} close={() => setAnalyzing(null)} />}

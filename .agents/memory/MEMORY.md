@@ -17,3 +17,4 @@
 - [Native BFCache verification](native-bfcache-verification.md) — launch flags and cross-tab broadcasts can prevent genuine restores; require trusted persisted events, not simulated lifecycle events.
 - [Browser test cleanup bridge](browser-test-cleanup-bridge.md) — notebook sign-in does not imply a Clerk cleanup client; establish scoped host-side cleanup before creating synthetic accounts.
 - [Vite DOM integration tests](vite-dom-integration-tests.md) — share one module loader for React contexts and install the DOM before importing React DOM.
+- [Local scanner readiness](local-malware-scanner.md) — tiny antivirus fixtures do not establish full-signature startup cost; calibrate resource limits against official signatures.

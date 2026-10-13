@@ -169,7 +169,7 @@ test("real storage adapter scopes listing, pins deletion generation, and rejects
   };
   await build({
     entryPoints: [join(dir, "../src/lib/document-storage.ts")], outfile: join(temp, "adapter.mjs"),
-    bundle: true, platform: "node", format: "esm", external: ["pdf-lib"],
+    bundle: true, platform: "node", format: "esm", external: ["pdf-lib", "pino"],
     plugins: [{
       name: "cleanup-storage-fixture",
       setup(builder) {

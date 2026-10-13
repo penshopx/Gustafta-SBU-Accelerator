@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startDocumentCleanup } from "./lib/document-cleanup-job";
+import { startSignatureUpdates } from "./lib/document-signatures";
 
 const rawPort = process.env["PORT"];
 
@@ -17,6 +18,7 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 const stopDocumentCleanup = startDocumentCleanup();
+const stopSignatureUpdates = startSignatureUpdates();
 const server = app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
@@ -26,5 +28,5 @@ const server = app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
 });
 
-process.once("SIGTERM", () => { stopDocumentCleanup(); server.close(); });
-process.once("SIGINT", () => { stopDocumentCleanup(); server.close(); });
+process.once("SIGTERM", () => { stopDocumentCleanup(); stopSignatureUpdates(); server.close(); });
+process.once("SIGINT", () => { stopDocumentCleanup(); stopSignatureUpdates(); server.close(); });

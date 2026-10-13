@@ -60,7 +60,7 @@ export function DocumentAnalysisPanel({ doc, expectedUserId, close }: { doc: Cas
   const sorted = Array.isArray(items) && !foreign ? [...items].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : [];
 
   const run = async () => {
-    if (!consent || pending || tooBig || doc.status !== 'ready') return;
+    if (!consent || pending || tooBig || doc.status !== 'ready' || doc.scanStatus !== 'clean') return;
     const mine = ++token.current;
     const c = new AbortController(); ctl.current = c;
     setPending(true); setError(null);
@@ -114,7 +114,7 @@ export function DocumentAnalysisPanel({ doc, expectedUserId, close }: { doc: Cas
       <p className="mt-3 text-xs leading-5 text-[#617a90]">Hasil bersifat awal: bukan penilaian kepatuhan hukum, bukan keputusan SBU, bukan penilaian otomatis, dan tidak mengesahkan atau membatalkan bukti. Lokasi sumber adalah indikasi AI yang perlu Anda periksa sendiri.</p>
       {error && <p role="alert" data-testid="text-analysis-error" className="mt-3 text-sm text-[#b34442]">{error}</p>}
       <div className="mt-4 flex flex-wrap gap-2">
-        <button data-testid="button-run-analysis" onClick={() => void run()} disabled={!consent || pending || tooBig || doc.status !== 'ready'} className="btn btn-primary"><ScanSearch size={16} />{pending ? 'Menganalisis...' : 'Jalankan analisis'}</button>
+        <button data-testid="button-run-analysis" onClick={() => void run()} disabled={!consent || pending || tooBig || doc.status !== 'ready' || doc.scanStatus !== 'clean'} className="btn btn-primary"><ScanSearch size={16} />{pending ? 'Menganalisis...' : 'Jalankan analisis'}</button>
         {pending && <button data-testid="button-cancel-analysis" onClick={cancel} className="btn btn-outline"><X size={14} /> Batalkan</button>}
       </div>
       <h3 className="display mt-7 text-base font-extrabold">Riwayat analisis</h3>

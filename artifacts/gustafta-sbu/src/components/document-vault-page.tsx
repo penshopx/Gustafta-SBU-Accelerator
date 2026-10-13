@@ -13,6 +13,7 @@ import { DocumentAnalysisPanel } from './document-analysis-panel';
 import { DocumentMetadataDialog, SimpleModal, categoryKeys, categoryLabels } from './document-metadata-dialog';
 import { Empty } from './dashboard-overview';
 import { ErrorState, Loading } from './request-states';
+import { DocumentScanStatus } from './document-scan-status';
 
 export function DocumentVaultPage({ expectedUserId, canOwnCases }: { expectedUserId: string; canOwnCases: boolean }) {
   const qc = useQueryClient();
@@ -32,7 +33,7 @@ export function DocumentVaultPage({ expectedUserId, canOwnCases }: { expectedUse
 
   const cases = useListCases({ ...readOptions, query: { enabled: canOwnCases, queryKey: getListCasesQueryKey() } });
   const params = { ...(dq ? { q: dq } : {}), ...(category ? { category: category as ListDocumentVaultCategory } : {}), ...(caseId ? { caseId: Number(caseId) } : {}), page };
-  const vault = useListDocumentVault(params, { ...readOptions, query: { queryKey: getListDocumentVaultQueryKey(params), retry: false } });
+  const vault = useListDocumentVault(params, { ...readOptions, query: { queryKey: getListDocumentVaultQueryKey(params), retry: false, refetchInterval: 15000 } });
   const data = vault.data;
   const foreign = !!data && (data.userId !== expectedUserId || !Array.isArray(data.documents) || data.documents.some(d => d.ownerId !== expectedUserId));
   const totalPages = data ? Math.max(1, Math.ceil(data.total / (data.pageSize || 50))) : 1;
@@ -79,7 +80,8 @@ export function DocumentVaultPage({ expectedUserId, canOwnCases }: { expectedUse
           {d.description && <div className="mt-1 break-words text-xs text-[#58708a]">{d.description}</div>}
           <div className="mt-1 break-words text-[11px] text-[#8195a5]">{sizeLabel(d.size)} · <Link href={`/cases/${d.caseId}`} data-testid={`link-document-case-${d.id}`} className="font-bold text-[#1769d1]">{d.caseName}</Link></div></div></div>
         <div className="flex flex-wrap gap-1">
-          {d.status === 'ready' && <>
+          <DocumentScanStatus doc={d} expectedUserId={expectedUserId}/>
+          {d.status === 'ready' && d.scanStatus === 'clean' && <>
             <button data-testid={`button-bedah-${d.id}`} aria-label={`Bedah Dokumen ${d.name}`} onClick={() => setAnalyzing(d)} className="rounded-lg p-2 text-[#1769d1] hover:bg-[#eaf4fc]"><ScanSearch size={16} /></button>
             <button data-testid={`button-edit-document-${d.id}`} aria-label={`Ubah keterangan ${d.name}`} onClick={() => setEditing(d)} className="rounded-lg p-2 text-[#456986] hover:bg-[#eaf4fc]"><Pencil size={16} /></button>
             {canOwnCases && <button data-testid={`button-new-version-${d.id}`} aria-label={`Unggah versi baru ${d.name}`} onClick={() => newVersion(d)} className="rounded-lg p-2 text-[#456986] hover:bg-[#eaf4fc]"><Layers size={16} /></button>}

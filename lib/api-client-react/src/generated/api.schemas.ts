@@ -213,6 +213,19 @@ export const CaseDocumentStatus = {
   ready: 'ready',
 } as const;
 
+/**
+ * Only clean documents may be downloaded or analyzed. A scan is not evidence or regulatory verification.
+ */
+export type CaseDocumentScanStatus = typeof CaseDocumentScanStatus[keyof typeof CaseDocumentScanStatus];
+
+
+export const CaseDocumentScanStatus = {
+  pending: 'pending',
+  clean: 'clean',
+  infected: 'infected',
+  error: 'error',
+} as const;
+
 export interface CaseDocument {
   category?: CaseDocumentCategory;
   description?: string;
@@ -226,6 +239,10 @@ export interface CaseDocument {
   size: number;
   contentType: string;
   status: CaseDocumentStatus;
+  /** Only clean documents may be downloaded or analyzed. A scan is not evidence or regulatory verification. */
+  scanStatus: CaseDocumentScanStatus;
+  /** @nullable */
+  scannedAt?: string | null;
   createdAt: string;
 }
 

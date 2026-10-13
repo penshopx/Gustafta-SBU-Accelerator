@@ -26,6 +26,7 @@ test("standalone profiles/documents isolate owners and preserve records after st
     await bootstrap.query("CREATE TABLE sbu_profiles (LIKE public.sbu_profiles INCLUDING ALL)");
     await bootstrap.query("CREATE TABLE sbu_cases (LIKE public.sbu_cases INCLUDING ALL)");
     await bootstrap.query(await readFile(new URL("../../../lib/db/migrations/standalone-documents.sql", import.meta.url), "utf8"));
+    await bootstrap.query(await readFile(new URL("../../../lib/db/migrations/document-malware.sql", import.meta.url), "utf8"));
     await bootstrap.query(`ALTER TABLE sbu_documents
       ADD COLUMN category text NOT NULL DEFAULT 'lainnya',
       ADD COLUMN description text NOT NULL DEFAULT '',
@@ -37,6 +38,7 @@ test("standalone profiles/documents isolate owners and preserve records after st
     globalThis.__standalonePool = restricted.pool;
     globalThis.__standaloneStorageCalls = [];
     globalThis.__standaloneStorageFailure = false;
+    globalThis.__standaloneScanVerdict = "clean";
     globalThis.__standaloneGenerateCalls = 0;
     globalThis.__standaloneAnalysisFailure = false;
     globalThis.__standaloneGenerate = async () => {
@@ -70,14 +72,18 @@ test("standalone profiles/documents isolate owners and preserve records after st
               import {createDocumentAnalysisRouter} from ${JSON.stringify(join(dir, "../src/routes/document-analysis.ts"))};
               export default createDocumentAnalysisRouter(globalThis.__standaloneGenerate);
             ` : `
+              import { Readable } from "node:stream";
               export class DocumentValidationError extends Error {}
               export const documentStorage = {
                 reserve: async () => { globalThis.__standaloneStorageCalls.push("reserve"); return {uploadURL:"https://invalid.test/synthetic-upload", objectPath:"/objects/uploads/synthetic-"+Date.now()}; },
                 seal: async (path,id) => { globalThis.__standaloneStorageCalls.push("seal"); if(globalThis.__standaloneStorageFailure) throw new DocumentValidationError(); return "/objects/documents/"+id; },
                 remove: async path => { globalThis.__standaloneStorageCalls.push("remove"); if(globalThis.__standaloneStorageFailure) throw new Error("storage failure"); },
-                file: async () => { globalThis.__standaloneStorageCalls.push("file");
+                scan: async () => { globalThis.__standaloneStorageCalls.push("scan"); return {verdict:globalThis.__standaloneScanVerdict,generation:"123"}; },
+                file: async (path,generation) => { globalThis.__standaloneStorageCalls.push("file");
+                  globalThis.__standaloneDownloadGeneration = generation;
                   if(globalThis.__standaloneStorageFailure) throw new Error("storage failure");
-                  return {getMetadata:async()=>[{size:"22",contentType:"application/pdf"}],download:async()=>[Buffer.alloc(22)]}; }
+                  return {getMetadata:async()=>[{size:"22",contentType:"application/pdf"}],download:async()=>[Buffer.alloc(22)],
+                    createReadStream:()=>Readable.from(["synthetic PDF"])}; }
               };
             `, loader: "ts", resolveDir: dir,
           }));
@@ -96,7 +102,9 @@ test("standalone profiles/documents isolate owners and preserve records after st
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
       const text = await response.text();
-      return { status: response.status, cache: response.headers.get("cache-control"), body: text ? JSON.parse(text) : null };
+      return { status: response.status, cache: response.headers.get("cache-control"),
+        attachment: response.headers.get("content-disposition"),
+        body: text ? response.headers.get("content-type") === "application/pdf" ? text : JSON.parse(text) : null };
     };
     assert.equal((await call("GET", "/company-profile", null)).status, 401);
     const input = { companyName: "Isolated A", nib: "1234567890123", npwp: "", address: "Synthetic", responsiblePerson: "Test" };
@@ -129,10 +137,47 @@ test("standalone profiles/documents isolate owners and preserve records after st
     assert.equal((await call("POST", `/cases/${a.id}/documents/${documentId}/complete`)).status, 422);
     assert.equal((await call("GET", `/cases/${a.id}/documents`)).body[0].status, "pending");
     globalThis.__standaloneStorageFailure = false;
-    assert.equal((await call("POST", `/cases/${a.id}/documents/${documentId}/complete`)).body.status, "ready");
+    globalThis.__standaloneScanVerdict = "error";
+    const failedScan = await call("POST", `/cases/${a.id}/documents/${documentId}/complete`);
+    assert.equal(failedScan.body.status, "ready");
+    assert.equal(failedScan.body.scanStatus, "error");
+    assert.equal(failedScan.body.scanGeneration, undefined);
+    const callsAfterFailure = [...globalThis.__standaloneStorageCalls];
+    assert.equal((await call("GET", `/cases/${a.id}/documents/${documentId}/download`)).status, 404);
+    assert.equal((await call("POST", `/cases/${a.id}/documents/${documentId}/analyses`, "test-owner-a", { consent: true, focus: "keuangan" })).status, 404);
+    assert.deepEqual(globalThis.__standaloneStorageCalls, callsAfterFailure, "quarantine does not read/download original");
+    assert.equal((await call("GET", `/cases/${a.id}/documents`)).body.length, 1, "scan failure retains original record");
+    assert.equal((await call("POST", `/cases/${a.id}/documents/${documentId}/complete`, "test-owner-a", undefined, "test-owner-b")).status, 409);
+    assert.equal((await call("POST", `/cases/${a.id}/documents/${documentId}/complete`, "test-owner-b")).status, 404);
+    assert.deepEqual(globalThis.__standaloneStorageCalls, callsAfterFailure, "foreign/stale form does not invoke scanner");
+    globalThis.__standaloneScanVerdict = "clean";
+    const retry = await call("POST", `/cases/${a.id}/documents/${documentId}/complete`);
+    assert.equal(retry.body.scanStatus, "clean");
+    assert.equal(retry.body.scanGeneration, undefined);
+    const download = await call("GET", `/cases/${a.id}/documents/${documentId}/download`);
+    assert.equal(download.status, 200);
+    assert.equal(download.cache, "private, no-store");
+    assert.match(download.attachment, /^attachment;/);
+    assert.equal(globalThis.__standaloneDownloadGeneration, "123", "download uses scanned immutable generation");
     const seals = globalThis.__standaloneStorageCalls.filter(c => c === "seal").length;
     assert.equal((await call("POST", `/cases/${a.id}/documents/${documentId}/complete`)).body.status, "ready");
     assert.equal(globalThis.__standaloneStorageCalls.filter(c => c === "seal").length, seals, "completion is idempotent");
+    // An old ready document is NOT implicitly trusted, and infected files are
+    // never re-sealed/released or silently removed by scan/completion retries.
+    const isolated = await call("POST", `/cases/${a.id}/documents`, "test-owner-a", metadata);
+    const isolatedPath = `/cases/${a.id}/documents/${isolated.body.document.id}`;
+    await restricted.pool.query("UPDATE sbu_documents SET status='ready' WHERE id=$1", [isolated.body.document.id]);
+    assert.equal((await call("GET", `${isolatedPath}/download`)).status, 404);
+    globalThis.__standaloneScanVerdict = "infected";
+    const infected = await call("POST", `${isolatedPath}/complete`);
+    assert.equal(infected.body.scanStatus, "infected");
+    const scans = globalThis.__standaloneStorageCalls.filter(c => c === "scan").length;
+    assert.equal((await call("POST", `${isolatedPath}/complete`)).body.scanStatus, "infected");
+    assert.equal(globalThis.__standaloneStorageCalls.filter(c => c === "scan").length, scans);
+    assert.equal((await call("GET", `${isolatedPath}/download`)).status, 404);
+    assert.equal((await call("GET", "/documents")).body.total, 2);
+    assert.equal((await call("DELETE", isolatedPath)).status, 204, "only explicit owner deletion removes quarantined file");
+    globalThis.__standaloneScanVerdict = "clean";
     const vault = await call("GET", "/documents?category=lainnya&page=1");
     assert.equal(vault.status, 200);
     assert.equal(vault.cache, "private, no-store");
@@ -198,6 +243,8 @@ test("standalone profiles/documents isolate owners and preserve records after st
     delete globalThis.__standaloneGenerate;
     delete globalThis.__standaloneGenerateCalls;
     delete globalThis.__standaloneAnalysisFailure;
+    delete globalThis.__standaloneScanVerdict;
+    delete globalThis.__standaloneDownloadGeneration;
     if (restricted) await restricted.close();
     await bootstrap.query("RESET search_path").catch(() => {});
     await bootstrap.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);

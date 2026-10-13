@@ -40,6 +40,8 @@ export const ListDocumentVaultResponse = zod.object({
   "size": zod.number().int(),
   "contentType": zod.string(),
   "status": zod.enum(['pending', 'ready']),
+  "scanStatus": zod.enum(['pending', 'clean', 'infected', 'error']).describe('Only clean documents may be downloaded or analyzed. A scan is not evidence or regulatory verification.'),
+  "scannedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 }).and(zod.object({
   "caseName": zod.string()
@@ -325,6 +327,8 @@ export const ListCaseDocumentsResponseItem = zod.object({
   "size": zod.number().int(),
   "contentType": zod.string(),
   "status": zod.enum(['pending', 'ready']),
+  "scanStatus": zod.enum(['pending', 'clean', 'infected', 'error']).describe('Only clean documents may be downloaded or analyzed. A scan is not evidence or regulatory verification.'),
+  "scannedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListCaseDocumentsResponse = zod.array(ListCaseDocumentsResponseItem)
@@ -370,6 +374,8 @@ export const RequestCaseDocumentUploadResponse = zod.object({
   "size": zod.number().int(),
   "contentType": zod.string(),
   "status": zod.enum(['pending', 'ready']),
+  "scanStatus": zod.enum(['pending', 'clean', 'infected', 'error']).describe('Only clean documents may be downloaded or analyzed. A scan is not evidence or regulatory verification.'),
+  "scannedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 }),
   "uploadURL": zod.string()
@@ -399,6 +405,8 @@ export const CompleteCaseDocumentUploadResponse = zod.object({
   "size": zod.number().int(),
   "contentType": zod.string(),
   "status": zod.enum(['pending', 'ready']),
+  "scanStatus": zod.enum(['pending', 'clean', 'infected', 'error']).describe('Only clean documents may be downloaded or analyzed. A scan is not evidence or regulatory verification.'),
+  "scannedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -438,6 +446,8 @@ export const UpdateCaseDocumentMetadataResponse = zod.object({
   "size": zod.number().int(),
   "contentType": zod.string(),
   "status": zod.enum(['pending', 'ready']),
+  "scanStatus": zod.enum(['pending', 'clean', 'infected', 'error']).describe('Only clean documents may be downloaded or analyzed. A scan is not evidence or regulatory verification.'),
+  "scannedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 

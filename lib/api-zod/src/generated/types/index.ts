@@ -11,6 +11,7 @@ export * from './assessment';
 export * from './assessmentStatus';
 export * from './caseDocument';
 export * from './caseDocumentCategory';
+export * from './caseDocumentScanStatus';
 export * from './caseDocumentStatus';
 export * from './caseInput';
 export * from './caseInputQualification';

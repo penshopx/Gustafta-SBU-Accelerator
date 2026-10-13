@@ -215,7 +215,7 @@ paths:
       security: [{ FormOwner: [] }]
       responses:
         "200":
-          description: Checked and attached document
+          description: Stored privately and locally scanned; scan failure or detection remains quarantined. Repeat to retry a failed or pending scan.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/CaseDocument" }
@@ -744,7 +744,7 @@ components:
         contentType: { type: string, enum: [application/pdf, image/png, image/jpeg] }
     CaseDocument:
       type: object
-      required: [id, caseId, ownerId, name, size, contentType, status, createdAt]
+      required: [id, caseId, ownerId, name, size, contentType, status, scanStatus, createdAt]
       properties:
         category: { type: string, enum: [legalitas, keuangan, personel, peralatan, pengalaman, smap, lainnya] }
         description: { type: string }
@@ -757,6 +757,11 @@ components:
         size: { type: integer }
         contentType: { type: string }
         status: { type: string, enum: [pending, ready] }
+        scanStatus:
+          type: string
+          enum: [pending, clean, infected, error]
+          description: Only clean documents may be downloaded or analyzed. A scan is not evidence or regulatory verification.
+        scannedAt: { type: [string, "null"], format: date-time }
         createdAt: { type: string, format: date-time }
     DocumentMetadataInput:
       type: object

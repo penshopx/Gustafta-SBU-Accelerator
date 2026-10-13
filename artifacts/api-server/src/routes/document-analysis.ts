@@ -22,7 +22,8 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
     const [item] = await db.select({ document: documentsTable }).from(documentsTable)
       .innerJoin(casesTable, eq(casesTable.id, documentsTable.caseId))
       .where(and(eq(documentsTable.id, documentId), eq(documentsTable.caseId, caseId),
-        eq(documentsTable.ownerId, userId), eq(casesTable.ownerId, userId), eq(documentsTable.status, "ready")));
+        eq(documentsTable.ownerId, userId), eq(casesTable.ownerId, userId), eq(documentsTable.status, "ready"),
+        eq(documentsTable.scanStatus, "clean")));
     return item?.document;
   };
   router.get("/cases/:id/documents/:documentId/analyses", async (req, res): Promise<void> => {
@@ -47,7 +48,7 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
       res.status(400).json({ error: "Pilih fokus dan setujui pengiriman dokumen yang dipilih ke penyedia AI." }); return;
     }
     const document = await owned(params.data.id, params.data.documentId, userId);
-    if (!document) { res.status(404).json({ error: "Dokumen belum tersedia." }); return; }
+    if (!document || !document.scanGeneration) { res.status(404).json({ error: "Dokumen belum tersedia atau masih dikarantina." }); return; }
     if (document.size > MAX_ANALYSIS_BYTES) {
       res.status(422).json({ error: "Bedah dokumen dibatasi 4 MiB dan PDF maksimal 10 halaman. Buat salinan ringkas; dokumen asli tetap tersimpan." }); return;
     }
@@ -71,7 +72,7 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
     res.on("close", disconnect);
     try {
       const run = async () => {
-        const file = await documentStorage.file(document.objectPath);
+        const file = await documentStorage.file(document.objectPath, document.scanGeneration);
         const [metadata] = await file.getMetadata();
         if (Number(metadata.size) !== document.size || metadata.contentType !== document.contentType ||
             metadata.contentEncoding || document.size > MAX_ANALYSIS_BYTES) throw new AnalysisFormatError();
@@ -86,7 +87,8 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
         return db.transaction(async (tx) => {
           const [current] = await tx.select().from(documentsTable).where(and(eq(documentsTable.id, document.id),
             eq(documentsTable.ownerId, userId), eq(documentsTable.caseId, document.caseId),
-            eq(documentsTable.status, "ready"))).for("update");
+            eq(documentsTable.status, "ready"), eq(documentsTable.scanStatus, "clean"),
+            eq(documentsTable.scanGeneration, document.scanGeneration!))).for("update");
           if (!current) return null;
           const [{ stored }] = await tx.select({ stored: sql<number>`count(*)::int` }).from(documentAnalysesTable)
             .where(and(eq(documentAnalysesTable.documentId, document.id), eq(documentAnalysesTable.ownerId, userId)));

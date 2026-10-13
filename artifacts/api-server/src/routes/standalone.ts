@@ -136,7 +136,23 @@ router.post("/cases/:id/documents/:documentId/complete", async (req, res): Promi
     if (stagedPath) await documentStorage.remove(stagedPath).catch(() => {
       req.log.warn({ event: "document_stage_cleanup_failed" }, "Temporary upload cleanup deferred");
     });
-    res.json(CompleteCaseDocumentUploadResponse.parse(publicDocument(row)));
+    // Seal/commit first so a scanner outage never discards the original.
+    // Row locking serializes retries/deletion; lifecycle GC retains all ready
+    // rows (including quarantined documents), not only clean ones.
+    const scanned = await db.transaction(async (tx) => {
+      await tx.execute(documentActivityLock);
+      const [item] = await tx.select().from(documents).where(and(eq(documents.id, row.id),
+        eq(documents.caseId, params.data.id), eq(documents.ownerId, userId))).for("update");
+      if (!item || item.scanStatus === "clean" || item.scanStatus === "infected") return item;
+      const result = await documentStorage.scan(item.objectPath, item.size);
+      const [updated] = await tx.update(documents).set({
+        scanStatus: result.verdict, scanGeneration: result.verdict === "clean" ? result.generation : null,
+        scannedAt: new Date(),
+      }).where(eq(documents.id, item.id)).returning();
+      return updated;
+    });
+    if (!scanned) { res.status(404).json({ error: "Dokumen tidak ditemukan." }); return; }
+    res.json(CompleteCaseDocumentUploadResponse.parse(publicDocument(scanned)));
   } catch (error) {
     // Commit failures can be ambiguous; a concurrent retry may already refer
     // to the sealed file. Only locked reconciliation may reclaim this orphan.
@@ -175,10 +191,12 @@ router.get("/cases/:id/documents/:documentId/download", async (req, res): Promis
   const userId = owner(req);
   if (!await ownsCase(params.data.id, userId)) { res.status(404).json({ error: "Kasus tidak ditemukan." }); return; }
   const [item] = await db.select().from(documents).where(and(eq(documents.id, params.data.documentId),
-    eq(documents.caseId, params.data.id), eq(documents.ownerId, userId), eq(documents.status, "ready")));
+    eq(documents.caseId, params.data.id), eq(documents.ownerId, userId), eq(documents.status, "ready"),
+    eq(documents.scanStatus, "clean")));
   if (!item) { res.status(404).json({ error: "Dokumen belum tersedia." }); return; }
   try {
-    const file = await documentStorage.file(item.objectPath);
+    if (!item.scanGeneration) { res.status(404).json({ error: "Dokumen belum lolos pemindaian." }); return; }
+    const file = await documentStorage.file(item.objectPath, item.scanGeneration);
     res.set({
       "Content-Type": item.contentType,
       "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(item.name)}`,
