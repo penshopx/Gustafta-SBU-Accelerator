@@ -16,3 +16,9 @@ For route integration tests, authenticate with a disposable restricted login ins
 **Why:** `search_path` does not block explicitly qualified application writes, and `RESET ROLE` on an administrator session can restore its original privileges. A separate login keeps the original session identity restricted as well.
 
 **How to apply:** Grant writes only on cloned tables and their local sequences, check inherited/PUBLIC write privileges before mounting routes, and use `EXPLAIN` without `ANALYZE` for denied-write probes so a permission regression cannot execute statement-level triggers on application tables.
+
+Bootstrap the disposable schema and tables before creating a restricted route login; the restricted harness grants access to existing objects, not permission to create the fixture. Make cleanup steps independent and preserve the primary test failure when teardown also fails.
+
+**Why:** Granting against a missing schema can fail mid-setup and leave an orphan login. A teardown error can hide the first failure and leave pools open, obscuring the cause until the runner times out.
+
+**How to apply:** In isolated route tests, set up schema and fixture data with the administrator connection, then mount the restricted connection for route calls only. Release each resource even if another release fails; report teardown failures separately from the original assertion.

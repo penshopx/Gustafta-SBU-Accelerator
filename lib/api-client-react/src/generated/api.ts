@@ -43,6 +43,9 @@ import type {
   ListDocumentVaultParams,
   LocalCompanyProfile,
   LocalCompanyProfileInput,
+  Personnel,
+  PersonnelInput,
+  PersonnelUpdate,
   Profile,
   ProfileInput,
   Regulation,
@@ -52,6 +55,8 @@ import type {
   SbuChatInput,
   SbuChatReply,
   SbuChatSpecialist,
+  SkkCertificateInput,
+  SkkCertificateUpdate,
   TransitionVerification,
   TransitionVerificationInput,
   Workspace
@@ -83,6 +88,619 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListPersonnelUrl = () => {
+
+
+
+
+  return `/api/personnel`
+}
+
+export const listPersonnel = async ( options?: Parameters<typeof customFetch>[1]): Promise<Personnel[]> => {
+
+  return customFetch<Personnel[]>(getListPersonnelUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPersonnelQueryKey = () => {
+    return [
+    `/api/personnel`
+    ] as const;
+    }
+
+
+export const getListPersonnelQueryOptions = <TData = Awaited<ReturnType<typeof listPersonnel>>, TError = ErrorType<void | FormOwnerMismatchResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPersonnel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPersonnelQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPersonnel>>> = ({ signal }) => listPersonnel({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPersonnel>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPersonnelQueryResult = NonNullable<Awaited<ReturnType<typeof listPersonnel>>>
+export type ListPersonnelQueryError = ErrorType<void | FormOwnerMismatchResponse>
+
+
+
+export function useListPersonnel<TData = Awaited<ReturnType<typeof listPersonnel>>, TError = ErrorType<void | FormOwnerMismatchResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPersonnel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPersonnelQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePersonnelUrl = () => {
+
+
+
+
+  return `/api/personnel`
+}
+
+export const createPersonnel = async (personnelInput: PersonnelInput, options?: Parameters<typeof customFetch>[1]): Promise<Personnel> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Personnel>(getCreatePersonnelUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(personnelInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePersonnelMutationKey = () => ['createPersonnel'] as const;
+
+export const getCreatePersonnelMutationOptions = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPersonnel>>, TError,CreatePersonnelMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPersonnel>>, TError,CreatePersonnelMutationVariables, TContext> => {
+
+const mutationKey = getCreatePersonnelMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPersonnel>>, CreatePersonnelMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPersonnel(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePersonnelMutationResult = NonNullable<Awaited<ReturnType<typeof createPersonnel>>>
+    export type CreatePersonnelMutationBody = BodyType<PersonnelInput>
+    export type CreatePersonnelMutationError = ErrorType<void | FormOwnerMismatchResponse>
+    export type CreatePersonnelMutationVariables = {data: BodyType<PersonnelInput>}
+
+    export const useCreatePersonnel = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPersonnel>>, TError,CreatePersonnelMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPersonnel>>,
+        TError,
+        CreatePersonnelMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreatePersonnelMutationOptions(options));
+    }
+
+export const getGetPersonnelUrl = (personnelId: string,) => {
+
+
+
+
+  return `/api/personnel/${personnelId}`
+}
+
+export const getPersonnel = async (personnelId: string, options?: Parameters<typeof customFetch>[1]): Promise<Personnel> => {
+
+  return customFetch<Personnel>(getGetPersonnelUrl(personnelId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPersonnelQueryKey = (personnelId: string,) => {
+    return [
+    `/api/personnel/${personnelId}`
+    ] as const;
+    }
+
+
+export const getGetPersonnelQueryOptions = <TData = Awaited<ReturnType<typeof getPersonnel>>, TError = ErrorType<void | FormOwnerMismatchResponse>>(personnelId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPersonnel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPersonnelQueryKey(personnelId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPersonnel>>> = ({ signal }) => getPersonnel(personnelId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: personnelId !== null && personnelId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPersonnel>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPersonnelQueryResult = NonNullable<Awaited<ReturnType<typeof getPersonnel>>>
+export type GetPersonnelQueryError = ErrorType<void | FormOwnerMismatchResponse>
+
+
+
+export function useGetPersonnel<TData = Awaited<ReturnType<typeof getPersonnel>>, TError = ErrorType<void | FormOwnerMismatchResponse>>(
+ personnelId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPersonnel>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPersonnelQueryOptions(personnelId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdatePersonnelUrl = (personnelId: string,) => {
+
+
+
+
+  return `/api/personnel/${personnelId}`
+}
+
+export const updatePersonnel = async (personnelId: string,
+    personnelUpdate: PersonnelUpdate, options?: Parameters<typeof customFetch>[1]): Promise<Personnel> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Personnel>(getUpdatePersonnelUrl(personnelId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(personnelUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdatePersonnelMutationKey = () => ['updatePersonnel'] as const;
+
+export const getUpdatePersonnelMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePersonnel>>, TError,UpdatePersonnelMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePersonnel>>, TError,UpdatePersonnelMutationVariables, TContext> => {
+
+const mutationKey = getUpdatePersonnelMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePersonnel>>, UpdatePersonnelMutationVariables> = (props) => {
+          const {personnelId,data} = props ?? {};
+
+          return  updatePersonnel(personnelId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePersonnelMutationResult = NonNullable<Awaited<ReturnType<typeof updatePersonnel>>>
+    export type UpdatePersonnelMutationBody = BodyType<PersonnelUpdate>
+    export type UpdatePersonnelMutationError = ErrorType<void>
+    export type UpdatePersonnelMutationVariables = {personnelId: string;data: BodyType<PersonnelUpdate>}
+
+    export const useUpdatePersonnel = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePersonnel>>, TError,UpdatePersonnelMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePersonnel>>,
+        TError,
+        UpdatePersonnelMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdatePersonnelMutationOptions(options));
+    }
+
+export const getDeletePersonnelUrl = (personnelId: string,) => {
+
+
+
+
+  return `/api/personnel/${personnelId}`
+}
+
+export const deletePersonnel = async (personnelId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeletePersonnelUrl(personnelId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeletePersonnelMutationKey = () => ['deletePersonnel'] as const;
+
+export const getDeletePersonnelMutationOptions = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePersonnel>>, TError,DeletePersonnelMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deletePersonnel>>, TError,DeletePersonnelMutationVariables, TContext> => {
+
+const mutationKey = getDeletePersonnelMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePersonnel>>, DeletePersonnelMutationVariables> = (props) => {
+          const {personnelId} = props ?? {};
+
+          return  deletePersonnel(personnelId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeletePersonnelMutationResult = NonNullable<Awaited<ReturnType<typeof deletePersonnel>>>
+
+    export type DeletePersonnelMutationError = ErrorType<void | FormOwnerMismatchResponse>
+    export type DeletePersonnelMutationVariables = {personnelId: string}
+
+    export const useDeletePersonnel = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePersonnel>>, TError,DeletePersonnelMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deletePersonnel>>,
+        TError,
+        DeletePersonnelMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeletePersonnelMutationOptions(options));
+    }
+
+export const getCreateSkkCertificateUrl = (personnelId: string,) => {
+
+
+
+
+  return `/api/personnel/${personnelId}/certificates`
+}
+
+export const createSkkCertificate = async (personnelId: string,
+    skkCertificateInput: SkkCertificateInput, options?: Parameters<typeof customFetch>[1]): Promise<Personnel> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Personnel>(getCreateSkkCertificateUrl(personnelId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(skkCertificateInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSkkCertificateMutationKey = () => ['createSkkCertificate'] as const;
+
+export const getCreateSkkCertificateMutationOptions = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSkkCertificate>>, TError,CreateSkkCertificateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSkkCertificate>>, TError,CreateSkkCertificateMutationVariables, TContext> => {
+
+const mutationKey = getCreateSkkCertificateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSkkCertificate>>, CreateSkkCertificateMutationVariables> = (props) => {
+          const {personnelId,data} = props ?? {};
+
+          return  createSkkCertificate(personnelId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSkkCertificateMutationResult = NonNullable<Awaited<ReturnType<typeof createSkkCertificate>>>
+    export type CreateSkkCertificateMutationBody = BodyType<SkkCertificateInput>
+    export type CreateSkkCertificateMutationError = ErrorType<void | FormOwnerMismatchResponse>
+    export type CreateSkkCertificateMutationVariables = {personnelId: string;data: BodyType<SkkCertificateInput>}
+
+    export const useCreateSkkCertificate = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSkkCertificate>>, TError,CreateSkkCertificateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSkkCertificate>>,
+        TError,
+        CreateSkkCertificateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateSkkCertificateMutationOptions(options));
+    }
+
+export const getUpdateSkkCertificateUrl = (personnelId: string,
+    certificateId: string,) => {
+
+
+
+
+  return `/api/personnel/${personnelId}/certificates/${certificateId}`
+}
+
+export const updateSkkCertificate = async (personnelId: string,
+    certificateId: string,
+    skkCertificateUpdate: SkkCertificateUpdate, options?: Parameters<typeof customFetch>[1]): Promise<Personnel> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<Personnel>(getUpdateSkkCertificateUrl(personnelId,certificateId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(skkCertificateUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateSkkCertificateMutationKey = () => ['updateSkkCertificate'] as const;
+
+export const getUpdateSkkCertificateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSkkCertificate>>, TError,UpdateSkkCertificateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSkkCertificate>>, TError,UpdateSkkCertificateMutationVariables, TContext> => {
+
+const mutationKey = getUpdateSkkCertificateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSkkCertificate>>, UpdateSkkCertificateMutationVariables> = (props) => {
+          const {personnelId,certificateId,data} = props ?? {};
+
+          return  updateSkkCertificate(personnelId,certificateId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSkkCertificateMutationResult = NonNullable<Awaited<ReturnType<typeof updateSkkCertificate>>>
+    export type UpdateSkkCertificateMutationBody = BodyType<SkkCertificateUpdate>
+    export type UpdateSkkCertificateMutationError = ErrorType<void>
+    export type UpdateSkkCertificateMutationVariables = {personnelId: string;certificateId: string;data: BodyType<SkkCertificateUpdate>}
+
+    export const useUpdateSkkCertificate = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSkkCertificate>>, TError,UpdateSkkCertificateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSkkCertificate>>,
+        TError,
+        UpdateSkkCertificateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateSkkCertificateMutationOptions(options));
+    }
+
+export const getDeleteSkkCertificateUrl = (personnelId: string,
+    certificateId: string,) => {
+
+
+
+
+  return `/api/personnel/${personnelId}/certificates/${certificateId}`
+}
+
+export const deleteSkkCertificate = async (personnelId: string,
+    certificateId: string, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteSkkCertificateUrl(personnelId,certificateId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteSkkCertificateMutationKey = () => ['deleteSkkCertificate'] as const;
+
+export const getDeleteSkkCertificateMutationOptions = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSkkCertificate>>, TError,DeleteSkkCertificateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSkkCertificate>>, TError,DeleteSkkCertificateMutationVariables, TContext> => {
+
+const mutationKey = getDeleteSkkCertificateMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSkkCertificate>>, DeleteSkkCertificateMutationVariables> = (props) => {
+          const {personnelId,certificateId} = props ?? {};
+
+          return  deleteSkkCertificate(personnelId,certificateId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSkkCertificateMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSkkCertificate>>>
+
+    export type DeleteSkkCertificateMutationError = ErrorType<void | FormOwnerMismatchResponse>
+    export type DeleteSkkCertificateMutationVariables = {personnelId: string;certificateId: string}
+
+    export const useDeleteSkkCertificate = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSkkCertificate>>, TError,DeleteSkkCertificateMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSkkCertificate>>,
+        TError,
+        DeleteSkkCertificateMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteSkkCertificateMutationOptions(options));
+    }
 
 export const getListConsultationsUrl = () => {
 

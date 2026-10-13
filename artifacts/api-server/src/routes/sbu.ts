@@ -21,6 +21,7 @@ import { getContext, recordCaseAudit, workspaceDisclaimer } from "../lib/workspa
 import standaloneRouter from "./standalone";
 import sbuChatRouter from "./sbu-chat";
 import consultationsRouter from "./consultations";
+import personnelRouter from "./personnel";
 import documentVaultRouter from "./document-vault";
 import documentAnalysisRouter from "./document-analysis";
 
@@ -39,7 +40,7 @@ router.use(requireAuth);
 // is only a precondition; Clerk remains the authority for resource ownership.
 router.use((req, res, next) => {
   if (!["GET", "HEAD"].includes(req.method) ||
-      !/^\/(?:me|workspace|dashboard|cases|documents|company-profile|transition-verifications)(?:\/|$)/.test(req.path)) {
+      !/^\/(?:me|workspace|dashboard|cases|documents|personnel|company-profile|transition-verifications)(?:\/|$)/.test(req.path)) {
     next();
     return;
   }
@@ -69,6 +70,7 @@ router.use((req, res, next) => {
 });
 
 router.use(standaloneRouter);
+router.use(personnelRouter);
 router.use(sbuChatRouter);
 router.use(consultationsRouter);
 router.use(documentVaultRouter);

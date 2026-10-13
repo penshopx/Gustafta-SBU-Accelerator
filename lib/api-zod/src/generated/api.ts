@@ -8,6 +8,363 @@
 import * as zod from 'zod';
 
 
+export const listPersonnelResponseAsOfDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const listPersonnelResponseCertificatesItemIssuedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const listPersonnelResponseCertificatesItemExpiresOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const ListPersonnelResponseItem = zod.object({
+  "id": zod.string().uuid(),
+  "fullName": zod.string(),
+  "assignment": zod.enum(['pjbu', 'pjt', 'pjsk', 'lainnya']),
+  "position": zod.string(),
+  "caseId": zod.number().int().nullable(),
+  "notes": zod.string(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "asOfDate": zod.string().regex(listPersonnelResponseAsOfDateRegExp).describe('Calendar day in Asia/Jakarta used for declared validity date indicators'),
+  "certificates": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "personnelId": zod.string().uuid(),
+  "certificateNumber": zod.string(),
+  "issuer": zod.string(),
+  "jobTitle": zod.string(),
+  "level": zod.number().int().nullable(),
+  "issuedOn": zod.string().regex(listPersonnelResponseCertificatesItemIssuedOnRegExp).nullable().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "expiresOn": zod.string().regex(listPersonnelResponseCertificatesItemExpiresOnRegExp).nullable().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "documentId": zod.string().uuid().nullable(),
+  "documentName": zod.string().nullable(),
+  "documentCaseId": zod.number().int().nullable(),
+  "documentAvailable": zod.boolean().describe('Current storage readiness and malware scan allow downloads; not proof of authenticity'),
+  "notes": zod.string(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "dateStatus": zod.enum(['unknown', 'not_yet_effective', 'active_declared', 'expiring', 'expired']),
+  "daysRemaining": zod.number().int().nullable()
+}))
+})
+export const ListPersonnelResponse = zod.array(ListPersonnelResponseItem)
+
+
+export const createPersonnelBodyFullNameMax = 160;
+
+export const createPersonnelBodyPositionMax = 160;
+
+
+export const createPersonnelBodyNotesMax = 3000;
+
+
+
+export const CreatePersonnelBody = zod.object({
+  "fullName": zod.string().min(1).max(createPersonnelBodyFullNameMax),
+  "assignment": zod.enum(['pjbu', 'pjt', 'pjsk', 'lainnya']),
+  "position": zod.string().max(createPersonnelBodyPositionMax).optional(),
+  "caseId": zod.number().int().min(1).nullish(),
+  "notes": zod.string().max(createPersonnelBodyNotesMax).optional()
+})
+
+export const createPersonnelResponseAsOfDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createPersonnelResponseCertificatesItemIssuedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createPersonnelResponseCertificatesItemExpiresOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const CreatePersonnelResponse = zod.object({
+  "id": zod.string().uuid(),
+  "fullName": zod.string(),
+  "assignment": zod.enum(['pjbu', 'pjt', 'pjsk', 'lainnya']),
+  "position": zod.string(),
+  "caseId": zod.number().int().nullable(),
+  "notes": zod.string(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "asOfDate": zod.string().regex(createPersonnelResponseAsOfDateRegExp).describe('Calendar day in Asia/Jakarta used for declared validity date indicators'),
+  "certificates": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "personnelId": zod.string().uuid(),
+  "certificateNumber": zod.string(),
+  "issuer": zod.string(),
+  "jobTitle": zod.string(),
+  "level": zod.number().int().nullable(),
+  "issuedOn": zod.string().regex(createPersonnelResponseCertificatesItemIssuedOnRegExp).nullable().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "expiresOn": zod.string().regex(createPersonnelResponseCertificatesItemExpiresOnRegExp).nullable().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "documentId": zod.string().uuid().nullable(),
+  "documentName": zod.string().nullable(),
+  "documentCaseId": zod.number().int().nullable(),
+  "documentAvailable": zod.boolean().describe('Current storage readiness and malware scan allow downloads; not proof of authenticity'),
+  "notes": zod.string(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "dateStatus": zod.enum(['unknown', 'not_yet_effective', 'active_declared', 'expiring', 'expired']),
+  "daysRemaining": zod.number().int().nullable()
+}))
+})
+
+
+export const GetPersonnelParams = zod.object({
+  "personnelId": zod.coerce.string().uuid()
+})
+
+export const getPersonnelResponseAsOfDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const getPersonnelResponseCertificatesItemIssuedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const getPersonnelResponseCertificatesItemExpiresOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const GetPersonnelResponse = zod.object({
+  "id": zod.string().uuid(),
+  "fullName": zod.string(),
+  "assignment": zod.enum(['pjbu', 'pjt', 'pjsk', 'lainnya']),
+  "position": zod.string(),
+  "caseId": zod.number().int().nullable(),
+  "notes": zod.string(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "asOfDate": zod.string().regex(getPersonnelResponseAsOfDateRegExp).describe('Calendar day in Asia/Jakarta used for declared validity date indicators'),
+  "certificates": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "personnelId": zod.string().uuid(),
+  "certificateNumber": zod.string(),
+  "issuer": zod.string(),
+  "jobTitle": zod.string(),
+  "level": zod.number().int().nullable(),
+  "issuedOn": zod.string().regex(getPersonnelResponseCertificatesItemIssuedOnRegExp).nullable().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "expiresOn": zod.string().regex(getPersonnelResponseCertificatesItemExpiresOnRegExp).nullable().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "documentId": zod.string().uuid().nullable(),
+  "documentName": zod.string().nullable(),
+  "documentCaseId": zod.number().int().nullable(),
+  "documentAvailable": zod.boolean().describe('Current storage readiness and malware scan allow downloads; not proof of authenticity'),
+  "notes": zod.string(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "dateStatus": zod.enum(['unknown', 'not_yet_effective', 'active_declared', 'expiring', 'expired']),
+  "daysRemaining": zod.number().int().nullable()
+}))
+})
+
+
+export const UpdatePersonnelParams = zod.object({
+  "personnelId": zod.coerce.string().uuid()
+})
+
+export const updatePersonnelBodyExpectedRevisionMin = 0;
+
+export const updatePersonnelBodyFullNameMax = 160;
+
+export const updatePersonnelBodyPositionMax = 160;
+
+
+export const updatePersonnelBodyNotesMax = 3000;
+
+
+
+export const UpdatePersonnelBody = zod.object({
+  "expectedRevision": zod.number().int().min(updatePersonnelBodyExpectedRevisionMin),
+  "fullName": zod.string().min(1).max(updatePersonnelBodyFullNameMax).optional(),
+  "assignment": zod.enum(['pjbu', 'pjt', 'pjsk', 'lainnya']).optional(),
+  "position": zod.string().max(updatePersonnelBodyPositionMax).optional(),
+  "caseId": zod.number().int().min(1).nullish(),
+  "notes": zod.string().max(updatePersonnelBodyNotesMax).optional()
+})
+
+export const updatePersonnelResponseAsOfDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const updatePersonnelResponseCertificatesItemIssuedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const updatePersonnelResponseCertificatesItemExpiresOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const UpdatePersonnelResponse = zod.object({
+  "id": zod.string().uuid(),
+  "fullName": zod.string(),
+  "assignment": zod.enum(['pjbu', 'pjt', 'pjsk', 'lainnya']),
+  "position": zod.string(),
+  "caseId": zod.number().int().nullable(),
+  "notes": zod.string(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "asOfDate": zod.string().regex(updatePersonnelResponseAsOfDateRegExp).describe('Calendar day in Asia/Jakarta used for declared validity date indicators'),
+  "certificates": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "personnelId": zod.string().uuid(),
+  "certificateNumber": zod.string(),
+  "issuer": zod.string(),
+  "jobTitle": zod.string(),
+  "level": zod.number().int().nullable(),
+  "issuedOn": zod.string().regex(updatePersonnelResponseCertificatesItemIssuedOnRegExp).nullable().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "expiresOn": zod.string().regex(updatePersonnelResponseCertificatesItemExpiresOnRegExp).nullable().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "documentId": zod.string().uuid().nullable(),
+  "documentName": zod.string().nullable(),
+  "documentCaseId": zod.number().int().nullable(),
+  "documentAvailable": zod.boolean().describe('Current storage readiness and malware scan allow downloads; not proof of authenticity'),
+  "notes": zod.string(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "dateStatus": zod.enum(['unknown', 'not_yet_effective', 'active_declared', 'expiring', 'expired']),
+  "daysRemaining": zod.number().int().nullable()
+}))
+})
+
+
+export const DeletePersonnelParams = zod.object({
+  "personnelId": zod.coerce.string().uuid()
+})
+
+export const DeletePersonnelResponse = zod.void()
+
+
+export const CreateSkkCertificateParams = zod.object({
+  "personnelId": zod.coerce.string().uuid()
+})
+
+export const createSkkCertificateBodyCertificateNumberMax = 160;
+
+export const createSkkCertificateBodyIssuerMax = 160;
+
+export const createSkkCertificateBodyJobTitleMax = 160;
+
+export const createSkkCertificateBodyLevelMax = 9;
+
+export const createSkkCertificateBodyIssuedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createSkkCertificateBodyExpiresOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createSkkCertificateBodyNotesMax = 3000;
+
+
+
+export const CreateSkkCertificateBody = zod.object({
+  "certificateNumber": zod.string().min(1).max(createSkkCertificateBodyCertificateNumberMax),
+  "issuer": zod.string().min(1).max(createSkkCertificateBodyIssuerMax),
+  "jobTitle": zod.string().min(1).max(createSkkCertificateBodyJobTitleMax),
+  "level": zod.number().int().min(1).max(createSkkCertificateBodyLevelMax).nullish(),
+  "issuedOn": zod.string().regex(createSkkCertificateBodyIssuedOnRegExp).nullish().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "expiresOn": zod.string().regex(createSkkCertificateBodyExpiresOnRegExp).nullish().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "documentId": zod.string().uuid().nullish(),
+  "notes": zod.string().max(createSkkCertificateBodyNotesMax).optional()
+})
+
+export const createSkkCertificateResponseAsOfDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createSkkCertificateResponseCertificatesItemIssuedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createSkkCertificateResponseCertificatesItemExpiresOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const CreateSkkCertificateResponse = zod.object({
+  "id": zod.string().uuid(),
+  "fullName": zod.string(),
+  "assignment": zod.enum(['pjbu', 'pjt', 'pjsk', 'lainnya']),
+  "position": zod.string(),
+  "caseId": zod.number().int().nullable(),
+  "notes": zod.string(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "asOfDate": zod.string().regex(createSkkCertificateResponseAsOfDateRegExp).describe('Calendar day in Asia/Jakarta used for declared validity date indicators'),
+  "certificates": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "personnelId": zod.string().uuid(),
+  "certificateNumber": zod.string(),
+  "issuer": zod.string(),
+  "jobTitle": zod.string(),
+  "level": zod.number().int().nullable(),
+  "issuedOn": zod.string().regex(createSkkCertificateResponseCertificatesItemIssuedOnRegExp).nullable().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "expiresOn": zod.string().regex(createSkkCertificateResponseCertificatesItemExpiresOnRegExp).nullable().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "documentId": zod.string().uuid().nullable(),
+  "documentName": zod.string().nullable(),
+  "documentCaseId": zod.number().int().nullable(),
+  "documentAvailable": zod.boolean().describe('Current storage readiness and malware scan allow downloads; not proof of authenticity'),
+  "notes": zod.string(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "dateStatus": zod.enum(['unknown', 'not_yet_effective', 'active_declared', 'expiring', 'expired']),
+  "daysRemaining": zod.number().int().nullable()
+}))
+})
+
+
+export const UpdateSkkCertificateParams = zod.object({
+  "personnelId": zod.coerce.string().uuid(),
+  "certificateId": zod.coerce.string().uuid()
+})
+
+export const updateSkkCertificateBodyExpectedRevisionMin = 0;
+
+export const updateSkkCertificateBodyCertificateNumberMax = 160;
+
+export const updateSkkCertificateBodyIssuerMax = 160;
+
+export const updateSkkCertificateBodyJobTitleMax = 160;
+
+export const updateSkkCertificateBodyLevelMax = 9;
+
+export const updateSkkCertificateBodyIssuedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const updateSkkCertificateBodyExpiresOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const updateSkkCertificateBodyNotesMax = 3000;
+
+
+
+export const UpdateSkkCertificateBody = zod.object({
+  "expectedRevision": zod.number().int().min(updateSkkCertificateBodyExpectedRevisionMin),
+  "certificateNumber": zod.string().min(1).max(updateSkkCertificateBodyCertificateNumberMax).optional(),
+  "issuer": zod.string().min(1).max(updateSkkCertificateBodyIssuerMax).optional(),
+  "jobTitle": zod.string().min(1).max(updateSkkCertificateBodyJobTitleMax).optional(),
+  "level": zod.number().int().min(1).max(updateSkkCertificateBodyLevelMax).nullish(),
+  "issuedOn": zod.string().regex(updateSkkCertificateBodyIssuedOnRegExp).nullish().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "expiresOn": zod.string().regex(updateSkkCertificateBodyExpiresOnRegExp).nullish().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "documentId": zod.string().uuid().nullish(),
+  "notes": zod.string().max(updateSkkCertificateBodyNotesMax).optional()
+})
+
+export const updateSkkCertificateResponseAsOfDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const updateSkkCertificateResponseCertificatesItemIssuedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const updateSkkCertificateResponseCertificatesItemExpiresOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const UpdateSkkCertificateResponse = zod.object({
+  "id": zod.string().uuid(),
+  "fullName": zod.string(),
+  "assignment": zod.enum(['pjbu', 'pjt', 'pjsk', 'lainnya']),
+  "position": zod.string(),
+  "caseId": zod.number().int().nullable(),
+  "notes": zod.string(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "asOfDate": zod.string().regex(updateSkkCertificateResponseAsOfDateRegExp).describe('Calendar day in Asia/Jakarta used for declared validity date indicators'),
+  "certificates": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "personnelId": zod.string().uuid(),
+  "certificateNumber": zod.string(),
+  "issuer": zod.string(),
+  "jobTitle": zod.string(),
+  "level": zod.number().int().nullable(),
+  "issuedOn": zod.string().regex(updateSkkCertificateResponseCertificatesItemIssuedOnRegExp).nullable().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "expiresOn": zod.string().regex(updateSkkCertificateResponseCertificatesItemExpiresOnRegExp).nullable().describe('Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.'),
+  "documentId": zod.string().uuid().nullable(),
+  "documentName": zod.string().nullable(),
+  "documentCaseId": zod.number().int().nullable(),
+  "documentAvailable": zod.boolean().describe('Current storage readiness and malware scan allow downloads; not proof of authenticity'),
+  "notes": zod.string(),
+  "revision": zod.number().int(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "dateStatus": zod.enum(['unknown', 'not_yet_effective', 'active_declared', 'expiring', 'expired']),
+  "daysRemaining": zod.number().int().nullable()
+}))
+})
+
+
+export const DeleteSkkCertificateParams = zod.object({
+  "personnelId": zod.coerce.string().uuid(),
+  "certificateId": zod.coerce.string().uuid()
+})
+
+export const DeleteSkkCertificateResponse = zod.void()
+
+
 export const ListConsultationsResponseItem = zod.object({
   "id": zod.string().uuid(),
   "title": zod.string(),

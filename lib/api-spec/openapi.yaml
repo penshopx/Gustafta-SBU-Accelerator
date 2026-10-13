@@ -10,6 +10,121 @@ tags:
   - name: health
   - name: workspace
 paths:
+  /personnel:
+    get:
+      operationId: listPersonnel
+      security: [{ FormOwner: [] }]
+      responses:
+        "200":
+          description: Private personnel register; dates and certificates are user declarations, not verified eligibility.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Personnel" } }
+        "401": { description: Authentication required }
+        "409": { $ref: "#/components/responses/FormOwnerMismatch" }
+    post:
+      operationId: createPersonnel
+      security: [{ FormOwner: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PersonnelInput" }
+      responses:
+        "201":
+          description: Personnel recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Personnel" }
+        "400": { description: Invalid fields }
+        "404": { description: Case not found or not owned }
+        "409": { $ref: "#/components/responses/FormOwnerMismatch" }
+  /personnel/{personnelId}:
+    parameters:
+      - { name: personnelId, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      operationId: getPersonnel
+      security: [{ FormOwner: [] }]
+      responses:
+        "200":
+          description: Personnel and their declared certificates
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Personnel" }
+        "404": { description: Not found }
+        "409": { $ref: "#/components/responses/FormOwnerMismatch" }
+    patch:
+      operationId: updatePersonnel
+      security: [{ FormOwner: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PersonnelUpdate" }
+      responses:
+        "200":
+          description: Updated personnel
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Personnel" }
+        "400": { description: Invalid fields or incompatible linked document }
+        "404": { description: Not found }
+        "409": { description: Owner mismatch or stale revision; reload before editing }
+    delete:
+      operationId: deletePersonnel
+      security: [{ FormOwner: [] }]
+      responses:
+        "204": { description: Person and their certificate records deleted; source documents are retained }
+        "404": { description: Not found }
+        "409": { $ref: "#/components/responses/FormOwnerMismatch" }
+  /personnel/{personnelId}/certificates:
+    parameters:
+      - { name: personnelId, in: path, required: true, schema: { type: string, format: uuid } }
+    post:
+      operationId: createSkkCertificate
+      security: [{ FormOwner: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SkkCertificateInput" }
+      responses:
+        "201":
+          description: Declared certificate added; no verification or case assessment change
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Personnel" }
+        "400": { description: Invalid dates or unavailable document }
+        "404": { description: Person or document not found }
+        "409": { $ref: "#/components/responses/FormOwnerMismatch" }
+  /personnel/{personnelId}/certificates/{certificateId}:
+    parameters:
+      - { name: personnelId, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: certificateId, in: path, required: true, schema: { type: string, format: uuid } }
+    patch:
+      operationId: updateSkkCertificate
+      security: [{ FormOwner: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SkkCertificateUpdate" }
+      responses:
+        "200":
+          description: Updated declared certificate
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Personnel" }
+        "400": { description: Invalid fields or dates }
+        "404": { description: Not found }
+        "409": { description: Owner mismatch or stale revision; reload before editing }
+    delete:
+      operationId: deleteSkkCertificate
+      security: [{ FormOwner: [] }]
+      responses:
+        "204": { description: Certificate record deleted; source document retained }
+        "404": { description: Not found }
+        "409": { $ref: "#/components/responses/FormOwnerMismatch" }
   /consultations:
     get:
       operationId: listConsultations
@@ -716,6 +831,95 @@ components:
       name: X-SBU-Form-Owner
       description: Required account precondition for private reads and writes. Capture the tab/cache or form owner, not the current cookie. This is not authentication; ownership is always derived from the verified Clerk session. Missing or mismatched values return 409 before private data access. Private reads use Cache-Control private, no-store.
   schemas:
+    CalendarDay:
+      type: [string, "null"]
+      pattern: '^\d{4}-\d{2}-\d{2}$'
+      description: Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.
+    PersonnelInput:
+      type: object
+      additionalProperties: false
+      required: [fullName, assignment]
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 160 }
+        assignment: { type: string, enum: [pjbu, pjt, pjsk, lainnya] }
+        position: { type: string, maxLength: 160 }
+        caseId: { type: [integer, "null"], minimum: 1 }
+        notes: { type: string, maxLength: 3000 }
+    PersonnelUpdate:
+      type: object
+      additionalProperties: false
+      required: [expectedRevision]
+      properties:
+        expectedRevision: { type: integer, minimum: 0 }
+        fullName: { type: string, minLength: 1, maxLength: 160 }
+        assignment: { type: string, enum: [pjbu, pjt, pjsk, lainnya] }
+        position: { type: string, maxLength: 160 }
+        caseId: { type: [integer, "null"], minimum: 1 }
+        notes: { type: string, maxLength: 3000 }
+    SkkCertificateInput:
+      type: object
+      additionalProperties: false
+      required: [certificateNumber, issuer, jobTitle]
+      properties:
+        certificateNumber: { type: string, minLength: 1, maxLength: 160 }
+        issuer: { type: string, minLength: 1, maxLength: 160 }
+        jobTitle: { type: string, minLength: 1, maxLength: 160 }
+        level: { type: [integer, "null"], minimum: 1, maximum: 9 }
+        issuedOn: { $ref: "#/components/schemas/CalendarDay" }
+        expiresOn: { $ref: "#/components/schemas/CalendarDay" }
+        documentId: { type: [string, "null"], format: uuid }
+        notes: { type: string, maxLength: 3000 }
+    SkkCertificateUpdate:
+      type: object
+      additionalProperties: false
+      required: [expectedRevision]
+      properties:
+        expectedRevision: { type: integer, minimum: 0 }
+        certificateNumber: { type: string, minLength: 1, maxLength: 160 }
+        issuer: { type: string, minLength: 1, maxLength: 160 }
+        jobTitle: { type: string, minLength: 1, maxLength: 160 }
+        level: { type: [integer, "null"], minimum: 1, maximum: 9 }
+        issuedOn: { $ref: "#/components/schemas/CalendarDay" }
+        expiresOn: { $ref: "#/components/schemas/CalendarDay" }
+        documentId: { type: [string, "null"], format: uuid }
+        notes: { type: string, maxLength: 3000 }
+    SkkCertificate:
+      type: object
+      required: [id, personnelId, certificateNumber, issuer, jobTitle, level, issuedOn, expiresOn, documentId, documentName, documentCaseId, documentAvailable, notes, revision, createdAt, updatedAt, dateStatus, daysRemaining]
+      properties:
+        id: { type: string, format: uuid }
+        personnelId: { type: string, format: uuid }
+        certificateNumber: { type: string }
+        issuer: { type: string }
+        jobTitle: { type: string }
+        level: { type: [integer, "null"] }
+        issuedOn: { $ref: "#/components/schemas/CalendarDay" }
+        expiresOn: { $ref: "#/components/schemas/CalendarDay" }
+        documentId: { type: [string, "null"], format: uuid }
+        documentName: { type: [string, "null"] }
+        documentCaseId: { type: [integer, "null"] }
+        documentAvailable: { type: boolean, description: Current storage readiness and malware scan allow downloads; not proof of authenticity }
+        notes: { type: string }
+        revision: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        dateStatus: { type: string, enum: [unknown, not_yet_effective, active_declared, expiring, expired] }
+        daysRemaining: { type: [integer, "null"] }
+    Personnel:
+      type: object
+      required: [id, fullName, assignment, position, caseId, notes, revision, createdAt, updatedAt, certificates, asOfDate]
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: string }
+        assignment: { type: string, enum: [pjbu, pjt, pjsk, lainnya] }
+        position: { type: string }
+        caseId: { type: [integer, "null"] }
+        notes: { type: string }
+        revision: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        asOfDate: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$', description: Calendar day in Asia/Jakarta used for declared validity date indicators }
+        certificates: { type: array, items: { $ref: "#/components/schemas/SkkCertificate" } }
     ConsultationMessage:
       type: object
       required: [id, role, content, createdAt]

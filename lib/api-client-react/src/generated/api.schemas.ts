@@ -5,6 +5,200 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+/**
+ * Valid YYYY-MM-DD calendar day, never a timestamp; null means unknown or explicitly cleared.
+ * @nullable
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+export type CalendarDay = string | null;
+
+export type PersonnelInputAssignment = typeof PersonnelInputAssignment[keyof typeof PersonnelInputAssignment];
+
+
+export const PersonnelInputAssignment = {
+  pjbu: 'pjbu',
+  pjt: 'pjt',
+  pjsk: 'pjsk',
+  lainnya: 'lainnya',
+} as const;
+
+export interface PersonnelInput {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  fullName: string;
+  assignment: PersonnelInputAssignment;
+  /** @maxLength 160 */
+  position?: string;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  caseId?: number | null;
+  /** @maxLength 3000 */
+  notes?: string;
+}
+
+export type PersonnelUpdateAssignment = typeof PersonnelUpdateAssignment[keyof typeof PersonnelUpdateAssignment];
+
+
+export const PersonnelUpdateAssignment = {
+  pjbu: 'pjbu',
+  pjt: 'pjt',
+  pjsk: 'pjsk',
+  lainnya: 'lainnya',
+} as const;
+
+export interface PersonnelUpdate {
+  /** @minimum 0 */
+  expectedRevision: number;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  fullName?: string;
+  assignment?: PersonnelUpdateAssignment;
+  /** @maxLength 160 */
+  position?: string;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  caseId?: number | null;
+  /** @maxLength 3000 */
+  notes?: string;
+}
+
+export interface SkkCertificateInput {
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  certificateNumber: string;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  issuer: string;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  jobTitle: string;
+  /**
+     * @minimum 1
+     * @maximum 9
+     * @nullable
+     */
+  level?: number | null;
+  issuedOn?: CalendarDay | null;
+  expiresOn?: CalendarDay | null;
+  /** @nullable */
+  documentId?: string | null;
+  /** @maxLength 3000 */
+  notes?: string;
+}
+
+export interface SkkCertificateUpdate {
+  /** @minimum 0 */
+  expectedRevision: number;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  certificateNumber?: string;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  issuer?: string;
+  /**
+     * @minLength 1
+     * @maxLength 160
+     */
+  jobTitle?: string;
+  /**
+     * @minimum 1
+     * @maximum 9
+     * @nullable
+     */
+  level?: number | null;
+  issuedOn?: CalendarDay | null;
+  expiresOn?: CalendarDay | null;
+  /** @nullable */
+  documentId?: string | null;
+  /** @maxLength 3000 */
+  notes?: string;
+}
+
+export type SkkCertificateDateStatus = typeof SkkCertificateDateStatus[keyof typeof SkkCertificateDateStatus];
+
+
+export const SkkCertificateDateStatus = {
+  unknown: 'unknown',
+  not_yet_effective: 'not_yet_effective',
+  active_declared: 'active_declared',
+  expiring: 'expiring',
+  expired: 'expired',
+} as const;
+
+export interface SkkCertificate {
+  id: string;
+  personnelId: string;
+  certificateNumber: string;
+  issuer: string;
+  jobTitle: string;
+  /** @nullable */
+  level: number | null;
+  issuedOn: CalendarDay | null;
+  expiresOn: CalendarDay | null;
+  /** @nullable */
+  documentId: string | null;
+  /** @nullable */
+  documentName: string | null;
+  /** @nullable */
+  documentCaseId: number | null;
+  /** Current storage readiness and malware scan allow downloads; not proof of authenticity */
+  documentAvailable: boolean;
+  notes: string;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+  dateStatus: SkkCertificateDateStatus;
+  /** @nullable */
+  daysRemaining: number | null;
+}
+
+export type PersonnelAssignment = typeof PersonnelAssignment[keyof typeof PersonnelAssignment];
+
+
+export const PersonnelAssignment = {
+  pjbu: 'pjbu',
+  pjt: 'pjt',
+  pjsk: 'pjsk',
+  lainnya: 'lainnya',
+} as const;
+
+export interface Personnel {
+  id: string;
+  fullName: string;
+  assignment: PersonnelAssignment;
+  position: string;
+  /** @nullable */
+  caseId: number | null;
+  notes: string;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+  /**
+     * Calendar day in Asia/Jakarta used for declared validity date indicators
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  asOfDate: string;
+  certificates: SkkCertificate[];
+}
+
 export type ConsultationMessageRole = typeof ConsultationMessageRole[keyof typeof ConsultationMessageRole];
 
 
