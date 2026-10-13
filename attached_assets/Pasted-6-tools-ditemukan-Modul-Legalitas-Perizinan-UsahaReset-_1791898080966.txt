@@ -1,0 +1,64 @@
+6 tools ditemukan · Modul: Legalitas & Perizinan UsahaReset filter
+
+Legalitas & Perizinan Usaha
+(6)
+SBU, IUJK, PBG/SLF, OSS-RBA, TKDN & dokumen legalitas badan usaha konstruksi.
+
+[Gelombang 10 Panduan Pengurusan SBU & IUJK Dari SKK ke SBU — SKK wajib, dokumen, OSS-RBA, biaya, tips Pilih klasifikasi + kualifikasi + kondisi perusahaan → AI susun panduan lengkap: SKK yang wajib dimiliki, dokumen yang dibutuhkan, langkah di OSS-RBA/SIKI per tahap, estimasi waktu dan biaya, tips sukses, dan kesalahan yang sering menyebabkan penolakan. Buka](https://gustafta.my.id/panduan-iujk-sbu)
+[Gelombang 21 Panduan PBG & SLF Tahapan perizinan Persetujuan Bangunan Gedung & Sertifikat Laik Fungsi Pilih jenis permohonan (PBG baru/renovasi, SLF pertama/perpanjangan) dan daerah → AI generate panduan lengkap: dasar hukum PP 16/2021, prasyarat, tahapan step-by-step (instansi/waktu/dokumen per tahap), checklist dokumen, estimasi retribusi, tips percepatan, masalah umum & solusi. Buka](https://gustafta.my.id/panduan-pbg-slf)
+[Gelombang 24 Panduan OSS-RBA & Perizinan Usaha Konstruksi NIB, SBU, IUJK, LKUT, PBG/IMB — tahapan, dokumen, checklist verifikasi mandiri Pilih jenis perizinan (NIB, SBU jasa konstruksi, IUJK perpanjangan, LKUT, SIUJK nasional, PB UMKU, izin lingkungan, PBG/IMB, developer, kontraktor spesialis), bentuk badan usaha (PT/CV/Firma/Koperasi/BUMD), kode KBLI → AI generate panduan OSS-RBA: prasyarat, tahapan step-by-step + platform + estimasi waktu, daftar dokumen, checklist verifikasi, masalah umum+solusi, kontak dukungan. Buka](https://gustafta.my.id/panduan-oss-perizinan)
+[Gelombang 27 Panduan Persetujuan Bangunan Gedung (PBG) / IMB Tahapan PBG sesuai PP 16/2021 — dokumen teknis, retribusi, estimasi waktu, kesalahan umum Pilih jenis bangunan, status lahan, wilayah, luas & jumlah lantai → AI generate panduan PBG: perbedaan IMB vs PBG, dasar hukum, tahapan pengajuan step-by-step (instansi + durasi + dokumen + referensi pasal), daftar dokumen teknis wajib/opsional, persyaratan khusus, biaya retribusi estimasi, 5 kesalahan umum & akibatnya, tips & strategi. Buka](https://gustafta.my.id/panduan-pbg-imb)
+[Gelombang 17 Generator Pakta Integritas Anti-KKN, pengadaan, K3, ISO 37001 — pakta formal siap tanda tangan Pilih jenis pakta (pengadaan Perpres 16/2018 / anti-korupsi KPK / K3 Zero Accident / SMAP ISO 37001 / dll), isi data organisasi dan penandatangan → AI generate pakta integritas resmi lengkap dengan klausul khusus, sanksi pelanggaran, dan landasan hukum yang berlaku. Buka](https://gustafta.my.id/generator-pakta-integritas)
+[Gelombang 16 Panduan Pembuatan Dokumen TKDN Perhitungan TKDN, formulir, verifikasi & sanksi — Perpres 16/2018 & revisi Pilih jenis pekerjaan, skala proyek, sumber komponen, dan sumber pendanaan → AI generate panduan TKDN: nilai minimal yang dipersyaratkan, formula perhitungan, komponen TKDN (material/alat/SDM/umum), dokumen wajib, prosedur verifikasi, sanksi pelanggaran, dan tips. Buka](https://gustafta.my.id/panduan-tkdn)
+Konteks Roadmap
+Roadmap Produk 2026–2030
+Tiga gelombang pertumbuhan Ekosistem Kompetensi Indonesia. Gelombang adalah konteks kapan sebuah tool dirilis — jelajahi tetap gunakan Modul di atas.
+
+Gelombang 1
+2026–2027
+Digital Compliance & Certification
+
+E-Sertifikat + QR Verifikasi
+Mock Asesmen SKK
+Diagnostik Kompetensi AI
+Gelombang 2
+2027–2028
+Skills-Based Talent Economy
+
+Skills Map & Analytics
+Mini Apps Practice Layer
+Generator Dokumen BUJK
+Gelombang 3
+2029–2030
+Immersive & Autonomous Learning
+
+AI Assessment Engine
+Green Jobs Certification
+RPL.AI Automation
+Konteks Pasar Indonesia 2026–2030
+Konstruksi 2025 → 2034
+
+USD 125B → USD 226B (CAGR 6.77%)
+
+Kekurangan tenaga ahli/tahun
+
+349K–500K pekerja baru
+
+Pekerja belum bersertifikat
+
+> 8.3 juta (< 10% tersertifikasi)
+
+HR Tech Indonesia 2024
+
+USD 6.01B, tumbuh 15–20%/tahun
+
+Employer hiring micro-credential
+
+97% sudah memprioritaskan
+
+Digital skilled workers → GDP 2030
+
+USD 303.4 miliar (16% GDP)
+
+Sumber: Deloitte, World Bank, Credential Engine, HR Tech Indonesia Report 2024, PermenPUPR 6/2021
+

@@ -1,0 +1,1106 @@
+
+Ekosistem Kompetensi 2026–2030
+Platform AI untuk
+Sertifikasi & Kompetensi
+Dari diagnostik gap hingga sertifikat digital terverifikasi — tools AI untuk mempersiapkan, menilai, dan mendokumentasikan kompetensi tenaga konstruksi Indonesia.
+
+📁
+Dokumen & catatan
+tersimpan rapi
+→
+🧠
+AI membaca &
+memahami konteks
+→
+💬
+Jawaban lebih
+terarah & akurat
+[Mulai dari Ruang Simpan →](https://gustafta.my.id/ruang-simpan)
+[Mulai Diagnostik](https://gustafta.my.id/diagnostik-kompetensi)
+[Mock Asesmen](https://gustafta.my.id/mock-asesmen)
+944+
+
+Agen AI Aktif
+
+45+
+
+Domain Konstruksi
+
+45
+
+MultiClaw Suites
+
+$226B
+
+Pasar Konstruksi 2034
+
+Jelajahi per Modul
+138 tools · 8 modul · gratis digunakan
+
+[Lihat Semua AI Tools](https://gustafta.my.id/ai-tools)
+Ceritakan kebutuhan atau cari Modul... (cth: persiapan SKK, audit K3, hitung volume)
+Semua Modul (138)
+Sertifikasi & Asesmen SKK (42)
+Legalitas & Perizinan Usaha (6)
+Tender & Kontrak (13)
+Dokumen Proyek & Pelaporan (21)
+K3 & Keselamatan Konstruksi (21)
+Mutu & Sertifikasi ISO (7)
+Estimasi & Kalkulasi Teknis (14)
+Karir, Biaya & SDM (14)
+Sertifikasi & Asesmen SKK
+(42)
+Persiapan uji kompetensi, diagnostik, simulasi asesmen, portofolio, LSP, RPL & sertifikat.
+
+Gelombang 1
+SERTIVA
+E-Sertifikat Digital + QR
+
+Terbitkan sertifikat digital terverifikasi dengan QR code untuk pelatihan, bimtek, & uji kompetensi.
+
+Buka
+Gelombang 1
+Diagnostik Kompetensi
+Gap Analysis AI — SKK/KKNI
+
+Analisis AI terhadap profil pendidikan & pengalaman untuk menentukan level KKNI dan gap kompetensi.
+
+Buka
+Gelombang 1
+Mock Asesmen SKK
+Simulasi Uji Kompetensi AI
+
+Latihan soal uji kompetensi berbasis SKKNI/BNSP dengan penilaian dan penjelasan per soal.
+
+Buka
+Gelombang 1
+Persiapan Asesmen SKK
+Paket Dokumen + Tips Asesor
+
+Generate checklist dokumen, unit kompetensi prioritas, tips wawancara asesor, dan estimasi biaya sertifikasi.
+
+Buka
+Gelombang 2
+Cek Kelayakan SKK
+SKK apa yang bisa diambil sekarang?
+
+Input pendidikan + pengalaman → AI menampilkan semua jabatan SKK eligible sekarang, yang bisa dicapai 1-2 tahun, dan urutan prioritas strategis.
+
+Buka
+Gelombang 2
+Generator APL-02 Asesmen Mandiri
+Formulir SKK otomatis dari pengalamanmu
+
+Ceritakan pengalaman kerja → AI pre-fills seluruh APL-02 (klaim K/BK, konfidensitas, jenis bukti, dokumen pendukung) per unit SKKNI.
+
+Buka
+Gelombang 3
+Generator Dokumen SKK
+Surat Pernyataan · Keterangan Kerja · Pengantar LSP
+
+Generate 3 jenis surat resmi aplikasi SKK: surat pernyataan pengalaman kerja (bermaterai), surat keterangan kerja, dan surat pengantar ke LSP — siap cetak.
+
+Buka
+Gelombang 10
+Validator Klaim Unit Kompetensi SKK
+Nilai kekuatan klaim sebelum asesmen · skor per unit · saran perkuatan
+
+Deskripsikan pengalaman per unit kompetensi + bukti yang dimiliki → AI nilai kekuatan klaim seperti asesor sungguhan (Kuat/Cukup/Lemah/Tidak Cukup), skor 0–100, analisis objektif, dan saran konkret untuk memperkuat bukti sebelum mendaftar asesmen.
+
+Buka
+Gelombang 18
+Simulator Ujian Teori SKK — Bank Soal Pilihan Ganda
+10–40 soal per bidang & level — kunci jawaban + penjelasan per soal
+
+Pilih bidang SKK (manpro / gedung / jalan / K3 / MEP / geoteknik / dll) dan level (5–8), jumlah soal → AI generate bank soal pilihan ganda (A/B/C/D) berbasis SKKNI. Jawab online, navigasi bebas antar soal, lihat skor akhir + pembahasan kunci jawaban tiap soal + referensi regulasi.
+
+Buka
+Gelombang 20
+Simulator Wawancara SKK
+AI assesor BNSP — 5 pertanyaan kompetensi, skor 1–4, feedback + jawaban ideal
+
+Pilih jabatan SKK (Manajer Proyek / Pengawas / Pelaksana K3 / QS / BIM dll) dan fokus topik → AI bertindak sebagai assesor SKK berlisensi BNSP: ajukan 5 pertanyaan situasional berbasis SKKNI, nilai jawaban 1–4, berikan feedback & jawaban ideal per soal, predikat akhir: Kompeten / Kompeten Bersyarat / Belum Kompeten.
+
+Buka
+Gelombang 23
+Simulator Wawancara Teknis SKK
+Simulasi uji wawancara teknis SKK oleh asesor BNSP — 5 pertanyaan + feedback
+
+Pilih bidang SKK (12 bidang: MK, pelaksana gedung/jalan, QS, Ahli K3, Ahli Struktur, Geoteknik, MEP, Manpro, Lingkungan, Ahli Jalan, Irigasi) dan jenjang (4–9) → AI generate pertanyaan teknis berbasis SKKNI + unit kompetensi. Jawab tiap pertanyaan → feedback skor bintang + poin perbaikan. Predikat Kompeten/Belum + rekomendasi.
+
+Buka
+Gelombang 26
+Simulator Tes Teori SKK Konstruksi
+Latihan soal ujian teori SKK per jabatan — pilihan ganda + pembahasan + skor akhir
+
+Pilih jabatan SKK (Tukang hingga Ahli Utama, 16 jabatan), topik materi (K3, Teknik, Kontrak, dll), dan jumlah soal (5–20) → AI generate bank soal pilihan ganda + kunci jawaban + penjelasan per soal. Simulasi real-time: konfirmasi jawaban → lihat kunci + pembahasan → lanjut soal berikutnya → nilai akhir + review semua jawaban.
+
+Buka
+Gelombang 16
+Simulator Asesmen Kompetensi SKK
+Latih asesmen SKK LPJK vs AI asesor — unit kompetensi & skor akhir
+
+Pilih skema SKK (gedung/jalan/K3/MEP/dll), pengalaman kerja → AI asesor mengajukan pertanyaan berbasis unit kompetensi SKKNI, portofolio, dan observasi. Evaluasi setiap jawaban. Diakhiri skor, UK Kompeten/Belum Kompeten, umpan balik, dan rekomendasi belajar.
+
+Buka
+Gelombang 15
+Panduan Sertifikasi Tenaga Ahli Migas
+Jalur sertifikasi, persyaratan, prosedur & estimasi biaya SKK Migas
+
+Pilih jabatan target (reservoir/pemboran/produksi/K3 migas/dll), pengalaman, dan subsektor → AI generate panduan lengkap: jalur sertifikasi, lembaga penguji (SKK Migas/BNSP/LSP), persyaratan dokumen, prosedur langkah demi langkah, estimasi biaya & waktu.
+
+Buka
+Gelombang 9
+Panduan Mutasi / Alih Profesi SKK
+Gap unit kompetensi · dokumen yang masih berlaku · langkah mutasi
+
+Pilih jabatan asal dan jabatan tujuan → AI analisis gap unit kompetensi, unit yang masih diakui, dokumen yang bisa dipakai ulang, langkah step-by-step mutasi, keuntungan, dan risiko yang perlu dipertimbangkan.
+
+Buka
+Gelombang 9
+Panduan SKK untuk Pengadaan Konstruksi
+PPK · PPTK · PP · Pokja · PPHP — SKK wajib + konsekuensi
+
+Pilih jabatan pengadaan + nilai kontrak → AI jelaskan SKK wajib berdasarkan UU Jasa Konstruksi dan regulasi LKPP, konsekuensi tanpa kompetensi, langkah mempersiapkan diri, dan referensi regulasi lengkap.
+
+Buka
+Gelombang 8
+Estimator Biaya Sertifikasi SKK
+LSP + pelatihan + dokumen + transportasi + CPD
+
+Pilih jabatan + kota + skala → kalkulator real-time tampilkan estimasi total biaya sertifikasi (min–maks), breakdown per komponen dengan bar chart proporsi, cicilan bulanan, dan ROI kenaikan gaji. Tanpa AI.
+
+Buka
+Gelombang 8
+Panduan SKK untuk Fresh Graduate
+Jabatan realistis · jalur RPL magang · langkah konkret
+
+Input jurusan + IPK + pengalaman → AI rekomendasikan 3 jabatan SKK yang realistis dan reachable, strategi memanfaatkan RPL dari magang/KP, 5–6 langkah konkret pertama, dan kesalahan yang harus dihindari.
+
+Buka
+Gelombang 8
+Tracker CPD Mandiri SKK
+Catat aktivitas · hitung poin · pantau progres perpanjangan
+
+Catat semua kegiatan CPD (seminar, pelatihan, menulis makalah, proyek, dll) → hitung poin otomatis sesuai kategori, progress bar menuju target 40 poin 3 tahun, breakdown per kategori, dan filter riwayat. Data tersimpan di browser.
+
+Buka
+Gelombang 8
+Panduan SKK untuk Jasa Konsultansi
+Jabatan wajib · persyaratan BUJK konsultan · perbedaan vs kontraktor
+
+Pilih bidang konsultansi + skala → AI buat panduan lengkap: jabatan SKK yang wajib dan disarankan, persyaratan BUJK konsultansi, estimasi biaya setup, tips khusus jasa konsultansi, dan perbedaan kunci dari kontraktor.
+
+Buka
+Gelombang 7
+Checker Kesiapan Asesmen SKK
+Checklist dokumen · skor kesiapan · prioritas melengkapi
+
+Centang dokumen yang sudah disiapkan → AI analisis kelengkapan khusus jabatan yang dipilih, beri skor kesiapan 0–100, list kekurangan + cara mendapatkan, dan rekomendasikan tindakan prioritas sebelum asesmen.
+
+Buka
+Gelombang 7
+Panduan Memilih LSP SKK
+Tipologi LSP · cara verifikasi · estimasi biaya · red flags
+
+Pilih jabatan + prioritas (murah/cepat/reputasi) → AI buat panduan lengkap: tipe LSP yang tersedia, langkah menemukan LSP, checklist verifikasi keaslian (termasuk red flag), estimasi biaya, pertanyaan yang harus ditanyakan.
+
+Buka
+Gelombang 7
+Generator Portofolio SKK Digital
+Profil profesional · uraian tugas · draft APL-02 format BNSP
+
+Input jabatan + daftar proyek (nama, jabatan, nilai, durasi) → AI generate portofolio lengkap: ringkasan profil, kompetensi utama, uraian tugas per proyek, capaian terukur, unit kompetensi yang dibuktikan, dan draft APL-02 siap pakai.
+
+Buka
+Gelombang 7
+Generator Surat Pengalaman Proyek SKK
+3 surat formal siap cetak · pernyataan bermaterai · pengantar LSP
+
+Input nama + proyek pengalaman → AI generate 3 dokumen formal siap pakai: Surat Pernyataan Pengalaman Kerja (format bermaterai), Surat Keterangan Kerja dari perusahaan, dan Surat Pengantar ke LSP. Tinggal cetak + tanda tangan.
+
+Buka
+Gelombang 6
+Peta Unit Kompetensi SKKNI
+Unit kompetensi · elemen · KUK · jenis uji
+
+Pilih jabatan SKK → AI tampilkan peta lengkap: unit kompetensi, elemen, Kriteria Unjuk Kerja (KUK), jenis pengujian (tulis/lisan/observasi/portofolio), bobot dalam asesmen, dan tips persiapan spesifik.
+
+Buka
+Gelombang 6
+Asisten Banding Asesmen SKK
+Surat banding · strategi remedial · rencana persiapan ulang
+
+Tidak lulus asesmen? Input unit tidak lulus + catatan penguji → AI buat: draft surat banding siap pakai, analisis gap per unit, strategi remedial konkret, dan rencana mingguan persiapan asesmen ulang.
+
+Buka
+Gelombang 6
+Panduan Registrasi SIKI-SKK
+Step-by-step daftar · upload dokumen · aktivasi digital
+
+Pilih jabatan + status pendaftar → AI buat panduan step-by-step registrasi SKK ke sistem digital LPJK: SIKI-SKK, SiKA-SKK, dan sistem terkait. Termasuk daftar dokumen upload, masalah umum + solusi, dan FAQ.
+
+Buka
+Gelombang 5
+Simulator Uji Kompetensi SKK
+Latihan soal PG + esai · evaluasi AI · feedback per soal
+
+Pilih jabatan SKK + jumlah soal → AI buat soal pilihan ganda + esai berbasis unit kompetensi nyata. Kerjakan → AI evaluasi tiap jawaban, beri skor, feedback detail, dan rekomendasi materi yang perlu diperkuat.
+
+Buka
+Gelombang 5
+Generator Laporan Proyek BNSP
+Format portofolio SKK · kompetensi terbuktikan · salin teks
+
+Input nama proyek + peran + jabatan SKK → AI buat laporan proyek terstruktur format BNSP: deskripsi, peran & tanggung jawab, unit kompetensi yang dibuktikan, pencapaian, metode, dan hasil proyek.
+
+Buka
+Gelombang 5
+Analisis Proyek vs Kompetensi SKK
+Skor kesesuaian · unit terpenuhi · gap · saran penguatan
+
+Input proyek + peran + deskripsi pekerjaan → AI analisis kesesuaian: skor 0–100, unit kompetensi mana yang terpenuhi/kurang, kekuatan/kelemahan bukti, rekomendasi jalur asesmen, dan saran penguatan portofolio.
+
+Buka
+Gelombang 5
+Kalkulator Kelayakan RPL / Portofolio
+Hitung poin pengalaman · skor RPL · status kelayakan jalur
+
+Tambahkan berbagai jenis pengalaman (proyek, pelatihan, seminar, dll.) → kalkulator otomatis hitung total poin RPL, bandingkan dengan ambang batas jabatan target, dan tampilkan status kelayakan jalur portofolio.
+
+Buka
+Gelombang 5
+Panduan Pasca-Asesmen SKK
+Proses penerbitan · cara pakai SKK · SIKI-SKK · FAQ
+
+Pilih jabatan + hasil asesmen (lulus/tidak lulus) → AI buat panduan lengkap: fase tindak lanjut, cara mendaftarkan ke SIKI-SKK/SiKA-SKK, cara menggunakan SKK di tender & proyek, hak dan kewajiban, dan FAQ pasca-asesmen.
+
+Buka
+Gelombang 4
+Panduan Pengisian APL-01
+Petunjuk per seksi · contoh isian · checklist · dokumen
+
+Pilih jabatan SKK + jalur asesmen → AI buat panduan lengkap APL-01: petunjuk tiap seksi dengan contoh isian nyata, daftar dokumen wajib/pendukung, kesalahan umum yang harus dihindari, dan checklist sebelum submit ke LSP.
+
+Buka
+Gelombang 4
+Generator CV Kompetensi SKK
+AI tulis CV profesional · kompetensi terstruktur · siap tender
+
+Input profil + daftar proyek → AI buat CV lengkap: profil profesional, kompetensi utama, pengalaman proyek dengan bullet BNSP-ready, kualifikasi, dan tips optimasi CV untuk aplikasi SKK & tender.
+
+Buka
+Gelombang 4
+Materi Belajar & Referensi SKK
+Rencana studi · topik prioritas · regulasi · referensi
+
+Pilih jabatan SKK + waktu belajar → AI buat panduan studi terstruktur: rencana per minggu, 5–7 topik dengan poin kunci, referensi SNI/Peraturan/Buku nyata, tips asesmen, dan kesalahan umum yang harus dihindari.
+
+Buka
+Gelombang 3
+Kalkulator Poin CPD SKK
+Hitung poin CPD · status perpanjangan · gap analysis
+
+Tambahkan aktivitas CPD (diklat, seminar, proyek, publikasi, organisasi) → kalkulator otomatis hitung total poin, status cukup/kurang, dan saran aktivitas tambahan untuk mencapai 30 poin minimum.
+
+Buka
+Gelombang 3
+Evaluasi Kesiapan Portofolio SKK
+AI evaluasi bukti portofolio · skor 5 kriteria · rekomendasi
+
+Input pengalaman proyek → AI evaluasi kesiapan portofolio untuk jalur RPL: skor per 5 kriteria (relevansi, kompleksitas, kesesuaian level, dokumen, kejelasan peran), dokumen yang kurang, dan rekomendasi perbaikan.
+
+Buka
+Gelombang 3
+Rekomendasi Jalur Sertifikasi SKK
+Roadmap multi-tahun · biaya · timeline · karir
+
+Input profil + target karir → AI rancang roadmap sertifikasi SKK optimal: urutan SKK per tahun, prasyarat, estimasi biaya kumulatif, dan dampak karir setiap langkah.
+
+Buka
+Gelombang 3
+Analisis Unit SKKNI
+Unit kompetensi · elemen · KUK · bukti portofolio
+
+Pilih jabatan SKK → AI breakdown semua unit kompetensi (inti/pilihan/umum), elemen, KUK, metode asesmen per unit, contoh bukti portofolio, dan tips menghadapi asesmen.
+
+Buka
+Gelombang 3
+Tracker Portofolio SKK
+Dashboard semua SKK Anda · aktif/expired/segera
+
+Simpan semua sertifikat SKK dalam satu dashboard — status aktif/akan expired/sudah expired, countdown hari, progress bar masa berlaku, dan akses cepat panduan perpanjangan.
+
+Buka
+Gelombang 3
+Simulator Wawancara Asesmen
+AI asesor BNSP · 4 putaran · skor & feedback
+
+AI berperan sebagai asesor BNSP sungguhan — ajukan 4 pertanyaan wawancara kompetensi situasional, beri feedback per jawaban, dan predikat akhir Kompeten/Belum Kompeten.
+
+Buka
+Gelombang 3
+Panduan Perpanjangan SKK
+Status aktif · Jalur perpanjangan · Timeline
+
+Input jabatan SKK + tanggal terbit → status real-time (sisa hari), 3 jalur perpanjangan (asesmen ulang / portofolio / diklat), dokumen, biaya, dan risiko jika tidak diperpanjang.
+
+Buka
+Legalitas & Perizinan Usaha
+(6)
+SBU, IUJK, PBG/SLF, OSS-RBA, TKDN & dokumen legalitas badan usaha konstruksi.
+
+Gelombang 10
+Panduan Pengurusan SBU & IUJK
+Dari SKK ke SBU — SKK wajib, dokumen, OSS-RBA, biaya, tips
+
+Pilih klasifikasi + kualifikasi + kondisi perusahaan → AI susun panduan lengkap: SKK yang wajib dimiliki, dokumen yang dibutuhkan, langkah di OSS-RBA/SIKI per tahap, estimasi waktu dan biaya, tips sukses, dan kesalahan yang sering menyebabkan penolakan.
+
+Buka
+Gelombang 21
+Panduan PBG & SLF
+Tahapan perizinan Persetujuan Bangunan Gedung & Sertifikat Laik Fungsi
+
+Pilih jenis permohonan (PBG baru/renovasi, SLF pertama/perpanjangan) dan daerah → AI generate panduan lengkap: dasar hukum PP 16/2021, prasyarat, tahapan step-by-step (instansi/waktu/dokumen per tahap), checklist dokumen, estimasi retribusi, tips percepatan, masalah umum & solusi.
+
+Buka
+Gelombang 24
+Panduan OSS-RBA & Perizinan Usaha Konstruksi
+NIB, SBU, IUJK, LKUT, PBG/IMB — tahapan, dokumen, checklist verifikasi mandiri
+
+Pilih jenis perizinan (NIB, SBU jasa konstruksi, IUJK perpanjangan, LKUT, SIUJK nasional, PB UMKU, izin lingkungan, PBG/IMB, developer, kontraktor spesialis), bentuk badan usaha (PT/CV/Firma/Koperasi/BUMD), kode KBLI → AI generate panduan OSS-RBA: prasyarat, tahapan step-by-step + platform + estimasi waktu, daftar dokumen, checklist verifikasi, masalah umum+solusi, kontak dukungan.
+
+Buka
+Gelombang 27
+Panduan Persetujuan Bangunan Gedung (PBG) / IMB
+Tahapan PBG sesuai PP 16/2021 — dokumen teknis, retribusi, estimasi waktu, kesalahan umum
+
+Pilih jenis bangunan, status lahan, wilayah, luas & jumlah lantai → AI generate panduan PBG: perbedaan IMB vs PBG, dasar hukum, tahapan pengajuan step-by-step (instansi + durasi + dokumen + referensi pasal), daftar dokumen teknis wajib/opsional, persyaratan khusus, biaya retribusi estimasi, 5 kesalahan umum & akibatnya, tips & strategi.
+
+Buka
+Gelombang 17
+Generator Pakta Integritas
+Anti-KKN, pengadaan, K3, ISO 37001 — pakta formal siap tanda tangan
+
+Pilih jenis pakta (pengadaan Perpres 16/2018 / anti-korupsi KPK / K3 Zero Accident / SMAP ISO 37001 / dll), isi data organisasi dan penandatangan → AI generate pakta integritas resmi lengkap dengan klausul khusus, sanksi pelanggaran, dan landasan hukum yang berlaku.
+
+Buka
+Gelombang 16
+Panduan Pembuatan Dokumen TKDN
+Perhitungan TKDN, formulir, verifikasi & sanksi — Perpres 16/2018 & revisi
+
+Pilih jenis pekerjaan, skala proyek, sumber komponen, dan sumber pendanaan → AI generate panduan TKDN: nilai minimal yang dipersyaratkan, formula perhitungan, komponen TKDN (material/alat/SDM/umum), dokumen wajib, prosedur verifikasi, sanksi pelanggaran, dan tips.
+
+Buka
+Tender & Kontrak
+(13)
+Penawaran, kualifikasi tender, SPK, kontrak, klarifikasi & negosiasi harga.
+
+Gelombang 11
+Generator Surat Penawaran
+Draft teknis & harga untuk tender konstruksi
+
+Pilih jenis pekerjaan + nama paket → AI generate surat penawaran teknis & harga lengkap format tender konstruksi Indonesia: pembuka, data penawaran, lingkup, harga, jangka waktu, syarat pembayaran, keunggulan, penutup + lampiran.
+
+Buka
+Gelombang 11
+Kalkulator Eskalasi Harga Material
+Hitung dampak IHK & estimasi klaim CCO addendum
+
+Input indeks harga konstruksi BPS awal vs akhir per material + volume → hitung eskalasi bruto dan klaim bersih berdasarkan klausul persentase (Perpres 46/2025). Update real-time, tanpa AI.
+
+Buka
+Gelombang 21
+Generator SPK Konstruksi
+Surat Perintah Kerja formal — subkon, mandor, pengadaan, sewa alat
+
+Pilih tipe SPK (subkontraktor sipil/MEP/finishing, mandor borong, pengadaan material, sewa alat, konsultan, pekerjaan tambah), isi data proyek, penerima, nilai, durasi, metode pembayaran, lingkup → AI generate SPK formal: lingkup, ketentuan umum/teknis/K3, sanksi denda, pengakhiran, kolom tandatangan.
+
+Buka
+Gelombang 22
+Panduan Proses Tender BUJK
+Panduan lengkap tender konstruksi: tahapan, dokumen, strategi, kesalahan umum
+
+Pilih jenis tender (pemerintah LPSE/APBN, swasta, BUMN, EPC, Design-Build), nilai pekerjaan, dan klasifikasi SBU → AI generate panduan komprehensif: dasar hukum (Perpres 16/2018 & amandemen), prasyarat peserta, tahapan step-by-step dengan waktu & dokumen, checklist administrasi+teknis, strategi pemenangan, dan kesalahan umum beserta solusinya.
+
+Buka
+Gelombang 24
+Generator SPK & Kontrak Konstruksi
+SPK, kontrak lumpsum/unit price, MOU, subkontrak, perjanjian sewa alat — template formal per pasal
+
+Pilih jenis dokumen (SPK, kontrak lumpsum/unit price, MOU, perjanjian subkontrak/konsultansi/sewa alat/pengadaan/JO, addendum), nama proyek, nilai kontrak, durasi, sumber dana, kondisi khusus → AI generate dokumen formal per pasal: pembukaan, para pihak, isi tiap pasal (ruang lingkup, nilai, waktu, pembayaran, perubahan, penalti, force majeure, penyelesaian sengketa), klausul khusus, lampiran wajib.
+
+Buka
+Gelombang 26
+Panduan Pengadaan Barang/Jasa Konstruksi
+Metode PBJ, tahapan, dokumen wajib, evaluasi — Perpres 46/2025 & Perlem LKPP
+
+Pilih jenis pengadaan (konstruksi/konsultansi/material/EPC), sumber dana (APBN/APBD/BUMN), dan nilai pagu → AI generate panduan lengkap: metode + alasan pemilihan, tahapan dengan dokumen per fase + PIC, syarat kualifikasi penyedia, metode evaluasi penawaran, kesalahan umum + pencegahan, estimasi jadwal.
+
+Buka
+Gelombang 17
+Generator Surat Kuasa Proyek Konstruksi
+Tender, kontrak, rapat, izin, serah terima — surat kuasa formal siap pakai
+
+Pilih keperluan (pengambilan dokumen tender / penandatanganan kontrak / pengurusan PBG / PHO-FHO / dll), isi data pemberi & penerima kuasa → AI generate surat kuasa formal lengkap dengan ketentuan tambahan dan catatan hukum. Siap disalin & ditandatangani.
+
+Buka
+Gelombang 17
+Simulator Klarifikasi Teknis Tender
+Latih menjawab pertanyaan panitia evaluasi tender — skor & feedback profesional
+
+Pilih jenis tender, posisi dalam tim (direktur/PM/estimator/QS/K3/dll), dan nama proyek → AI panitia mengajukan pertanyaan klarifikasi teknis: metode kerja, jadwal, harga satuan, kualifikasi, K3. Diakhiri skor, kekuatan/kelemahan presentasi, dan saran perbaikan.
+
+Buka
+Gelombang 15
+Simulator Negosiasi Harga Kontrak
+Latih skill negosiasi kontrak konstruksi vs AI — summary hasil
+
+Pilih posisi (kontraktor/subkon/supplier), lawan negosiasi (owner/procurement/MK), jenis kontrak, nilai penawaran, dan target penekanan harga → AI mensimulasikan sesi negosiasi bolak-balik. Diakhiri summary: nilai disepakati, diskon tercapai, kondisi, dan evaluasi.
+
+Buka
+Gelombang 14
+Generator Surat Teguran Keterlambatan
+Surat teguran resmi kepada sub-kon / supplier yang terlambat
+
+Pilih tingkat teguran (1-3 atau final), penerima (subkon/supplier/mandor), alasan pelanggaran, dan hari keterlambatan → AI generate surat teguran resmi dengan isi paragraf, tuntutan spesifik, konsekuensi, dan klausul hukum yang relevan.
+
+Buka
+Gelombang 13
+Generator Draft Kontrak Sederhana
+Draft kontrak subkontrak / sewa alat / pengadaan material
+
+Pilih jenis pekerjaan (subkontrak sipil, MEP, finishing, sewa alat, dll), nilai kontrak, metode bayar, dan durasi → AI generate draft kontrak 12 pasal lengkap: para pihak, lingkup, pembayaran, denda, K3, penyelesaian sengketa, dengan catatan hukum.
+
+Buka
+Gelombang 13
+Panduan Kualifikasi Tender BUJK
+Gap assessment kualifikasi + strategi pemenangan tender
+
+Pilih jenis pengadaan, metode kualifikasi, klasifikasi SBU, subkualifikasi, dan pengalaman → AI analisis gap persyaratan kualifikasi, skor kesiapan 0-100, checklist dokumen yang perlu disiapkan, dan strategi pemenangan tender berdasarkan Perpres 46/2025.
+
+Buka
+Gelombang 12
+Simulator Negosiasi Kontrak
+Latih negosiasi pasal kritis kontrak konstruksi vs AI
+
+Pilih jenis kontrak, peran Anda, dan topik (denda keterlambatan, pembayaran termin, force majeure, CCO, dll) → AI berperan sebagai pihak lawan yang realistis. Simulasi 5 ronde dengan evaluasi kekuatan argumen yuridis dan skor negosiasi akhir.
+
+Buka
+Dokumen Proyek & Pelaporan
+(21)
+RMK, RKS, method statement, laporan harian/mingguan, berita acara, notulensi & jadwal.
+
+Gelombang 10
+Generator BAST Proyek Konstruksi
+Draft Berita Acara Serah Terima formal + checklist lampiran
+
+Pilih jenis proyek + jenis serah terima (BAST Pertama, Kedua, Parsial, CCO) → AI generate draft BAST dengan bahasa hukum formal, ruang identitas pihak, klausul masa pemeliharaan, checklist 8–10 dokumen wajib, dan catatan penting proses serah terima.
+
+Buka
+Gelombang 10
+Generator Rencana Mutu Kontrak (RMK)
+Draft RMK 7 bab · indikator mutu · jadwal peninjauan
+
+Input jenis proyek + nama + peran penyusun + durasi → AI generate draft RMK terstruktur 7 bab (Pendahuluan → Pengendalian Mutu → K3 → Pelaporan) dengan konten spesifik per jenis proyek, indikator mutu, dan jadwal peninjauan. Format sesuai Perlem LKPP.
+
+Buka
+Gelombang 18
+Generator Dokumen RKS Konstruksi
+Rencana Kerja dan Syarat teknis per jenis pekerjaan — standar SNI/ASTM
+
+Pilih jenis pekerjaan (pondasi/struktur beton/baja/MEP/jalan/dll), standar referensi (SNI/ASTM/JIS), tingkat detail, dan seksi yang difokuskan → AI generate RKS lengkap per bab: lingkup pekerjaan, material, metode pelaksanaan, pengendalian mutu, K3, dan lampiran.
+
+Buka
+Gelombang 18
+Generator Berita Acara Proyek Konstruksi
+MC, serah terima, adendum, CCO, force majeure, sengketa — siap tanda tangan
+
+Pilih jenis BA (prestasi pekerjaan/MC / serah terima / adendum / perpanjangan waktu / CCO / force majeure / penyelesaian sengketa / dll), isi data proyek dan konteks → AI generate berita acara resmi lengkap: narasi formal, pihak penandatangan, dan daftar lampiran.
+
+Buka
+Gelombang 19
+Generator Jadwal Mobilisasi Proyek
+Jadwal mobilisasi personel, alat berat & fasilitas awal proyek konstruksi
+
+Pilih jenis proyek, nama proyek, nilai kontrak, durasi, lokasi → AI generate jadwal mobilisasi lengkap per fase: daftar personel kunci & jadwal hadir, alat berat & kapasitas, tahapan aktivitas mingguan dengan PIC, risiko mobilisasi yang perlu diantisipasi.
+
+Buka
+Gelombang 19
+Generator Laporan Audit Internal ISO
+ISO 9001 / 14001 / 45001 / IMS / SMK3 — temuan, NCR, OFI, rekomendasi
+
+Pilih standar (ISO 9001/14001/45001/IMS/SMK3), tipe audit (rutin/surveilans/pre-sertifikasi/follow-up NCR), scope area, nama organisasi → AI generate laporan audit internal formal: hasil per klausul, detail temuan (Major NC/Minor NC/OFI/Positif), statistik, kesimpulan, rekomendasi tindak lanjut.
+
+Buka
+Gelombang 20
+Generator Metode Kerja (Method Statement)
+14 jenis pekerjaan konstruksi — tahapan, K3, QC & contingency plan formal
+
+Pilih jenis pekerjaan (galian/beton/bekisting/perkerasan/jembatan/MEP/demolisi/dll), nama proyek, volume, durasi, level risiko site → AI generate method statement formal: lingkup, acuan regulasi, personel & peralatan, tahapan pelaksanaan dengan PIC, K3 & lingkungan, rencana QC & inspeksi, contingency.
+
+Buka
+Gelombang 20
+Generator Risalah Rapat Proyek
+12 jenis rapat — notulensi per agenda, action items & distribusi formal
+
+Pilih jenis rapat (koordinasi mingguan / kick-off / progress / evaluasi desain / K3 / BAST / NCR / klaim / dll), nama proyek, peserta, agenda (multi-baris) → AI generate risalah rapat formal: pembukaan, notulensi per agenda dengan keputusan, tabel action items (PIC/deadline), penutup + distribusi.
+
+Buka
+Gelombang 21
+Generator Kurva S Proyek
+Item pekerjaan, bobot %, distribusi per periode, kumulatif, milestones kritis
+
+Pilih jenis proyek, nama, durasi (maks 24 periode), satuan waktu → AI generate tabel Kurva S: item pekerjaan terbobot sesuai jenis proyek, distribusi realistis per periode (S-curve shape), kumulatif rencana, milestone kritis (mobilisasi/struktur atas/finishing/BAST). Copy CSV untuk Excel.
+
+Buka
+Gelombang 22
+Generator Laporan Harian Proyek
+Daily report proyek formal: kegiatan, personel, alat, material, K3
+
+Isi jenis proyek, nama, tanggal, kondisi cuaca, kegiatan hari ini, progress kumulatif, dan kendala → AI generate laporan harian lengkap: tabel kegiatan+volume+bobot, daftar personel per jabatan, peralatan+kondisi, penerimaan material, masalah & kendala, rencana esok hari, catatan K3, kolom tanda tangan 4 pihak. Salin sebagai teks.
+
+Buka
+Gelombang 25
+Generator SOP Pekerjaan Konstruksi
+Generate SOP formal per fase kerja — APD, hazard, pengendalian, prosedur darurat
+
+Pilih 18 jenis pekerjaan konstruksi (galian, struktur beton, bekisting, baja erection, kerja ketinggian, confined space, dll) × standar K3 (Permen PUPR, PP 50, ISO 45001, CSMS) × level risiko → AI generate SOP lengkap per fase (Persiapan, Pelaksanaan, Akhir, Darurat). Setiap langkah: pelaksana, alat, hazard spesifik, pengendalian hierarki, verifikasi.
+
+Buka
+Gelombang 25
+Generator Laporan Kemajuan Proyek (Progress Report)
+Generate LKP mingguan/bulanan/MC/PHO — deviasi Kurva S, kendala, rencana tindak lanjut
+
+Input nama proyek, periode, nilai kontrak, dan status (on track / delayed / critical) → AI generate laporan kemajuan formal lengkap: ringkasan eksekutif, progress realisasi vs rencana + deviasi Kurva S, tabel kemajuan per paket pekerjaan, kendala & tindak lanjut + PIC + deadline, pencapaian periode ini, rencana periode berikutnya, dan status traffic light.
+
+Buka
+Gelombang 26
+Generator Berita Acara Serah Terima (BAST) Konstruksi
+BAST PHO/FHO/Parsial/Aset formal — daftar pemeriksaan, kewajiban pemeliharaan, dokumen serah terima
+
+Pilih jenis BAST (PHO/FHO/Termin/Aset/Sub-Kontraktor), jenis proyek, sumber anggaran, dan nilai kontrak → AI generate BAST formal lengkap: identitas para pihak, dasar pelaksanaan, uraian & realisasi pekerjaan, daftar pemeriksaan + status Sesuai/Perlu Perbaikan, catatan temuan, kewajiban masa pemeliharaan, daftar dokumen diserahkan, pernyataan penerimaan, kolom tanda tangan.
+
+Buka
+Gelombang 27
+Generator Jadwal Pelaksanaan Proyek
+Bar Chart induk proyek — item pekerjaan, durasi, bobot, milestone, Kurva S kumulatif
+
+Pilih jenis proyek, durasi kontrak, metode pengerjaan → AI generate jadwal induk lengkap: item pekerjaan terstruktur per kategori (Persiapan/Sipil/Struktur/Arsitektur/MEP/Finishing), durasi hari, minggu mulai–selesai, bobot %, predecessor, milestone proyek, Kurva S bobot kumulatif, catatan penting & asumsi. Dapat disalin ke Excel.
+
+Buka
+Gelombang 16
+Generator Checklist Serah Terima Proyek
+PHO & FHO — checklist interaktif per seksi + dokumen pendamping
+
+Pilih jenis proyek, jenis serah terima (PHO/FHO/parsial), dan lingkup pekerjaan → AI generate checklist lengkap per seksi (sipil, MEP, K3, dokumen, dll) dengan kode item, standar penerimaan, status (Wajib/Dianjurkan). Checklist interaktif bisa dicentang & disalin.
+
+Buka
+Gelombang 15
+Generator Notulensi Rapat Otomatis
+Input poin diskusi → notulensi formal, keputusan & action item
+
+Pilih jenis rapat, isi peserta, agenda, dan poin-poin diskusi dalam bentuk catatan kasar → AI menyusun notulensi resmi lengkap: agenda & pembahasan per poin, keputusan rapat, tabel action item (kegiatan/PIC/target/status), dan penutup formal. Bisa langsung disalin.
+
+Buka
+Gelombang 14
+Simulator Rapat Evaluasi Proyek
+Latih rapat evaluasi vs AI moderator — notulensi + action item
+
+Pilih jenis rapat (bulanan/mingguan/mutu/K3/keuangan), peran Anda, dan isu yang dibahas → AI moderator memimpin rapat evaluasi formal dengan mensimulasikan peserta berbeda (owner, konsultan, K3). Diakhiri notulensi resmi, keputusan, dan action item.
+
+Buka
+Gelombang 13
+Generator Laporan Mingguan Proyek
+Draft laporan mingguan Site Manager ke PPK / Owner
+
+Input nama proyek, progress aktual vs rencana, kondisi cuaca, dan kendala → AI generate laporan mingguan profesional: tabel progress per aktivitas, narasi realisasi, isu & risiko, rencana minggu depan, status pembayaran, dan catatan untuk Direksi.
+
+Buka
+Gelombang 13
+Simulator Pre-Construction Meeting (PCM)
+Latih PCM vs AI fasilitator — notulensi + evaluasi
+
+Pilih jenis proyek, peran (kontraktor/konsultan/owner), dan topik PCM → AI berperan sebagai fasilitator rapat PCM yang memimpin diskusi jadwal, metode kerja, K3, koordinasi, dan pembayaran. Sesi 7 ronde, diakhiri notulensi resmi dan evaluasi partisipasi.
+
+Buka
+Gelombang 12
+Generator BAPRO — Berita Acara Kemajuan
+Draft laporan kemajuan pekerjaan formal untuk pelaporan ke PPK
+
+Input nama proyek, jenis kontrak, periode laporan, dan persentase fisik → AI generate BAPRO lengkap: tabel kemajuan per item, narasi kemajuan, kendala & solusi, rencana periode berikutnya, dan draft penutup dengan placeholder tanda tangan.
+
+Buka
+Gelombang 12
+Generator Checklist Serah Terima Akhir
+Checklist PHO/FHO lengkap per kategori pekerjaan
+
+Pilih jenis proyek dan tahapan (PHO/FHO) → AI generate checklist serah terima komprehensif per kategori: arsitektur, struktur, MEP, K3, administrasi — lengkap dengan kriteria kelulusan, status wajib/opsional, referensi SNI, dan daftar dokumen serah terima.
+
+Buka
+K3 & Keselamatan Konstruksi
+(21)
+CSMS, JSA, HIRADC, RKK/SMKK, laporan insiden, work permit & audit K3.
+
+Gelombang 10
+Simulator CSMS / Safety Pre-Qualification
+Latihan menjawab evaluasi K3 dari Owner/Principal
+
+Pilih jenis evaluasi (CSMS, Vendor Assessment, Safety Audit, dll) → AI berperan sebagai auditor K3 senior dan ajukan 6 pertanyaan kritis. Setiap jawaban dinilai 0–10 dengan feedback konstruktif. Skor akhir 0–100 dengan predikat Lulus / Kondisional / Belum Lulus.
+
+Buka
+Gelombang 11
+Generator Laporan Insiden K3
+Draft laporan KK/PAK sesuai Permenaker No. 8/2020
+
+Pilih jenis insiden (KK luka ringan/berat/fatal, near miss, kebakaran, dll) + tipe pekerjaan → AI generate laporan insiden formal: kronologi, penyebab langsung & dasar, tindakan darurat, rekomendasi pencegahan + kewajiban pelaporan legal.
+
+Buka
+Gelombang 11
+Asisten Klaim Asuransi CAR
+Panduan klaim Construction All Risk step-by-step
+
+Pilih jenis klaim CAR (kerusakan material, alat berat, kebakaran, TPL, dll) → AI generate panduan klaim: langkah+batas waktu, dokumen wajib + urgensi, klausul polis relevan, pengecualian yang sering ditolak, dan tips negosiasi dengan insurer.
+
+Buka
+Gelombang 19
+Panduan CSMS Kontraktor
+Contractor Safety Management System — BUMN, SKK Migas, Pertamina, PLN
+
+Pilih tipe owner (BUMN Energi/SKK Migas/Konstruksi/Swasta), kategori CSMS (prequalification/level 1–3/renewal/perbaikan NCR), skala pekerjaan → AI generate panduan elemen CSMS lengkap: persyaratan tiap elemen, dokumen wajib, checklist kesiapan, jadwal persiapan, tips nilai tinggi.
+
+Buka
+Gelombang 19
+Simulator Uji Pelaksana Lapangan K3
+AI menguji foreman/mandor — K3, metode kerja, administrasi proyek, QC
+
+Pilih jabatan (mandor sipil/safety officer/foreman bekisting/pembesian/MEP/jalan/jembatan/operator alat berat), fokus topik → AI ajukan 5 pertanyaan situasi lapangan nyata dengan skenario K3, prosedur teknis, pengelolaan tenaga kerja. Setiap jawaban dinilai 1–4 dengan feedback & koreksi.
+
+Buka
+Gelombang 20
+Generator Work Permit & JSA
+12 pekerjaan berisiko tinggi — izin kerja formal + Job Safety Analysis
+
+Pilih jenis pekerjaan berisiko (working at height / confined space / hot work / LOTO / excavation / critical lifting / demolisi / night work / B3 / dll), nama proyek, lokasi, tanggal → AI generate work permit resmi lengkap: persyaratan izin, APD wajib, JSA per langkah kerja (bahaya/pengendalian/risiko), prosedur darurat, kolom tandatangan.
+
+Buka
+Gelombang 22
+Simulator Uji K3 Konstruksi
+Quiz teori K3 berbasis Permenaker, PP 50/2012, dan ISO 45001 — 5 soal pilihan ganda
+
+Pilih topik K3 (12 topik: peraturan K3, manajemen risiko HIRADC, working at height, confined space, hot work/LOTO, APD, alat berat, limbah B3, investigasi kecelakaan, ERP, K3 listrik) dan level kompetensi (pemula/menengah/mahir/expert) → AI generate 5 soal berbasis kasus nyata lapangan. Penjelasan + referensi regulasi + predikat akhir.
+
+Buka
+Gelombang 23
+Generator RKK — Rencana Keselamatan Konstruksi
+Buat RKK formal sesuai Permen PUPR 10/2021 & Permenaker 5/1996
+
+Pilih jenis kontrak (8 tipe), nilai kontrak, level risiko, jumlah pekerja → AI generate RKK lengkap: kebijakan K3, sasaran, identifikasi bahaya & pengendalian risiko (HIRADC), program keselamatan, daftar APD, komunikasi K3, emergency response plan, dan dokumen wajib. Accordion per seksi.
+
+Buka
+Gelombang 23
+Panduan Persiapan Audit CSMS
+Persiapan audit Contractor Safety Management System Level 1/2/3
+
+Pilih level CSMS (1/2/3), jenis pekerjaan/sektor (sipil umum, migas onshore/offshore, ketenagalistrikan, petrokimia, pertambangan), dan klien/owner → AI generate panduan komprehensif: elemen & sub-elemen CSMS, dokumen wajib per kategori, checklist pre-audit, 6–8 pertanyaan auditor + contoh jawaban, strategi, kesalahan umum.
+
+Buka
+Gelombang 24
+Generator HIRADC — Identifikasi Bahaya & Penilaian Risiko
+Hazard Identification, Risk Assessment, Determining Controls — matriks risiko 5×5
+
+Pilih jenis pekerjaan (galian, struktur beton, bekisting, baja/erection, atap, finishing, MEP, jalan, jembatan, pipa, las, confined space, kerja ketinggian, alat berat, demolisi, kelistrikan) + standar acuan (PP 50/2012, ISO 45001, OHSAS, Permen PUPR) → AI generate HIRADC lengkap: aktivitas, bahaya, dampak, nilai K×S, level risiko, pengendalian, PIC. Salin ke Excel.
+
+Buka
+Gelombang 25
+Panduan Pengelolaan Limbah Konstruksi & B3
+Klasifikasi limbah, manifest B3, checklist, dan potensi sanksi — PP 22/2021
+
+Pilih jenis proyek konstruksi (gedung, jalan, jembatan, migas, demolisi) dan skala → AI susun panduan lengkap 6 seksi: kategori limbah B3/non-B3 + regulasi acuan, prosedur penanganan B3 langkah-langkah, checklist pengelolaan per frekuensi, dokumen & manifest wajib, potensi sanksi denda pelanggaran, kontak instansi terkait (KLHK, Dinas LH, perusahaan pengangkut).
+
+Buka
+Gelombang 25
+Panduan Implementasi SMK3 Perusahaan
+Roadmap SMK3 PP 50/2012 & ISO 45001:2018 — elemen, SDM, jadwal, estimasi biaya sertifikasi
+
+Pilih skala perusahaan, bidang usaha konstruksi, dan target sertifikasi (PP 50, ISO 45001, atau CSMS) → AI generate roadmap implementasi komprehensif 5 seksi: elemen-elemen SMK3 + sub-elemen + dokumen wajib per elemen, jalur & tahapan sertifikasi, checklist kesiapan (Wajib/Disarankan), SDM yang dibutuhkan + kualifikasi, jadwal implementasi per bulan + estimasi biaya.
+
+Buka
+Gelombang 27
+Generator Laporan Audit Internal K3
+Laporan audit K3 formal — skor kepatuhan, temuan Critical/Major/Minor/OFI, rekomendasi, follow-up
+
+Pilih jenis audit (rutin/komprehensif/ISO 45001/PP 50/CSMS), jenis proyek, skala temuan → AI generate laporan audit K3 formal: nomor laporan, ringkasan eksekutif, skor kepatuhan per elemen, temuan utama (deskripsi + klausul + rekomendasi + PIC + deadline), temuan positif (good practice), rekomendasi strategis, rencana follow-up, penutup.
+
+Buka
+Gelombang 16
+Generator Laporan HSE Bulanan
+Input data K3 → laporan HSE formal: statistik, insiden, inspeksi, rekomendasi
+
+Input nama proyek, periode, man-hours, jumlah insiden & near miss, inspeksi, temuan kritis, program K3, kondisi umum → AI generate laporan HSE bulanan resmi: statistik K3 (FR/SR/DART), detail insiden, hasil inspeksi per area, program K3, analisis risiko, rekomendasi, target bulan depan.
+
+Buka
+Gelombang 15
+Simulator Sidang Pelanggaran K3
+Latih menghadapi sidang K3 vs AI majelis — vonis + rekomendasi
+
+Pilih posisi (kontraktor/HSE officer/site manager), jenis pelanggaran K3 (APD/ketinggian/crane/hot work/dll), dan tingkat pelanggaran → AI majelis sidang memimpin proses sidang resmi, menguji pembelaan Anda. Diakhiri vonis, sanksi, dan rekomendasi perbaikan.
+
+Buka
+Gelombang 14
+Panduan Penyusunan SMKK
+Sistem Manajemen Keselamatan Konstruksi — Permen PUPR 10/2021
+
+Pilih jenis proyek, risiko K3 utama, anggaran, dan durasi → AI generate panduan SMKK lengkap: komponen wajib, rencana K3 per elemen, hirarki pengendalian (eliminasi → APD), struktur organisasi K3, dan referensi regulasi yang berlaku.
+
+Buka
+Gelombang 14
+Generator Job Safety Analysis (JSA)
+HIRARC per langkah kerja — bahaya, risiko, pengendalian, APD
+
+Pilih jenis pekerjaan berisiko (ketinggian, galian dalam, crane, las, dll), kondisi lingkungan, dan level risiko → AI generate JSA dengan identifikasi bahaya per tahap kerja, penilaian risiko, hirarki pengendalian (eliminasi/substitusi/engineering/APD), dan prosedur darurat.
+
+Buka
+Gelombang 12
+Panduan K3 Pekerjaan Ketinggian
+APD wajib, prosedur aman, checklist, prosedur darurat
+
+Pilih jenis pekerjaan ketinggian (scaffolding, bekisting, fasad, gondola, dll) dan rentang ketinggian → AI generate panduan K3 lengkap: APD per standar SNI, prosedur kerja aman, identifikasi risiko + pengendalian hierarkis, checklist sebelum kerja, prosedur darurat.
+
+Buka
+Gelombang 9
+Kalkulator Jam Kerja & Fatigue Risk
+Monitor jam kerja · deteksi kelelahan · rekomendasi rotasi
+
+Input data pekerja proyek: jam kerja per minggu, hari berturut tanpa libur, shift malam → kalkulator otomatis deteksi level risiko (Aman/Waspada/Berbahaya/Kritis) sesuai PP 35/2021, visualisasi bar per pekerja. Tanpa AI.
+
+Buka
+Gelombang 8
+Generator Draft SOP K3 Konstruksi
+Pilih aktivitas berisiko → SOP terstruktur dengan prosedur + PJ + APD
+
+Pilih jenis proyek + aktivitas berisiko (galian, ketinggian, crane, las, B3, dll) → AI generate draft SOP K3 terstruktur: per-seksi per-aktivitas, langkah operasional, penanggung jawab, APD wajib, formulir terkait, dan referensi regulasi nyata.
+
+Buka
+Live
+AI Vision K3
+Inspeksi K3 dari Foto
+
+Upload foto lapangan → AI analisis temuan K3 + skor kepatuhan berdasarkan PP 50/2012.
+
+Buka
+Mutu & Sertifikasi ISO
+(7)
+ISO 9001, audit mutu internal, ITP, NCR/CAR & manajemen risiko proyek.
+
+Gelombang 11
+Panduan Audit Mutu Internal ISO
+Pertanyaan audit per klausul · checklist · format laporan
+
+Pilih standar (ISO 9001, 14001, 45001, IMS) + jenis audit → AI generate panduan per klausul: pertanyaan audit, bukti yang dicari, tembuan, risiko potensial, checklist persiapan, tips auditor, dan format laporan sesuai standar.
+
+Buka
+Gelombang 18
+Panduan Penerapan ISO 9001:2015 Konstruksi
+Roadmap QMS, klausul per klausul, dokumen wajib & indikator kesesuaian
+
+Pilih jenis perusahaan konstruksi, skala, status SMM saat ini, dan klausul yang difokuskan → AI generate panduan implementasi ISO 9001:2015: persyaratan + langkah tiap klausul, dokumen wajib, indikator kesesuaian, roadmap dengan timeline, dokumen sistem mutu, dan estimasi biaya.
+
+Buka
+Gelombang 21
+Simulator Penanganan NCR
+Latih respons NCR audit ISO/CSMS — skenario nyata, skor 1–5, feedback
+
+Pilih jenis temuan NCR (Major/Minor ISO 9001/14001/45001, CSMS level 3, audit internal) dan jabatan auditee → AI generate skenario NCR dengan bukti objektif + klausul acuan, ajukan 5 pertanyaan: akar masalah, korektif, preventif, dokumentasi, komunikasi. Skor 1–5 per jawaban + jawaban ideal.
+
+Buka
+Gelombang 22
+Generator ITP — Inspection Test Plan
+Buat ITP formal QC konstruksi: Hold Point, Witness, dokumen verifikasi
+
+Pilih jenis pekerjaan (14 tipe: pondasi, struktur beton, pasangan, waterproofing, perkerasan jalan, jembatan, M/E, fabrikasi baja, dll), nama proyek & kontraktor → AI generate ITP lengkap: no aktivitas, referensi standar, dokumen verifikasi, level H/W/R/M per Kontraktor/MK/Owner, frekuensi, batas penerimaan. Salin TSV ke Excel.
+
+Buka
+Gelombang 24
+Simulator Audit Internal ISO
+Simulasi audit ISO 9001/14001/45001/37001 oleh Lead Auditor — 5 pertanyaan + temuan NCR
+
+Pilih standar ISO (9001 SMM, 14001 SML, 45001 SMK3, 37001 anti-penyuapan, 19650 BIM, 31000 manajemen risiko) dan jenis audit (internal, sertifikasi awal, penuh, surveillance, re-sertifikasi) → Lead Auditor AI ajukan 5 pertanyaan per klausul. Setiap jawaban dinilai: Conformance/OFI/Minor NCR/Major NCR + referensi klausul. Rekap temuan + status kelulusan.
+
+Buka
+Gelombang 26
+Generator NCR / CAR Report
+Non-Conformance Report formal — temuan, bukti objektif, akar masalah, perbaikan & pencegahan
+
+Pilih jenis temuan (NCR Major/Minor/OFI/Observation) dan standar acuan (SNI/ISO/CSMS/ITP) → AI generate NCR report formal: nomor + tanggal, deskripsi temuan, bukti objektif, klausul dilanggar, analisis akar masalah (metode 5-Why/Fishbone), tindakan perbaikan + PIC + deadline, tindakan pencegahan, checklist verifikasi penutupan NCR.
+
+Buka
+Gelombang 17
+Panduan Manajemen Risiko Proyek
+Risk register, matriks 5×5, mitigasi & kontingensi — ISO 31000 & PMBOK
+
+Pilih jenis proyek, fase, dan kategori risiko → AI generate risk register lengkap: identifikasi risiko per kategori dengan penyebab & dampak, skor kemungkinan & dampak, level risiko (Sangat Tinggi/Tinggi/Sedang/Rendah), rencana mitigasi, kontingensi, PIC, dan jadwal review.
+
+Buka
+Estimasi & Kalkulasi Teknis
+(14)
+AHSP, volume galian/timbunan, beton, tulangan, bekisting & produktivitas alat/tenaga.
+
+Gelombang 18
+Kalkulator AHSP — Analisa Harga Satuan Pekerjaan
+Template AHSP PUPR 2022 — koefisien material, upah, alat + overhead
+
+Pilih jenis pekerjaan (beton K-250 / pembesian / bekisting / bata / keramik / cat / galian / dll), edit harga satuan sesuai pasar lokal, atur overhead & profit → kalkulator hitung subtotal material/upah/alat, overhead, harga satuan akhir, dan total untuk volume pekerjaan.
+
+Buka
+Gelombang 19
+Kalkulator Volume Galian & Timbunan
+Average End Area · Prismatoid · Cut & Fill · Estimasi biaya pekerjaan tanah
+
+Input tipe galian (fondasi/basement/saluran/cut-fill), jenis material (tanah biasa/pasir/lempung/batuan), data segmen (panjang, luas A/B/tengah) → hitung volume galian (BM), BCM, kebutuhan timbunan, kelebihan buang. Metode Average End Area atau Prismatoid. Estimasi biaya per AHSP.
+
+Buka
+Gelombang 20
+Kalkulator Beton Ready Mix
+Volume + wastage + jumlah truk molen + estimasi biaya per elemen struktural
+
+Input elemen beton (kolom/balok/pelat/pondasi telapak/bored pile/dinding/tangga), mutu beton (K-175 s/d K-400 atau fc), dimensi & jumlah unit → hitung volume bersih, volume + wastage per tipe, total truk molen, biaya beton + upah. Tabel detail per elemen & rekap biaya.
+
+Buka
+Gelombang 21
+Kalkulator Kebutuhan Tulangan
+Hitung berat baja, jumlah batang, biaya per elemen struktural
+
+Input elemen struktur (kolom/balok/pelat/pondasi/dinding/tangga), tambahkan daftar tulangan per elemen (diameter D6–D32, panjang, jumlah, mutu BJTP24/BJTD32/BJTD40, jumlah unit) → hitung berat total per diameter, per mutu, estimasi biaya. Tabel rekapitulasi lengkap.
+
+Buka
+Gelombang 22
+Kalkulator Bekisting & Perancah
+Hitung plywood, kaso, scaffolding, dan estimasi biaya bekisting per elemen
+
+Tambah elemen struktural (kolom persegi/bulat, balok, pelat, dinding, tangga, pile cap) dengan dimensi & jumlah unit → hitung otomatis: luas bekisting per elemen, total plywood (+10% wastage), kaso (m), kebutuhan scaffolding sewa, estimasi biaya material. Tabel detail per elemen.
+
+Buka
+Gelombang 23
+Kalkulator Kebutuhan Cat Bangunan
+Hitung volume cat, kaleng, primer, dan estimasi biaya per jenis permukaan
+
+Tambah area (dinding bata/beton, plafon gypsum/kayu, kusen kayu, pagar besi, lantai beton, kolom) dengan luas, jenis cat, dan jumlah lapis → hitung otomatis: volume total (liter +10% wastage), kaleng 5L, kebutuhan primer per permukaan, estimasi biaya. Tabel detail toggle per area.
+
+Buka
+Gelombang 24
+Kalkulator Beban Struktural Beton
+Hitung berat sendiri, beban hidup, dan beban ultimate elemen struktural (SNI 1727:2020)
+
+Input elemen struktural (pelat lantai, balok, kolom, dinding, pondasi, tangga), dimensi P×L×T, mutu beton (K175–K400), dan fungsi ruang → hitung berat sendiri (kg/ton), beban hidup sesuai standar (kantor 250, gudang 500–1000 kg/m²), beban ultimate 1.2D+1.6L per SNI 1727:2020. Detail per elemen + estimasi kapasitas kolom.
+
+Buka
+Gelombang 25
+Kalkulator Cut & Fill — Volume Galian & Timbunan
+Metode penampang melintang — hitung volume, swell/shrinkage, dan biaya pekerjaan tanah
+
+Input penampang STA (nama, jarak, luas cut, luas fill) → hitung total volume galian (bank), timbunan (padat), material dibuang (loose), material didatangkan, faktor swell & shrinkage per jenis tanah (biasa/pasir/keras/batu/organik). Estimasi biaya galian, timbunan, buang, datangkan. Rekomendasi manajemen material.
+
+Buka
+Gelombang 26
+Kalkulator Dimensi Kolom & Balok Beton Bertulang
+Preliminary design dimensi + tulangan longitudinal & geser — SNI 2847:2019
+
+Input beban aksial Pu (kolom) atau Mu+Vu+bentang (balok), mutu beton & baja → hitung dimensi awal (b×h), tulangan longitudinal (jumlah+diameter), sengkang (diameter+jarak), kapasitas φPn/φMn vs beban, status Memadai/Perlu Diperbesar. Frontend calculator real-time tanpa AI.
+
+Buka
+Gelombang 27
+Kalkulator Kebutuhan Material Beton
+Volume + waste per elemen, semen/pasir/kerikil/air, jumlah truck mixer, estimasi biaya ready mix
+
+Input elemen beton (kolom, balok, pelat, pondasi, dll) dengan dimensi dan jumlah → volume bersih + faktor waste per jenis elemen, total volume kotor siap pesan, jumlah truck mixer, kebutuhan material mix design (semen/pasir/kerikil/air SNI 7394:2008), estimasi biaya ready mix. Rincian per elemen dalam tabel.
+
+Buka
+Gelombang 27
+Kalkulator Produktivitas Alat Berat
+Output/jam, hari untuk target volume, jumlah alat optimal, biaya per unit produksi — SNI 7394:2008
+
+Pilih jenis alat berat (Excavator/Bulldozer/Grader/Dump Truck/Compactor/Concrete Pump/Tower Crane/Asphalt Finisher), kondisi lapangan, jam kerja, target volume → produktivitas per jam & hari, hari kerja untuk capai target, output per minggu, estimasi total biaya sewa, biaya per unit produksi. Referensi SNI 7394:2008.
+
+Buka
+Gelombang 17
+Kalkulator Kebutuhan Material Beton
+K-175 hingga K-500 — semen, pasir, kerikil, air + faktor waste per jenis pekerjaan
+
+Pilih mutu beton (K-175 s/d K-500), jenis pekerjaan (kolom/balok/pelat/pondasi), dan volume → kalkulator hitung kebutuhan semen (sak/kg), pasir (ton), kerikil (ton), air (liter) dengan faktor waste SNI. Lengkap: W/C ratio, slump target, kategori mutu, dan rekomendasi pelaksanaan.
+
+Buka
+Gelombang 15
+Kalkulator Produktivitas Tenaga Kerja
+Efisiensi kerja vs standar SNI — proyeksi penyelesaian pekerjaan
+
+Input jenis pekerjaan (beton/baja/bata/keramik/dll), volume, jumlah TK, jam kerja, faktor cuaca & pengalaman → kalkulator menampilkan produktivitas aktual vs standar SNI, efisiensi (%), volume per hari, proyeksi selesai, dan rekomendasi akselerasi.
+
+Buka
+Live
+RAB Kalkulator
+Estimasi Biaya Konstruksi AI
+
+Kalkulasi RAB otomatis dari deskripsi pekerjaan menggunakan AHSP PermenPUPR 1/2022.
+
+Buka
+Karir, Biaya & SDM
+(14)
+ROI karir, upah, cashflow, BEP, kompensasi PHK, rekrutmen & perencanaan tim SKK.
+
+Gelombang 2
+ROI & Karir SKK
+Berapa kenaikan gaji & kapan balik modal?
+
+Input jabatan + gaji + target SKK → proyeksi kenaikan gaji, breakeven biaya sertifikasi, ROI 5 tahun, dan roadmap SKK lanjutan.
+
+Buka
+Gelombang 2
+Syarat Personel & Compliance BUJK
+Permen PU 6/2025 + Kepdirjen PU 281/2026 — Personel/PJ BUJK
+
+Cek personel bersertifikat dan persyaratan PJ sebagai pendukung sertifikasi BUJK/SBU. Kepdirjen PU No. 281/KPTS/DK/2026 adalah panduan implementasi BUJK/SBU, bukan aturan langsung sertifikasi SKK; verifikasi akhir melalui kanal resmi LPJK/LSBU.
+
+Buka
+Gelombang 16
+Kalkulator Cashflow Proyek Konstruksi
+Proyeksi cashflow bulanan — defisit puncak, titik impas, kebutuhan kredit
+
+Input nilai kontrak, uang muka, progres per termin, durasi, overhead, retensi, dan pola distribusi pekerjaan (kurva-S/front-loaded/dll) → kalkulator generate cashflow masuk/keluar per bulan, net, kumulatif, defisit puncak, bulan break-even, dan estimasi kebutuhan kredit.
+
+Buka
+Gelombang 14
+Kalkulator BEP Proyek Konstruksi
+Hitung Break Even Point, margin profit aktual, komposisi biaya
+
+Input nilai kontrak dan rincian biaya per kategori (material, upah, alat, subkon, overhead) beserta contingency dan target profit → kalkulator menampilkan BEP, margin aktual, status laba/rugi, dan visualisasi komposisi biaya per komponen.
+
+Buka
+Gelombang 13
+Kalkulator Depresiasi Alat Berat
+Hitung penyusutan alat dengan metode SL, DDB, atau SYD
+
+Pilih jenis alat berat, masukkan nilai perolehan, nilai sisa, dan umur ekonomis → kalkulator hitung depresiasi per tahun dengan tabel lengkap menggunakan metode Straight Line, Double Declining Balance, atau Sum of Years Digits. Cocok untuk RAB dan laporan keuangan BUJK.
+
+Buka
+Gelombang 12
+Kalkulator Kompensasi PHK
+Hitung pesangon, UPMK, UPH sesuai PP 35/2021
+
+Pilih alasan PHK (pensiun, efisiensi, pengunduran diri, dll), masukkan masa kerja dan gaji → kalkulator otomatis hitung Uang Pesangon, Uang Penghargaan Masa Kerja, dan Uang Pengganti Hak sesuai UU Cipta Kerja + PP 35/2021.
+
+Buka
+Gelombang 7
+Kalkulator Manfaat SKK untuk BUJK
+Kualifikasi SBU · kapasitas tender · analisis komposisi
+
+Input komposisi tenaga SKK BUJK Anda → kalkulator real-time hitung: total poin SKK, estimasi kualifikasi SBU (K2/M1/M2/B1/B2), kapasitas nilai proyek, cakupan klasifikasi, status K3 compliance, dan estimasi biaya gaji bulanan.
+
+Buka
+Gelombang 6
+Kalkulator Standar Upah SKK
+Estimasi rentang gaji · per kota · per jenis kontrak
+
+Pilih jabatan + level + kota + pengalaman + jenis kontrak → kalkulator real-time hitung rentang upah wajar: batas bawah, rekomendasi, batas atas. Berguna untuk negosiasi gaji atau menentukan budget rekrutmen SKK.
+
+Buka
+Gelombang 6
+Rencana Pengembangan Karir SKK
+Roadmap personal · milestone · CPD · pelatihan
+
+Input posisi sekarang + target jabatan + timeline → AI buat roadmap karir lengkap: milestone bertahap, kebutuhan CPD per kategori, pelatihan prioritas, hambatan potensial, dan indikator sukses yang terukur.
+
+Buka
+Gelombang 5
+Panduan Rekrutmen Tenaga SKK BUJK
+Tahapan rekrutmen · kriteria seleksi · verifikasi SKK asli
+
+Input jabatan + level + urgensi → AI buat panduan rekrutmen lengkap: tahapan dengan durasi, kriteria seleksi per kategori, pertanyaan wawancara efektif, cara verifikasi keaslian SKK di SIKI-SKK, dan tips negosiasi.
+
+Buka
+Gelombang 4
+Planner SKK BUJK
+Analisis kebutuhan SKK · gap analysis · rencana rekrutmen
+
+Input subklasifikasi + kualifikasi SBU + personel bersertifikat yang tersedia → AI analisis gap personel/PJ untuk mendukung sertifikasi BUJK/SBU berdasarkan Permen PU No. 6 Tahun 2025 dan panduan implementasi Kepdirjen PU No. 281/KPTS/DK/2026. Kepdirjen ini tidak langsung mengatur sertifikasi SKK; verifikasi akhir melalui kanal resmi LPJK/LSBU.
+
+Buka
+Gelombang 4
+Checker Kepatuhan SKK Proyek
+Cek SKK vs proyek · syarat per regulasi · skor kepatuhan
+
+Input jenis + nilai proyek + SKK BUJK → AI cek kepatuhan: syarat SKK spesifik proyek berdasarkan PP 14/2021, status terpenuhi/kurang, kewajiban administrasi, dan tindakan yang diperlukan sebelum tender.
+
+Buka
+Gelombang 4
+Kalkulator Biaya Tim SKK
+Estimasi anggaran · per jalur · tips hemat · localStorage
+
+Tambahkan jabatan SKK + jumlah orang + jalur sertifikasi → kalkulator estimasi biaya per item dan total: min/rata-rata/maks, perbandingan jalur (portofolio vs diklat), dan tips hemat untuk grup.
+
+Buka
+Live
+PKB Builder
+Pengembangan Keprofesian
+
+Rencanakan dan dokumentasikan kegiatan PKB/CPD untuk pemenuhan SKP sertifikasi.
+
+Buka
+Konteks Roadmap
+Roadmap Produk 2026–2030
+Tiga gelombang pertumbuhan Ekosistem Kompetensi Indonesia. Gelombang adalah konteks kapan sebuah tool dirilis — jelajahi tetap gunakan Modul di atas.
+
+Gelombang 1
+2026–2027
+Digital Compliance & Certification
+
+E-Sertifikat + QR Verifikasi
+Mock Asesmen SKK
+Diagnostik Kompetensi AI
+Gelombang 2
+2027–2028
+Skills-Based Talent Economy
+
+Skills Map & Analytics
+Mini Apps Practice Layer
+Generator Dokumen BUJK
+Gelombang 3
+2029–2030
+Immersive & Autonomous Learning
+
+AI Assessment Engine
+Green Jobs Certification
+RPL.AI Automation
+Konteks Pasar Indonesia 2026–2030
+Konstruksi 2025 → 2034
+
+USD 125B → USD 226B (CAGR 6.77%)
+
+Kekurangan tenaga ahli/tahun
+
+349K–500K pekerja baru
+
+Pekerja belum bersertifikat
+
+> 8.3 juta (< 10% tersertifikasi)
+
+HR Tech Indonesia 2024
+
+USD 6.01B, tumbuh 15–20%/tahun
+
+Employer hiring micro-credential
+
+97% sudah memprioritaskan
+
+Digital skilled workers → GDP 2030
+
+USD 303.4 miliar (16% GDP)
+
+Sumber: Deloitte, World Bank, Credential Engine, HR Tech Indonesia Report 2024, PermenPUPR 6/2021
+
+Konsultasi dengan AI Spesialis
+45 MultiClaw suite AI tersedia untuk konsultasi mendalam — SBU, SKK, K3, Tender, Kontrak, ESG, dan banyak lagi.
+
+→ Panduan Uji Kompetensi SKK
+→ Panduan SBU Konstruksi
+→ Skema Sertifikasi BUJK
