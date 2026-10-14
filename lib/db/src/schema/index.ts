@@ -23,3 +23,4 @@ export * from "./standalone";
 export * from "./consultations";
 export * from "./personnel";
 export * from "./workroom";
+export * from "./workroom-reviews";

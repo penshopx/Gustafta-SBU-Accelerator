@@ -5,10 +5,60 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
-export interface WorkroomItemDeletion {
-  /** @minimum 0 */
-  revision: number;
+export interface ReviewSelection {
+  /** @maxItems 50 */
+  workroomIds: string[];
+  /**
+     * @maxItems 50
+     * @items.minimum 1
+     */
+  evidenceIds: number[];
+  /** @maxItems 50 */
+  documentIds: string[];
 }
+
+export interface ReviewCase {
+  id: number;
+  companyName: string;
+  requestType: string;
+  qualification: string;
+  classification: string;
+  status: string;
+  /** @nullable */
+  existingSbuExpiresOn: string | null;
+  updatedAt: string;
+}
+
+export interface ReviewEvidence {
+  id: number;
+  code: string;
+  title: string;
+  note: string;
+  updatedAt: string;
+}
+
+/**
+ * Metadata reference only, never file bytes, object paths or signed URLs
+ */
+export interface ReviewDocument {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  version: number;
+  contentType: string;
+  size: number;
+  status: string;
+  scanStatus: string;
+  createdAt: string;
+}
+
+export type ReviewSnapshotSchemaVersion = typeof ReviewSnapshotSchemaVersion[keyof typeof ReviewSnapshotSchemaVersion];
+
+
+export const ReviewSnapshotSchemaVersion = {
+  'review-v1': 'review-v1',
+} as const;
 
 export type WorkroomItemKind = typeof WorkroomItemKind[keyof typeof WorkroomItemKind];
 
@@ -41,6 +91,81 @@ export interface WorkroomItem {
   revision: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ReviewSnapshot {
+  schemaVersion: ReviewSnapshotSchemaVersion;
+  case: ReviewCase;
+  workroomItems: WorkroomItem[];
+  evidence: ReviewEvidence[];
+  documents: ReviewDocument[];
+}
+
+export interface ReviewPreview {
+  selection: ReviewSelection;
+  snapshot: ReviewSnapshot;
+  /** @pattern ^[a-f0-9]{64}$ */
+  snapshotHash: string;
+  /** @nullable */
+  latestReviewId: string | null;
+}
+
+export type ReviewDecisionInputDecision = typeof ReviewDecisionInputDecision[keyof typeof ReviewDecisionInputDecision];
+
+
+export const ReviewDecisionInputDecision = {
+  approved: 'approved',
+  needs_changes: 'needs_changes',
+} as const;
+
+export interface ReviewDecisionInput {
+  selection: ReviewSelection;
+  /** @pattern ^[a-f0-9]{64}$ */
+  snapshotHash: string;
+  /** @nullable */
+  latestReviewId: string | null;
+  decision: ReviewDecisionInputDecision;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  note: string;
+  confirmed: boolean;
+}
+
+export type ReviewRecordDecision = typeof ReviewRecordDecision[keyof typeof ReviewRecordDecision];
+
+
+export const ReviewRecordDecision = {
+  approved: 'approved',
+  needs_changes: 'needs_changes',
+} as const;
+
+export interface ReviewRecord {
+  id: string;
+  caseId: number;
+  /** @minimum 1 */
+  sequenceNo: number;
+  decision: ReviewRecordDecision;
+  note: string;
+  selection: ReviewSelection;
+  snapshot: ReviewSnapshot;
+  snapshotHash: string;
+  decidedAt: string;
+  /** Selected material and case attributes still match this historical snapshot; not an LSBU approval */
+  current: boolean;
+}
+
+export interface ReviewWorkspace {
+  caseId: number;
+  materials: ReviewSnapshot;
+  reviews: ReviewRecord[];
+  historyTruncated: boolean;
+}
+
+export interface WorkroomItemDeletion {
+  /** @minimum 0 */
+  revision: number;
 }
 
 export interface Workroom {

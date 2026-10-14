@@ -10,6 +10,59 @@ tags:
   - name: health
   - name: workspace
 paths:
+  /cases/{id}/workroom/reviews:
+    get:
+      operationId: getWorkroomReviews
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200':
+          description: Private review sources and latest 50 immutable decisions
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewWorkspace' }
+        '401': { description: Authentication required }
+        '404': { description: Case not found }
+        '409': { description: Account precondition mismatch }
+    post:
+      operationId: createWorkroomReview
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewDecisionInput' }
+      responses:
+        '201':
+          description: Immutable internal decision recorded against the reviewed snapshot
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewRecord' }
+        '400': { description: Invalid decision or selection }
+        '401': { description: Authentication required }
+        '404': { description: Selected owned materials unavailable }
+        '409': { description: 'Account, materials or previous decision changed' }
+  /cases/{id}/workroom/reviews/preview:
+    post:
+      operationId: previewWorkroomReview
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewSelection' }
+      responses:
+        '200':
+          description: Exact private material snapshot for explicit human review
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewPreview' }
+        '400': { description: Invalid selection }
+        '401': { description: Authentication required }
+        '404': { description: Selected owned materials unavailable }
+        '409': { description: Account precondition mismatch }
   /cases/{id}/workroom:
     parameters:
       - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
@@ -881,6 +934,118 @@ components:
       name: X-SBU-Form-Owner
       description: Required account precondition for private reads and writes. Capture the tab/cache or form owner, not the current cookie. This is not authentication; ownership is always derived from the verified Clerk session. Missing or mismatched values return 409 before private data access. Private reads use Cache-Control private, no-store.
   schemas:
+    ReviewSelection:
+      type: object
+      required: [workroomIds, evidenceIds, documentIds]
+      properties:
+        workroomIds:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items: { type: string, format: uuid }
+        evidenceIds:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items: { type: integer, minimum: 1 }
+        documentIds:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items: { type: string, format: uuid }
+    ReviewCase:
+      type: object
+      required: [id, companyName, requestType, qualification, classification, status, existingSbuExpiresOn, updatedAt]
+      properties:
+        id: { type: integer }
+        companyName: { type: string }
+        requestType: { type: string }
+        qualification: { type: string }
+        classification: { type: string }
+        status: { type: string }
+        existingSbuExpiresOn: { type: [string, 'null'] }
+        updatedAt: { type: string }
+    ReviewEvidence:
+      type: object
+      required: [id, code, title, note, updatedAt]
+      properties:
+        id: { type: integer }
+        code: { type: string }
+        title: { type: string }
+        note: { type: string }
+        updatedAt: { type: string }
+    ReviewDocument:
+      type: object
+      description: Metadata reference only, never file bytes, object paths or signed URLs
+      required: [id, name, category, description, version, contentType, size, status, scanStatus, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        category: { type: string }
+        description: { type: string }
+        version: { type: integer }
+        contentType: { type: string }
+        size: { type: integer }
+        status: { type: string }
+        scanStatus: { type: string }
+        createdAt: { type: string }
+    ReviewSnapshot:
+      type: object
+      required: [schemaVersion, case, workroomItems, evidence, documents]
+      properties:
+        schemaVersion: { type: string, enum: [review-v1] }
+        case: { $ref: '#/components/schemas/ReviewCase' }
+        workroomItems:
+          type: array
+          items: { $ref: '#/components/schemas/WorkroomItem' }
+        evidence:
+          type: array
+          items: { $ref: '#/components/schemas/ReviewEvidence' }
+        documents:
+          type: array
+          items: { $ref: '#/components/schemas/ReviewDocument' }
+    ReviewPreview:
+      type: object
+      required: [selection, snapshot, snapshotHash, latestReviewId]
+      properties:
+        selection: { $ref: '#/components/schemas/ReviewSelection' }
+        snapshot: { $ref: '#/components/schemas/ReviewSnapshot' }
+        snapshotHash: { type: string, pattern: '^[a-f0-9]{64}$' }
+        latestReviewId: { type: [string, 'null'] }
+    ReviewDecisionInput:
+      type: object
+      required: [selection, snapshotHash, latestReviewId, decision, note, confirmed]
+      properties:
+        selection: { $ref: '#/components/schemas/ReviewSelection' }
+        snapshotHash: { type: string, pattern: '^[a-f0-9]{64}$' }
+        latestReviewId: { type: [string, 'null'], format: uuid }
+        decision: { type: string, enum: [approved, needs_changes] }
+        note: { type: string, minLength: 1, maxLength: 2000 }
+        confirmed: { type: boolean }
+    ReviewRecord:
+      type: object
+      required: [id, caseId, sequenceNo, decision, note, selection, snapshot, snapshotHash, decidedAt, current]
+      properties:
+        id: { type: string, format: uuid }
+        caseId: { type: integer }
+        sequenceNo: { type: integer, minimum: 1 }
+        decision: { type: string, enum: [approved, needs_changes] }
+        note: { type: string }
+        selection: { $ref: '#/components/schemas/ReviewSelection' }
+        snapshot: { $ref: '#/components/schemas/ReviewSnapshot' }
+        snapshotHash: { type: string }
+        decidedAt: { type: string }
+        current: { type: boolean, description: Selected material and case attributes still match this historical snapshot; not an LSBU approval }
+    ReviewWorkspace:
+      type: object
+      required: [caseId, materials, reviews, historyTruncated]
+      properties:
+        caseId: { type: integer }
+        materials: { $ref: '#/components/schemas/ReviewSnapshot' }
+        reviews:
+          type: array
+          items: { $ref: '#/components/schemas/ReviewRecord' }
+        historyTruncated: { type: boolean }
     WorkroomItemDeletion:
       type: object
       required: [revision]

@@ -23,6 +23,7 @@ import sbuChatRouter from "./sbu-chat";
 import consultationsRouter from "./consultations";
 import personnelRouter from "./personnel";
 import workroomRouter from "./workroom";
+import workroomReviewsRouter from "./workroom-reviews";
 import documentVaultRouter from "./document-vault";
 import documentAnalysisRouter from "./document-analysis";
 
@@ -73,6 +74,7 @@ router.use((req, res, next) => {
 router.use(standaloneRouter);
 router.use(personnelRouter);
 router.use(workroomRouter);
+router.use(workroomReviewsRouter);
 router.use(sbuChatRouter);
 router.use(consultationsRouter);
 router.use(documentVaultRouter);

@@ -51,6 +51,11 @@ import type {
   Regulation,
   RenameConsultationInput,
   RequestCaseDocumentUpload201,
+  ReviewDecisionInput,
+  ReviewPreview,
+  ReviewRecord,
+  ReviewSelection,
+  ReviewWorkspace,
   SbuCase,
   SbuChatInput,
   SbuChatReply,
@@ -93,6 +98,243 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetWorkroomReviewsUrl = (id: number,) => {
+
+
+
+
+  return `/api/cases/${id}/workroom/reviews`
+}
+
+export const getWorkroomReviews = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<ReviewWorkspace> => {
+
+  return customFetch<ReviewWorkspace>(getGetWorkroomReviewsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWorkroomReviewsQueryKey = (id: number,) => {
+    return [
+    `/api/cases/${id}/workroom/reviews`
+    ] as const;
+    }
+
+
+export const getGetWorkroomReviewsQueryOptions = <TData = Awaited<ReturnType<typeof getWorkroomReviews>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkroomReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWorkroomReviewsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkroomReviews>>> = ({ signal }) => getWorkroomReviews(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorkroomReviews>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWorkroomReviewsQueryResult = NonNullable<Awaited<ReturnType<typeof getWorkroomReviews>>>
+export type GetWorkroomReviewsQueryError = ErrorType<void>
+
+
+
+export function useGetWorkroomReviews<TData = Awaited<ReturnType<typeof getWorkroomReviews>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkroomReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWorkroomReviewsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateWorkroomReviewUrl = (id: number,) => {
+
+
+
+
+  return `/api/cases/${id}/workroom/reviews`
+}
+
+export const createWorkroomReview = async (id: number,
+    reviewDecisionInput: ReviewDecisionInput, options?: Parameters<typeof customFetch>[1]): Promise<ReviewRecord> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ReviewRecord>(getCreateWorkroomReviewUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reviewDecisionInput)
+  }
+);}
+
+
+
+
+
+export const getCreateWorkroomReviewMutationKey = () => ['createWorkroomReview'] as const;
+
+export const getCreateWorkroomReviewMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWorkroomReview>>, TError,CreateWorkroomReviewMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWorkroomReview>>, TError,CreateWorkroomReviewMutationVariables, TContext> => {
+
+const mutationKey = getCreateWorkroomReviewMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWorkroomReview>>, CreateWorkroomReviewMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createWorkroomReview(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWorkroomReviewMutationResult = NonNullable<Awaited<ReturnType<typeof createWorkroomReview>>>
+    export type CreateWorkroomReviewMutationBody = BodyType<ReviewDecisionInput>
+    export type CreateWorkroomReviewMutationError = ErrorType<void>
+    export type CreateWorkroomReviewMutationVariables = {id: number;data: BodyType<ReviewDecisionInput>}
+
+    export const useCreateWorkroomReview = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWorkroomReview>>, TError,CreateWorkroomReviewMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWorkroomReview>>,
+        TError,
+        CreateWorkroomReviewMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateWorkroomReviewMutationOptions(options));
+    }
+
+export const getPreviewWorkroomReviewUrl = (id: number,) => {
+
+
+
+
+  return `/api/cases/${id}/workroom/reviews/preview`
+}
+
+export const previewWorkroomReview = async (id: number,
+    reviewSelection: ReviewSelection, options?: Parameters<typeof customFetch>[1]): Promise<ReviewPreview> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ReviewPreview>(getPreviewWorkroomReviewUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reviewSelection)
+  }
+);}
+
+
+
+
+
+export const getPreviewWorkroomReviewMutationKey = () => ['previewWorkroomReview'] as const;
+
+export const getPreviewWorkroomReviewMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewWorkroomReview>>, TError,PreviewWorkroomReviewMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewWorkroomReview>>, TError,PreviewWorkroomReviewMutationVariables, TContext> => {
+
+const mutationKey = getPreviewWorkroomReviewMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewWorkroomReview>>, PreviewWorkroomReviewMutationVariables> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  previewWorkroomReview(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewWorkroomReviewMutationResult = NonNullable<Awaited<ReturnType<typeof previewWorkroomReview>>>
+    export type PreviewWorkroomReviewMutationBody = BodyType<ReviewSelection>
+    export type PreviewWorkroomReviewMutationError = ErrorType<void>
+    export type PreviewWorkroomReviewMutationVariables = {id: number;data: BodyType<ReviewSelection>}
+
+    export const usePreviewWorkroomReview = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewWorkroomReview>>, TError,PreviewWorkroomReviewMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewWorkroomReview>>,
+        TError,
+        PreviewWorkroomReviewMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPreviewWorkroomReviewMutationOptions(options));
+    }
 
 export const getGetWorkroomUrl = (id: number,) => {
 

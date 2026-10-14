@@ -11,6 +11,326 @@ import * as zod from 'zod';
 
 
 
+export const GetWorkroomReviewsParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+
+export const getWorkroomReviewsResponseReviewsItemSelectionWorkroomIdsMax = 50;
+
+
+export const getWorkroomReviewsResponseReviewsItemSelectionEvidenceIdsMax = 50;
+
+export const getWorkroomReviewsResponseReviewsItemSelectionDocumentIdsMax = 50;
+
+
+
+export const GetWorkroomReviewsResponse = zod.object({
+  "caseId": zod.number().int(),
+  "materials": zod.object({
+  "schemaVersion": zod.enum(['review-v1']),
+  "case": zod.object({
+  "id": zod.number().int(),
+  "companyName": zod.string(),
+  "requestType": zod.string(),
+  "qualification": zod.string(),
+  "classification": zod.string(),
+  "status": zod.string(),
+  "existingSbuExpiresOn": zod.string().nullable(),
+  "updatedAt": zod.string()
+}),
+  "workroomItems": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "kind": zod.enum(['checklist', 'action', 'journal']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "status": zod.enum(['todo', 'doing', 'done']),
+  "assignee": zod.string(),
+  "dueOn": zod.string().nullable(),
+  "revision": zod.number().int(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "evidence": zod.array(zod.object({
+  "id": zod.number().int(),
+  "code": zod.string(),
+  "title": zod.string(),
+  "note": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "documents": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "category": zod.string(),
+  "description": zod.string(),
+  "version": zod.number().int(),
+  "contentType": zod.string(),
+  "size": zod.number().int(),
+  "status": zod.string(),
+  "scanStatus": zod.string(),
+  "createdAt": zod.string()
+}).describe('Metadata reference only, never file bytes, object paths or signed URLs'))
+}),
+  "reviews": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "sequenceNo": zod.number().int().min(1),
+  "decision": zod.enum(['approved', 'needs_changes']),
+  "note": zod.string(),
+  "selection": zod.object({
+  "workroomIds": zod.array(zod.string().uuid()).max(getWorkroomReviewsResponseReviewsItemSelectionWorkroomIdsMax),
+  "evidenceIds": zod.array(zod.number().int().min(1)).max(getWorkroomReviewsResponseReviewsItemSelectionEvidenceIdsMax),
+  "documentIds": zod.array(zod.string().uuid()).max(getWorkroomReviewsResponseReviewsItemSelectionDocumentIdsMax)
+}),
+  "snapshot": zod.object({
+  "schemaVersion": zod.enum(['review-v1']),
+  "case": zod.object({
+  "id": zod.number().int(),
+  "companyName": zod.string(),
+  "requestType": zod.string(),
+  "qualification": zod.string(),
+  "classification": zod.string(),
+  "status": zod.string(),
+  "existingSbuExpiresOn": zod.string().nullable(),
+  "updatedAt": zod.string()
+}),
+  "workroomItems": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "kind": zod.enum(['checklist', 'action', 'journal']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "status": zod.enum(['todo', 'doing', 'done']),
+  "assignee": zod.string(),
+  "dueOn": zod.string().nullable(),
+  "revision": zod.number().int(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "evidence": zod.array(zod.object({
+  "id": zod.number().int(),
+  "code": zod.string(),
+  "title": zod.string(),
+  "note": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "documents": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "category": zod.string(),
+  "description": zod.string(),
+  "version": zod.number().int(),
+  "contentType": zod.string(),
+  "size": zod.number().int(),
+  "status": zod.string(),
+  "scanStatus": zod.string(),
+  "createdAt": zod.string()
+}).describe('Metadata reference only, never file bytes, object paths or signed URLs'))
+}),
+  "snapshotHash": zod.string(),
+  "decidedAt": zod.string(),
+  "current": zod.boolean().describe('Selected material and case attributes still match this historical snapshot; not an LSBU approval')
+})),
+  "historyTruncated": zod.boolean()
+})
+
+
+
+
+
+export const CreateWorkroomReviewParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const createWorkroomReviewBodySelectionWorkroomIdsMax = 50;
+
+
+export const createWorkroomReviewBodySelectionEvidenceIdsMax = 50;
+
+export const createWorkroomReviewBodySelectionDocumentIdsMax = 50;
+
+export const createWorkroomReviewBodySnapshotHashRegExp = new RegExp('^[a-f0-9]{64}$');
+export const createWorkroomReviewBodyNoteMax = 2000;
+
+
+
+export const CreateWorkroomReviewBody = zod.object({
+  "selection": zod.object({
+  "workroomIds": zod.array(zod.string().uuid()).max(createWorkroomReviewBodySelectionWorkroomIdsMax),
+  "evidenceIds": zod.array(zod.number().int().min(1)).max(createWorkroomReviewBodySelectionEvidenceIdsMax),
+  "documentIds": zod.array(zod.string().uuid()).max(createWorkroomReviewBodySelectionDocumentIdsMax)
+}),
+  "snapshotHash": zod.string().regex(createWorkroomReviewBodySnapshotHashRegExp),
+  "latestReviewId": zod.string().uuid().nullable(),
+  "decision": zod.enum(['approved', 'needs_changes']),
+  "note": zod.string().min(1).max(createWorkroomReviewBodyNoteMax),
+  "confirmed": zod.boolean()
+})
+
+
+export const createWorkroomReviewResponseSelectionWorkroomIdsMax = 50;
+
+
+export const createWorkroomReviewResponseSelectionEvidenceIdsMax = 50;
+
+export const createWorkroomReviewResponseSelectionDocumentIdsMax = 50;
+
+
+
+export const CreateWorkroomReviewResponse = zod.object({
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "sequenceNo": zod.number().int().min(1),
+  "decision": zod.enum(['approved', 'needs_changes']),
+  "note": zod.string(),
+  "selection": zod.object({
+  "workroomIds": zod.array(zod.string().uuid()).max(createWorkroomReviewResponseSelectionWorkroomIdsMax),
+  "evidenceIds": zod.array(zod.number().int().min(1)).max(createWorkroomReviewResponseSelectionEvidenceIdsMax),
+  "documentIds": zod.array(zod.string().uuid()).max(createWorkroomReviewResponseSelectionDocumentIdsMax)
+}),
+  "snapshot": zod.object({
+  "schemaVersion": zod.enum(['review-v1']),
+  "case": zod.object({
+  "id": zod.number().int(),
+  "companyName": zod.string(),
+  "requestType": zod.string(),
+  "qualification": zod.string(),
+  "classification": zod.string(),
+  "status": zod.string(),
+  "existingSbuExpiresOn": zod.string().nullable(),
+  "updatedAt": zod.string()
+}),
+  "workroomItems": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "kind": zod.enum(['checklist', 'action', 'journal']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "status": zod.enum(['todo', 'doing', 'done']),
+  "assignee": zod.string(),
+  "dueOn": zod.string().nullable(),
+  "revision": zod.number().int(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "evidence": zod.array(zod.object({
+  "id": zod.number().int(),
+  "code": zod.string(),
+  "title": zod.string(),
+  "note": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "documents": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "category": zod.string(),
+  "description": zod.string(),
+  "version": zod.number().int(),
+  "contentType": zod.string(),
+  "size": zod.number().int(),
+  "status": zod.string(),
+  "scanStatus": zod.string(),
+  "createdAt": zod.string()
+}).describe('Metadata reference only, never file bytes, object paths or signed URLs'))
+}),
+  "snapshotHash": zod.string(),
+  "decidedAt": zod.string(),
+  "current": zod.boolean().describe('Selected material and case attributes still match this historical snapshot; not an LSBU approval')
+})
+
+
+
+
+
+export const PreviewWorkroomReviewParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const previewWorkroomReviewBodyWorkroomIdsMax = 50;
+
+
+export const previewWorkroomReviewBodyEvidenceIdsMax = 50;
+
+export const previewWorkroomReviewBodyDocumentIdsMax = 50;
+
+
+
+export const PreviewWorkroomReviewBody = zod.object({
+  "workroomIds": zod.array(zod.string().uuid()).max(previewWorkroomReviewBodyWorkroomIdsMax),
+  "evidenceIds": zod.array(zod.number().int().min(1)).max(previewWorkroomReviewBodyEvidenceIdsMax),
+  "documentIds": zod.array(zod.string().uuid()).max(previewWorkroomReviewBodyDocumentIdsMax)
+})
+
+export const previewWorkroomReviewResponseSelectionWorkroomIdsMax = 50;
+
+
+export const previewWorkroomReviewResponseSelectionEvidenceIdsMax = 50;
+
+export const previewWorkroomReviewResponseSelectionDocumentIdsMax = 50;
+
+export const previewWorkroomReviewResponseSnapshotHashRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
+export const PreviewWorkroomReviewResponse = zod.object({
+  "selection": zod.object({
+  "workroomIds": zod.array(zod.string().uuid()).max(previewWorkroomReviewResponseSelectionWorkroomIdsMax),
+  "evidenceIds": zod.array(zod.number().int().min(1)).max(previewWorkroomReviewResponseSelectionEvidenceIdsMax),
+  "documentIds": zod.array(zod.string().uuid()).max(previewWorkroomReviewResponseSelectionDocumentIdsMax)
+}),
+  "snapshot": zod.object({
+  "schemaVersion": zod.enum(['review-v1']),
+  "case": zod.object({
+  "id": zod.number().int(),
+  "companyName": zod.string(),
+  "requestType": zod.string(),
+  "qualification": zod.string(),
+  "classification": zod.string(),
+  "status": zod.string(),
+  "existingSbuExpiresOn": zod.string().nullable(),
+  "updatedAt": zod.string()
+}),
+  "workroomItems": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int(),
+  "kind": zod.enum(['checklist', 'action', 'journal']),
+  "title": zod.string(),
+  "body": zod.string(),
+  "status": zod.enum(['todo', 'doing', 'done']),
+  "assignee": zod.string(),
+  "dueOn": zod.string().nullable(),
+  "revision": zod.number().int(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "evidence": zod.array(zod.object({
+  "id": zod.number().int(),
+  "code": zod.string(),
+  "title": zod.string(),
+  "note": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "documents": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "category": zod.string(),
+  "description": zod.string(),
+  "version": zod.number().int(),
+  "contentType": zod.string(),
+  "size": zod.number().int(),
+  "status": zod.string(),
+  "scanStatus": zod.string(),
+  "createdAt": zod.string()
+}).describe('Metadata reference only, never file bytes, object paths or signed URLs'))
+}),
+  "snapshotHash": zod.string().regex(previewWorkroomReviewResponseSnapshotHashRegExp),
+  "latestReviewId": zod.string().nullable()
+})
+
+
+
+
+
 export const GetWorkroomParams = zod.object({
   "id": zod.coerce.number().int().min(1)
 })
