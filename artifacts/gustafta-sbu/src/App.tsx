@@ -84,21 +84,34 @@ const roleOptions = [
   { value: 'profesional', title: 'Profesional', text: 'Kenali alur dan rujukan regulasi. Ruang kerja kasus belum tersedia untuk peran ini.' },
   { value: 'asosiasi', title: 'Asosiasi', text: 'Akses ringkasan regulasi. Akses bersama anggota belum tersedia.' },
 ] as const;
-export function ProfileForm({ profile, onboarding = false }: { profile?: Profile; onboarding?: boolean }) {
+export function ProfileForm({ profile, onboarding = false, onSaveStart, onSaved }: { profile?: Profile; onboarding?: boolean; onSaveStart?: () => void; onSaved?: () => void }) {
   const qc = useQueryClient(); const [, navigate] = useLocation();
   const [role, setRole] = useState<ProfileInput['role']>(profile?.role !== 'belum_dipilih' && profile?.role ? profile.role : 'kontraktor');
   const [name, setName] = useState(profile?.displayName || '');
   const [organization, setOrganization] = useState(profile?.organizationName || '');
   const mutation = useUpdateMe(useFormMutationOptions());
   const nameValid = hasVisibleNameCharacter(name);
-  const submit = (e: FormEvent) => { e.preventDefault(); if (!nameValid || mutation.isPending) return; mutation.mutate({ data: { role, displayName: name.trim(), organizationName: organization.trim() } }, { onSuccess: (data) => { qc.setQueryData(getGetMeQueryKey(), data); if (onboarding) navigate('/dashboard'); } }); };
+  const submit = (e: FormEvent) => { e.preventDefault(); if (!nameValid || mutation.isPending) return; onSaveStart?.(); mutation.mutate({ data: { role, displayName: name.trim(), organizationName: organization.trim() } }, { onSuccess: (data) => { onSaved?.(); qc.setQueryData(getGetMeQueryKey(), data); if (onboarding) navigate('/dashboard'); } }); };
   return <form onSubmit={submit} className="space-y-6">
     <div><div className="mb-3 text-xs font-bold text-[#2b4159]">Peran Anda</div><div className="grid gap-2 sm:grid-cols-2">{roleOptions.map(item => <button type="button" key={item.value} data-testid={`button-role-${item.value}`} onClick={() => setRole(item.value)} className={`rounded-xl border p-4 text-left transition-colors ${role === item.value ? 'border-[#1769d1] bg-[#eaf4ff] ring-1 ring-[#1769d1]' : 'border-[#d1dfe9] bg-white hover:bg-[#f4f9fc]'}`}><span className="flex items-center justify-between font-bold text-sm">{item.title}{role === item.value && <Check size={16} className="text-[#1769d1]" />}</span><span className="mt-1.5 block text-xs leading-relaxed text-[#647b90]">{item.text}</span></button>)}</div></div>
     <div className="grid gap-4 sm:grid-cols-2"><Field label="Nama tampilan"><ProfileNameField value={name} onChange={setName}/></Field><Field label="Nama organisasi"><input data-testid="input-organization" className="field" maxLength={160} value={organization} onChange={e => setOrganization(e.target.value)} placeholder="Opsional" /></Field></div>
     {mutation.isError && <p role="alert" className="text-sm text-[#b34442]">{errText(mutation.error)}</p>}
-    {mutation.isSuccess && !onboarding && <p role="status" className="text-sm font-semibold text-[#19745f]">Profil berhasil disimpan.</p>}
+    {mutation.isSuccess && !onboarding && !onSaved && <p role="status" className="text-sm font-semibold text-[#19745f]">Profil berhasil disimpan.</p>}
     <button data-testid="button-save-profile" disabled={mutation.isPending || !nameValid} className="btn btn-primary w-full sm:w-auto">{mutation.isPending ? 'Menyimpan...' : onboarding ? 'Masuk ke ruang kerja' : 'Simpan perubahan'} <ArrowRight size={16} /></button>
   </form>;
+}
+
+// Keep feedback outside the value-keyed draft, but reset both for a new owner.
+export function SettingsProfileForm({ profile }: { profile: Profile }) {
+  return <SettingsProfileDraft key={profile.userId} profile={profile}/>;
+}
+
+function SettingsProfileDraft({ profile }: { profile: Profile }) {
+  const [saved, setSaved] = useState(false);
+  return <>
+    <ProfileForm key={JSON.stringify([profile.role, profile.displayName, profile.organizationName])} profile={profile} onSaveStart={() => setSaved(false)} onSaved={() => setSaved(true)}/>
+    {saved && <p role="status" className="mt-4 text-sm font-semibold text-[#19745f]">Profil berhasil disimpan.</p>}
+  </>;
 }
 
 function PublicHome() { return <div className="min-h-[100dvh] bg-[#eef5fa]">
@@ -185,7 +198,7 @@ function CaseDetailPage({ profile }: { profile: Profile }) {
   {editOpen && <Modal title="Ubah kasus" close={() => setEditOpen(false)}><CaseForm initial={c} close={() => setEditOpen(false)} onDone={() => setEditOpen(false)}/></Modal>}
   {confirm && <Modal title="Hapus kasus ini?" close={() => setConfirm(false)}><p className="text-sm leading-7 text-[#567088]">Kasus beserta seluruh catatan bukti, daftar periksa, tindak lanjut, catatan kerjanya, serta keputusan tinjauan internal beserta snapshot-nya akan dihapus permanen. Kasus yang masih memiliki dokumen asli tidak dapat dihapus; hapus permanen semua dokumennya terlebih dahulu.</p>{remove.error && <p role="alert" className="mt-4 text-sm text-[#b34442]">{errText(remove.error)}</p>}<div className="mt-6 flex justify-end gap-2"><button data-testid="button-cancel-delete" onClick={() => setConfirm(false)} className="btn btn-outline">Batal</button><button data-testid="button-confirm-delete" disabled={remove.isPending} onClick={deleteConfirmed} className="btn btn-danger">{remove.isPending ? 'Menghapus...' : 'Ya, hapus'}</button></div></Modal>}</>;
 }
-function SettingsPage({ profile }: { profile: Profile }) { return <><PageHead kicker="AKUN / PENGATURAN" title="Profil ruang kerja" description="Perbarui identitas dan peran Anda. Perubahan peran memengaruhi fitur yang tersedia, bukan memberikan akses ke data pengguna lain."/><div className="grid gap-6 lg:grid-cols-[1.3fr_.7fr]"><section className="surface p-6 sm:p-8"><h2 className="display mb-6 text-xl font-extrabold">Informasi profil</h2><ProfileForm key={`${profile.role}-${profile.displayName}-${profile.organizationName}`} profile={profile}/></section><aside className="rounded-2xl bg-[#dceefa] p-6"><ShieldCheck className="text-[#1769d1]" size={27}/><h3 className="display mt-8 text-xl font-extrabold">Peran, bukan izin lintas akun.</h3><p className="mt-3 text-sm leading-7 text-[#486a82]">Kasus SBU hanya tersedia untuk peran kontraktor dan konsultan. Profesional dan asosiasi dapat membaca regulasi, tanpa akses bersama atau fitur yang belum tersedia.</p></aside></div><WorkspaceFoundation expectedUserId={profile.userId}/></>; }
+function SettingsPage({ profile }: { profile: Profile }) { return <><PageHead kicker="AKUN / PENGATURAN" title="Profil ruang kerja" description="Perbarui identitas dan peran Anda. Perubahan peran memengaruhi fitur yang tersedia, bukan memberikan akses ke data pengguna lain."/><div className="grid gap-6 lg:grid-cols-[1.3fr_.7fr]"><section className="surface p-6 sm:p-8"><h2 className="display mb-6 text-xl font-extrabold">Informasi profil</h2><SettingsProfileForm profile={profile}/></section><aside className="rounded-2xl bg-[#dceefa] p-6"><ShieldCheck className="text-[#1769d1]" size={27}/><h3 className="display mt-8 text-xl font-extrabold">Peran, bukan izin lintas akun.</h3><p className="mt-3 text-sm leading-7 text-[#486a82]">Kasus SBU hanya tersedia untuk peran kontraktor dan konsultan. Profesional dan asosiasi dapat membaca regulasi, tanpa akses bersama atau fitur yang belum tersedia.</p></aside></div><WorkspaceFoundation expectedUserId={profile.userId}/></>; }
 function NotFoundPage() { return <div className="grid min-h-[100dvh] place-items-center bg-[#eaf3fa] px-5"><div className="max-w-md text-center"><div className="mono text-sm text-[#1769d1]">404 / HALAMAN TIDAK DITEMUKAN</div><h1 className="display mt-5 text-4xl font-extrabold">Jalurnya tidak ada di sini.</h1><p className="mt-4 text-sm leading-7 text-[#60798e]">Alamat yang Anda tuju mungkin berubah. Kembali ke awal untuk melanjutkan.</p><Link href="/" data-testid="link-home-404" className="btn btn-primary mt-6">Ke beranda <ArrowRight size={16}/></Link></div></div>; }
 
 function AccountRoutes() {

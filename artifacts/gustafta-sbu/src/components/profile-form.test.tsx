@@ -7,7 +7,7 @@ import { Window as HappyWindow } from 'happy-dom';
 import { createServer } from 'vite';
 import { Router } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
-import { getGetMeQueryKey, type Profile } from '@workspace/api-client-react';
+import { getGetMeQueryKey, useGetMe, type Profile } from '@workspace/api-client-react';
 
 // Load App through Vite, just as production does (aliases, JSX and import.meta.env).
 // The public key below is a synthetic fixture; no Clerk provider is mounted and
@@ -39,9 +39,138 @@ test('formulir profil lengkap menjaga nama Unicode pada onboarding dan pengatura
     },
   });
   try {
-    const { ProfileForm } = await server.ssrLoadModule('/src/App.tsx') as typeof import('../App');
+    const { ProfileForm, SettingsProfileForm } = await server.ssrLoadModule('/src/App.tsx') as typeof import('../App');
     // Both modules must share Vite's instance of the form-owner context.
     const { AccountQueries } = await server.ssrLoadModule('/src/components/account-queries.tsx') as typeof import('./account-queries');
+    await t.test('konfirmasi bertahan setelah cache meremount draf, bukan setelah penolakan atau pergantian akun', async () => {
+      let stored: Profile = {
+        userId: 'settings-owner-a', displayName: 'Nama awal',
+        role: 'kontraktor', organizationName: 'Organisasi awal',
+      };
+      let reject = false;
+      let delay = false;
+      let finishRequest: (() => void) | undefined;
+      const requests: RequestInit[] = [];
+      globals.fetch = async (url, init) => {
+        assert.equal(url, '/api/me');
+        assert.equal(new Headers(init?.headers).get('X-SBU-Form-Owner'), stored.userId);
+        if (init?.method !== 'PATCH') return Response.json(stored);
+        requests.push(init);
+        if (delay) await new Promise<void>(resolve => { finishRequest = resolve; });
+        if (reject) return Response.json({ error: 'Perubahan ditolak' }, { status: 403 });
+        stored = { ...stored, ...JSON.parse(String(init.body)) };
+        return Response.json(stored);
+      };
+      let client!: ReturnType<typeof useQueryClient>;
+      function Settings({ owner }: { owner: string }) {
+        client = useQueryClient();
+        const me = useGetMe({ request: { headers: { 'X-SBU-Form-Owner': owner } } });
+        return me.data ? createElement(SettingsProfileForm, { profile: me.data }) : null;
+      }
+      const container = window.document.createElement('div');
+      window.document.body.appendChild(container);
+      const root = createRoot(container as unknown as HTMLElement);
+      const render = async (owner: string) => {
+        await act(async () => {
+          root.render(createElement(AccountQueries, {
+            key: owner, userId: owner,
+            children: createElement(Router, {
+              hook: (): [string, () => void] => ['/settings', () => {}],
+              children: createElement(Settings, { owner }),
+            }),
+          }));
+        });
+      };
+      const waitFor = async (predicate: () => boolean) => {
+        const deadline = Date.now() + 2000;
+        while (!predicate()) {
+          assert.ok(Date.now() < deadline, 'tampilan pengaturan harus selesai diperbarui');
+          await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+        }
+      };
+      const input = (id: string) => {
+        const element = container.querySelector(`[data-testid="${id}"]`);
+        assert.ok(element instanceof window.HTMLInputElement);
+        return element;
+      };
+      const setInput = async (id: string, value: string) => {
+        await act(async () => {
+          const element = input(id);
+          Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!.call(element, value);
+          element.dispatchEvent(new window.Event('input', { bubbles: true }));
+        });
+      };
+      const click = async (id: string) => {
+        await act(async () => {
+          const button = container.querySelector(`[data-testid="${id}"]`);
+          assert.ok(button instanceof window.HTMLButtonElement);
+          button.click();
+        });
+      };
+      const status = () => container.querySelector('[role="status"]');
+      try {
+        await render(stored.userId);
+        await waitFor(() => !!container.querySelector('form'));
+        assert.equal(status(), null);
+        for (const change of ['name', 'organization', 'role']) {
+          const oldForm = container.querySelector('form');
+          if (change === 'name') await setInput('input-display-name', '  Nama baru  ');
+          if (change === 'organization') await setInput('input-organization', '  Organisasi baru  ');
+          if (change === 'role') await click('button-role-konsultan');
+          await click('button-save-profile');
+          await waitFor(() => !client.isMutating() && !!status());
+          assert.equal(status()?.textContent, 'Profil berhasil disimpan.');
+          assert.notEqual(container.querySelector('form'), oldForm, 'respons baru tetap mengisi ulang draf');
+          assert.equal(input('input-display-name').value, stored.displayName);
+          assert.equal(input('input-organization').value, stored.organizationName);
+          assert.deepEqual(client.getQueryData(getGetMeQueryKey()), stored);
+          assert.equal(stored.role, change === 'role' ? 'konsultan' : 'kontraktor');
+        }
+        assert.equal(stored.displayName, 'Nama baru');
+        assert.equal(stored.organizationName, 'Organisasi baru');
+        assert.equal(requests.length, 3);
+        // A fresh read must retain the server's saved values and the confirmation.
+        await act(async () => { await client.refetchQueries({ queryKey: getGetMeQueryKey() }); });
+        assert.equal(input('input-display-name').value, 'Nama baru');
+        assert.ok(status());
+
+        reject = true;
+        delay = true;
+        const saved = { ...stored };
+        await setInput('input-display-name', 'Nama ditolak');
+        await click('button-save-profile');
+        await waitFor(() => !!finishRequest);
+        assert.equal(status(), null, 'konfirmasi lama hilang saat mulai menyimpan lagi');
+        await act(async () => { finishRequest!(); });
+        await waitFor(() => !!container.querySelector('[role="alert"]'));
+        assert.equal(status(), null, 'respons ditolak tidak boleh menampilkan sukses');
+        assert.deepEqual(stored, saved);
+        assert.deepEqual(client.getQueryData(getGetMeQueryKey()), saved);
+
+        reject = false;
+        delay = false;
+        await click('button-save-profile');
+        await waitFor(() => !!status());
+        // Even a direct owner-prop change must discard feedback and old inputs.
+        await act(async () => {
+          client.setQueryData(getGetMeQueryKey(), { ...stored, userId: 'settings-owner-b', displayName: 'Nama akun B' });
+        });
+        await waitFor(() => input('input-display-name').value === 'Nama akun B');
+        assert.equal(status(), null);
+        // The normal identity-keyed cache boundary must do the same.
+        stored = { ...stored, userId: 'settings-owner-b', displayName: 'Nama akun B' };
+        await render(stored.userId);
+        await waitFor(() => !!container.querySelector('form'));
+        assert.equal(input('input-display-name').value, 'Nama akun B');
+        assert.equal(status(), null);
+        await click('button-save-profile');
+        await waitFor(() => !!status());
+        assert.equal(new Headers(requests.at(-1)?.headers).get('X-SBU-Form-Owner'), 'settings-owner-b');
+      } finally {
+        await act(async () => { root.unmount(); });
+        container.remove();
+      }
+    });
     for (const onboarding of [true, false]) {
       for (const joinedName of ['می\u200cنا', 'क्\u200dष']) {
         await t.test(`${onboarding ? 'onboarding' : 'pengaturan'}: ${JSON.stringify(joinedName)}`, async () => {
