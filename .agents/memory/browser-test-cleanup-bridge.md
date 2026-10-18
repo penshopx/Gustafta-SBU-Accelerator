@@ -31,3 +31,16 @@ from its output directory. Discovering that after seeding leaves avoidable fixtu
 **How to apply:** Treat the empty run as a dependency-loading check, not proof of
 Clerk delete permissions or successful cleanup. Real scoped cleanup still needs
 its own result and remaining-fixture checks.
+
+Stage exact synthetic fixture emails privately before attempting sign-in, not
+only in a runner's final cleanup. Keep each browser-notebook action below its
+execution limit by running independently cleanable scenarios separately.
+
+**Why:** A notebook worker can reset at its action timeout without completing
+the runner's `finally`, losing in-memory cleanup scope and intermediate results.
+Account creation can succeed even when its sign-in navigation has not finished.
+
+**How to apply:** Checkpoint the scoped cleanup handoff before creating accounts,
+update it after owner discovery, and remove it only after successful host-side
+cleanup. Wait explicitly for the real shared session cookie after sign-in;
+navigation completion alone does not establish that the ticket exchange finished.

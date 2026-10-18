@@ -91,3 +91,41 @@ be rejected by the owner precondition with 409 before resource access.
 Save only the returned sanitized observations plus browser/version and runner
 date in `run-report.json`. Do not save URLs containing sign-in tokens, cookie
 values, Clerk IDs, emails, database snapshots, or temporary fixture IDs.
+
+## Same-account session renewal (positive complement)
+
+`same-account-session.browser.mjs` exports `runSameAccountSessionRegression`.
+Load it with the same `new Function` recipe and pass the same callbacks. For
+this runner, `snapshotOwners` must accept **one** distinct synthetic owner,
+not the two-owner assertion in the older notebook recipe; keep all six snapshot
+queries and their ordering unchanged. Use the existing scoped cleanup CLI
+above, including an empty-fixture dependency-loading check before creating users.
+Its exact email allowlist already supports all four scenarios in this runner.
+
+For notebooks with a per-action execution limit, invoke the runner once per
+scenario using `scenarios: ["profile"]` (then `case-create`, `evidence-create`,
+`evidence-edit`), performing scoped cleanup after each action. Default execution
+still includes all four. Supply `checkpointFixtures` to write the same private,
+mode-0600 fixture handoff **before sign-in** and after recording the owner.
+Unlike `cleanupOwners`, checkpointing only stages data; it must not delete it.
+This preserves exact-email cleanup scope even if the notebook worker resets
+before `finally` executes. Remove the handoff only after successful CLI cleanup.
+
+Each scenario opens an A-owned draft, then signs the **same** synthetic user in
+again in tab B. The real shared `__session` cookie must carry a different
+session ID but the same user ID. A retains its document and draft while the
+same notification/SDK fault injection is armed. A blocked storage event is
+forced by removing and restoring the account key (setting the same value alone
+would not emit an event); actual blocked storage and channel deliveries are
+required. No SBU response, cookie jar, mutation header, or server is mocked.
+
+The old profile/case/evidence-create/evidence-edit form must submit its original
+A owner header without bearer authentication, receive exactly 200/201, show the
+saved value without reloading A, and persist it in both a real API read and a
+scoped database snapshot. Profile organization and evidence notes are also
+checked. The shared jar must still hold the renewed session after saving.
+This tests neither BFCache nor SDK refresh. It requires no application change.
+
+Save only sanitized observations, browser/version, run date, and cleanup counts
+in `same-account-session.run-report.json`. Session IDs/claims and fixture data
+must remain in memory or the private temporary cleanup handoff, never reports.

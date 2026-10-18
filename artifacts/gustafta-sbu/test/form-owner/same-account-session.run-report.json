@@ -1,0 +1,162 @@
+{
+  "runner": "same-account-session.browser.mjs",
+  "sourceLoadedFromWorkspace": true,
+  "executionMode": "one scenario per notebook action",
+  "targetedScenarioInvocations": 4,
+  "browser": {
+    "name": "Chromium",
+    "version": "140.0.7339.16"
+  },
+  "runDate": "2026-10-18",
+  "result": "success",
+  "primaryFailure": null,
+  "scenarios": [
+    {
+      "scenario": "profile",
+      "newSessionSameAccount": true,
+      "ownerHeaderRetained": true,
+      "oldDocumentRetained": true,
+      "status": 200,
+      "visible": true,
+      "apiPersisted": true,
+      "databasePersisted": true,
+      "blockedNotifications": {
+        "storage": 3,
+        "channel": 3
+      },
+      "cleanup": {
+        "cleaned": true,
+        "accounts": 1,
+        "remainingProfiles": 0,
+        "privatePayloadRemoved": true
+      }
+    },
+    {
+      "scenario": "case-create",
+      "newSessionSameAccount": true,
+      "ownerHeaderRetained": true,
+      "oldDocumentRetained": true,
+      "status": 201,
+      "visible": true,
+      "apiPersisted": true,
+      "databasePersisted": true,
+      "blockedNotifications": {
+        "storage": 3,
+        "channel": 3
+      },
+      "cleanup": {
+        "cleaned": true,
+        "accounts": 1,
+        "remainingProfiles": 0,
+        "privatePayloadRemoved": true
+      }
+    },
+    {
+      "scenario": "evidence-create",
+      "newSessionSameAccount": true,
+      "ownerHeaderRetained": true,
+      "oldDocumentRetained": true,
+      "status": 201,
+      "visible": true,
+      "apiPersisted": true,
+      "databasePersisted": true,
+      "blockedNotifications": {
+        "storage": 3,
+        "channel": 3
+      },
+      "cleanup": {
+        "cleaned": true,
+        "accounts": 1,
+        "remainingProfiles": 0,
+        "privatePayloadRemoved": true
+      }
+    },
+    {
+      "scenario": "evidence-edit",
+      "newSessionSameAccount": true,
+      "ownerHeaderRetained": true,
+      "oldDocumentRetained": true,
+      "status": 200,
+      "visible": true,
+      "apiPersisted": true,
+      "databasePersisted": true,
+      "blockedNotifications": {
+        "storage": 3,
+        "channel": 3
+      },
+      "cleanup": {
+        "cleaned": true,
+        "accounts": 1,
+        "remainingProfiles": 0,
+        "privatePayloadRemoved": true
+      }
+    }
+  ],
+  "cleanup": {
+    "emptyPreflight": {
+      "cleaned": true,
+      "accounts": 0,
+      "remainingProfiles": 0
+    },
+    "earlierAttempts": [
+      {
+        "attempt": "initial immediate-cookie failure",
+        "cleaned": true,
+        "accounts": 1,
+        "remainingProfiles": 0,
+        "privatePayloadRemoved": true
+      },
+      {
+        "attempt": "updated-source combined action timeout recovery",
+        "cleaned": true,
+        "accounts": 3,
+        "remainingProfiles": 0,
+        "privatePayloadRemoved": true
+      }
+    ],
+    "targetedScenarioRuns": [
+      {
+        "scenario": "profile",
+        "cleaned": true,
+        "accounts": 1,
+        "remainingProfiles": 0,
+        "privatePayloadRemoved": true
+      },
+      {
+        "scenario": "case-create",
+        "cleaned": true,
+        "accounts": 1,
+        "remainingProfiles": 0,
+        "privatePayloadRemoved": true
+      },
+      {
+        "scenario": "evidence-create",
+        "cleaned": true,
+        "accounts": 1,
+        "remainingProfiles": 0,
+        "privatePayloadRemoved": true
+      },
+      {
+        "scenario": "evidence-edit",
+        "cleaned": true,
+        "accounts": 1,
+        "remainingProfiles": 0,
+        "privatePayloadRemoved": true
+      }
+    ],
+    "totalTargetedAccounts": 4,
+    "totalTargetedRemainingProfiles": 0
+  },
+  "verification": {
+    "realCookieSessionRenewedSameAccount": true,
+    "missedStorageAndChannelNotificationsObserved": true,
+    "oldDraftOwnerHeaderRetained": true,
+    "noBearerAuthorization": true,
+    "expectedMutationStatuses": true,
+    "visibleDraftValues": true,
+    "apiPersistence": true,
+    "databasePersistence": true,
+    "bfcacheOrSdkRefreshTested": false
+  },
+  "screenshots": []
+}
