@@ -23,3 +23,4 @@
 - [Node test child processes](node-test-child-processes.md) — clear inherited runner context and confirm child tests actually ran; exit status zero alone can hide skipped execution.
 - [Validation console formatting](validation-console-formatting.md) — configured checks may force ANSI coloring even for piped subprocesses; normalize CLI messages before assertions.
 - [PDF page isolation](pdf-page-isolation.md) — render selected pixels into a fresh PDF; copying source page objects cannot establish isolation from unselected content.
+- [Route fixture SQL boundaries](route-fixture-sql-boundaries.md) — declaring a SQL expression at import time is not a database query; keep execution blocked in isolated route tests.

@@ -13,15 +13,18 @@ const testDir = fileURLToPath(new URL(".", import.meta.url));
 // Read the source contract, independently of generated Zod schemas and fixtures.
 const openapi = parse(await readFile(join(testDir, "../../../lib/api-spec/openapi.yaml"), "utf8"));
 const profileRef = "#/components/schemas/Profile";
-function createProfileValidator(schemas = openapi.components.schemas) {
+const dashboardRef = "#/components/schemas/Dashboard";
+function createResponseValidator(schemaRef, schemas = openapi.components.schemas) {
   const ajv = new Ajv2020({ allErrors: true });
   addFormats(ajv);
   for (const [name, schema] of Object.entries(schemas)) {
     ajv.addSchema(schema, `#/components/schemas/${name}`);
   }
-  return { ajv, validate: ajv.compile({ $ref: profileRef }) };
+  return { ajv, validate: ajv.compile({ $ref: schemaRef }) };
 }
+const createProfileValidator = (schemas) => createResponseValidator(profileRef, schemas);
 const { ajv: profileAjv, validate: validateProfile } = createProfileValidator();
+const { ajv: dashboardAjv, validate: validateDashboard } = createResponseValidator(dashboardRef);
 const temporaryDir = await mkdtemp(join(testDir, ".sbu-route-test-"));
 after(() => rm(temporaryDir, { recursive: true, force: true }));
 
@@ -205,6 +208,11 @@ await build({
              export const companyProfilesTable = {};
              export const documentsTable = {};
              export const documentAnalysesTable = {};
+             export const consultationsTable = {};
+             export const personnelTable = {};
+             export const skkCertificatesTable = {};
+             export const workroomItemsTable = {};
+             export const workroomReviewsTable = {};
           `,
            "@clerk/express": `export const getAuth = () => ({ userId: globalThis.__routeUserId === undefined ? "test-user" : globalThis.__routeUserId });`,
           "drizzle-orm": `
@@ -213,7 +221,17 @@ await build({
              export const desc = (column) => ({ column, direction: "desc" });
              export const ilike = () => { throw new Error("unexpected vault query"); };
              export const or = () => { throw new Error("unexpected vault query"); };
-             export const sql = () => { throw new Error("unexpected document query"); };
+             export const sql = (strings) => {
+               // These locks are declared at module load, not executed here.
+               if (strings.length === 1 && [
+                 "SELECT pg_advisory_xact_lock_shared(137, 1)",
+                 "SELECT pg_try_advisory_xact_lock(137, 1) AS acquired",
+               ].includes(strings[0])) return Object.freeze({ text: strings[0] });
+               throw new Error("unexpected document query");
+             };
+             export const getTableColumns = () => { throw new Error("unexpected personnel query"); };
+             export const asc = () => { throw new Error("unexpected workroom query"); };
+             export const inArray = () => { throw new Error("unexpected workroom query"); };
           `,
         })[args.path],
         loader: "js",
@@ -239,6 +257,12 @@ async function request(server, path, options) {
   });
   const raw = await response.text();
   const body = raw && response.headers.get("content-type")?.includes("application/json") ? JSON.parse(raw) : null;
+  if (path === "/api/dashboard" && (options?.method ?? "GET").toUpperCase() === "GET" && response.status === 200) {
+    assert.equal(openapi.paths["/dashboard"].get.responses["200"].content["application/json"].schema.$ref,
+      dashboardRef, "GET /api/dashboard harus menggunakan kontrak Dashboard");
+    assert.ok(validateDashboard(body),
+      `GET /api/dashboard tidak sesuai OpenAPI Dashboard: ${dashboardAjv.errorsText(validateDashboard.errors)}`);
+  }
   if (path === "/api/me" && response.status === 200) {
     const method = (options?.method ?? "GET").toLowerCase();
     assert.equal(openapi.paths["/me"][method].responses["200"].content["application/json"].schema.$ref,
@@ -981,6 +1005,94 @@ test("GET /api/cases mempertahankan urutan ID untuk waktu pembaruan yang sama", 
         "tanggal terbaru lebih dulu; pada tanggal sama ID terbesar lebih dulu");
       globalThis.__routeCaseRows.reverse();
     }
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+  }
+});
+
+test("validasi Dashboard dari OpenAPI menolak field hilang, tipe salah dan struktur recent rusak", async () => {
+  globalThis.__routeCaseRows = [{
+    id: 401, ownerId: "test-user", companyName: "Kontrak Dashboard",
+    requestType: "perpanjangan", qualification: "kecil", classification: "gedung",
+    status: "draf", existingSbuExpiresOn: null,
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  }];
+  const server = app.listen(0);
+  try {
+    // Mutate actual HTTP JSON, not a duplicate of the generated response schema.
+    const { status, body, raw } = await request(server, "/api/dashboard");
+    assert.equal(status, 200, raw);
+    assert.equal(body.recent.length, 1);
+    const rejects = (value, keyword, instancePath, missingProperty) => {
+      assert.equal(validateDashboard(value), false, `harus menolak ${JSON.stringify(value)}`);
+      assert.ok(validateDashboard.errors.some((error) =>
+        error.keyword === keyword && error.instancePath === instancePath &&
+        (missingProperty === undefined || error.params.missingProperty === missingProperty)),
+      dashboardAjv.errorsText(validateDashboard.errors));
+    };
+    for (const value of [null, [], "dashboard"]) rejects(value, "type", "");
+    for (const field of openapi.components.schemas.Dashboard.required) {
+      const missing = structuredClone(body);
+      delete missing[field];
+      rejects(missing, "required", "", field);
+    }
+    for (const field of ["total", "draft", "reviewing", "prepared"]) {
+      for (const value of ["1", null, true, [], {}, 1.5]) {
+        rejects({ ...body, [field]: value }, "type", `/${field}`);
+      }
+    }
+    for (const value of [null, {}, "recent", 1]) {
+      rejects({ ...body, recent: value }, "type", "/recent");
+    }
+    for (const value of [null, [], "case", 1]) {
+      rejects({ ...body, recent: [value] }, "type", "/recent/0");
+    }
+    const item = body.recent[0];
+    for (const field of openapi.components.schemas.SbuCase.required) {
+      const missing = structuredClone(item);
+      delete missing[field];
+      rejects({ ...body, recent: [missing] }, "required", "/recent/0", field);
+    }
+    for (const field of Object.keys(openapi.components.schemas.SbuCase.properties)) {
+      // An object is invalid for every scalar field, including optional clientId
+      // and nullable existingSbuExpiresOn.
+      rejects({ ...body, recent: [{ ...item, [field]: {} }] }, "type", `/recent/0/${field}`);
+    }
+    rejects({ ...body, recent: [{ ...item, id: "401" }] }, "type", "/recent/0/id");
+    for (const field of ["requestType", "qualification", "status"]) {
+      rejects({ ...body, recent: [{ ...item, [field]: "tidak-dikenal" }] }, "enum", `/recent/0/${field}`);
+    }
+    for (const field of ["createdAt", "updatedAt", "existingSbuExpiresOn"]) {
+      rejects({ ...body, recent: [{ ...item, [field]: "bukan-tanggal" }] }, "format", `/recent/0/${field}`);
+    }
+    assert.ok(validateDashboard({ ...body, recent: [{ ...item, existingSbuExpiresOn: null }] }),
+      dashboardAjv.errorsText(validateDashboard.errors));
+    assert.ok(validateDashboard({ ...body, recent: [{ ...item, existingSbuExpiresOn: "2027-04-15" }] }),
+      dashboardAjv.errorsText(validateDashboard.errors));
+
+    // Specification drift must fail even while generated code and manual count
+    // assertions still agree with the old response.
+    const addedField = structuredClone(openapi.components.schemas);
+    addedField.Dashboard.required.push("contractRevision");
+    addedField.Dashboard.properties.contractRevision = { type: "integer" };
+    const addedValidator = createResponseValidator(dashboardRef, addedField).validate;
+    assert.equal(addedValidator(body), false, "field wajib baru Dashboard harus terdeteksi");
+    assert.ok(addedValidator({ ...body, contractRevision: 1 }));
+
+    const changedType = structuredClone(openapi.components.schemas);
+    changedType.Dashboard.properties.total = { type: "string" };
+    const changedValidator = createResponseValidator(dashboardRef, changedType).validate;
+    assert.equal(changedValidator(body), false, "perubahan tipe Dashboard harus terdeteksi");
+    assert.ok(changedValidator({ ...body, total: String(body.total) }));
+
+    const changedItem = structuredClone(openapi.components.schemas);
+    changedItem.SbuCase.required.push("contractRevision");
+    changedItem.SbuCase.properties.contractRevision = { type: "integer" };
+    const itemValidator = createResponseValidator(dashboardRef, changedItem).validate;
+    assert.equal(itemValidator(body), false, "perubahan kontrak item recent harus terdeteksi melalui $ref");
+    assert.ok(itemValidator({ ...body, recent: [{ ...item, contractRevision: 1 }] }));
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__routeCaseRows;
