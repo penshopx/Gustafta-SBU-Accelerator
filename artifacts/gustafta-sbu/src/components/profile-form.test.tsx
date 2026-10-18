@@ -42,6 +42,127 @@ test('formulir profil lengkap menjaga nama Unicode pada onboarding dan pengatura
     const { ProfileForm, SettingsProfileForm } = await server.ssrLoadModule('/src/App.tsx') as typeof import('../App');
     // Both modules must share Vite's instance of the form-owner context.
     const { AccountQueries } = await server.ssrLoadModule('/src/components/account-queries.tsx') as typeof import('./account-queries');
+    for (const onboarding of [true, false]) {
+      for (const trigger of ['click', 'Enter'] as const) {
+        await t.test(`${onboarding ? 'onboarding' : 'pengaturan'}: ${trigger} berulang selama PATCH tertahan hanya menyimpan sekali`, async () => {
+          const profile: Profile = {
+            userId: 'pending-profile-owner', displayName: 'Nama awal',
+            role: onboarding ? 'belum_dipilih' : 'konsultan', organizationName: 'Organisasi uji',
+          };
+          const requests: RequestInit[] = [];
+          const navigations: string[] = [];
+          let starts = 0;
+          let saves = 0;
+          let saved: Profile | undefined;
+          let release!: () => void;
+          const responseGate = new Promise<void>(resolve => { release = resolve; });
+          globals.fetch = async (url, init) => {
+            assert.equal(url, '/api/me', 'tidak boleh mengakses layanan luar');
+            assert.equal(init?.method, 'PATCH');
+            assert.equal(new Headers(init.headers).get('X-SBU-Form-Owner'), profile.userId);
+            requests.push(init);
+            await responseGate;
+            saved = { ...profile, ...JSON.parse(String(init.body)) };
+            return Response.json(saved);
+          };
+          let client!: ReturnType<typeof useQueryClient>;
+          function Form() {
+            client = useQueryClient();
+            return createElement(ProfileForm, {
+              profile, onboarding,
+              onSaveStart: () => { starts++; },
+              onSaved: () => { saves++; },
+            });
+          }
+          const container = window.document.createElement('div');
+          window.document.body.appendChild(container);
+          const root = createRoot(container as unknown as HTMLElement);
+          const button = () => {
+            const element = container.querySelector('[data-testid="button-save-profile"]');
+            assert.ok(element instanceof window.HTMLButtonElement);
+            return element;
+          };
+          const field = () => {
+            const element = container.querySelector('[data-testid="input-display-name"]');
+            assert.ok(element instanceof window.HTMLInputElement);
+            return element;
+          };
+          const form = () => {
+            const element = container.querySelector('form');
+            assert.ok(element instanceof window.HTMLFormElement);
+            return element;
+          };
+          const enter = () => {
+            field().dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+            // Happy DOM has no implicit Enter submission. Exercise its resulting
+            // submit event even when a browser would block a disabled submitter.
+            form().requestSubmit();
+            field().dispatchEvent(new window.KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+          };
+          const waitFor = async (predicate: () => boolean) => {
+            const deadline = Date.now() + 2000;
+            while (!predicate()) {
+              assert.ok(Date.now() < deadline, 'penyimpanan profil harus mencapai keadaan yang diharapkan');
+              await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+            }
+          };
+          try {
+            await act(async () => {
+              root.render(createElement(AccountQueries, {
+                userId: profile.userId,
+                children: createElement(Router, {
+                  hook: () => [onboarding ? '/onboarding' : '/settings', path => navigations.push(path)],
+                  children: createElement(Form),
+                }),
+              }));
+            });
+            await act(async () => {
+              client.setQueryData(getGetMeQueryKey(), profile);
+              Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!.call(field(), '  Nama baru  ');
+              field().dispatchEvent(new window.Event('input', { bubbles: true }));
+            });
+            assert.equal(button().disabled, false);
+            await act(async () => {
+              if (trigger === 'click') button().click();
+              else enter();
+              // Include submissions before React has committed isPending.
+              button().click();
+              enter();
+              enter();
+            });
+            await waitFor(() => requests.length > 0 && button().disabled);
+            assert.equal(client.isMutating(), 1);
+            assert.equal(button().disabled, true, 'isPending menonaktifkan tombol');
+            assert.match(button().textContent!, /Menyimpan\.\.\./);
+            for (let attempt = 0; attempt < 3; attempt++) {
+              await act(async () => { button().click(); enter(); });
+            }
+            assert.equal(requests.length, 1, 'klik dan Enter tidak boleh menambah PATCH tertahan');
+            assert.equal(starts, 1);
+            assert.equal(saves, 0, 'belum ada penyimpanan berhasil sebelum respons');
+            assert.equal(saved, undefined);
+            assert.deepEqual(client.getQueryData(getGetMeQueryKey()), profile);
+            assert.deepEqual(navigations, [], 'tidak boleh navigasi sebelum respons');
+            await act(async () => { release(); });
+            await waitFor(() => !client.isMutating() && !button().disabled && saves === 1);
+            assert.equal(requests.length, 1);
+            assert.equal(starts, 1);
+            assert.equal(saves, 1, 'respons sukses hanya memanggil penyimpanan sekali');
+            assert.deepEqual(saved, {
+              ...profile, displayName: 'Nama baru', role: onboarding ? 'kontraktor' : 'konsultan',
+            });
+            assert.deepEqual(client.getQueryData(getGetMeQueryKey()), saved);
+            assert.deepEqual(navigations, onboarding ? ['/dashboard'] : []);
+            assert.equal(container.querySelector('[role="alert"]'), null);
+            assert.match(button().textContent!, onboarding ? /Masuk ke ruang kerja/ : /Simpan perubahan/);
+          } finally {
+            await act(async () => { release(); });
+            await act(async () => { root.unmount(); });
+            container.remove();
+          }
+        });
+      }
+    }
     await t.test('konfirmasi bertahan setelah cache meremount draf, bukan setelah penolakan atau pergantian akun', async () => {
       let stored: Profile = {
         userId: 'settings-owner-a', displayName: 'Nama awal',

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ClerkProvider, SignIn, SignUp, Show, useClerk, useAuth } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
@@ -90,8 +90,23 @@ export function ProfileForm({ profile, onboarding = false, onSaveStart, onSaved 
   const [name, setName] = useState(profile?.displayName || '');
   const [organization, setOrganization] = useState(profile?.organizationName || '');
   const mutation = useUpdateMe(useFormMutationOptions());
+  const saving = useRef(false);
   const nameValid = hasVisibleNameCharacter(name);
-  const submit = (e: FormEvent) => { e.preventDefault(); if (!nameValid || mutation.isPending) return; onSaveStart?.(); mutation.mutate({ data: { role, displayName: name.trim(), organizationName: organization.trim() } }, { onSuccess: (data) => { onSaved?.(); qc.setQueryData(getGetMeQueryKey(), data); if (onboarding) navigate('/dashboard'); } }); };
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!nameValid || saving.current || mutation.isPending) return;
+    // Block same-tick submissions before isPending has reached the next render.
+    saving.current = true;
+    onSaveStart?.();
+    mutation.mutate({ data: { role, displayName: name.trim(), organizationName: organization.trim() } }, {
+      onSuccess: (data) => {
+        onSaved?.();
+        qc.setQueryData(getGetMeQueryKey(), data);
+        if (onboarding) navigate('/dashboard');
+      },
+      onSettled: () => { saving.current = false; },
+    });
+  };
   return <form onSubmit={submit} className="space-y-6">
     <div><div className="mb-3 text-xs font-bold text-[#2b4159]">Peran Anda</div><div className="grid gap-2 sm:grid-cols-2">{roleOptions.map(item => <button type="button" key={item.value} data-testid={`button-role-${item.value}`} onClick={() => setRole(item.value)} className={`rounded-xl border p-4 text-left transition-colors ${role === item.value ? 'border-[#1769d1] bg-[#eaf4ff] ring-1 ring-[#1769d1]' : 'border-[#d1dfe9] bg-white hover:bg-[#f4f9fc]'}`}><span className="flex items-center justify-between font-bold text-sm">{item.title}{role === item.value && <Check size={16} className="text-[#1769d1]" />}</span><span className="mt-1.5 block text-xs leading-relaxed text-[#647b90]">{item.text}</span></button>)}</div></div>
     <div className="grid gap-4 sm:grid-cols-2"><Field label="Nama tampilan"><ProfileNameField value={name} onChange={setName}/></Field><Field label="Nama organisasi"><input data-testid="input-organization" className="field" maxLength={160} value={organization} onChange={e => setOrganization(e.target.value)} placeholder="Opsional" /></Field></div>
