@@ -73,10 +73,20 @@ export function clerkProxyMiddleware(): RequestHandler {
       // assets) and body-less responses stream through without buffering.
       proxyRes: (proxyRes, req, res) => {
         const headers = { ...proxyRes.headers };
-        // Transfer-Encoding/Connection are hop-by-hop (RFC 7230 §6.1).
-        delete headers['transfer-encoding'];
-        delete headers['connection'];
-        delete headers['keep-alive'];
+        // Strip transport metadata, including extension headers nominated by
+        // Connection (RFC 9110 §7.6.1). In particular, Trailer cannot accompany
+        // the Content-Length we add below for a buffered response.
+        const connection = proxyRes.headers.connection;
+        for (const name of (Array.isArray(connection) ? connection.join(',') : connection ?? '').split(',')) {
+          delete headers[name.trim().toLowerCase()];
+        }
+        for (const name of [
+          'transfer-encoding', 'connection', 'keep-alive',
+          'proxy-authenticate', 'proxy-authorization', 'proxy-connection',
+          'te', 'trailer', 'upgrade',
+        ]) {
+          delete headers[name];
+        }
 
         const status = proxyRes.statusCode ?? 502;
         // Content-Length is forbidden on 1xx/204; HEAD/304 may keep theirs.
