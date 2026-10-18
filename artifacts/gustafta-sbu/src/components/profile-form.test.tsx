@@ -163,6 +163,140 @@ test('formulir profil lengkap menjaga nama Unicode pada onboarding dan pengatura
         });
       }
     }
+    for (const onboarding of [true, false]) {
+      for (const failure of ['network', '503'] as const) {
+        await t.test(`${onboarding ? 'onboarding' : 'pengaturan'}: isian utuh dan retry berhasil setelah ${failure}`, async () => {
+          const profile: Profile = {
+            userId: 'retry-profile-owner', displayName: onboarding ? '' : 'Nama awal',
+            role: onboarding ? 'belum_dipilih' : 'kontraktor', organizationName: 'Organisasi awal',
+          };
+          const draft = {
+            displayName: 'می\u200cنا क्\u200dष', organizationName: 'Organisasi Nusantara 新',
+            role: 'asosiasi',
+          } as const;
+          const requests: RequestInit[] = [];
+          const navigations: string[] = [];
+          const releases: (() => void)[] = [];
+          globals.fetch = async (url, init) => {
+            assert.equal(url, '/api/me', 'uji tidak boleh mengakses layanan luar');
+            assert.equal(init?.method, 'PATCH');
+            assert.equal(new Headers(init.headers).get('X-SBU-Form-Owner'), profile.userId);
+            requests.push(init);
+            const attempt = requests.length;
+            await new Promise<void>(resolve => { releases.push(resolve); });
+            if (attempt === 1) {
+              if (failure === 'network') throw new TypeError('Failed to fetch');
+              return Response.json({ error: 'Layanan profil sementara tidak tersedia' }, { status: 503 });
+            }
+            assert.equal(attempt, 2, 'retry harus berasal dari satu pengiriman ulang pengguna');
+            return Response.json({ ...profile, ...JSON.parse(String(init.body)) });
+          };
+          let client!: ReturnType<typeof useQueryClient>;
+          function Form() {
+            client = useQueryClient();
+            return createElement(ProfileForm, { profile, onboarding });
+          }
+          const container = window.document.createElement('div');
+          window.document.body.appendChild(container);
+          const root = createRoot(container as unknown as HTMLElement);
+          const input = (id: string) => {
+            const element = container.querySelector(`[data-testid="${id}"]`);
+            assert.ok(element instanceof window.HTMLInputElement);
+            return element;
+          };
+          const button = (id = 'button-save-profile') => {
+            const element = container.querySelector(`[data-testid="${id}"]`);
+            assert.ok(element instanceof window.HTMLButtonElement);
+            return element;
+          };
+          const waitFor = async (predicate: () => boolean) => {
+            const deadline = Date.now() + 2000;
+            while (!predicate()) {
+              assert.ok(Date.now() < deadline, 'formulir harus selesai memproses respons');
+              await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+            }
+          };
+          const assertDraft = () => {
+            assert.equal(input('input-display-name').value, draft.displayName, 'ZWJ/ZWNJ tetap utuh');
+            assert.equal(input('input-organization').value, draft.organizationName);
+            // The selected role is rendered with a check icon; inspect all
+            // options so retaining the default role cannot pass this assertion.
+            for (const role of ['kontraktor', 'konsultan', 'profesional', 'asosiasi']) {
+              assert.equal(!!button(`button-role-${role}`).querySelector('svg'), role === draft.role);
+            }
+          };
+          try {
+            await act(async () => {
+              root.render(createElement(AccountQueries, {
+                userId: profile.userId,
+                children: createElement(Router, {
+                  hook: () => [onboarding ? '/onboarding' : '/settings', path => navigations.push(path)],
+                  children: createElement(Form),
+                }),
+              }));
+            });
+            await act(async () => {
+              client.setQueryData(getGetMeQueryKey(), profile);
+              for (const [id, value] of [
+                ['input-display-name', draft.displayName],
+                ['input-organization', draft.organizationName],
+              ]) {
+                const element = input(id);
+                Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!.call(element, value);
+                element.dispatchEvent(new window.Event('input', { bubbles: true }));
+              }
+              button(`button-role-${draft.role}`).click();
+            });
+            const updatesBeforeSave = client.getQueryState(getGetMeQueryKey())!.dataUpdateCount;
+            const assertNoSuccess = () => {
+              assert.deepEqual(client.getQueryData(getGetMeQueryKey()), profile);
+              assert.equal(client.getQueryState(getGetMeQueryKey())!.dataUpdateCount, updatesBeforeSave,
+                'cache tidak boleh diperbarui sebelum retry sukses');
+              assert.deepEqual(navigations, []);
+              assert.equal(container.querySelector('[role="status"]'), null);
+            };
+            assertDraft();
+            await act(async () => { button().click(); });
+            await waitFor(() => requests.length === 1 && button().disabled);
+            assert.match(button().textContent!, /Menyimpan\.\.\./);
+            assertNoSuccess();
+            await act(async () => { releases[0](); });
+            await waitFor(() => !client.isMutating() && !!container.querySelector('[role="alert"]'));
+            assert.match(container.querySelector('[role="alert"]')!.textContent!,
+              failure === 'network' ? /Failed to fetch/ : /Layanan profil sementara tidak tersedia/);
+            assert.equal(button().disabled, false, 'tombol dapat dipakai lagi setelah gagal');
+            assert.match(button().textContent!, onboarding ? /Masuk ke ruang kerja/ : /Simpan perubahan/);
+            assertDraft();
+            assertNoSuccess();
+            assert.equal(requests.length, 1, 'kegagalan tidak memulai retry otomatis');
+
+            // Retry through the real enabled button without re-entering any field.
+            await act(async () => { button().click(); });
+            await waitFor(() => requests.length === 2 && button().disabled);
+            assert.equal(container.querySelector('[role="alert"]'), null);
+            assertDraft();
+            assertNoSuccess();
+            for (const request of requests) {
+              assert.deepEqual(JSON.parse(String(request.body)), draft, 'kedua PATCH membawa isian yang sama');
+            }
+            await act(async () => { releases[1](); });
+            await waitFor(() => !client.isMutating() && !button().disabled &&
+              (onboarding ? navigations.length === 1 : !!container.querySelector('[role="status"]')));
+            assert.equal(requests.length, 2);
+            assert.deepEqual(client.getQueryData(getGetMeQueryKey()), { ...profile, ...draft });
+            assert.equal(client.getQueryState(getGetMeQueryKey())!.dataUpdateCount, updatesBeforeSave + 1);
+            assert.deepEqual(navigations, onboarding ? ['/dashboard'] : []);
+            assert.equal(container.querySelector('[role="alert"]'), null);
+            if (!onboarding) assert.match(container.querySelector('[role="status"]')!.textContent!, /Profil berhasil disimpan/);
+            assertDraft();
+          } finally {
+            await act(async () => { root.unmount(); });
+            await act(async () => { releases.forEach(release => release()); });
+            container.remove();
+          }
+        });
+      }
+    }
     await t.test('konfirmasi bertahan setelah cache meremount draf, bukan setelah penolakan atau pergantian akun', async () => {
       let stored: Profile = {
         userId: 'settings-owner-a', displayName: 'Nama awal',
