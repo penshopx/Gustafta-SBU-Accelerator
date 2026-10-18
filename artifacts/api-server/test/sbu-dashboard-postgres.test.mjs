@@ -18,8 +18,10 @@ async function request(server, userId, path = "/dashboard", { method = "GET", bo
   const response = await fetch(`http://127.0.0.1:${port}/api${path}`, {
     method,
     headers: {
-      "x-test-user-id": userId,
-      "X-SBU-Form-Owner": userId,
+      ...(userId == null ? {} : {
+        "x-test-user-id": userId,
+        "X-SBU-Form-Owner": userId,
+      }),
       ...(body === undefined ? {} : { "Content-Type": "application/json" }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -151,6 +153,40 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
     app.use(express.json());
     app.use("/api", router);
     server = app.listen(0);
+
+    await t.test("GET daftar dan dashboard tanpa sesi menolak akses tanpa membuat profil atau mengubah data PostgreSQL", async () => {
+      // Compare every column (including full timestamp precision), not only
+      // counts: an upsert or a delete/insert pair must also fail this check.
+      const snapshot = async () => ({
+        profiles: (await isolated.query(
+          "SELECT to_jsonb(p) AS row FROM sbu_profiles p ORDER BY user_id",
+        )).rows,
+        cases: (await isolated.query(
+          "SELECT to_jsonb(c) AS row FROM sbu_cases c ORDER BY id",
+        )).rows,
+        sequence: (await isolated.query(
+          `SELECT last_value, is_called FROM "${schema}".sbu_cases_id_seq`,
+        )).rows,
+      });
+      const beforeAnonymous = await snapshot();
+      assert.equal(beforeAnonymous.profiles.length, 2);
+      assert.equal(beforeAnonymous.cases.length, 10);
+
+      for (const path of ["/cases", "/dashboard"]) {
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          // No session, cookie, or owner header: never send the string
+          // "undefined" as an identity through fetch's header coercion.
+          const response = await request(server, undefined, path);
+          assert.equal(response.status, 401, `${path}: ${response.raw}`);
+          assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." },
+            `${path}: respons anonim tidak boleh membocorkan profil atau permohonan`);
+          assert.deepEqual(await snapshot(), beforeAnonymous,
+            `${path}: akses anonim tidak boleh menambah, menghapus, atau mengubah profil/permohonan maupun memajukan sequence lokal`);
+          assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
+            `${path}: data uji tidak boleh masuk ke tabel aplikasi`);
+        }
+      }
+    });
 
     let firstList;
     let firstRecent;
