@@ -92,14 +92,17 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
     for (const [id, updatedAt, status] of fixtures) {
       await isolated.query(`
         INSERT INTO sbu_cases
-          (id, owner_id, company_name, request_type, qualification, classification, status, created_at, updated_at)
-        VALUES ($1, $2, $3, 'baru', 'kecil', 'gedung', $4, '2026-02-01T00:00:00Z', $5)
-      `, [id, ownerId, `Perusahaan Uji ${id}`, status, updatedAt]);
+          (id, owner_id, company_name, request_type, qualification, classification, status,
+           existing_sbu_expires_on, created_at, updated_at)
+        VALUES ($1, $2, $3, 'baru', 'kecil', 'gedung', $4, $6, '2026-02-01T00:00:00Z', $5)
+      `, [id, ownerId, `Perusahaan Uji ${id}`, status, updatedAt, id === 900 ? "2027-04-15" : null]);
     }
     await isolated.query(`
       INSERT INTO sbu_cases
         (id, owner_id, company_name, request_type, qualification, classification, status, updated_at)
-      VALUES (999, $1, 'Perusahaan Pengguna Lain', 'baru', 'kecil', 'gedung', 'draf', '2026-03-12T10:00:00Z')
+      VALUES
+        (999, $1, 'Perusahaan Pengguna Lain', 'baru', 'kecil', 'gedung', 'draf', '2026-03-12T10:00:00Z'),
+        (998, $1, 'Perusahaan Lama Pengguna Lain', 'baru', 'kecil', 'gedung', 'ditinjau', '2026-03-08T10:00:00Z')
     `, [otherOwnerId]);
     const publicCounts = async () => (await admin.query(`
       SELECT
@@ -265,14 +268,68 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
       }
     });
 
+    await t.test("PATCH permohonan tertua langsung menaikkannya ke awal daftar lengkap tanpa mengubah kolom lain atau pengguna lain", async () => {
+      const baseline = await request(server, ownerId, "/cases");
+      assert.equal(baseline.status, 200, baseline.raw);
+      const otherList = await request(server, otherOwnerId, "/cases");
+      assert.equal(otherList.status, 200, otherList.raw);
+      assert.deepEqual(otherList.body.map((item) => item.id), [999, 998]);
+      const original = before.find((item) => item.id === 900);
+      assert.equal(baseline.body.at(-1).id, original.id,
+        "Permohonan yang akan diedit harus berawal di posisi terakhir");
+      const companyName = "Perusahaan Lama Setelah Diedit";
+
+      try {
+        const patched = await request(server, ownerId, `/cases/${original.id}`, {
+          method: "PATCH", body: { companyName },
+        });
+        assert.equal(patched.status, 200, patched.raw);
+
+        // The very next request must read the full list, not the dashboard.
+        const list = await request(server, ownerId, "/cases");
+        assert.equal(list.status, 200, list.raw);
+        assert.deepEqual(list.body.map((item) => item.id), [900, 100, 206, 205, 204, 203, 202, 201],
+          "PATCH harus langsung memindahkan permohonan lama ke posisi pertama dalam daftar lengkap");
+        assert.deepEqual(patched.body, {
+          ...baseline.body.at(-1), companyName, updatedAt: patched.body.updatedAt,
+        }, "Respons PATCH harus mempertahankan semua kolom yang tidak dikirim");
+        assert.ok(new Date(patched.body.updatedAt) > new Date(baseline.body[0].updatedAt),
+          "Waktu pembaruan harus lebih baru daripada permohonan teratas sebelumnya");
+        assert.deepEqual(list.body, [
+          patched.body, ...baseline.body.filter((item) => item.id !== original.id),
+        ], "Daftar harus memuat hasil edit dan seluruh permohonan lain secara utuh, tanpa duplikasi");
+
+        const stored = (await isolated.query("SELECT * FROM sbu_cases ORDER BY id")).rows;
+        const saved = stored.find((item) => item.id === original.id);
+        assert.ok(saved.updated_at > original.updated_at, "PATCH harus memajukan waktu di PostgreSQL");
+        assert.equal(saved.updated_at.toISOString(), patched.body.updatedAt);
+        assert.deepEqual(stored, before.map((item) => item.id === original.id ? {
+          ...item, company_name: companyName, updated_at: saved.updated_at,
+        } : item), "Hanya nama dan waktu permohonan sasaran yang boleh berubah; seluruh kolom lain harus utuh");
+
+        const otherAfter = await request(server, otherOwnerId, "/cases");
+        assert.equal(otherAfter.status, 200, otherAfter.raw);
+        assert.deepEqual(otherAfter.body, otherList.body,
+          "PATCH pemilik tidak boleh mengubah isi maupun urutan daftar pengguna lain");
+        assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
+          "PATCH dan GET daftar lengkap harus tetap terbatas pada tabel salinan");
+      } finally {
+        // Preserve the baseline used by the separate dashboard mutation scenarios.
+        await isolated.query(
+          "UPDATE sbu_cases SET company_name = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
+          [original.company_name, original.updated_at, original.id, ownerId],
+        );
+      }
+    });
+
     await t.test("PATCH dan DELETE di dalam/luar lima teratas langsung tercermin tanpa mengubah pengguna lain", async () => {
       const otherDashboard = await request(server, otherOwnerId);
       assert.equal(otherDashboard.status, 200, otherDashboard.raw);
       assert.deepEqual(otherDashboard.body, {
-        total: 1, draft: 1, reviewing: 0, prepared: 0,
+        total: 2, draft: 1, reviewing: 1, prepared: 0,
         recent: otherDashboard.body.recent,
       });
-      assert.deepEqual(otherDashboard.body.recent.map((item) => item.id), [999]);
+      assert.deepEqual(otherDashboard.body.recent.map((item) => item.id), [999, 998]);
       const otherRows = (await isolated.query(
         "SELECT * FROM sbu_cases WHERE owner_id = $1 ORDER BY id", [otherOwnerId],
       )).rows;
