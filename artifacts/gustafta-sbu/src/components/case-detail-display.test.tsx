@@ -98,7 +98,11 @@ test('tanggal transisi hanya tampil bila temuan terverifikasi oleh server', () =
 test('tanggal pembaruan detail kasus mengikuti zona waktu penonton tanpa mengubah tanggal SBU', () => {
   const expectedByZone: Record<string, string[]> = {
     UTC: ['1 Jan 2027', '31 Des 2026', '31 Des 2026', '31 Des 2026', '1 Jan 2027'],
-    'America/Los_Angeles': ['31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026'],
+    'America/Los_Angeles': [
+      '31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026',
+      '7 Mar 2026', '8 Mar 2026', '8 Mar 2026', '9 Mar 2026',
+      '31 Okt 2026', '1 Nov 2026', '1 Nov 2026', '2 Nov 2026',
+    ],
     'Asia/Jakarta': ['1 Jan 2027', '1 Jan 2027', '31 Des 2026', '1 Jan 2027', '1 Jan 2027'],
     'Asia/Tokyo': ['1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027'],
   };
@@ -106,14 +110,15 @@ test('tanggal pembaruan detail kasus mengikuti zona waktu penonton tanpa menguba
     // TZ must be set before importing the module-scoped local formatter.
     for (const tz of Object.keys(expectedByZone)) {
       const result = spawnSync(process.execPath, [
-        '--import', 'tsx', '--test',
+        '--import', 'tsx', '--test', '--test-reporter=tap',
         '--test-name-pattern', 'tanggal pembaruan detail kasus mengikuti zona waktu',
         fileURLToPath(import.meta.url),
       ], {
-        env: { ...process.env, TZ: tz, CASE_DETAIL_TZ_CHILD: '1' },
+        env: { ...process.env, NODE_TEST_CONTEXT: undefined, TZ: tz, CASE_DETAIL_TZ_CHILD: '1' },
         encoding: 'utf8',
       });
       assert.equal(result.status, 0, `${tz}: ${result.stdout}\n${result.stderr}`);
+      assert.match(result.stdout, /# pass 1\b/, `${tz}: uji detail harus benar-benar dijalankan`);
     }
     return;
   }
@@ -128,19 +133,34 @@ test('tanggal pembaruan detail kasus mengikuti zona waktu penonton tanpa menguba
     '2026-12-31T16:30:00.000Z', // Jakarta is still December; Tokyo is January.
     '2026-12-31T17:30:00.000Z', // Jakarta has now crossed midnight.
     '2027-01-01T07:30:00.000+07:00', // Same instant as the first value.
+    ...(zone === 'America/Los_Angeles' ? [
+      // DST starts March 8: midnight changes from 08:00Z to 07:00Z.
+      '2026-03-08T07:30:00.000Z', '2026-03-08T08:30:00.000Z',
+      '2026-03-09T06:30:00.000Z', '2026-03-09T07:30:00.000Z',
+      // DST ends November 1: midnight changes from 07:00Z to 08:00Z.
+      '2026-11-01T06:30:00.000Z', '2026-11-01T07:30:00.000Z',
+      '2026-11-02T07:30:00.000Z', '2026-11-02T08:30:00.000Z',
+    ] : []),
   ];
+  assert.equal(updates.length, expected.length);
   for (const [index, updatedAt] of updates.entries()) {
-    for (const expiry of ['2027-01-01', '2027-01-01T00:00:00.000Z']) {
-      const summary = renderToStaticMarkup(createElement(CaseSummary, {
-        sbuCase: {
-          ...sbuCase, createdAt: '2026-08-01T12:00:00.000Z',
-          updatedAt, existingSbuExpiresOn: expiry,
-        },
-      }));
-      assert.ok(summary.includes(`Dibuat 1 Agu 2026 · Diperbarui ${expected[index]}</div>`),
-        `${updatedAt} di ${zone} harus menampilkan pembaruan ${expected[index]}`);
-      assert.match(summary, /Berlaku hingga[\s\S]*?1 Jan 2027/);
-      assert.doesNotMatch(summary, /Diperbarui 1 Agu 2026/);
+    for (const [calendarDay, formattedDay] of [
+      ['2027-01-01', '1 Jan 2027'],
+      ['2026-03-08', '8 Mar 2026'],
+      ['2026-11-01', '1 Nov 2026'],
+    ]) {
+      for (const expiry of [calendarDay, `${calendarDay}T00:00:00.000Z`]) {
+        const summary = renderToStaticMarkup(createElement(CaseSummary, {
+          sbuCase: {
+            ...sbuCase, createdAt: '2026-08-01T12:00:00.000Z',
+            updatedAt, existingSbuExpiresOn: expiry,
+          },
+        }));
+        assert.ok(summary.includes(`Dibuat 1 Agu 2026 · Diperbarui ${expected[index]}</div>`),
+          `${updatedAt} di ${zone} harus menampilkan pembaruan ${expected[index]}`);
+        assert.match(summary, new RegExp(`Berlaku hingga[\\s\\S]*?${formattedDay}`));
+        assert.doesNotMatch(summary, /Diperbarui 1 Agu 2026/);
+      }
     }
   }
 });
@@ -148,11 +168,16 @@ test('tanggal pembaruan detail kasus mengikuti zona waktu penonton tanpa menguba
 test('tanggal berlaku tetap tanggal kalender yang sama saat ditampilkan di berbagai zona waktu', () => {
   if (!process.env.CALENDAR_TZ_CHILD) {
     for (const tz of ['UTC', 'America/Los_Angeles', 'Asia/Jakarta', 'Asia/Tokyo']) {
-      const result = spawnSync(process.execPath, ['--import', 'tsx', '--test', fileURLToPath(import.meta.url)], {
-        env: { ...process.env, TZ: tz, CALENDAR_TZ_CHILD: '1' },
+      const result = spawnSync(process.execPath, [
+        '--import', 'tsx', '--test', '--test-reporter=tap',
+        '--test-name-pattern', 'tanggal berlaku tetap tanggal kalender',
+        fileURLToPath(import.meta.url),
+      ], {
+        env: { ...process.env, NODE_TEST_CONTEXT: undefined, TZ: tz, CALENDAR_TZ_CHILD: '1' },
         encoding: 'utf8',
       });
       assert.equal(result.status, 0, `${tz}: ${result.stdout}\n${result.stderr}`);
+      assert.match(result.stdout, /# pass 1\b/, `${tz}: uji kalender harus benar-benar dijalankan`);
     }
     return;
   }

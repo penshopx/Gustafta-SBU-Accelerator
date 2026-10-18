@@ -20,5 +20,6 @@
 - [Vite DOM integration tests](vite-dom-integration-tests.md) — share one module loader for React contexts and install the DOM before importing React DOM.
 - [Local scanner readiness](local-malware-scanner.md) — tiny antivirus fixtures do not establish full-signature startup cost; calibrate resource limits against official signatures.
 - [Node test asynchronous setup](node-test-async-setup.md) — registering a test before awaited setup can run root teardown before later integration tests.
+- [Node test child processes](node-test-child-processes.md) — clear inherited runner context and confirm child tests actually ran; exit status zero alone can hide skipped execution.
 - [Validation console formatting](validation-console-formatting.md) — configured checks may force ANSI coloring even for piped subprocesses; normalize CLI messages before assertions.
 - [PDF page isolation](pdf-page-isolation.md) — render selected pixels into a fresh PDF; copying source page objects cannot establish isolation from unselected content.

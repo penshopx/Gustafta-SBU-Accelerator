@@ -306,7 +306,11 @@ test('ringkasan terisi menampilkan angka dan kasus terbaru dari respons tanpa ke
 test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tanggal kalender SBU', () => {
   const expectedByZone: Record<string, string[]> = {
     UTC: ['1 Jan 2027', '31 Des 2026', '1 Jan 2027'],
-    'America/Los_Angeles': ['31 Des 2026', '31 Des 2026', '31 Des 2026'],
+    'America/Los_Angeles': [
+      '31 Des 2026', '31 Des 2026', '31 Des 2026',
+      '7 Mar 2026', '8 Mar 2026', '8 Mar 2026', '9 Mar 2026',
+      '31 Okt 2026', '1 Nov 2026', '1 Nov 2026', '2 Nov 2026',
+    ],
     'Asia/Jakarta': ['1 Jan 2027', '1 Jan 2027', '1 Jan 2027'],
     'Asia/Tokyo': ['1 Jan 2027', '1 Jan 2027', '1 Jan 2027'],
   };
@@ -315,14 +319,15 @@ test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tangg
     // not a TZ change after importing the component.
     for (const tz of Object.keys(expectedByZone)) {
       const result = spawnSync(process.execPath, [
-        '--import', 'tsx', '--test',
+        '--import', 'tsx', '--test', '--test-reporter=tap',
         '--test-name-pattern', 'tanggal pembaruan kasus terbaru mengikuti zona waktu',
         fileURLToPath(import.meta.url),
       ], {
-        env: { ...process.env, TZ: tz, DASHBOARD_TZ_CHILD: '1' },
+        env: { ...process.env, NODE_TEST_CONTEXT: undefined, TZ: tz, DASHBOARD_TZ_CHILD: '1' },
         encoding: 'utf8',
       });
       assert.equal(result.status, 0, `${tz}: ${result.stdout}\n${result.stderr}`);
+      assert.match(result.stdout, /# pass 1\b/, `${tz}: uji dashboard harus benar-benar dijalankan`);
     }
     return;
   }
@@ -332,12 +337,20 @@ test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tangg
   const expected = expectedByZone[zone];
   assert.ok(expected, `zona pengujian dikenal: ${zone}`);
   const response: Dashboard = {
-    total: 3, draft: 3, reviewing: 0, prepared: 0,
+    total: expected.length, draft: expected.length, reviewing: 0, prepared: 0,
     recent: [
       '2027-01-01T00:30:00.000Z',
       '2026-12-31T23:30:00.000Z',
       // Same instant as the first case, expressed with an explicit UTC offset.
       '2027-01-01T07:30:00.000+07:00',
+      ...(zone === 'America/Los_Angeles' ? [
+        // Midnights before/after DST starts (UTC-8 -> UTC-7).
+        '2026-03-08T07:30:00.000Z', '2026-03-08T08:30:00.000Z',
+        '2026-03-09T06:30:00.000Z', '2026-03-09T07:30:00.000Z',
+        // Midnights before/after DST ends (UTC-7 -> UTC-8).
+        '2026-11-01T06:30:00.000Z', '2026-11-01T07:30:00.000Z',
+        '2026-11-02T07:30:00.000Z', '2026-11-02T08:30:00.000Z',
+      ] : []),
     ].map((updatedAt, index) => ({
       id: index + 1, companyName: `Perusahaan ${index + 1}`,
       requestType: 'perpanjangan', qualification: 'kecil', classification: 'Gedung',
@@ -346,6 +359,7 @@ test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tangg
       createdAt: '2026-08-01T12:00:00.000Z', updatedAt,
     })),
   };
+  assert.equal(response.recent.length, expected.length);
   const html = renderToStaticMarkup(createElement(Router, {
     hook: (): [string, (path: string) => void] => ['/dashboard', () => {}],
     children: createElement(DashboardResult, {
@@ -359,8 +373,15 @@ test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tangg
       `kasus ${item.id} di ${zone} harus menampilkan ${expected[index]}`);
     assert.doesNotMatch(row[1], /1 Agu 2026|15 Apr 2027/);
   }
-  assert.equal(html.match(/data-testid="link-case-\d+"/g)?.length, 3);
+  assert.equal(html.match(/data-testid="link-case-\d+"/g)?.length, expected.length);
   // These calendar values must stay fixed even when the update date crosses a day.
   assert.equal(formatCalendarDate('2027-04-15'), '15 Apr 2027');
   assert.equal(formatCalendarDate('2027-04-15T00:00:00.000Z'), '15 Apr 2027');
+  for (const [calendarDay, formattedDay] of [
+    ['2026-03-08', '8 Mar 2026'],
+    ['2026-11-01', '1 Nov 2026'],
+  ]) {
+    assert.equal(formatCalendarDate(calendarDay), formattedDay);
+    assert.equal(formatCalendarDate(`${calendarDay}T00:00:00.000Z`), formattedDay);
+  }
 });

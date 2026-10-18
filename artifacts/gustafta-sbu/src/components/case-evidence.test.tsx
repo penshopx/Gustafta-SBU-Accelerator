@@ -12,7 +12,11 @@ import { CaseEvidence } from './case-evidence';
 test('tanggal pembaruan kartu bukti mengikuti zona waktu penonton', () => {
   const expectedByZone: Record<string, string[]> = {
     UTC: ['1 Jan 2027', '31 Des 2026', '31 Des 2026', '31 Des 2026', '1 Jan 2027'],
-    'America/Los_Angeles': ['31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026'],
+    'America/Los_Angeles': [
+      '31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026',
+      '7 Mar 2026', '8 Mar 2026', '8 Mar 2026', '9 Mar 2026',
+      '31 Okt 2026', '1 Nov 2026', '1 Nov 2026', '2 Nov 2026',
+    ],
     'Asia/Jakarta': ['1 Jan 2027', '1 Jan 2027', '31 Des 2026', '1 Jan 2027', '1 Jan 2027'],
     'Asia/Tokyo': ['1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027'],
   };
@@ -20,14 +24,15 @@ test('tanggal pembaruan kartu bukti mengikuti zona waktu penonton', () => {
     // A fresh process constructs the local formatter after TZ has been set.
     for (const tz of Object.keys(expectedByZone)) {
       const result = spawnSync(process.execPath, [
-        '--import', 'tsx', '--test',
+        '--import', 'tsx', '--test', '--test-reporter=tap',
         '--test-name-pattern', 'tanggal pembaruan kartu bukti mengikuti zona waktu',
         fileURLToPath(import.meta.url),
       ], {
-        env: { ...process.env, TZ: tz, EVIDENCE_TZ_CHILD: '1' },
+        env: { ...process.env, NODE_TEST_CONTEXT: undefined, TZ: tz, EVIDENCE_TZ_CHILD: '1' },
         encoding: 'utf8',
       });
       assert.equal(result.status, 0, `${tz}: ${result.stdout}\n${result.stderr}`);
+      assert.match(result.stdout, /# pass 1\b/, `${tz}: uji kartu bukti harus benar-benar dijalankan`);
     }
     return;
   }
@@ -44,11 +49,20 @@ test('tanggal pembaruan kartu bukti mengikuti zona waktu penonton', () => {
     '2026-12-31T16:30:00.000Z',
     '2026-12-31T17:30:00.000Z',
     '2027-01-01T07:30:00.000+07:00',
+    ...(zone === 'America/Los_Angeles' ? [
+      // Midnights before/after DST starts (UTC-8 -> UTC-7).
+      '2026-03-08T07:30:00.000Z', '2026-03-08T08:30:00.000Z',
+      '2026-03-09T06:30:00.000Z', '2026-03-09T07:30:00.000Z',
+      // Midnights before/after DST ends (UTC-7 -> UTC-8).
+      '2026-11-01T06:30:00.000Z', '2026-11-01T07:30:00.000Z',
+      '2026-11-02T07:30:00.000Z', '2026-11-02T08:30:00.000Z',
+    ] : []),
   ].map((updatedAt, index) => ({
     id: index + 1, caseId: 7, code: 'legalitas',
     title: `Bukti ${index + 1}`, note: 'Catatan pengguna',
     createdAt: '2026-08-01T12:00:00.000Z', updatedAt,
   }));
+  assert.equal(rows.length, expected.length);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });

@@ -11,5 +11,6 @@ export function formatCalendarDate(value?: string | null): string {
 
 export function formatTimestampDate(value?: string | null): string {
   // Updates are instants displayed in the viewer's local zone, unlike SBU calendar days.
+  // Keep the zone's seasonal rules: a fixed UTC offset would misdate updates near midnight.
   return value ? formatter.format(new Date(value)) : '—';
 }
