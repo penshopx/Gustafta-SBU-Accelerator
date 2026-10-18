@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
+import { PDFDocument } from "pdf-lib";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
@@ -33,6 +34,7 @@ test("standalone profiles/documents isolate owners and preserve records after st
       ADD COLUMN series_id uuid,
       ADD COLUMN version integer NOT NULL DEFAULT 1`);
     await bootstrap.query("CREATE TABLE sbu_document_analyses (LIKE public.sbu_document_analyses INCLUDING ALL)");
+    await bootstrap.query(await readFile(new URL("../../../lib/db/migrations/document-analysis-pages.sql", import.meta.url), "utf8"));
     await bootstrap.query("RESET search_path");
     restricted = await createRestrictedRoutePool(admin, schema);
     globalThis.__standalonePool = restricted.pool;
@@ -41,8 +43,14 @@ test("standalone profiles/documents isolate owners and preserve records after st
     globalThis.__standaloneScanVerdict = "clean";
     globalThis.__standaloneGenerateCalls = 0;
     globalThis.__standaloneAnalysisFailure = false;
-    globalThis.__standaloneGenerate = async () => {
+    const syntheticPdf = await PDFDocument.create();
+    for (let p = 1; p <= 18; p++) syntheticPdf.addPage().drawText(`UNIQUE_PAGE_${p}_PRIVATE_MARKER`);
+    syntheticPdf.setTitle("PRIVATE_METADATA_DO_NOT_SEND");
+    await syntheticPdf.attach(Buffer.from("PRIVATE_ATTACHMENT_DO_NOT_SEND"), "secret.txt");
+    globalThis.__standaloneBytes = Buffer.from(await syntheticPdf.save());
+    globalThis.__standaloneGenerate = async (bytes, contentType, input) => {
       globalThis.__standaloneGenerateCalls++;
+      globalThis.__standaloneSent = { bytes, contentType, input };
       if (globalThis.__standaloneAnalysisFailure) throw new Error("synthetic provider error");
       return { summary: "Synthetic preliminary review", extracted: [], concerns: [],
         missingInformation: ["Not visible in this synthetic document"], nextSteps: ["Human review"] };
@@ -82,7 +90,7 @@ test("standalone profiles/documents isolate owners and preserve records after st
                 file: async (path,generation) => { globalThis.__standaloneStorageCalls.push("file");
                   globalThis.__standaloneDownloadGeneration = generation;
                   if(globalThis.__standaloneStorageFailure) throw new Error("storage failure");
-                  return {getMetadata:async()=>[{size:"22",contentType:"application/pdf"}],download:async()=>[Buffer.alloc(22)],
+                  return {getMetadata:async()=>[{size:String(globalThis.__standaloneBytes.length),contentType:"application/pdf"}],download:async()=>[globalThis.__standaloneBytes],
                     createReadStream:()=>Readable.from(["synthetic PDF"])}; }
               };
             `, loader: "ts", resolveDir: dir,
@@ -97,6 +105,11 @@ test("standalone profiles/documents isolate owners and preserve records after st
     app.use("/api", router);
     server = app.listen(0);
     const call = async (method, path, user = "test-owner-a", body, formOwner = user) => {
+      if (method === "POST" && path.endsWith("/analyses") && body) {
+        const documentId = path.split("/")[4];
+        const sourceRevision = createHash("sha256").update(JSON.stringify([documentId, 1, "123"])).digest("hex");
+        body = { pages: [2, 15], sourceRevision, ...body };
+      }
       const response = await fetch(`http://127.0.0.1:${server.address().port}/api${path}`, {
         method, headers: { ...(user ? { "x-test-user": user } : {}), ...(formOwner ? { "X-SBU-Form-Owner": formOwner } : {}), "Content-Type": "application/json" },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -116,7 +129,7 @@ test("standalone profiles/documents isolate owners and preserve records after st
     assert.equal(company.body.ownerId, "test-owner-a");
     assert.equal((await call("GET", "/company-profile", "test-owner-b")).body.companyName, "");
     assert.equal((await call("GET", "/company-profile")).body.companyName, "Isolated A");
-    const metadata = { name: "test.pdf", size: 22, contentType: "application/pdf" };
+    const metadata = { name: "test.pdf", size: globalThis.__standaloneBytes.length, contentType: "application/pdf" };
     assert.equal((await call("POST", `/cases/${b.id}/documents`, "test-owner-a", metadata)).status, 404);
     assert.equal((await call("POST", `/cases/${a.id}/documents`, "test-owner-a", metadata, "test-owner-b")).status, 409);
     assert.equal((await call("POST", `/cases/${a.id}/documents`, "test-owner-a", { ...metadata, size: 20971521 })).status, 400);
@@ -203,6 +216,23 @@ test("standalone profiles/documents isolate owners and preserve records after st
     assert.deepEqual((await call("GET", `${path}/analyses`)).body, []);
     assert.equal((await call("GET", `${path}/analyses`, "test-owner-b")).status, 404);
     assert.equal(globalThis.__standaloneGenerateCalls, 0, "no unauthorized or unconsented request reaches AI");
+    const info = await call("GET", `${path}/analysis-source`);
+    assert.equal(info.status, 200);
+    assert.equal(info.body.pageCount, 18);
+    assert.equal(info.body.documentId, documentId);
+    const beforeInvalid = globalThis.__standaloneStorageCalls.length;
+    for (const [user, formOwner, status] of [
+      [null, null, 401], ["test-owner-b", "test-owner-b", 404], ["test-owner-a", "test-owner-b", 409],
+    ]) assert.equal((await call("GET", `${path}/analysis-source`, user, undefined, formOwner)).status, status);
+    for (const pages of [[], [0], [-1], [1.5], [1, 1], Array.from({ length: 11 }, (_, i) => i + 1)]) {
+      assert.equal((await call("POST", `${path}/analyses`, "test-owner-a", { consent: true, focus: "keuangan", pages })).status, 400);
+    }
+    assert.equal((await call("POST", `${path}/analyses`, "test-owner-a",
+      { consent: true, focus: "keuangan", sourceRevision: "0".repeat(64) })).status, 409);
+    assert.equal(globalThis.__standaloneStorageCalls.length, beforeInvalid, "invalid input/owner/revision rejected before reading file");
+    assert.equal((await call("POST", `${path}/analyses`, "test-owner-a",
+      { consent: true, focus: "keuangan", pages: [19] })).status, 422);
+    assert.equal(globalThis.__standaloneGenerateCalls, 0);
     globalThis.__standaloneAnalysisFailure = true;
     assert.equal((await call("POST", `${path}/analyses`, "test-owner-a", { consent: true, focus: "keuangan" })).status, 503);
     assert.equal((await call("GET", `${path}/analyses`)).body.length, 0, "provider failure is not a saved result");
@@ -212,7 +242,30 @@ test("standalone profiles/documents isolate owners and preserve records after st
     assert.equal(analyzed.cache, "private, no-store");
     assert.equal(analyzed.body.ownerId, "test-owner-a");
     assert.equal(analyzed.body.documentId, documentId);
-    assert.equal((await call("GET", `${path}/analyses`)).body.length, 1);
+    assert.deepEqual(analyzed.body.sourcePages, [2, 15]);
+    assert.equal(analyzed.body.sourcePageCount, 18);
+    assert.equal(analyzed.body.sourceVersion, 1);
+    const sent = globalThis.__standaloneSent;
+    assert.equal(sent.contentType, "application/pdf");
+    assert.equal((await PDFDocument.load(sent.bytes)).getPageCount(), 2);
+    assert.notDeepEqual(sent.bytes, globalThis.__standaloneBytes);
+    const history = await call("GET", `${path}/analyses`);
+    assert.equal(history.body.length, 1);
+    assert.deepEqual(history.body[0].sourcePages, [2, 15], "page snapshot persists across a new read");
+    assert.equal((await call("POST", `${path}/analyses`, "test-owner-a", { consent: true, focus: "keuangan" })).status, 429,
+      "local preparation failures and provider failures count toward per-owner rate limit");
+    const savedRow = await restricted.pool.query("SELECT source_pages, source_version FROM sbu_document_analyses WHERE id=$1", [analyzed.body.id]);
+    assert.deepEqual(savedRow.rows[0].source_pages, [2, 15]);
+    const callsBeforeQuota = globalThis.__standaloneStorageCalls.length;
+    await restricted.pool.query(`INSERT INTO sbu_document_analyses
+      (id, document_id, case_id, owner_id, focus, result, model)
+      SELECT gen_random_uuid(), document_id, case_id, owner_id, focus, result, model
+      FROM sbu_document_analyses CROSS JOIN generate_series(1,9) WHERE id=$1`, [analyzed.body.id]);
+    assert.equal((await call("POST", `${path}/analyses`, "test-owner-a", { consent: true, focus: "keuangan" })).status, 429);
+    assert.equal(globalThis.__standaloneStorageCalls.length, callsBeforeQuota, "stored result quota rejects before file access");
+    const legacyHistory = (await call("GET", `${path}/analyses`)).body;
+    assert.equal(legacyHistory.filter(r => r.sourcePages === null).length, 9, "legacy rows do not invent a page mapping");
+    await restricted.pool.query("DELETE FROM sbu_document_analyses WHERE document_id=$1 AND id<>$2", [documentId, analyzed.body.id]);
     const resultPath = `${path}/analyses/${analyzed.body.id}`;
     assert.equal((await call("DELETE", resultPath, "test-owner-b")).status, 404);
     assert.equal((await call("DELETE", resultPath, "test-owner-a", undefined, "test-owner-b")).status, 409);
@@ -245,6 +298,8 @@ test("standalone profiles/documents isolate owners and preserve records after st
     delete globalThis.__standaloneAnalysisFailure;
     delete globalThis.__standaloneScanVerdict;
     delete globalThis.__standaloneDownloadGeneration;
+    delete globalThis.__standaloneBytes;
+    delete globalThis.__standaloneSent;
     if (restricted) await restricted.close();
     await bootstrap.query("RESET search_path").catch(() => {});
     await bootstrap.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);

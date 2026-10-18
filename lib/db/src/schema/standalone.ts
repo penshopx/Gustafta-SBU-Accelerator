@@ -41,6 +41,9 @@ export const documentAnalysesTable = pgTable("sbu_document_analyses", {
   focus: text("focus").notNull(),
   result: jsonb("result").notNull(),
   model: text("model").notNull(),
+  sourcePages: jsonb("source_pages").$type<number[]>(),
+  sourcePageCount: integer("source_page_count"),
+  sourceVersion: integer("source_version"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("sbu_analyses_owner_document_idx").on(t.ownerId, t.documentId)]);
 export const insertCompanyProfileSchema = createInsertSchema(companyProfilesTable);

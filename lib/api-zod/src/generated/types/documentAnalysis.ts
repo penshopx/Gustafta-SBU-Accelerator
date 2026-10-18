@@ -10,6 +10,16 @@ import type { DocumentAnalysisResult } from './documentAnalysisResult';
 
 export interface DocumentAnalysis {
   id: string;
+  /**
+     * Payload page order mapped to original page numbers; null for legacy results with no snapshot
+     * @nullable
+     * @items.minimum 1
+     */
+  sourcePages: number[] | null;
+  /** @nullable */
+  sourcePageCount: number | null;
+  /** @nullable */
+  sourceVersion: number | null;
   documentId: string;
   caseId: number;
   ownerId: string;

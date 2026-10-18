@@ -5,10 +5,13 @@ import {
   analyzeCaseDocument, useListDocumentAnalyses, useDeleteDocumentAnalysis,
   getListDocumentAnalysesQueryKey, getListCaseDocumentsQueryKey, getListDocumentVaultQueryKey,
   type CaseDocument, type DocumentAnalysis, type DocumentAnalysisInput,
+  useGetDocumentAnalysisSource,
+  getGetDocumentAnalysisSourceQueryKey,
 } from '@workspace/api-client-react';
 import { useFormMutationOptions, useAccountReadOptions } from './account-queries';
 import { SimpleModal, categoryLabels } from './document-metadata-dialog';
 import { Loading, ErrorState } from './request-states';
+import { parseAnalysisPages } from './document-analysis-selection';
 
 const AI_LIMIT = 4194304;
 const TIMEOUT = 90000;
@@ -21,7 +24,7 @@ function analysisError(e: unknown): string {
   const s = (e as { status?: number } | null)?.status;
   if (s === 401) return 'Sesi Anda berakhir. Masuk kembali; pertanyaan Anda tetap tersimpan di layar ini.';
   if (s === 409) return 'Permintaan ditolak karena akun atau dokumen tidak sesuai. Muat ulang halaman lalu coba lagi.';
-  if (s === 422) return 'Dokumen tidak dapat dianalisis (PDF maksimal 10 halaman, rusak, atau terproteksi). Draf Anda tetap ada.';
+  if (s === 422) return 'Pilihan tidak dapat dianalisis. Pilih 1–10 halaman yang ada dengan payload hasil maksimal 4 MiB; PDF harus terbaca dan tidak terproteksi. Draf Anda tetap ada.';
   if (s === 429) return 'Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.';
   if (s === 503) return 'Layanan analisis sedang tidak tersedia. Tidak ada hasil yang dibuat; coba lagi nanti.';
   return 'Analisis belum dapat diselesaikan. Tidak ada hasil yang dibuat; coba lagi.';
@@ -40,10 +43,15 @@ export function DocumentAnalysisPanel({ doc, expectedUserId, close }: { doc: Cas
   const caseId = doc.caseId; const documentId = doc.id;
   const key = getListDocumentAnalysesQueryKey(caseId, documentId);
   const list = useListDocumentAnalyses(caseId, documentId, { ...useAccountReadOptions(), query: { queryKey: key, retry: false } });
+  const source = useGetDocumentAnalysisSource(caseId, documentId, {
+    ...useAccountReadOptions(), query: { queryKey: getGetDocumentAnalysisSourceQueryKey(caseId, documentId), retry: false, enabled: doc.status === 'ready' && doc.scanStatus === 'clean' },
+  });
   const del = useDeleteDocumentAnalysis(options);
   const [consent, setConsent] = useState(false);
+  const [consentScope, setConsentScope] = useState('');
   const [focus, setFocus] = useState<DocumentAnalysisInput['focus']>('kesiapan_sbu');
   const [question, setQuestion] = useState('');
+  const [selection, setSelection] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -53,19 +61,25 @@ export function DocumentAnalysisPanel({ doc, expectedUserId, close }: { doc: Cas
   const token = useRef(0);
   useEffect(() => () => { token.current++; ctl.current?.abort(); }, []);
 
-  const tooBig = doc.size > AI_LIMIT;
+  const tooBig = doc.contentType !== 'application/pdf' && doc.size > AI_LIMIT;
+  const sourceInfo = source.data?.documentId === documentId && source.data.version === doc.version ? source.data : undefined;
+  const pages = sourceInfo ? parseAnalysisPages(selection, sourceInfo.pageCount) : null;
+  const revision = sourceInfo?.sourceRevision;
+  const scope = `${revision}:${JSON.stringify(pages)}`;
+  const approved = consent && consentScope === scope;
+  useEffect(() => { setConsent(false); }, [revision]);
   const matches = (a: DocumentAnalysis) => a.ownerId === expectedUserId && a.caseId === caseId && a.documentId === documentId;
   const items = list.data;
   const foreign = !!items && (!Array.isArray(items) || items.some(a => !matches(a)));
   const sorted = Array.isArray(items) && !foreign ? [...items].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : [];
 
   const run = async () => {
-    if (!consent || pending || tooBig || doc.status !== 'ready' || doc.scanStatus !== 'clean') return;
+    if (!approved || !pages || !sourceInfo || pending || tooBig || doc.status !== 'ready' || doc.scanStatus !== 'clean') return;
     const mine = ++token.current;
     const c = new AbortController(); ctl.current = c;
     setPending(true); setError(null);
     const q = question.trim();
-    const body: DocumentAnalysisInput = { consent: true, focus, ...(q ? { question: q } : {}) };
+    const body: DocumentAnalysisInput = { consent: true, focus, pages, sourceRevision: sourceInfo.sourceRevision, ...(q ? { question: q } : {}) };
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       const guard = new Promise<never>((_, rej) => {
@@ -106,15 +120,19 @@ export function DocumentAnalysisPanel({ doc, expectedUserId, close }: { doc: Cas
     <div className="min-w-0">
       <div className="rounded-lg bg-[#eef6fd] p-3 text-xs leading-5 text-[#365a76]"><b className="break-words">{doc.name}</b><br />Versi {doc.version ?? 1} · {categoryLabels[doc.category ?? 'lainnya']}{doc.caseName ? ` · ${doc.caseName}` : ''}</div>
       {tooBig && <p role="alert" className="mt-3 text-sm text-[#b34442]">Berkas melebihi batas analisis AI 4 MiB. Berkas tetap tersimpan; analisis tidak tersedia untuk versi ini.</p>}
-      <fieldset disabled={pending || tooBig} className="mt-4 min-w-0 space-y-4 border-0 p-0">
+      {source.isLoading ? <p className="mt-3 text-xs">Membaca jumlah halaman secara lokal; belum mengirim ke AI...</p>
+        : source.isError || !sourceInfo ? <ErrorState retry={() => { setConsent(false); void source.refetch(); }} message="Jumlah halaman atau versi dokumen belum dapat dikonfirmasi. Tidak ada pengiriman ke AI." />
+        : <p className="mt-3 text-sm text-[#365a76]">Dokumen asli: {sourceInfo.pageCount} halaman. Pilih maksimal 10 halaman; payload hasil maksimal 4 MiB.</p>}
+      <fieldset disabled={pending || tooBig || !sourceInfo} className="mt-4 min-w-0 space-y-4 border-0 p-0">
+        <label className="block"><span className="mb-2 block text-xs font-bold text-[#2b4159]">Halaman asli yang dikirim</span><input data-testid="input-analysis-pages" className="field" maxLength={200} value={selection} onChange={e => { setSelection(e.target.value); setConsent(false); }} placeholder="Contoh: 2-4, 9, 15" /><span className="mt-1 block text-xs text-[#617a90]">{pages ? `Urutan kirim: ${pages.join(', ')}` : 'Masukkan 1–10 nomor halaman/rentang yang ada, tanpa duplikat.'}</span></label>
         <label className="block"><span className="mb-2 block text-xs font-bold text-[#2b4159]">Fokus analisis</span><select data-testid="select-analysis-focus" className="field" value={focus} onChange={e => setFocus(e.target.value as DocumentAnalysisInput['focus'])}>{focusKeys.map(k => <option key={k} value={k}>{focusLabels[k]}</option>)}</select></label>
         <label className="block"><span className="mb-2 block text-xs font-bold text-[#2b4159]">Pertanyaan (opsional)</span><textarea data-testid="input-analysis-question" className="field min-h-[84px]" maxLength={2000} value={question} onChange={e => setQuestion(e.target.value)} placeholder="Contoh: apakah masa berlaku terbaca jelas?" /><span className="mt-1 block text-right text-[11px] text-[#688096]">{question.length}/2000</span></label>
-        <label className="flex items-start gap-3 rounded-lg border border-[#bfd0de] bg-[#f7fbfe] p-3 text-xs leading-5 text-[#2b4159]"><input data-testid="checkbox-analysis-consent" type="checkbox" className="mt-0.5 h-4 w-4 shrink-0" checked={consent} onChange={e => setConsent(e.target.checked)} /><span>Saya mengizinkan seluruh dokumen terpilih (dapat berisi informasi pribadi) dan pertanyaan manual saya dikirim ke OpenAI melalui Replit. Kredit Replit akan terpakai. Saya berwenang membagikan dokumen ini. Berkas kasus lain dan profil tidak dikirim otomatis.</span></label>
+        <label className="flex items-start gap-3 rounded-lg border border-[#bfd0de] bg-[#f7fbfe] p-3 text-xs leading-5 text-[#2b4159]"><input data-testid="checkbox-analysis-consent" type="checkbox" disabled={!pages} className="mt-0.5 h-4 w-4 shrink-0" checked={approved} onChange={e => { setConsent(e.target.checked); setConsentScope(scope); }} /><span>Saya mengizinkan hanya halaman asli {pages?.join(', ') || '(belum dipilih)'} dari versi {sourceInfo?.version ?? doc.version} dokumen ini dan pertanyaan manual saya dikirim ke OpenAI melalui Replit, model {sourceInfo?.model ?? '(belum dikonfirmasi)'}. Kredit Replit akan terpakai sesuai pemakaian model, jumlah halaman, dan token; biaya pasti tidak dihitung di sini. Halaman dapat berisi informasi pribadi dan saya berwenang membagikannya. PDF dikirim sebagai tampilan gambar halaman, tanpa lampiran/metadata PDF; detail kecil bisa kurang terbaca. Halaman lain, dokumen lain, dan profil tidak dikirim; tidak ada integrasi Gustafta.</span></label>
       </fieldset>
       <p className="mt-3 text-xs leading-5 text-[#617a90]">Hasil bersifat awal: bukan penilaian kepatuhan hukum, bukan keputusan SBU, bukan penilaian otomatis, dan tidak mengesahkan atau membatalkan bukti. Lokasi sumber adalah indikasi AI yang perlu Anda periksa sendiri.</p>
       {error && <p role="alert" data-testid="text-analysis-error" className="mt-3 text-sm text-[#b34442]">{error}</p>}
       <div className="mt-4 flex flex-wrap gap-2">
-        <button data-testid="button-run-analysis" onClick={() => void run()} disabled={!consent || pending || tooBig || doc.status !== 'ready' || doc.scanStatus !== 'clean'} className="btn btn-primary"><ScanSearch size={16} />{pending ? 'Menganalisis...' : 'Jalankan analisis'}</button>
+        <button data-testid="button-run-analysis" onClick={() => void run()} disabled={!approved || !pages || !sourceInfo || pending || tooBig || doc.status !== 'ready' || doc.scanStatus !== 'clean'} className="btn btn-primary"><ScanSearch size={16} />{pending ? 'Menganalisis...' : 'Jalankan analisis'}</button>
         {pending && <button data-testid="button-cancel-analysis" onClick={cancel} className="btn btn-outline"><X size={14} /> Batalkan</button>}
       </div>
       <h3 className="display mt-7 text-base font-extrabold">Riwayat analisis</h3>
@@ -124,6 +142,7 @@ export function DocumentAnalysisPanel({ doc, expectedUserId, close }: { doc: Cas
           return <article key={a.id} data-testid="analysis-result" className="min-w-0 rounded-xl border border-[#d1dfe9] bg-white p-4">
             <div className="flex items-start justify-between gap-2"><div className="min-w-0 text-xs text-[#617a90]"><b className="text-[#14253a]">{focusLabels[a.focus] ?? a.focus}</b> · {fmt(a.createdAt)} · {a.model}</div><div className="flex shrink-0 gap-1"><button aria-label={open ? 'Ciutkan' : 'Buka'} onClick={() => setCollapsed(c => ({ ...c, [a.id]: open }))} className="rounded-lg p-1.5 hover:bg-[#eaf4fc]">{open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button><button data-testid={`button-delete-analysis-${a.id}`} aria-label="Hapus analisis" onClick={() => { setDelError(null); setConfirm(a); }} className="rounded-lg p-1.5 text-[#ad4a48] hover:bg-[#fff0ef]"><Trash2 size={16} /></button></div></div>
             {open && <div className="mt-3">
+              <p className="mb-3 text-xs leading-5 text-[#617a90]">{a.sourcePages ? `Snapshot versi ${a.sourceVersion}, ${a.sourcePageCount} halaman asli. Pemetaan halaman lampiran → halaman asli: ${a.sourcePages.map((p, i) => `${i + 1} → ${p}`).join('; ')}. Cocokkan lokasi AI dengan pemetaan ini dan dokumen asli.` : 'Hasil lama: snapshot halaman asli tidak tersedia. Jangan mengasumsikan pemetaan halaman.'}</p>
               <p className="whitespace-pre-wrap break-words text-sm leading-6 text-[#2f465d]">{String(r.summary)}</p>
               {r.extracted.length > 0 && <div className="mt-4"><h4 className="text-xs font-bold text-[#2b4159]">Informasi terbaca</h4><dl className="mt-1.5 space-y-2">{r.extracted.map((x, i) => <div key={i} className="rounded-lg bg-[#f3f8fc] p-2.5 text-sm"><dt className="font-bold text-[#14253a]">{String(x.label)}</dt><dd className="break-words text-[#2f465d]">{String(x.value)}</dd><dd className="mt-0.5 text-[11px] text-[#617a90]">Lokasi menurut AI (perlu dicek): {String(x.location)}</dd></div>)}</dl></div>}
               <List title="Hal yang perlu diperhatikan" items={r.concerns} />

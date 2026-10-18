@@ -9,6 +9,14 @@ import type { DocumentAnalysisInputFocus } from './documentAnalysisInputFocus';
 
 export interface DocumentAnalysisInput {
   consent: boolean;
+  /** @pattern ^[a-f0-9]{64}$ */
+  sourceRevision: string;
+  /**
+     * @minItems 1
+     * @maxItems 10
+     * @items.minimum 1
+     */
+  pages: number[];
   focus: DocumentAnalysisInputFocus;
   /** @maxLength 2000 */
   question?: string;

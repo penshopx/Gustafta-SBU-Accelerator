@@ -916,9 +916,28 @@ export const DocumentAnalysisInputFocus = {
 
 export interface DocumentAnalysisInput {
   consent: boolean;
+  /** @pattern ^[a-f0-9]{64}$ */
+  sourceRevision: string;
+  /**
+     * @minItems 1
+     * @maxItems 10
+     * @items.minimum 1
+     */
+  pages: number[];
   focus: DocumentAnalysisInputFocus;
   /** @maxLength 2000 */
   question?: string;
+}
+
+export interface DocumentAnalysisSource {
+  documentId: string;
+  /** @minimum 1 */
+  version: number;
+  /** @pattern ^[a-f0-9]{64}$ */
+  sourceRevision: string;
+  /** @minimum 1 */
+  pageCount: number;
+  model: string;
 }
 
 export type DocumentAnalysisResultExtractedItem = {
@@ -969,6 +988,16 @@ export const DocumentAnalysisFocus = {
 
 export interface DocumentAnalysis {
   id: string;
+  /**
+     * Payload page order mapped to original page numbers; null for legacy results with no snapshot
+     * @nullable
+     * @items.minimum 1
+     */
+  sourcePages: number[] | null;
+  /** @nullable */
+  sourcePageCount: number | null;
+  /** @nullable */
+  sourceVersion: number | null;
   documentId: string;
   caseId: number;
   ownerId: string;

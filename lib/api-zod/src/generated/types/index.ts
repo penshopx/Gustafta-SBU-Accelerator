@@ -39,6 +39,7 @@ export * from './documentAnalysisInput';
 export * from './documentAnalysisInputFocus';
 export * from './documentAnalysisResult';
 export * from './documentAnalysisResultExtractedItem';
+export * from './documentAnalysisSource';
 export * from './documentMetadataInput';
 export * from './documentMetadataInputCategory';
 export * from './documentUploadInput';

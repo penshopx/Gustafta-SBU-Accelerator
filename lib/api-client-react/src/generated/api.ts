@@ -32,6 +32,7 @@ import type {
   Dashboard,
   DocumentAnalysis,
   DocumentAnalysisInput,
+  DocumentAnalysisSource,
   DocumentMetadataInput,
   DocumentUploadInput,
   Evidence,
@@ -1800,6 +1801,82 @@ export function useListDocumentVault<TData = Awaited<ReturnType<typeof listDocum
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListDocumentVaultQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetDocumentAnalysisSourceUrl = (id: number,
+    documentId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/documents/${documentId}/analysis-source`
+}
+
+export const getDocumentAnalysisSource = async (id: number,
+    documentId: string, options?: Parameters<typeof customFetch>[1]): Promise<DocumentAnalysisSource> => {
+
+  return customFetch<DocumentAnalysisSource>(getGetDocumentAnalysisSourceUrl(id,documentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDocumentAnalysisSourceQueryKey = (id: number,
+    documentId: string,) => {
+    return [
+    `/api/cases/${id}/documents/${documentId}/analysis-source`
+    ] as const;
+    }
+
+
+export const getGetDocumentAnalysisSourceQueryOptions = <TData = Awaited<ReturnType<typeof getDocumentAnalysisSource>>, TError = ErrorType<void | FormOwnerMismatchResponse>>(id: number,
+    documentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocumentAnalysisSource>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDocumentAnalysisSourceQueryKey(id,documentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocumentAnalysisSource>>> = ({ signal }) => getDocumentAnalysisSource(id,documentId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && documentId !== null && documentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDocumentAnalysisSource>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDocumentAnalysisSourceQueryResult = NonNullable<Awaited<ReturnType<typeof getDocumentAnalysisSource>>>
+export type GetDocumentAnalysisSourceQueryError = ErrorType<void | FormOwnerMismatchResponse>
+
+
+
+export function useGetDocumentAnalysisSource<TData = Awaited<ReturnType<typeof getDocumentAnalysisSource>>, TError = ErrorType<void | FormOwnerMismatchResponse>>(
+ id: number,
+    documentId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocumentAnalysisSource>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDocumentAnalysisSourceQueryOptions(id,documentId,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

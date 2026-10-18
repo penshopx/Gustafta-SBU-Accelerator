@@ -21,3 +21,4 @@
 - [Local scanner readiness](local-malware-scanner.md) — tiny antivirus fixtures do not establish full-signature startup cost; calibrate resource limits against official signatures.
 - [Node test asynchronous setup](node-test-async-setup.md) — registering a test before awaited setup can run root teardown before later integration tests.
 - [Validation console formatting](validation-console-formatting.md) — configured checks may force ANSI coloring even for piped subprocesses; normalize CLI messages before assertions.
+- [PDF page isolation](pdf-page-isolation.md) — render selected pixels into a fresh PDF; copying source page objects cannot establish isolation from unselected content.

@@ -1020,10 +1020,33 @@ export const ListDocumentVaultResponse = zod.object({
 
 
 
+export const GetDocumentAnalysisSourceParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "documentId": zod.coerce.string().uuid()
+})
+
+
+export const getDocumentAnalysisSourceResponseSourceRevisionRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
+
+export const GetDocumentAnalysisSourceResponse = zod.object({
+  "documentId": zod.string().uuid(),
+  "version": zod.number().int().min(1),
+  "sourceRevision": zod.string().regex(getDocumentAnalysisSourceResponseSourceRevisionRegExp),
+  "pageCount": zod.number().int().min(1),
+  "model": zod.string()
+})
+
+
+
+
+
 export const ListDocumentAnalysesParams = zod.object({
   "id": zod.coerce.number().int().min(1),
   "documentId": zod.coerce.string().uuid()
 })
+
 
 export const listDocumentAnalysesResponseResultSummaryMax = 3000;
 
@@ -1051,6 +1074,9 @@ export const listDocumentAnalysesResponseResultNextStepsMax = 8;
 
 export const ListDocumentAnalysesResponseItem = zod.object({
   "id": zod.string().uuid(),
+  "sourcePages": zod.array(zod.number().int().min(1)).nullable().describe('Payload page order mapped to original page numbers; null for legacy results with no snapshot'),
+  "sourcePageCount": zod.number().int().nullable(),
+  "sourceVersion": zod.number().int().nullable(),
   "documentId": zod.string().uuid(),
   "caseId": zod.number().int(),
   "ownerId": zod.string(),
@@ -1081,15 +1107,22 @@ export const AnalyzeCaseDocumentParams = zod.object({
   "documentId": zod.coerce.string().uuid()
 })
 
+export const analyzeCaseDocumentBodySourceRevisionRegExp = new RegExp('^[a-f0-9]{64}$');
+
+export const analyzeCaseDocumentBodyPagesMax = 10;
+
 export const analyzeCaseDocumentBodyQuestionMax = 2000;
 
 
 
 export const AnalyzeCaseDocumentBody = zod.object({
   "consent": zod.boolean(),
+  "sourceRevision": zod.string().regex(analyzeCaseDocumentBodySourceRevisionRegExp),
+  "pages": zod.array(zod.number().int().min(1)).min(1).max(analyzeCaseDocumentBodyPagesMax),
   "focus": zod.enum(['kesiapan_sbu', 'legalitas', 'keuangan', 'personel', 'pengalaman', 'smap']),
   "question": zod.string().max(analyzeCaseDocumentBodyQuestionMax).optional()
 })
+
 
 export const analyzeCaseDocumentResponseResultSummaryMax = 3000;
 
@@ -1117,6 +1150,9 @@ export const analyzeCaseDocumentResponseResultNextStepsMax = 8;
 
 export const AnalyzeCaseDocumentResponse = zod.object({
   "id": zod.string().uuid(),
+  "sourcePages": zod.array(zod.number().int().min(1)).nullable().describe('Payload page order mapped to original page numbers; null for legacy results with no snapshot'),
+  "sourcePageCount": zod.number().int().nullable(),
+  "sourceVersion": zod.number().int().nullable(),
   "documentId": zod.string().uuid(),
   "caseId": zod.number().int(),
   "ownerId": zod.string(),
