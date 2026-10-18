@@ -881,6 +881,85 @@ for (const status of [422, 500]) {
   });
 }
 
+test('membuka konfirmasi bukti lain setelah DELETE gagal tidak membawa pesan lama dan memakai ID baru', async (t) => {
+  const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const originalFetch = globalThis.fetch;
+  const originalWindow = testGlobals.window;
+  const originalAct = testGlobals.IS_REACT_ACT_ENVIRONMENT;
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity }, mutations: { retry: false } },
+  });
+  let renderer: TestRenderer.ReactTestRenderer | undefined;
+  t.after(async () => {
+    try {
+      await act(async () => { renderer?.unmount(); });
+    } finally {
+      client.clear();
+      globalThis.fetch = originalFetch;
+      testGlobals.window = originalWindow;
+      testGlobals.IS_REACT_ACT_ENVIRONMENT = originalAct;
+    }
+  });
+  testGlobals.IS_REACT_ACT_ENVIRONMENT = true;
+  testGlobals.window = { addEventListener() {}, removeEventListener() {} } as unknown as Window & typeof globalThis;
+  const rows: Evidence[] = [
+    { id: 11, caseId: 7, code: 'legalitas', title: 'Legalitas tersimpan', note: 'Catatan legalitas', updatedAt: '2026-09-25T12:00:00Z' },
+    { id: 12, caseId: 7, code: 'tenaga', title: 'Tenaga tersimpan', note: 'Catatan tenaga', updatedAt: '2026-09-24T12:00:00Z' },
+  ];
+  const evidenceKey = getListEvidenceQueryKey(7);
+  client.setQueryData(evidenceKey, rows);
+  const requests: string[] = [];
+  const messages = ['Bukti tenaga belum dapat dihapus.', 'Bukti legalitas belum dapat dihapus.'];
+  globalThis.fetch = async (input, init) => {
+    requests.push(`${init?.method ?? 'GET'} ${String(input)}`);
+    return Response.json({ error: messages[requests.length - 1] }, { status: 500 });
+  };
+  const waitForRender = async (ready: () => boolean) => {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      if (ready()) return;
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+    }
+    assert.fail('Komponen tidak mencapai keadaan yang diharapkan');
+  };
+  const click = async (testId: string) => {
+    await act(async () => { renderer!.root.findByProps({ 'data-testid': testId }).props.onClick(); });
+  };
+  await act(async () => {
+    renderer = TestRenderer.create(createElement(QueryClientProvider, { client },
+      createElement(CaseEvidence, { id: 7, requestType: 'baru', qualification: 'kecil' })));
+  });
+  await click('button-delete-evidence-12');
+  await click('button-confirm-delete');
+  await waitForRender(() => renderer!.root.findAllByProps({ role: 'alert' }).length === 1
+    && renderer!.root.findByProps({ 'data-testid': 'button-confirm-delete' }).props.disabled === false);
+  const assertError = (message: string) => {
+    const dialog = renderer!.root.findByProps({ role: 'dialog' });
+    assert.ok(dialog.findByProps({ role: 'alert' }).children.some(child =>
+      typeof child === 'string' && child.includes(message)));
+  };
+  assertError(messages[0]);
+  await act(async () => {
+    renderer!.update(createElement(QueryClientProvider, { client },
+      createElement(CaseEvidence, { id: 7, requestType: 'baru', qualification: 'kecil' })));
+  });
+  assertError(messages[0]); // Rendering ulang dialog yang sama tidak boleh menghapus kegagalannya.
+  await click('button-cancel-delete');
+  assert.equal(renderer!.root.findAllByProps({ role: 'dialog' }).length, 0);
+  await click('button-delete-evidence-11');
+  assert.equal(renderer!.root.findByProps({ role: 'dialog' }).props['aria-label'], 'Hapus catatan bukti?');
+  assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0, 'konfirmasi baru tidak menampilkan kegagalan bukti sebelumnya');
+  assert.equal(renderer!.root.findByProps({ 'data-testid': 'button-confirm-delete' }).props.disabled, false);
+  assert.deepEqual(requests, ['DELETE /api/cases/7/evidence/12'], 'membuka konfirmasi baru tidak mengirim DELETE');
+  await click('button-confirm-delete');
+  await waitForRender(() => renderer!.root.findAllByProps({ role: 'alert' }).length === 1
+    && renderer!.root.findByProps({ 'data-testid': 'button-confirm-delete' }).props.disabled === false);
+  assertError(messages[1]);
+  assert.deepEqual(requests, [
+    'DELETE /api/cases/7/evidence/12', 'DELETE /api/cases/7/evidence/11',
+  ], 'DELETE berikutnya hanya memakai ID bukti yang baru dipilih');
+  assert.deepEqual(client.getQueryData(evidenceKey), rows);
+});
+
 test('aksi dari rencana membuka formulir dengan kategori yang disarankan dan menyimpannya', async () => {
   const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
   const originalFetch = globalThis.fetch;
