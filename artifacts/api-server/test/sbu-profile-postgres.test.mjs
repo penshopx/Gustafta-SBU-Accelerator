@@ -105,8 +105,8 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
           builder.onLoad({ filter: /.*/, namespace: "profile-test" }, (args) => ({
             contents: args.path === "auth"
               ? `export const getAuth = (req) => ({ userId: req.get("x-test-user-id") });`
-               : `export { profilesTable, casesTable, evidenceTable, transitionVerificationsTable } from ${
-                JSON.stringify(join(testDir, "../../../lib/db/src/schema/sbu.ts"))
+              : `export * from ${
+                JSON.stringify(join(testDir, "../../../lib/db/src/schema/index.ts"))
               }; export const db = globalThis.__profileTestDb;`,
             loader: "js",
             resolveDir: testDir,
@@ -245,6 +245,74 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
             "Pembuatan maupun pembaruan profil uji tidak boleh menulis ke tabel aplikasi");
         });
       }
+    }
+
+    for (const ownExists of [true, false]) {
+      await t.test(`PATCH dengan isian tidak valid ${ownExists ? "menjaga seluruh kolom profil lama" : "tidak membuat profil baru"}`, async (t) => {
+        const ownId = `test-invalid-owner-${randomUUID()}`;
+        const otherId = `test-invalid-other-${randomUUID()}`;
+        const validBody = {
+          role: "konsultan",
+          displayName: "Nama Pengganti",
+          organizationName: "Organisasi Pengganti",
+        };
+        await isolated.query(
+          "INSERT INTO sbu_profiles (user_id, role, display_name, organization_name) VALUES ($1, $2, $3, $4)",
+          [otherId, "profesional", "Nama Pengguna Lain Privat", "Organisasi Pengguna Lain Privat"],
+        );
+        if (ownExists) {
+          await isolated.query(
+            "INSERT INTO sbu_profiles (user_id, role, display_name, organization_name) VALUES ($1, $2, $3, $4)",
+            [ownId, "kontraktor", "Nama Pemilik Lama", "Organisasi Pemilik Lama"],
+          );
+        }
+        const allIsolatedProfiles = async () => (await isolated.query(
+          "SELECT * FROM sbu_profiles ORDER BY user_id",
+        )).rows;
+        const applicationProfiles = async () => (await admin.query(
+          "SELECT * FROM public.sbu_profiles WHERE user_id = ANY($1::text[]) ORDER BY user_id",
+          [[ownId, otherId]],
+        )).rows;
+        const before = await allIsolatedProfiles();
+        assert.equal(before.filter((row) => row.user_id === ownId).length, ownExists ? 1 : 0);
+        assert.deepEqual(await applicationProfiles(), [], "ID uji tidak boleh ada di tabel aplikasi");
+
+        const invalidInputs = [
+          { label: "role di luar pilihan", body: { ...validBody, role: "peran-tidak-dikenal" } },
+        ];
+        for (const field of ["role", "displayName", "organizationName"]) {
+          const withoutField = { ...validBody };
+          delete withoutField[field];
+          invalidInputs.push(
+            { label: `${field} wajib hilang`, body: withoutField },
+            { label: `${field} bertipe angka`, body: { ...validBody, [field]: 123 } },
+          );
+        }
+        for (const { label, body } of invalidInputs) {
+          await t.test(label, async () => {
+            const beforeQueryCount = routeQueryCount;
+            const response = await request(server, ownId, {
+              method: "PATCH",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            assert.equal(response.status, 400, response.raw);
+            assert.equal(response.body.error, "Profil tidak valid.");
+            assert.equal(routeQueryCount, beforeQueryCount,
+              "Validasi harus menolak sebelum SQL apa pun, termasuk INSERT atau UPDATE profil");
+            const after = await allIsolatedProfiles();
+            assert.deepEqual(after, before,
+              "Semua kolom dan jumlah baris harus tetap utuh, termasuk profil pengguna lain");
+            assert.equal(
+              after.filter((row) => row.user_id === ownId).length,
+              ownExists ? 1 : 0,
+              "Permintaan tidak valid tidak boleh menghapus profil lama atau membuat profil baru",
+            );
+            assert.deepEqual(await applicationProfiles(), [],
+              "Permintaan tidak valid tidak boleh menulis profil uji ke tabel aplikasi");
+          });
+        }
+      });
     }
 
     const profiles = [
