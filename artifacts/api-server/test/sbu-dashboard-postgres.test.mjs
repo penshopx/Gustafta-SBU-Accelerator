@@ -277,6 +277,7 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
         "SELECT * FROM sbu_cases WHERE owner_id = $1 ORDER BY id", [otherOwnerId],
       )).rows;
 
+      const deletedIds = new Set();
       const assertDashboard = async (expectedCounts, expectedIds) => {
         // Read PostgreSQL independently of the route, after each HTTP mutation.
         const stored = (await isolated.query(
@@ -294,6 +295,15 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
         assert.equal(dashboard.status, 200, dashboard.raw);
         const { recent, ...counts } = dashboard.body;
         assert.deepEqual(counts, storedCounts, "Ringkasan harus langsung mengikuti hitungan tersimpan");
+        assert.equal(recent.length, Math.min(expectedCounts.total, 5),
+          "Jumlah terbaru harus mengikuti jumlah tersisa, dengan batas maksimal lima");
+        assert.ok(recent.every((item) => !deletedIds.has(item.id)),
+          "Permohonan yang sudah dihapus tidak boleh muncul kembali dalam ringkasan");
+        if (expectedCounts.total === 0) {
+          assert.deepEqual(dashboard.body, {
+            total: 0, draft: 0, reviewing: 0, prepared: 0, recent: [],
+          }, "Penghapusan permohonan terakhir harus mengosongkan seluruh ringkasan");
+        }
         assert.deepEqual(recent.map((item) => ({
           id: item.id, companyName: item.companyName, status: item.status, updatedAt: item.updatedAt,
         })), stored.slice(0, 5).map((item) => ({
@@ -329,6 +339,7 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
         assert.equal(deleted.raw, "");
         assert.deepEqual((await isolated.query("SELECT id FROM sbu_cases WHERE id = $1", [id])).rows, [],
           "DELETE harus benar-benar menghapus baris salinan");
+        deletedIds.add(id);
       };
 
       // Change a current top-five item, then promote an item previously outside it.
@@ -349,6 +360,20 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
       // Removing a top-five item must backfill with the next stored item.
       await deleteCase(205);
       await assertDashboard({ total: 6, draft: 2, reviewing: 2, prepared: 2 }, [202, 100, 206, 204, 203]);
+
+      // Cross the five-item boundary, then remove every remaining status through
+      // the real route. Each GET must shrink recent and preserve the other owner.
+      for (const { id, counts, recentIds } of [
+        { id: 202, counts: { total: 5, draft: 2, reviewing: 2, prepared: 1 }, recentIds: [100, 206, 204, 203, 201] },
+        { id: 100, counts: { total: 4, draft: 2, reviewing: 1, prepared: 1 }, recentIds: [206, 204, 203, 201] },
+        { id: 206, counts: { total: 3, draft: 1, reviewing: 1, prepared: 1 }, recentIds: [204, 203, 201] },
+        { id: 204, counts: { total: 2, draft: 1, reviewing: 0, prepared: 1 }, recentIds: [203, 201] },
+        { id: 203, counts: { total: 1, draft: 1, reviewing: 0, prepared: 0 }, recentIds: [201] },
+        { id: 201, counts: { total: 0, draft: 0, reviewing: 0, prepared: 0 }, recentIds: [] },
+      ]) {
+        await deleteCase(id);
+        await assertDashboard(counts, recentIds);
+      }
     });
   } finally {
     try {
