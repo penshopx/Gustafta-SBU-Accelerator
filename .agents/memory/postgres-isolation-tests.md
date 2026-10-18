@@ -22,3 +22,9 @@ Bootstrap the disposable schema and tables before creating a restricted route lo
 **Why:** Granting against a missing schema can fail mid-setup and leave an orphan login. A teardown error can hide the first failure and leave pools open, obscuring the cause until the runner times out.
 
 **How to apply:** In isolated route tests, set up schema and fixture data with the administrator connection, then mount the restricted connection for route calls only. Release each resource even if another release fails; report teardown failures separately from the original assertion.
+
+Route-test database shims should expose the schema-only exports while continuing to replace the database connection. Do not import the application's database bootstrap merely to satisfy newly mounted subrouters.
+
+**Why:** Bundling a parent router resolves model imports from all mounted subrouters, even when the test never calls those endpoints. Importing the real database bootstrap to fix missing exports risks defeating connection isolation.
+
+**How to apply:** Re-export schema definitions from the schema-only barrel; inject only the restricted fixture connection as the runtime database.

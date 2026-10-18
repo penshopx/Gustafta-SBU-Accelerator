@@ -73,7 +73,7 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
     const ownerId = `test-dashboard-owner-${randomUUID()}`;
     const otherOwnerId = `test-dashboard-other-${randomUUID()}`;
     const owners = [ownerId, otherOwnerId];
-    await isolated.query("INSERT INTO sbu_profiles (user_id) VALUES ($1), ($2)", owners);
+    await isolated.query("INSERT INTO sbu_profiles (user_id, role) VALUES ($1, 'kontraktor'), ($2, 'kontraktor')", owners);
     const tiedAt = "2026-03-10T10:00:00.000Z";
     const newerAt = "2026-03-11T10:00:00.000Z";
     const olderAt = "2026-03-09T10:00:00.000Z";
@@ -134,8 +134,8 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
           builder.onLoad({ filter: /.*/, namespace: "dashboard-test" }, (args) => ({
             contents: args.path === "auth"
               ? `export const getAuth = (req) => ({ userId: req.get("x-test-user-id") });`
-              : `export { profilesTable, casesTable, evidenceTable, transitionVerificationsTable } from ${
-                JSON.stringify(join(testDir, "../../../lib/db/src/schema/sbu.ts"))
+              : `export * from ${
+                JSON.stringify(join(testDir, "../../../lib/db/src/schema/index.ts"))
               }; export const db = globalThis.__dashboardTestDb;`,
             loader: "js",
             resolveDir: testDir,
@@ -189,6 +189,81 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
       "GET berulang tidak boleh mengubah permohonan salinan");
     assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
       "Permintaan daftar dan dashboard tidak boleh memasukkan data uji ke tabel aplikasi");
+
+    await t.test("POST langsung menambah total/draf dan menggeser lima terbaru tanpa mengubah pengguna lain", async () => {
+      const baseline = await request(server, ownerId);
+      assert.equal(baseline.status, 200, baseline.raw);
+      const otherDashboard = await request(server, otherOwnerId);
+      assert.equal(otherDashboard.status, 200, otherDashboard.raw);
+      const otherRows = (await isolated.query(
+        "SELECT * FROM sbu_cases WHERE owner_id = $1 ORDER BY id", [otherOwnerId],
+      )).rows;
+      const input = {
+        companyName: "Perusahaan Baru dari POST",
+        requestType: "baru",
+        qualification: "kecil",
+        classification: "gedung",
+      };
+
+      try {
+        const created = await request(server, ownerId, "/cases", { method: "POST", body: input });
+        assert.equal(created.status, 201, created.raw);
+        assert.equal(created.body.status, "draf");
+        for (const [key, value] of Object.entries(input)) assert.equal(created.body[key], value);
+        assert.ok(Number.isInteger(created.body.id) && created.body.id > 0);
+        assert.ok(!before.some((item) => item.id === created.body.id),
+          "POST harus menghasilkan ID baru dari identitas lokal, bukan menimpa fixture");
+
+        // Read the dashboard immediately after the real POST, without another mutation.
+        const dashboard = await request(server, ownerId);
+        assert.equal(dashboard.status, 200, dashboard.raw);
+        const { recent, ...counts } = dashboard.body;
+        assert.deepEqual(counts, {
+          total: baseline.body.total + 1,
+          draft: baseline.body.draft + 1,
+          reviewing: baseline.body.reviewing,
+          prepared: baseline.body.prepared,
+        }, "Permohonan baru harus langsung menambah total dan draf saja");
+        assert.equal(recent.length, 5);
+        assert.deepEqual(recent, [created.body, ...baseline.body.recent.slice(0, 4)],
+          "Permohonan baru harus menjadi yang terbaru dan menggeser anggota kelima");
+        assert.ok(!recent.some((item) => item.id === baseline.body.recent[4].id));
+
+        const stored = (await isolated.query(
+          "SELECT * FROM sbu_cases WHERE owner_id = $1 ORDER BY updated_at DESC, id DESC", [ownerId],
+        )).rows;
+        assert.equal(stored.length, baseline.body.total + 1);
+        assert.deepEqual(stored[0], {
+          ...stored[0],
+          id: created.body.id,
+          owner_id: ownerId,
+          company_name: input.companyName,
+          request_type: input.requestType,
+          qualification: input.qualification,
+          classification: input.classification,
+          status: "draf",
+          created_at: new Date(created.body.createdAt),
+          updated_at: new Date(created.body.updatedAt),
+        }, "POST harus benar-benar menyimpan permohonan yang dikembalikan di PostgreSQL");
+        assert.deepEqual(stored.filter((item) => item.id !== created.body.id).sort((a, b) => a.id - b.id),
+          before.filter((item) => item.owner_id === ownerId),
+          "Anggota kelima yang bergeser dan permohonan lama lainnya harus tetap tersimpan utuh");
+        const otherAfter = await request(server, otherOwnerId);
+        assert.equal(otherAfter.status, 200, otherAfter.raw);
+        assert.deepEqual(otherAfter.body, otherDashboard.body,
+          "POST pemilik tidak boleh mengubah dashboard pengguna lain");
+        assert.deepEqual((await isolated.query(
+          "SELECT * FROM sbu_cases WHERE owner_id = $1 ORDER BY id", [otherOwnerId],
+        )).rows, otherRows, "POST tidak boleh mengubah data pengguna lain");
+        assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
+          "POST harus tetap menulis hanya ke tabel salinan");
+      } finally {
+        // Restore only this scenario's fixture so PATCH/DELETE keep their baseline,
+        // even when a response assertion fails after the insert was committed.
+        await isolated.query("DELETE FROM sbu_cases WHERE owner_id = $1 AND company_name = $2",
+          [ownerId, input.companyName]);
+      }
+    });
 
     await t.test("PATCH dan DELETE di dalam/luar lima teratas langsung tercermin tanpa mengubah pengguna lain", async () => {
       const otherDashboard = await request(server, otherOwnerId);
