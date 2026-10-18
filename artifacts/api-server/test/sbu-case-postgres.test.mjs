@@ -99,8 +99,8 @@ test("PATCH permohonan di PostgreSQL mempertahankan kolom lain dan tidak meminda
           builder.onLoad({ filter: /.*/, namespace: "case-test" }, (args) => ({
             contents: args.path === "auth"
               ? `export const getAuth = (req) => ({ userId: req.get("x-test-user-id") });`
-              : `export { profilesTable, casesTable, evidenceTable, transitionVerificationsTable } from ${
-                JSON.stringify(join(testDir, "../../../lib/db/src/schema/sbu.ts"))
+              : `export * from ${
+                JSON.stringify(join(testDir, "../../../lib/db/src/schema/index.ts"))
               }; export const db = globalThis.__caseTestDb;`,
             loader: "js",
             resolveDir: testDir,
