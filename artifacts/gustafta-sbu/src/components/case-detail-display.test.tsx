@@ -105,6 +105,14 @@ test('tanggal pembaruan detail kasus mengikuti zona waktu penonton tanpa menguba
     ],
     'Asia/Jakarta': ['1 Jan 2027', '1 Jan 2027', '31 Des 2026', '1 Jan 2027', '1 Jan 2027'],
     'Asia/Tokyo': ['1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027'],
+    'Asia/Kathmandu': [
+      '1 Jan 2027', '1 Jan 2027', '31 Des 2026', '31 Des 2026', '1 Jan 2027',
+      '26 Sep 2026', '27 Sep 2026', '31 Des 2026', '1 Jan 2027', '1 Jan 2027',
+    ],
+    'Pacific/Kiritimati': [
+      '1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027',
+      '26 Sep 2026', '27 Sep 2026', '31 Des 2026', '1 Jan 2027', '1 Jan 2027',
+    ],
   };
   if (!process.env.CASE_DETAIL_TZ_CHILD) {
     // TZ must be set before importing the module-scoped local formatter.
@@ -124,7 +132,9 @@ test('tanggal pembaruan detail kasus mengikuti zona waktu penonton tanpa menguba
   }
 
   const zone = process.env.TZ!;
-  assert.equal(new Intl.DateTimeFormat().resolvedOptions().timeZone, zone);
+  // ICU may canonicalize Asia/Kathmandu to the equivalent Asia/Katmandu.
+  assert.equal(new Intl.DateTimeFormat().resolvedOptions().timeZone,
+    new Intl.DateTimeFormat('id-ID', { timeZone: zone }).resolvedOptions().timeZone);
   const expected = expectedByZone[zone];
   assert.ok(expected, `zona pengujian dikenal: ${zone}`);
   const updates = [
@@ -133,6 +143,18 @@ test('tanggal pembaruan detail kasus mengikuti zona waktu penonton tanpa menguba
     '2026-12-31T16:30:00.000Z', // Jakarta is still December; Tokyo is January.
     '2026-12-31T17:30:00.000Z', // Jakarta has now crossed midnight.
     '2027-01-01T07:30:00.000+07:00', // Same instant as the first value.
+    ...(zone === 'Asia/Kathmandu' ? [
+      // UTC+05:45: midnight is 18:15Z, not an hour-aligned boundary.
+      '2026-09-26T18:14:59.999Z', '2026-09-26T18:15:00.000Z',
+      '2026-12-31T18:14:59.999Z', '2026-12-31T18:15:00.000Z',
+      '2027-01-01T00:00:00.000+05:45', // Same year-boundary instant.
+    ] : []),
+    ...(zone === 'Pacific/Kiritimati' ? [
+      // UTC+14: the local date rolls over while UTC is still in the morning.
+      '2026-09-26T09:59:59.999Z', '2026-09-26T10:00:00.000Z',
+      '2026-12-31T09:59:59.999Z', '2026-12-31T10:00:00.000Z',
+      '2027-01-01T00:00:00.000+14:00',
+    ] : []),
     ...(zone === 'America/Los_Angeles' ? [
       // DST starts March 8: midnight changes from 08:00Z to 07:00Z.
       '2026-03-08T07:30:00.000Z', '2026-03-08T08:30:00.000Z',
@@ -145,6 +167,7 @@ test('tanggal pembaruan detail kasus mengikuti zona waktu penonton tanpa menguba
   assert.equal(updates.length, expected.length);
   for (const [index, updatedAt] of updates.entries()) {
     for (const [calendarDay, formattedDay] of [
+      ['2026-12-31', '31 Des 2026'],
       ['2027-01-01', '1 Jan 2027'],
       ['2026-03-08', '8 Mar 2026'],
       ['2026-11-01', '1 Nov 2026'],
@@ -152,7 +175,8 @@ test('tanggal pembaruan detail kasus mengikuti zona waktu penonton tanpa menguba
       for (const expiry of [calendarDay, `${calendarDay}T00:00:00.000Z`]) {
         const summary = renderToStaticMarkup(createElement(CaseSummary, {
           sbuCase: {
-            ...sbuCase, createdAt: '2026-08-01T12:00:00.000Z',
+            // 08:00Z stays August 1 in every tested zone, including UTC+14.
+            ...sbuCase, createdAt: '2026-08-01T08:00:00.000Z',
             updatedAt, existingSbuExpiresOn: expiry,
           },
         }));
@@ -167,7 +191,7 @@ test('tanggal pembaruan detail kasus mengikuti zona waktu penonton tanpa menguba
 
 test('tanggal berlaku tetap tanggal kalender yang sama saat ditampilkan di berbagai zona waktu', () => {
   if (!process.env.CALENDAR_TZ_CHILD) {
-    for (const tz of ['UTC', 'America/Los_Angeles', 'Asia/Jakarta', 'Asia/Tokyo']) {
+    for (const tz of ['UTC', 'America/Los_Angeles', 'Asia/Jakarta', 'Asia/Tokyo', 'Asia/Kathmandu', 'Pacific/Kiritimati']) {
       const result = spawnSync(process.execPath, [
         '--import', 'tsx', '--test', '--test-reporter=tap',
         '--test-name-pattern', 'tanggal berlaku tetap tanggal kalender',

@@ -16,3 +16,9 @@ Run local-timestamp component assertions in fresh processes with `TZ` set before
 **Why:** `Intl.DateTimeFormat` captures the default time zone when constructed. Changing `TZ` after importing the renderer can falsely appear to exercise multiple viewer zones while all assertions use the first zone.
 
 **How to apply:** Use explicit expected dates around midnight and a year boundary, and verify the process's resolved time zone. Keep calendar-date assertions as a separate invariant.
+
+Compare the default resolved zone with an explicitly configured formatter's resolved zone rather than the input IANA spelling.
+
+**Why:** The runtime's ICU can resolve `Asia/Kathmandu` as `Asia/Katmandu`; literal equality would reject a correctly configured process.
+
+**How to apply:** Canonicalize both sides through `Intl.DateTimeFormat` when checking the active zone, but keep timestamp expectations explicit and independent of the formatter under test.

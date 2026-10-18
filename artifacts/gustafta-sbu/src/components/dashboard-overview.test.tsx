@@ -313,6 +313,14 @@ test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tangg
     ],
     'Asia/Jakarta': ['1 Jan 2027', '1 Jan 2027', '1 Jan 2027'],
     'Asia/Tokyo': ['1 Jan 2027', '1 Jan 2027', '1 Jan 2027'],
+    'Asia/Kathmandu': [
+      '1 Jan 2027', '1 Jan 2027', '1 Jan 2027',
+      '26 Sep 2026', '27 Sep 2026', '31 Des 2026', '1 Jan 2027', '1 Jan 2027',
+    ],
+    'Pacific/Kiritimati': [
+      '1 Jan 2027', '1 Jan 2027', '1 Jan 2027',
+      '26 Sep 2026', '27 Sep 2026', '31 Des 2026', '1 Jan 2027', '1 Jan 2027',
+    ],
   };
   if (!process.env.DASHBOARD_TZ_CHILD) {
     // The formatter captures the default zone at import time; use fresh processes,
@@ -333,7 +341,9 @@ test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tangg
   }
 
   const zone = process.env.TZ!;
-  assert.equal(new Intl.DateTimeFormat().resolvedOptions().timeZone, zone);
+  // ICU may canonicalize Asia/Kathmandu to the equivalent Asia/Katmandu.
+  assert.equal(new Intl.DateTimeFormat().resolvedOptions().timeZone,
+    new Intl.DateTimeFormat('id-ID', { timeZone: zone }).resolvedOptions().timeZone);
   const expected = expectedByZone[zone];
   assert.ok(expected, `zona pengujian dikenal: ${zone}`);
   const response: Dashboard = {
@@ -343,6 +353,18 @@ test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tangg
       '2026-12-31T23:30:00.000Z',
       // Same instant as the first case, expressed with an explicit UTC offset.
       '2027-01-01T07:30:00.000+07:00',
+      ...(zone === 'Asia/Kathmandu' ? [
+        // UTC+05:45: midnight is 18:15Z.
+        '2026-09-26T18:14:59.999Z', '2026-09-26T18:15:00.000Z',
+        '2026-12-31T18:14:59.999Z', '2026-12-31T18:15:00.000Z',
+        '2027-01-01T00:00:00.000+05:45',
+      ] : []),
+      ...(zone === 'Pacific/Kiritimati' ? [
+        // UTC+14: midnight is 10:00Z on the preceding UTC date.
+        '2026-09-26T09:59:59.999Z', '2026-09-26T10:00:00.000Z',
+        '2026-12-31T09:59:59.999Z', '2026-12-31T10:00:00.000Z',
+        '2027-01-01T00:00:00.000+14:00',
+      ] : []),
       ...(zone === 'America/Los_Angeles' ? [
         // Midnights before/after DST starts (UTC-8 -> UTC-7).
         '2026-03-08T07:30:00.000Z', '2026-03-08T08:30:00.000Z',
@@ -378,6 +400,8 @@ test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tangg
   assert.equal(formatCalendarDate('2027-04-15'), '15 Apr 2027');
   assert.equal(formatCalendarDate('2027-04-15T00:00:00.000Z'), '15 Apr 2027');
   for (const [calendarDay, formattedDay] of [
+    ['2026-12-31', '31 Des 2026'],
+    ['2027-01-01', '1 Jan 2027'],
     ['2026-03-08', '8 Mar 2026'],
     ['2026-11-01', '1 Nov 2026'],
   ]) {
