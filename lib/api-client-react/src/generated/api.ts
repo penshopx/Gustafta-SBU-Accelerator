@@ -58,8 +58,11 @@ import type {
   ReviewWorkspace,
   SbuCase,
   SbuChatInput,
+  SbuChatLimitError,
+  SbuChatQuota,
   SbuChatReply,
   SbuChatSpecialist,
+  SbuChatUnavailable,
   SkkCertificateInput,
   SkkCertificateUpdate,
   TransitionVerification,
@@ -2119,6 +2122,83 @@ export function useGetSbuChatSpecialists<TData = Awaited<ReturnType<typeof getSb
 
 
 
+export const getGetSbuChatQuotaUrl = () => {
+
+
+
+
+  return `/api/openai/sbu/quota`
+}
+
+/**
+ * @summary Current server-session account quota; daily reset at 00:00 UTC (07:00 WIB)
+ */
+export const getSbuChatQuota = async ( options?: Parameters<typeof customFetch>[1]): Promise<SbuChatQuota> => {
+
+  return customFetch<SbuChatQuota>(getGetSbuChatQuotaUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSbuChatQuotaQueryKey = () => {
+    return [
+    `/api/openai/sbu/quota`
+    ] as const;
+    }
+
+
+export const getGetSbuChatQuotaQueryOptions = <TData = Awaited<ReturnType<typeof getSbuChatQuota>>, TError = ErrorType<void | FormOwnerMismatchResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSbuChatQuota>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSbuChatQuotaQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSbuChatQuota>>> = ({ signal }) => getSbuChatQuota({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSbuChatQuota>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSbuChatQuotaQueryResult = NonNullable<Awaited<ReturnType<typeof getSbuChatQuota>>>
+export type GetSbuChatQuotaQueryError = ErrorType<void | FormOwnerMismatchResponse>
+
+
+/**
+ * @summary Current server-session account quota; daily reset at 00:00 UTC (07:00 WIB)
+ */
+
+export function useGetSbuChatQuota<TData = Awaited<ReturnType<typeof getSbuChatQuota>>, TError = ErrorType<void | FormOwnerMismatchResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSbuChatQuota>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSbuChatQuotaQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getSendSbuChatMessageUrl = () => {
 
 
@@ -2161,7 +2241,7 @@ return customFetch<SbuChatReply>(getSendSbuChatMessageUrl(),
 
 export const getSendSbuChatMessageMutationKey = () => ['sendSbuChatMessage'] as const;
 
-export const getSendSbuChatMessageMutationOptions = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+export const getSendSbuChatMessageMutationOptions = <TError = ErrorType<void | FormOwnerMismatchResponse | SbuChatLimitError | SbuChatUnavailable>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendSbuChatMessage>>, TError,SendSbuChatMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof sendSbuChatMessage>>, TError,SendSbuChatMessageMutationVariables, TContext> => {
 
@@ -2190,13 +2270,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type SendSbuChatMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sendSbuChatMessage>>>
     export type SendSbuChatMessageMutationBody = BodyType<SbuChatInput>
-    export type SendSbuChatMessageMutationError = ErrorType<void | FormOwnerMismatchResponse>
+    export type SendSbuChatMessageMutationError = ErrorType<void | FormOwnerMismatchResponse | SbuChatLimitError | SbuChatUnavailable>
     export type SendSbuChatMessageMutationVariables = {data: BodyType<SbuChatInput>}
 
     /**
  * @summary Role-focused SBU AI guidance without reading company data or documents
  */
-export const useSendSbuChatMessage = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+export const useSendSbuChatMessage = <TError = ErrorType<void | FormOwnerMismatchResponse | SbuChatLimitError | SbuChatUnavailable>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendSbuChatMessage>>, TError,SendSbuChatMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof sendSbuChatMessage>>,

@@ -24,3 +24,4 @@ export * from "./consultations";
 export * from "./personnel";
 export * from "./workroom";
 export * from "./workroom-reviews";
+export * from "./chat-quota";

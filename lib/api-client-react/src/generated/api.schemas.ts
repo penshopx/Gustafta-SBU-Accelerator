@@ -629,6 +629,43 @@ export interface SbuChatInput {
   messages: SbuChatMessage[];
 }
 
+export interface SbuChatQuota {
+  userId: string;
+  /** @minimum 1 */
+  dailyLimit: number;
+  /** @minimum 0 */
+  dailyRemaining: number;
+  dailyResetAt: string;
+  /** @minimum 1 */
+  minuteLimit: number;
+  /** @minimum 0 */
+  minuteRemaining: number;
+  minuteResetAt: string;
+  busy: boolean;
+  /** @minimum 0 */
+  retryAfterSeconds: number;
+}
+
+export type SbuChatLimitErrorCode = typeof SbuChatLimitErrorCode[keyof typeof SbuChatLimitErrorCode];
+
+
+export const SbuChatLimitErrorCode = {
+  chat_busy: 'chat_busy',
+  chat_minute_limit: 'chat_minute_limit',
+  chat_daily_limit: 'chat_daily_limit',
+} as const;
+
+export interface SbuChatLimitError {
+  error: string;
+  code: SbuChatLimitErrorCode;
+  quota: SbuChatQuota;
+}
+
+export interface SbuChatUnavailable {
+  error: string;
+  quota?: SbuChatQuota;
+}
+
 export type SbuChatReplySpecialist = typeof SbuChatReplySpecialist[keyof typeof SbuChatReplySpecialist];
 
 
@@ -688,6 +725,7 @@ export interface SbuChatCitation {
 }
 
 export interface SbuChatReply {
+  quota: SbuChatQuota;
   specialist: SbuChatReplySpecialist;
   userId: string;
   mode: SbuChatReplyMode;

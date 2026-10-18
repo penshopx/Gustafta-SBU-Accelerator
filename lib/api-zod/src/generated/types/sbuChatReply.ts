@@ -6,10 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SbuChatCitation } from './sbuChatCitation';
+import type { SbuChatQuota } from './sbuChatQuota';
 import type { SbuChatReplyMode } from './sbuChatReplyMode';
 import type { SbuChatReplySpecialist } from './sbuChatReplySpecialist';
 
 export interface SbuChatReply {
+  quota: SbuChatQuota;
   specialist: SbuChatReplySpecialist;
   userId: string;
   mode: SbuChatReplyMode;

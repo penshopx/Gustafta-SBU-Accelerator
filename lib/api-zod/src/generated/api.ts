@@ -1165,6 +1165,32 @@ export const GetSbuChatSpecialistsResponse = zod.array(GetSbuChatSpecialistsResp
 
 
 /**
+ * @summary Current server-session account quota; daily reset at 00:00 UTC (07:00 WIB)
+ */
+
+export const getSbuChatQuotaResponseDailyRemainingMin = 0;
+
+
+export const getSbuChatQuotaResponseMinuteRemainingMin = 0;
+
+export const getSbuChatQuotaResponseRetryAfterSecondsMin = 0;
+
+
+
+export const GetSbuChatQuotaResponse = zod.object({
+  "userId": zod.string(),
+  "dailyLimit": zod.number().int().min(1),
+  "dailyRemaining": zod.number().int().min(getSbuChatQuotaResponseDailyRemainingMin),
+  "dailyResetAt": zod.coerce.date(),
+  "minuteLimit": zod.number().int().min(1),
+  "minuteRemaining": zod.number().int().min(getSbuChatQuotaResponseMinuteRemainingMin),
+  "minuteResetAt": zod.coerce.date(),
+  "busy": zod.boolean(),
+  "retryAfterSeconds": zod.number().int().min(getSbuChatQuotaResponseRetryAfterSecondsMin)
+})
+
+
+/**
  * @summary Role-focused SBU AI guidance without reading company data or documents
  */
 export const sendSbuChatMessageBodySpecialistDefault = `sbuclaw`;
@@ -1184,10 +1210,29 @@ export const SendSbuChatMessageBody = zod.object({
 })).min(1).max(sendSbuChatMessageBodyMessagesMax)
 })
 
+
+export const sendSbuChatMessageResponseQuotaDailyRemainingMin = 0;
+
+
+export const sendSbuChatMessageResponseQuotaMinuteRemainingMin = 0;
+
+export const sendSbuChatMessageResponseQuotaRetryAfterSecondsMin = 0;
+
 export const sendSbuChatMessageResponseCitationsItemCheckedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 
 
 export const SendSbuChatMessageResponse = zod.object({
+  "quota": zod.object({
+  "userId": zod.string(),
+  "dailyLimit": zod.number().int().min(1),
+  "dailyRemaining": zod.number().int().min(sendSbuChatMessageResponseQuotaDailyRemainingMin),
+  "dailyResetAt": zod.coerce.date(),
+  "minuteLimit": zod.number().int().min(1),
+  "minuteRemaining": zod.number().int().min(sendSbuChatMessageResponseQuotaMinuteRemainingMin),
+  "minuteResetAt": zod.coerce.date(),
+  "busy": zod.boolean(),
+  "retryAfterSeconds": zod.number().int().min(sendSbuChatMessageResponseQuotaRetryAfterSecondsMin)
+}),
   "specialist": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']),
   "userId": zod.string(),
   "mode": zod.enum(['bujk', 'pendamping', 'asesor', 'lsbu', 'asosiasi', 'umum']),

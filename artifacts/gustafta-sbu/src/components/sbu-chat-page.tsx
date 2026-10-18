@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Link } from 'wouter';
+import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, Copy, Loader2, Plus, SendHorizontal, ShieldAlert, Square } from 'lucide-react';
-import { sendSbuChatMessage, useGetSbuChatSpecialists, getGetSbuChatSpecialistsQueryKey, type SbuChatInput, type SbuChatSpecialist, type SbuChatCitation } from '@workspace/api-client-react';
-import { useFormMutationOptions } from '@/components/account-queries';
+import { sendSbuChatMessage, useGetSbuChatQuota, getGetSbuChatQuotaQueryKey, useGetSbuChatSpecialists, getGetSbuChatSpecialistsQueryKey, type SbuChatInput, type SbuChatSpecialist, type SbuChatCitation } from '@workspace/api-client-react';
+import { useAccountReadOptions, useFormMutationOptions } from '@/components/account-queries';
 import { ChatCitations, chatAnswerForCopy } from './chat-citations';
+import { ChatQuotaNotice, chatLimitMessage, chatQuotaFromError } from './chat-quota';
 
 type Mode = SbuChatInput['mode'];
 type SpecId = SbuChatSpecialist['id'];
@@ -28,7 +30,7 @@ const errorFor = (e: unknown): string => {
   const status = (e as { status?: number } | null)?.status;
   if (status === 401) return 'Sesi Anda berakhir atau tidak valid. Muat ulang halaman atau masuk kembali.';
   if (status === 409) return 'Akun aktif tidak cocok dengan sesi ini. Muat ulang halaman sebelum melanjutkan.';
-  if (status === 429) return 'Terlalu banyak permintaan. Tunggu sebentar lalu coba kirim lagi.';
+  if (status === 429) return chatLimitMessage(e)!;
   if (status === 503) return 'Layanan asisten sedang tidak tersedia. Coba lagi beberapa saat lagi.';
   return 'Pesan belum dapat dikirim. Draf Anda dipertahankan; silakan coba lagi.';
 };
@@ -44,6 +46,13 @@ function buildPayload(history: Msg[]) {
 
 export default function SbuChatPage({ expectedUserId, initialRole }: { expectedUserId: string; initialRole?: string }) {
   const options = useFormMutationOptions();
+  const readOptions = useAccountReadOptions();
+  const queryClient = useQueryClient();
+  const quotaQuery = useGetSbuChatQuota({
+    ...readOptions,
+    query: { queryKey: getGetSbuChatQuotaQueryKey(), retry: false, staleTime: 0, refetchInterval: 15000, refetchOnWindowFocus: 'always', refetchOnMount: 'always' },
+  });
+  const quota = quotaQuery.data?.userId === expectedUserId ? quotaQuery.data : undefined;
   const [mode, setMode] = useState<Mode>(() => defaultModeForRole(initialRole));
   const [messages, setMessages] = useState<Msg[]>([]);
   const [draft, setDraft] = useState('');
@@ -77,7 +86,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
 
   const send = async (text: string, base: Msg[] = messages) => {
     const content = text.trim();
-    if (!content || loading || ctrl.current || !consent || !catalog.isSuccess || !spec || content.length > MAX_USER) return;
+    if (!content || loading || ctrl.current || !consent || !catalog.isSuccess || !spec || !quota || quotaQuery.isError || content.length > MAX_USER) return;
     const next = [...base, { id: ++seq.current, role: 'user' as const, content }];
     const c = new AbortController();
     ctrl.current = c; timedOut.current = false;
@@ -92,17 +101,25 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
         setError('Respons tidak sesuai dengan akun atau mode atau spesialis yang aktif, sehingga tidak ditampilkan. Muat ulang halaman lalu coba lagi.');
         return;
       }
+      if (res.quota.userId !== expectedUserId) {
+        setError('Sesi kuota berubah. Muat ulang halaman sebelum melanjutkan.'); return;
+      }
+      queryClient.setQueryData(getGetSbuChatQuotaQueryKey(), res.quota);
       setMessages([...next, { id: ++seq.current, role: 'assistant', content: res.answer, citations: res.citations, retrievalNotice: res.retrievalNotice }]);
       setDraft('');
     } catch (e) {
       if (c.signal.aborted && !timedOut.current) return;
-      setError(timedOut.current ? 'Permintaan melebihi 80 detik dan dihentikan. Draf Anda dipertahankan; coba kirim lagi.' : errorFor(e));
+      const errorQuota = chatQuotaFromError(e, expectedUserId);
+      if (errorQuota) queryClient.setQueryData(getGetSbuChatQuotaQueryKey(), errorQuota);
+      setError(timedOut.current ? 'Permintaan melebihi 80 detik dan dihentikan. Draf dipertahankan; percobaan yang diterima tetap memakai kuota.' :
+        errorFor(e) + (errorQuota && (e as { status?: number }).status === 503 ? ' Percobaan ini tetap memakai kuota karena sudah dikirim ke AI.' : ''));
     } finally {
       if (ctrl.current === c) { abort(); setLoading(false); }
+      void queryClient.invalidateQueries({ queryKey: getGetSbuChatQuotaQueryKey() });
     }
   };
 
-  const cancel = () => { abort(); setLoading(false); setError('Permintaan dibatalkan. Draf Anda dipertahankan.'); };
+  const cancel = () => { abort(); setLoading(false); setError('Permintaan dibatalkan. Draf dipertahankan. Percobaan yang sudah diterima tetap memakai kuota.'); };
   const resetAll = (to?: { mode?: Mode; specialist?: SpecId }) => { abort(); setLoading(false); setMessages([]); setDraft(''); setError(null); setConfirm(null); if (to?.mode) setMode(to.mode); if (to?.specialist) setSpecialist(to.specialist); };
   const dirty = messages.length > 0 || draft.trim().length > 0;
   const pickMode = (to: Mode) => {
@@ -121,7 +138,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
     try { await navigator.clipboard.writeText(chatAnswerForCopy(m.content, m.citations, m.retrievalNotice)); setCopied(m.id); window.setTimeout(() => setCopied(null), 1500); } catch { /* clipboard unavailable */ }
   };
   const over = draft.length > MAX_USER;
-  const canSend = consent && catalog.isSuccess && !!spec && !loading && !!draft.trim() && !over;
+  const canSend = consent && catalog.isSuccess && !!spec && !!quota && !quotaQuery.isError && !loading && !!draft.trim() && !over;
 
   return <div className="mx-auto max-w-5xl">
     <div className="mb-6">
@@ -134,6 +151,11 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
       <ShieldAlert size={18} className="mt-0.5 shrink-0 text-[#1769d1]" />
       <p>Jawaban AI bersifat pendahuluan dan perlu ditinjau manusia yang kompeten. Bukan nasihat hukum, bukan keputusan LSBU atau instansi, dan tidak menjamin penerbitan SBU. Asisten mencari ringkasan sumber publik terkurasi, bukan dokumen lengkap atau verifikasi live. Baca bagian sumber dan batas verifikasi di bawah jawaban; periksa ketentuan primer di <Link href="/regulations" data-testid="link-chat-regulations" className="font-bold underline">Pusat regulasi</Link>.</p>
     </div>
+
+    {quota && !quotaQuery.isError ? <ChatQuotaNotice quota={quota} /> :
+      <p role="status" className="mb-5 text-sm text-[#526b81]">{quotaQuery.isPending ? 'Memeriksa kuota asisten…' : 'Kuota belum dapat diperiksa. Pengiriman dinonaktifkan sementara.'}
+        {!quotaQuery.isPending && <button type="button" className="ml-2 font-bold underline" onClick={() => void quotaQuery.refetch()}>Periksa lagi</button>}
+      </p>}
 
     <div className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Mode peran">
       {MODES.map(m => <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} disabled={loading} data-testid={`button-mode-${m.id}`} onClick={() => pickMode(m.id)} className={`rounded-xl border p-3.5 text-left transition-colors ${mode === m.id ? 'border-[#1769d1] bg-[#eaf4ff] ring-1 ring-[#1769d1]' : 'border-[#d1dfe9] bg-white hover:bg-[#f4f9fc]'}`}>

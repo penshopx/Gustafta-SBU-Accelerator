@@ -1,32 +1,69 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 import { build } from "esbuild";
 import express from "express";
+import { createRestrictedRoutePool } from "./helpers/restricted-postgres.mjs";
 
 const dir = fileURLToPath(new URL(".", import.meta.url));
 const temp = await mkdtemp(join(dir, ".sbu-chat-"));
-after(() => rm(temp, { recursive: true, force: true }));
+const { Pool } = createRequire(new URL("../../../lib/db/package.json", import.meta.url))("pg");
+const admin = new Pool({ connectionString: process.env.DATABASE_URL });
+const schema = `chat_${randomUUID().replaceAll("-", "")}`;
+let restricted, second;
+after(async () => {
+  try { await restricted?.close(); } finally {
+    try { await second?.close(); } finally {
+      try { await admin.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); } finally {
+        await admin.end();
+        await rm(temp, { recursive: true, force: true });
+      }
+    }
+  }
+});
+await admin.query(`CREATE SCHEMA "${schema}"`);
+const bootstrap = await admin.connect();
+try {
+  await bootstrap.query(`SET search_path TO "${schema}"`);
+  await bootstrap.query(await readFile(new URL("../../../lib/db/migrations/chat-quota.sql", import.meta.url), "utf8"));
+  await bootstrap.query(await readFile(new URL("../../../lib/db/migrations/chat-quota.sql", import.meta.url), "utf8"));
+} finally {
+  await bootstrap.query("RESET search_path");
+  bootstrap.release();
+}
+restricted = await createRestrictedRoutePool(admin, schema);
+second = await createRestrictedRoutePool(admin, schema);
+globalThis.__chatQuotaPool = restricted.pool;
+const plugins = [{
+  name: "controlled-clerk-and-quota",
+  setup(builder) {
+    builder.onResolve({ filter: /^@workspace\/api-zod$/ }, () => ({
+      path: fileURLToPath(new URL("../../../lib/api-zod/src/index.ts", import.meta.url)),
+    }));
+    builder.onResolve({ filter: /^@workspace\/db$/ }, () => ({ path: "db", namespace: "controlled" }));
+    builder.onResolve({ filter: /^@clerk\/express$/ }, () => ({ path: "clerk", namespace: "controlled" }));
+    builder.onLoad({ filter: /.*/, namespace: "controlled" }, ({ path }) => ({
+      contents: path === "db" ? "export const pool = globalThis.__chatQuotaPool;"
+        : "export const getAuth = req => ({userId: req.testUser ?? null});", loader: "js",
+    }));
+  },
+}];
 await build({
   entryPoints: [join(dir, "../src/routes/sbu-chat.ts")],
   outfile: join(temp, "route.mjs"), platform: "node", bundle: true, format: "esm",
   external: ["express", "@workspace/integrations-openai-ai-server"],
-  plugins: [{
-    name: "controlled-clerk",
-    setup(builder) {
-      builder.onResolve({ filter: /^@workspace\/api-zod$/ }, () => ({
-        path: fileURLToPath(new URL("../../../lib/api-zod/src/index.ts", import.meta.url)),
-      }));
-      builder.onResolve({ filter: /^@clerk\/express$/ }, () => ({ path: "clerk", namespace: "controlled" }));
-      builder.onLoad({ filter: /.*/, namespace: "controlled" }, () => ({
-        contents: "export const getAuth = req => ({userId: req.testUser ?? null});", loader: "js",
-      }));
-    },
-  }],
+  plugins,
 });
 const { createSbuChatRouter } = await import(join(temp, "route.mjs"));
+await build({
+  entryPoints: [join(dir, "../src/lib/sbu-chat-quota.ts")],
+  outfile: join(temp, "quota.mjs"), platform: "node", bundle: true, format: "esm", plugins,
+});
+const { createPostgresChatQuotaStore, parseChatDailyLimit } = await import(join(temp, "quota.mjs"));
 await build({
   entryPoints: [join(dir, "../src/lib/sbu-chat-policy.ts")],
   outfile: join(temp, "policy.mjs"), platform: "node", bundle: true, format: "esm",
@@ -40,6 +77,7 @@ const { retrieveChatSources, validateCitedAnswer } = await import(join(temp, "re
 const body = (mode = "bujk") => ({ mode, consent: true, messages: [{ role: "user", content: "Bantu persiapan SBU" }] });
 
 async function server(generate, run) {
+  await restricted.pool.query("DELETE FROM sbu_chat_quota");
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => { req.testUser = req.get("X-Test-Identity"); next(); });
@@ -78,6 +116,7 @@ test("unauthenticated, stale owner, consent and invalid context never call provi
     assert.equal((await send({ ...body(), messages: [body().messages[0], body().messages[0]] })).status, 400);
   });
   assert.equal(calls, 0);
+  assert.equal((await restricted.pool.query("SELECT count(*)::int AS count FROM sbu_chat_quota")).rows[0].count, 0);
 });
 
 test("all six modes return server identity and no-store; accounts never share histories", async () => {
@@ -192,6 +231,176 @@ test("one in-flight generation per owner, independent other owner", async () => 
     release();
     assert.equal((await pending).status, 200);
   });
+});
+
+test("quota configuration is explicit and bounded", () => {
+  assert.equal(parseChatDailyLimit(undefined), 30);
+  assert.equal(parseChatDailyLimit("50"), 50);
+  for (const value of ["", "0", "-1", "1.5", "1001", "Infinity", "30x", " 30"]) {
+    assert.throws(() => parseChatDailyLimit(value));
+  }
+});
+
+test("two independent PostgreSQL pools enforce atomic admission, resets and fenced leases", async () => {
+  await restricted.pool.query("DELETE FROM sbu_chat_quota");
+  const a = createPostgresChatQuotaStore(restricted.pool, 3);
+  const b = createPostgresChatQuotaStore(second.pool, 3);
+  const results = await Promise.all(Array.from({ length: 20 }, (_, i) => (i % 2 ? a : b).reserve("atomic-owner")));
+  const winners = results.filter(result => result.leaseId);
+  assert.equal(winners.length, 1);
+  assert.equal(results.filter(result => result.code === "chat_busy").length, 19);
+  assert.equal((await b.read("atomic-owner")).dailyRemaining, 2);
+  const other = await b.reserve("other-owner");
+  assert.ok(other.leaseId, "other account is not blocked by the first account");
+  await b.finish("other-owner", other.leaseId);
+  await a.finish("atomic-owner", winners[0].leaseId);
+  // Retrying a completed attempt is a new billable attempt; failures aren't refunded.
+  const retry = await b.reserve("atomic-owner");
+  assert.equal(retry.quota.dailyRemaining, 1);
+  await b.finish("atomic-owner", retry.leaseId);
+  const lastRace = await Promise.all([a.reserve("atomic-owner"), b.reserve("atomic-owner")]);
+  const last = lastRace.find(result => result.leaseId);
+  assert.ok(last);
+  assert.equal(lastRace.filter(result => result.code === "chat_daily_limit").length, 1,
+    "the last daily unit cannot be admitted twice across instances");
+  await a.finish("atomic-owner", last.leaseId);
+  const blocked = await b.reserve("atomic-owner");
+  assert.equal(blocked.code, "chat_daily_limit");
+  assert.equal(blocked.quota.dailyRemaining, 0);
+  assert.ok(blocked.quota.retryAfterSeconds > 0);
+
+  // Move only synthetic counters into the prior periods, no app-server clock override.
+  await restricted.pool.query(`UPDATE sbu_chat_quota SET day_start=day_start-interval '1 day',
+    minute_start=minute_start-interval '1 minute' WHERE user_id='atomic-owner'`);
+  const reset = await b.read("atomic-owner");
+  assert.equal(reset.dailyRemaining, 3);
+  assert.equal(reset.minuteRemaining, 6);
+  assert.equal(reset.dailyResetAt.getUTCHours(), 0);
+
+  const crashed = await a.reserve("atomic-owner");
+  await restricted.pool.query(`UPDATE sbu_chat_quota SET lease_until=clock_timestamp()-interval '1 second'
+    WHERE user_id='atomic-owner'`);
+  const replacement = await b.reserve("atomic-owner");
+  assert.ok(replacement.leaseId);
+  assert.notEqual(replacement.leaseId, crashed.leaseId);
+  const staleFinish = await a.finish("atomic-owner", crashed.leaseId);
+  assert.equal(staleFinish.busy, true, "old instance cannot release the replacement lease");
+  assert.equal(staleFinish.dailyRemaining, 1);
+  await b.finish("atomic-owner", replacement.leaseId);
+  const minuteStore = createPostgresChatQuotaStore(restricted.pool, 30);
+  await minuteStore.read("minute-owner");
+  await restricted.pool.query(`UPDATE sbu_chat_quota SET minute_count=6 WHERE user_id='minute-owner'`);
+  assert.equal((await minuteStore.reserve("minute-owner")).code, "chat_minute_limit");
+  await restricted.pool.query(`UPDATE sbu_chat_quota SET minute_start=minute_start-interval '1 minute' WHERE user_id='minute-owner'`);
+  assert.ok((await minuteStore.reserve("minute-owner")).leaseId);
+});
+
+test("two HTTP instances share daily limits, charge failed attempts, disable SDK retries and fail closed", { timeout: 15000 }, async () => {
+  await restricted.pool.query("DELETE FROM sbu_chat_quota");
+  let calls = 0, retries, release, entered, cancelEntered, cancelObserved, cancelRelease;
+  const started = new Promise(resolve => { entered = resolve; });
+  const cancellationStarted = new Promise(resolve => { cancelEntered = resolve; });
+  const cancellationObserved = new Promise(resolve => { cancelObserved = resolve; });
+  const provider = async (_mode, messages, _signal, _specialist, _context, _sources, maxRetries) => {
+    calls++; retries = maxRetries;
+    if (messages[0].content === "hold") { entered(); await new Promise(resolve => { release = resolve; }); }
+    if (messages[0].content === "cancel") {
+      _signal.addEventListener("abort", cancelObserved, { once: true });
+      cancelEntered();
+      await new Promise(resolve => { cancelRelease = resolve; }); // deliberately ignore abort
+    }
+    if (messages[0].content === "fail") throw Error("private prompt secret provider error");
+    return JSON.stringify({ answer: "Bantuan awal", citationIds: [] });
+  };
+  const listeners = [];
+  const start = async (store) => {
+    const app = express();
+    app.use(express.json());
+    app.use((req, _res, next) => { req.testUser = req.get("x-test-identity"); next(); });
+    app.use(createSbuChatRouter(provider, store));
+    const listener = app.listen(0, "127.0.0.1");
+    listeners.push(listener);
+    await new Promise(resolve => listener.once("listening", resolve));
+    return `http://127.0.0.1:${listener.address().port}/openai/sbu`;
+  };
+  const send = (url, content = "help", user = "http-owner", signal) => fetch(`${url}/messages`, {
+    method: "POST",
+    signal,
+    headers: { "content-type": "application/json", "x-test-identity": user, "x-sbu-form-owner": user },
+    body: JSON.stringify({ ...body(), messages: [{ role: "user", content }] }),
+  });
+  try {
+    const [a, b] = await Promise.all([
+      start(createPostgresChatQuotaStore(restricted.pool, 2)),
+      start(createPostgresChatQuotaStore(second.pool, 2)),
+    ]);
+    const pending = send(a, "hold");
+    await started;
+    const busy = await send(b);
+    assert.equal(busy.status, 429);
+    assert.equal((await busy.json()).code, "chat_busy");
+    assert.ok(Number(busy.headers.get("retry-after")) > 0);
+    assert.equal((await send(b, "help", "independent-owner")).status, 200);
+    release();
+    const completed = await pending;
+    assert.equal(completed.status, 200);
+    assert.equal((await completed.json()).quota.dailyRemaining, 1);
+    const failed = await send(b, "fail");
+    assert.equal(failed.status, 503);
+    const failedBody = await failed.json();
+    assert.equal(failedBody.quota.dailyRemaining, 0);
+    assert.equal(failedBody.quota.busy, false);
+    assert.doesNotMatch(JSON.stringify(failedBody), /private prompt|secret|provider error/);
+    assert.equal(retries, 0);
+    const before = calls;
+    const limit = await send(a);
+    assert.equal(limit.status, 429);
+    const limited = await limit.json();
+    assert.equal(limited.code, "chat_daily_limit");
+    assert.match(limited.error, /07.00 WIB/);
+    assert.equal(calls, before, "denied requests never call the provider");
+    const quota = await fetch(`${b}/quota`, { headers: { "x-test-identity": "http-owner", "x-sbu-form-owner": "http-owner" } });
+    assert.equal(quota.headers.get("cache-control"), "private, no-store");
+    const snapshot = await quota.json();
+    assert.equal(snapshot.dailyRemaining, 0);
+    assert.match(snapshot.dailyResetAt, /T00:00:00.000Z$/);
+    assert.equal((await fetch(`${a}/quota`)).status, 401);
+    assert.equal((await fetch(`${a}/quota`, { headers: { "x-test-identity": "http-owner", "x-sbu-form-owner": "someone-else" } })).status, 409);
+
+    const controller = new AbortController();
+    const cancelled = send(a, "cancel", "cancel-owner", controller.signal);
+    await cancellationStarted;
+    controller.abort();
+    await assert.rejects(cancelled, { name: "AbortError" });
+    await cancellationObserved;
+    const cancelledRetry = await send(b, "help", "cancel-owner");
+    assert.equal(cancelledRetry.status, 429, "ignored cancellation must retain the active lease");
+    const cancelledBody = await cancelledRetry.json();
+    assert.equal(cancelledBody.code, "chat_busy");
+    assert.equal(cancelledBody.quota.dailyRemaining, 1, "cancellation is charged, denial is not");
+    cancelRelease();
+
+    const afterCancellation = calls;
+    const broken = await start({
+      read: async () => { throw Error("database secret"); },
+      reserve: async () => { throw Error("database secret"); },
+    });
+    const unavailable = await send(broken);
+    assert.equal(unavailable.status, 503);
+    assert.doesNotMatch(await unavailable.text(), /database secret/);
+    assert.equal(calls, afterCancellation);
+    const { rows } = await restricted.pool.query("SELECT * FROM sbu_chat_quota WHERE user_id='http-owner'");
+    assert.deepEqual(Object.keys(rows[0]).sort(), ["user_id", "day_start", "day_count", "minute_start", "minute_count", "lease_id", "lease_until"].sort());
+    assert.equal(rows[0].day_count, 2, "denials and quota reads consume no additional quota");
+    assert.doesNotMatch(JSON.stringify(rows), /private prompt|secret|Bantuan|help|hold|fail/);
+  } finally {
+    release?.();
+    cancelRelease?.();
+    for (const listener of listeners) {
+      listener.closeAllConnections();
+      await new Promise(resolve => listener.close(resolve));
+    }
+  }
 });
 
 test("retrieval separates publisher metadata from unverified preparation copies; no draft BG001 rules", () => {

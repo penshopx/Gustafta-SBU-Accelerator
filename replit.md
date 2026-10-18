@@ -100,6 +100,8 @@ Empat peran dapat membentuk profil. Kontraktor/konsultan dapat membuat dan menge
 
 ## Gotchas
 
+- Kebijakan kuota Asisten peran: `docs/sbu-chat-quota.md`. Penghitung PostgreSQL bersama lintas instance; `SBU_CHAT_DAILY_LIMIT` bawaan 30 (1–1000), reset 07.00 WIB. Retry/kegagalan/pembatalan setelah reservasi tetap dihitung; tidak menyimpan isi chat. Berlaku hanya Asisten peran, bukan Klinik atau Bedah Dokumen.
+
 - Setelah mengubah OpenAPI, jalankan `pnpm --filter @workspace/api-spec run codegen`.
 - Jangan mengubah status “kasus selesai persiapan” menjadi klaim SBU diterbitkan.
 - Pembersihan dokumen privat berjalan saat startup API dan tiap jam dalam workflow API yang sudah ada. `SBU_DOCUMENT_CLEANUP_MODE`: `delete` (bawaan), `dry-run` (hanya inspeksi/jumlah calon), atau `off`; nilai lain menghentikan startup. Masa tenggang tetap 48 jam berdasarkan metadata reservasi **dan** usia generasi objek, bukan sekadar kedaluwarsa URL PUT 15 menit. Penyelesaian unggahan tetap maksimal 30 menit.
