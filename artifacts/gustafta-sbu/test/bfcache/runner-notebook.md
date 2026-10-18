@@ -1,5 +1,27 @@
 # Gustafta production BFCache acceptance runner
 
+## Cross-engine preflight
+
+Before creating fixtures or changing services, confirm that the browser runner
+exposes the actual requested Firefox/WebKit BrowserType and that its compatible
+executable can launch. Do not substitute Chromium, a changed user agent, or
+synthetic lifecycle events. A bridge that exposes only Chromium is an
+environment blocker, not an application failure or a privacy pass.
+
+The latest Firefox/WebKit preflight is recorded separately in
+[`cross-engine-report.json`](./cross-engine-report.json). Both engines were
+unavailable through the provided bridge, and no ready local runner was found.
+No accounts or cases were created. The original Chromium evidence below does
+not satisfy Firefox/WebKit acceptance, which remains blocked.
+
+Resume in a runner with both engines and the scoped cleanup adapter available.
+For each engine, execute the production summary and detail journeys below with
+fresh synthetic accounts/cases. Require native trusted `pageshow.persisted=true`,
+concealment at pageshow and its first animation frame, concealment while fresh
+`/api/me` is pending, and reopening only for the verified matching identity.
+Record ordinary reloads as missing BFCache evidence, not passes. Verify cleanup
+even after a failed assertion. Report WebKit separately from native Safari.
+
 This is a replay recipe for the Replit `ExecutePlaywrightAction` notebook. The
 workspace shell does not resolve a standalone Playwright package; use the
 injected browser bridge and Clerk test helper. The recipe deliberately uses a

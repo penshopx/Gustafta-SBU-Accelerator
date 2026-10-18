@@ -1,0 +1,82 @@
+{
+  "phase": "engine-availability-preflight",
+  "scope": "Firefox and WebKit/Safari launch availability only; no app navigation, account creation, workflow changes, or lifecycle test performed",
+  "result": "unable",
+  "acceptanceStatus": "blocked; Firefox and WebKit privacy acceptance criteria remain unverified",
+  "localRunnerPreflight": {
+    "firefoxOnPath": false,
+    "firefoxEsrOnPath": false,
+    "webkitWebDriverOnPath": false,
+    "safariDriverOnPath": false,
+    "playwrightCliOnPath": false,
+    "workspaceResolvablePackages": {
+      "playwright": false,
+      "playwright-core": false,
+      "@playwright/test": false
+    },
+    "defaultPlaywrightBrowserCacheFound": false,
+    "interpretation": "No ready local alternative found. This does not establish that browsers cannot be provisioned in another environment."
+  },
+  "bridge": {
+    "injectedBrowserGlobal": false,
+    "injectedBrowserTypeGlobals": [],
+    "availableHelper": "newBrowserContext",
+    "inspection": "Created and closed an empty default context; context.browser() returned a browser whose browserType().name() was \"chromium\". The exposed BrowserType is Chromium only; no Firefox or WebKit BrowserType was available through the documented bridge.",
+    "firefoxLaunchAttempted": false,
+    "webkitLaunchAttempted": false,
+    "limitation": "The documented bridge has no Firefox/WebKit BrowserType to call launch() on. No alternate BrowserType/import/property was guessed or used. Therefore these are supported-API limitations, not browser launch errors."
+  },
+  "executables": {
+    "firefox": {
+      "available": false,
+      "checkedLocations": [
+        "/usr/bin/firefox",
+        "/usr/bin/firefox-esr",
+        "/repl/tools/bin/firefox",
+        "/repl/tools/bin/firefox-esr"
+      ],
+      "launchError": null,
+      "limitation": "No executable found at the checked locations, and the bridge does not expose a Firefox BrowserType."
+    },
+    "webkitSafari": {
+      "available": false,
+      "checkedLocations": [
+        "/usr/bin/safari",
+        "/Applications/Safari.app/Contents/MacOS/safaridriver",
+        "/repl/tools/bin/webkit",
+        "/repl/tools/bin/safari"
+      ],
+      "launchError": null,
+      "limitation": "No executable found at the checked locations, and the bridge does not expose a WebKit BrowserType. Native Safari is not available in this environment."
+    },
+    "chromium": {
+      "available": true,
+      "path": "/repl/tools/bin/chromium",
+      "testedForThisRequest": false
+    }
+  },
+  "conclusion": {
+    "firefox": "unable",
+    "webkitSafari": "unable",
+    "applicationResult": "not tested; no application pass or failure inferred"
+  },
+  "acceptanceEvidence": {
+    "trustedPersistedPageshow": null,
+    "summaryHiddenAtFirstFrame": null,
+    "detailHiddenAtFirstFrame": null,
+    "privateSurfacesHiddenDuringMe": null,
+    "onlyVerifiedIdentityReopened": null,
+    "reason": "Neither requested engine could be launched; no simulated lifecycle events or Chromium substitutes were used."
+  },
+  "fixtures": {
+    "accountsCreated": 0,
+    "casesCreated": 0,
+    "cleanupRequired": false,
+    "emptyProbeContextClosed": true
+  },
+  "resumeRequirements": {
+    "environment": "A browser runner exposing actual Firefox and WebKit BrowserTypes and their compatible installed executables, with access to the app and its test-account cleanup adapter.",
+    "test": "Serve a production frontend bundle, create fresh scoped accounts/cases, and run the summary/detail A-to-B native-history journey in each engine. Require trusted pageshow.persisted=true, concealment at pageshow and first animation frame, concealment throughout fresh /api/me, then only the matching identity; verify scoped cleanup.",
+    "classification": "Keep unavailable engine, ordinary reload without BFCache, and demonstrated application failure as separate outcomes. WebKit testing is not proof of native Safari testing."
+  }
+}
