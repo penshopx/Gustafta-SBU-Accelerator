@@ -1,248 +1,111 @@
-# Gustafta production BFCache acceptance runner
+# Isolated Chromium BFCache runner
 
-## Cross-engine preflight
-
-Before creating fixtures or changing services, confirm that the browser runner
-exposes the actual requested Firefox/WebKit BrowserType and that its compatible
-executable can launch. Do not substitute Chromium, a changed user agent, or
-synthetic lifecycle events. A bridge that exposes only Chromium is an
-environment blocker, not an application failure or a privacy pass.
-
-The latest Firefox/WebKit preflight is recorded separately in
-[`cross-engine-report.json`](./cross-engine-report.json). Both engines were
-unavailable through the provided bridge, and no ready local runner was found.
-No accounts or cases were created. The original Chromium evidence below does
-not satisfy Firefox/WebKit acceptance, which remains blocked.
-
-Resume in a runner with both engines and the scoped cleanup adapter available.
-For each engine, execute the production summary and detail journeys below with
-fresh synthetic accounts/cases. Require native trusted `pageshow.persisted=true`,
-concealment at pageshow and its first animation frame, concealment while fresh
-`/api/me` is pending, and reopening only for the verified matching identity.
-Record ordinary reloads as missing BFCache evidence, not passes. Verify cleanup
-even after a failed assertion. Report WebKit separately from native Safari.
-
-This is a replay recipe for the Replit `ExecutePlaywrightAction` notebook. The
-workspace shell does not resolve a standalone Playwright package; use the
-injected browser bridge and Clerk test helper. The recipe deliberately uses a
-separately launched Chromium process without
-`--disable-back-forward-cache`, two tabs in one context, native history
-traversals, and no `page.route`, synthetic lifecycle events, or CDP Network
-interception.
-
-## 1. Serve the production bundle
-
-Build the SBU app and temporarily serve its production output through the
-managed web workflow:
+The notebook recipe has been replaced by an executable runner:
 
 ```sh
-PORT=26110 BASE_PATH=/ NODE_ENV=production pnpm --filter @workspace/gustafta-sbu run build
+pnpm --filter @workspace/gustafta-sbu test:bfcache
+pnpm --filter @workspace/gustafta-sbu test:bfcache:unit
 ```
 
-For the test only, use `vite preview --config vite.config.ts --host 0.0.0.0`
-as the SBU web workflow's `dev` command and restart
-`artifacts/gustafta-sbu: web`. After the test, restore
-`vite --config vite.config.ts --host 0.0.0.0` and restart the workflow.
-Do not use a Vite development/HMR page as the BFCache target.
+Run from this workspace with its existing **test** `CLERK_SECRET_KEY` and
+`VITE_CLERK_PUBLISHABLE_KEY` supplied by the environment. The runner refuses live
+keys. Never copy credentials into command arguments, source files or reports.
+Dependencies are declared in this app's development dependencies.
 
-## 2. Launch Chromium and create the shared context
+By default Chromium is launched from `/repl/tools/bin/chromium`; elsewhere set
+`BFCACHE_CHROMIUM_PATH` to an installed full Chromium executable. This must not be
+the BFCache-disabled browser from a pre-existing notebook. No browser-engine or
+user-agent substitutions count as evidence.
 
-Run in the browser notebook, where `browser`, `REPLIT_DEV_DOMAIN`,
-`signInClerkUser`, and `query` are injected:
+## What runs
 
-```js
-const browserRun = await browser.browserType().launch({
-  headless: true,
-  executablePath: "/repl/tools/bin/chromium",
-  ignoreDefaultArgs: ["--disable-back-forward-cache"],
-});
-const ctxRun = await browserRun.newContext({
-  baseURL: `https://${REPLIT_DEV_DOMAIN}`,
-  timezoneId: "UTC",
-});
-const pageA = await ctxRun.newPage();
-const pageB = await ctxRun.newPage();
-```
+`run.mjs` builds the unchanged app with Vite's production build into a unique OS
+temporary directory. Only build-time routing is set to `/`, with Clerk's test
+frontend API used directly (no development proxy needed). It does **not** change
+the managed frontend or API command, their ports, environment, or `dist` output.
+The normal application and API do not import any code in this test directory.
 
-Create fresh run-scoped synthetic emails, then establish A in page A:
+`fixture-server.mjs` listens on a random loopback port and serves that bundle.
+Real Clerk test sessions authenticate requests, but profiles, one A-owned case,
+dashboard data, and `/api/me` hold/failure controls exist only in memory in this
+test server. There are no database writes, uploaded files or application audit
+rows to clean up. No test middleware or release endpoint is added to the normal
+server. The test server is read-only and rejects unknown fixture API routes.
 
-```js
-const suffix = nanoid();
-const emailA = `bfcache-a-${suffix}@example.com`;
-const emailB = `bfcache-b-${suffix}@example.com`;
-const signInA = await signInClerkUser({
-  firstName: "Cache", lastName: `Alpha ${suffix}`, email: emailA,
-  basePath: "/api/me",
-});
-await pageA.goto(signInA);
-const meA = await pageA.evaluate(async () => {
-  const r = await fetch("/api/me", { cache: "no-store" });
-  return { status: r.status, data: await r.json() };
-});
-if (meA.status !== 200) throw new Error("A /api/me did not succeed");
-```
+The server deliberately serves static documents with `no-cache`, not `no-store`:
+Chromium can evict a `no-store` document when session cookies change. Private API
+responses remain `private, no-store`. No request interception or offline mode is
+used. Native Back/Forward must produce trusted `pageshow.persisted=true`; a
+reload, missing first restored animation frame, visible A data, or unproven
+response ordering makes the process exit nonzero.
 
-Complete ordinary A onboarding and create one private draft case in the UI.
-Use a unique synthetic company name as the private marker. Record the case
-route in memory; do not print user IDs, email addresses, or case identifiers
-in evidence output. The case must be owned by A and visible in A's detail
-route before proceeding.
+During restoration the test server delays the ordinary HTML reload by 150 ms.
+This ensures a real first restored animation frame is observable on loopback
+before the guard's reload replaces the document. No app script is delayed or
+modified; only test HTTP latency is added.
 
-Install an early lifecycle probe before loading the detail document. Pass the
-unique marker string to the init script; save only event booleans and surface
-visibility in `sessionStorage`:
+Each scenario uses a fresh browser context with two tabs. B's real Clerk session
+is prepared **before** freezing A; its cookies stay only in memory and its SDK
+document is navigated away. A's dashboard or case
+detail is loaded from the production bundle and its unique synthetic case marker
+must actually be visible before freezing. While A is frozen, B's preauthenticated
+cookie jar replaces the shared cookies only inside this isolated context. The
+sibling confirms B through `/api/me`, without loading either the app or the
+Clerk SDK. Even Clerk's own BroadcastChannel can evict a frozen document, so
+simply avoiding the Gustafta publisher is insufficient. This intentionally
+models a silent session switch missed by the frozen page, not ordinary UI login.
 
-```js
-const privateMarker = `BFCache fixture ${suffix}`;
-await ctxRun.addInitScript((marker) => {
-  const key = "__gustafta_bfcache_evidence";
-  const save = (type, event) => {
-    const gate = [...document.querySelectorAll("#root div")]
-      .find((el) => el.style.display === "contents" || el.style.display === "none");
-    const record = {
-      type, trusted: event?.isTrusted ?? null,
-      persisted: event?.persisted ?? null,
-      path: location.pathname,
-      wrapperDisplay: gate?.style.display ?? null,
-      privateMarkerPresent: document.body?.innerText.includes(marker) ?? false,
-    };
-    const records = JSON.parse(sessionStorage.getItem(key) || "[]");
-    records.push(record);
-    sessionStorage.setItem(key, JSON.stringify(records));
-  };
-  addEventListener("pagehide", (e) => save("pagehide", e), true);
-  addEventListener("pageshow", (e) => {
-    save("pageshow", e);
-    if (e.persisted) requestAnimationFrame(() => save("first-rAF-after-persisted-pageshow"));
-  }, true);
-}, privateMarker);
-```
+Dashboard and case detail are exercised with both Back and Forward. For each,
+the fresh B `/api/me` response is held until the runner has recorded the hidden
+pending state, then released in-process (not through a public endpoint). A
+separate dashboard restore returns `/api/me` 503 and requires the verification
+error surface to remain closed. The case route must deny A's case under B.
 
-## 3. A → B switch while A is frozen; native Back and Forward
+## Evidence
 
-Use full-document navigations to an external base and destination. Never mount
-the Gustafta app in page B while A is frozen: its cross-tab BroadcastChannel
-message can evict A from BFCache. The Clerk helper redirect to `/api/me`
-changes the shared session without mounting that publisher.
+`probe.mjs` installs a lifecycle probe before any app script, and a
+MutationObserver plus animation-frame observer before private content can mount.
+It records:
 
-```js
-const appOrigin = `https://${REPLIT_DEV_DOMAIN}`;
-await pageA.goto("https://example.com/");
-await pageA.goto(`${appOrigin}/cases/${caseId}`); // A marker must be visible
-await pageA.goto("https://example.org/");         // A is now frozen candidate
+- Native `pageshow` trust/persistence and gate visibility.
+- Visibility on the first animation frame following the persisted event.
+- Any transient A marker or non-B sidebar exposure after arming.
+- The **first** visible B shell, Clerk-B agreement, `/api/me` response status and
+  ResourceTiming response end on the new document.
+- Test-server request start/response times and B ownership as a boolean.
 
-const signInB = await signInClerkUser({
-  firstName: "Cache", lastName: `Beta ${suffix}`, email: emailB,
-  basePath: "/api/me",
-});
-await pageB.goto(signInB);
-const meB = await pageB.locator("body").innerText(); // verify B JSON, no app shell
+The target is foregrounded before history traversal; headless background tabs
+also suspend animation frames. Browser-reported non-restoration reason codes
+are included without frame URLs, for diagnosing missing BFCache evidence.
 
-await pageA.goBack(); // native Back; inspect persisted pageshow and first rAF
-// Verify /api/me is freshly B-owned, and the A case is denied/not found.
-await pageA.goBack(); // return to example.com base
-await pageA.goForward(); // native Forward; verify persisted pageshow again
-```
+All browser timestamps use `performance.timeOrigin + performance.now()` (or
+`timeOrigin + responseEnd`) so restores and reloads share one time scale.
+Server timestamps use epoch milliseconds. The ordering assertion uses browser
+timestamps within the same clock, not a comparison against a different host.
 
-At each traversal, require `pageshow.isTrusted === true` and
-`pageshow.persisted === true`; require `wrapperDisplay === "none"` and the A
-marker absent both at `pageshow` and at its first recorded animation frame.
-After the guard's full-document reload, check B's fresh `/api/me` result and
-the A-owned case denial. A successful ordinary load (`persisted:false`) is
-not BFCache proof.
+The sanitized JSON is written automatically to
+`generated-artifacts/bfcache/report.json` in the workspace root. This directory
+is excluded from Git and deployment. Reports contain fixed scenario/route labels,
+booleans, timings, status codes and safe failure codes, **not** Clerk IDs, emails,
+cookies, tickets, secret values, raw exceptions, request headers or case markers.
+No HAR, browser trace, screenshot or storage-state dump is saved.
 
-## 4. Optional `/api/me` failure restore
+`attempt-report.json` remains the historical manually run Chromium evidence;
+it is not rewritten to imply that its missing timestamp was measured.
+`cross-engine-report.json` describes the separate Firefox/WebKit availability
+gap. This runner proves Chromium only, not Firefox, WebKit or native Safari,
+and its fixture API is not a substitute for live API authorization tests.
 
-To exercise the app's error surface without disrupting the static app reload,
-use a temporary API-server-only fixture while the target app document is
-frozen. A minimal fixture is an env-gated middleware after Clerk identity
-verification and before the API router that returns `503` for
-`GET /api/me` only when `GUSTAFTA_BFCACHE_TEST_FAIL_ME=1`. Restart the API
-workflow with that env override after navigating A away; do not use browser
-offline mode, `page.route`, or CDP Network interception for this assertion.
+## Cleanup and failures
 
-Perform the native restore and verify the app itself renders its
-session-verification error for `GET /api/me · HTTP 503`, states that private
-data remains closed, and never exposes the A marker. Remove the fixture and
-env file and restart the API workflow without the override before finishing.
+Browser, HTTP server, temporary build and exact run-created Clerk users are
+cleaned up in `finally`, including failed assertions. Before deleting any user,
+the runner verifies its exact generated email and unique run suffix, then
+confirms Clerk returns 404 after deletion. Cleanup
+failures are separate from the primary failure and also make the run fail.
+Do not use force-kill if you want JavaScript cleanup to run.
 
-## 5. Dashboard summary ordering with held `/api/me`
-
-For the A-owned `/dashboard` summary gap, use the same production bundle and
-shared A/B context, but keep B's sibling tab API-only. Freeze A's summary with
-a full-document navigation to the external base, switch B through the Clerk
-helper redirect to `/api/me`, and restart `artifacts/api-server: API Server`
-with `artifacts/gustafta-sbu/test/bfcache/dashboard-hold.env`. The exact
-temporary override is `GUSTAFTA_BFCACHE_TEST_HOLD_ME=1`.
-
-The env-gated middleware is placed after Clerk identity verification and
-before `app.use("/api", router)`. It holds only `GET /api/me`, sets
-`Cache-Control: private, no-store`, and has a 60-second server-side failsafe.
-The API-only B page releases it with
-`POST /api/__bfcache_test/release-me`; the JSON response reports the number
-of released waiters. Do not use browser network interception.
-
-After native Back, capture the pending state first: require a trusted persisted
-`pageshow`, a hidden gate and absent A marker at that event and the first rAF,
-Clerk B matching, a new `/api/me` request with no response yet, and no private
-sidebar. In the immediate next notebook action, start the response waiter only
-after capturing that state, release through B, await the fresh `/api/me` 200
-and verify its B identity, then wait for the sidebar. This avoids the
-frontend's session-check deadline expiring while the server holds the request.
-Require the first dashboard shell record to show B's sidebar/Clerk identity,
-the A marker absent, and a completed `/api/me` ResourceTiming entry.
-
-Install a reset-on-each-document shell observer before loading the target.
-Use a per-probe flag and pair a MutationObserver with a short polling fallback
-so the first sidebar insertion is recorded:
-
-```js
-await ctxRun.addInitScript(({ marker, expectedBName, expectedBId }) => {
-  const key = "__gustafta_dashboard_order";
-  window.__bfShellLogged = false;
-  const check = () => {
-    const sidebar = document.querySelector('[data-testid="text-sidebar-name"]');
-    if (!sidebar || window.__bfShellLogged) return;
-    window.__bfShellLogged = true;
-    const me = performance.getEntriesByType("resource")
-      .filter((e) => new URL(e.name).pathname === "/api/me").at(-1);
-    const records = JSON.parse(sessionStorage.getItem(key) || "[]");
-    records.push({
-      type: "first-dashboard-shell-visible",
-      at: performance.now(),
-      shellIsB: sidebar.textContent?.trim() === expectedBName,
-      clerkIsB: window.Clerk?.user?.id === expectedBId,
-      markerPresent: document.body?.innerText.includes(marker) ?? false,
-      meStatus: me?.responseStatus ?? null,
-      meResponseEnd: me?.responseEnd ?? null,
-    });
-    sessionStorage.setItem(key, JSON.stringify(records));
-    clearInterval(poll);
-  };
-  new MutationObserver(check).observe(document, {
-    childList: true, subtree: true, characterData: true,
-  });
-  const poll = setInterval(check, 25);
-  setTimeout(() => clearInterval(poll), 30_000);
-}, { marker: privateMarker, expectedBName, expectedBId });
-```
-
-Record booleans/status/timings only; never persist the Clerk ID, email,
-cookie, or marker string. Remove the middleware and env file after the run and
-restart the API workflow without an override.
-
-## 6. Sanitized evidence and cleanup
-
-Save only booleans, status codes, route paths, and wrapper visibility. Never
-save Clerk IDs, emails, auth cookies, or secret values. Before cleanup, select
-the exact run-scoped synthetic profiles and their dependent app rows; refuse
-cleanup unless the expected profiles match exactly. Delete only those Clerk
-users through the existing `@clerk/express`/`@clerk/backend` client using the
-server's secret environment, then remove their documents, cases, profile,
-workspace, client, and audit rows in a database transaction. Verify zero
-matching profiles remain. Finally close the isolated browser context and
-browser, remove any temporary API failure fixture, and restore the original
-web workflow command.
-
-The completed run's sanitized observation summary is in
-[`attempt-report.json`](./attempt-report.json).
+Failure reports identify the scenario and stage; provider exceptions are reduced
+to numeric HTTP status and allowlisted error codes. Fix missing browser,
+test keys, network access or fixture contracts and rerun the command. A failed
+or unavailable browser never becomes a privacy pass.

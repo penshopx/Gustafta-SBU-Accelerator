@@ -7,11 +7,14 @@
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
-    "test": "node --import tsx --test src/components/*.test.tsx src/lib/*.test.ts",
+    "test": "node --import tsx --test src/components/*.test.tsx src/lib/*.test.ts test/bfcache/*.test.mjs",
     "test:typecheck": "node --test test/typecheck/*.test.mjs",
+    "test:bfcache": "node test/bfcache/run.mjs",
+    "test:bfcache:unit": "node --test test/bfcache/*.test.mjs",
     "typecheck": "tsc --build ../../lib/api-client-react/tsconfig.json --force && tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
+    "@clerk/backend": "^3.25.0",
     "@clerk/localizations": "^4.22.0",
     "@clerk/react": "^6.17.6",
     "@clerk/themes": "^2.4.57",
@@ -65,6 +68,7 @@
     "input-otp": "^1.4.2",
     "lucide-react": "catalog:",
     "next-themes": "^0.4.6",
+    "playwright": "^1.64.1",
     "react": "catalog:",
     "react-day-picker": "^9.11.1",
     "react-dom": "catalog:",
