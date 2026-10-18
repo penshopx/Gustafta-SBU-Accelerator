@@ -36,6 +36,10 @@ args = "preparation-summary-print-regression"
 task = "workflow.run"
 args = "document-cleanup-regression"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "api-codegen-regression"
+
 [[workflows.workflow]]
 name = "api-typecheck-regression"
 author = "agent"
@@ -87,6 +91,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm --filter @workspace/api-server exec node --test test/document-cleanup.test.mjs"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "api-codegen-regression"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/api-spec run test:codegen"
 
 [workflows.workflow.metadata]
 isValidation = true

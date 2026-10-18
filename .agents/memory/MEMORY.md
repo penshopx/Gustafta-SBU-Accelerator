@@ -20,3 +20,4 @@
 - [Vite DOM integration tests](vite-dom-integration-tests.md) — share one module loader for React contexts and install the DOM before importing React DOM.
 - [Local scanner readiness](local-malware-scanner.md) — tiny antivirus fixtures do not establish full-signature startup cost; calibrate resource limits against official signatures.
 - [Node test asynchronous setup](node-test-async-setup.md) — registering a test before awaited setup can run root teardown before later integration tests.
+- [Validation console formatting](validation-console-formatting.md) — configured checks may force ANSI coloring even for piped subprocesses; normalize CLI messages before assertions.

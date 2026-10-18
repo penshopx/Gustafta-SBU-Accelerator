@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "codegen": "orval --config ./orval.config.ts && pnpm -w run typecheck:libs --force"
+    "codegen": "node ./codegen.mjs && pnpm -w run typecheck:libs --force",
+    "test:codegen": "node --test test/codegen.test.mjs"
   },
   "devDependencies": {
     "orval": "^8.30.0"

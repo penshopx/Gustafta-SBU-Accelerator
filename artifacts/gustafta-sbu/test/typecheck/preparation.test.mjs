@@ -22,7 +22,7 @@ function cleanWorkspace() {
     for (const pkg of packages) {
       const target = path.join(root, pkg);
       mkdirSync(target, { recursive: true });
-      for (const item of ["package.json", "tsconfig.json", "src", "openapi.yaml", "orval.config.ts"]) {
+      for (const item of ["package.json", "tsconfig.json", "src", "openapi.yaml", "orval.config.ts", "codegen.mjs"]) {
         const source = path.join(workspace, pkg, item);
         if (existsSync(source)) cpSync(source, path.join(target, item), { recursive: true });
       }

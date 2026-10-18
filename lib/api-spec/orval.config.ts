@@ -1,9 +1,14 @@
 import { defineConfig, InputTransformerFn } from "orval";
 import path from "path";
 
-const root = path.resolve(__dirname, "..", "..");
-const apiClientReactSrc = path.resolve(root, "lib", "api-client-react", "src");
-const apiZodSrc = path.resolve(root, "lib", "api-zod", "src");
+// Only the transactional runner may publish generated sources. In particular,
+// running Orval directly must not clean either active source tree.
+const stageRoot = process.env.API_CODEGEN_STAGE_ROOT;
+if (!stageRoot) {
+  throw new Error("Use pnpm --filter @workspace/api-spec run codegen to generate both outputs safely");
+}
+const apiClientReactSrc = path.resolve(stageRoot, "api-client-react", "src");
+const apiZodSrc = path.resolve(stageRoot, "api-zod", "src");
 
 // Our exports make assumptions about the title of the API being "Api" (i.e. generated output is `api.ts`).
 const titleTransformer: InputTransformerFn = (config) => {
