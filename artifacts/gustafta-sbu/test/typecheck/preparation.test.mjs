@@ -59,7 +59,7 @@ function assertPassed(result) {
   assert.equal(result.status, 0, result.output);
 }
 
-test("frontend typecheck handles clean and stale Regulation declarations, while preserving real type errors", () => {
+test("frontend typecheck handles stale declarations and regenerated contract changes, while preserving real type errors", () => {
   const root = cleanWorkspace();
   try {
     assertPassed(check(root));
@@ -79,11 +79,57 @@ test("frontend typecheck handles clean and stale Regulation declarations, while 
     assertPassed(check(root));
     assert.ok(!existsSync(path.join(root, "artifacts/gustafta-sbu/dist")));
 
-    // Codegen must also replace a stale declaration despite valid build metadata.
+    // Change only the fixture contract, with existing output/build metadata in
+    // place. A frontend consumer must fail until codegen propagates this field.
+    const spec = path.join(root, "lib/api-spec/openapi.yaml");
+    const originalSpec = readFileSync(spec, "utf8");
+    const regulationProperties = "    Regulation:\n      type: object\n      required: [id, title, detail, source, effectiveStatus, transitionFindings]\n      properties:\n";
+    assert.ok(originalSpec.includes(regulationProperties), "Regulation fixture anchor must exist");
+    assert.ok(!originalSpec.includes("typecheckContractProbe"), "Probe must be new to the contract");
+    writeFileSync(spec, originalSpec.replace(
+      regulationProperties,
+      `${regulationProperties}        typecheckContractProbe: { type: string }\n`,
+    ));
+    const clientSource = path.join(root, "lib/api-client-react/src/generated/api.schemas.ts");
+    const zodSource = path.join(root, "lib/api-zod/src/generated/api.ts");
+    for (const file of [clientSource, declaration, zodSource]) {
+      assert.doesNotMatch(readFileSync(file, "utf8"), /typecheckContractProbe/);
+    }
+    const contractProbe = path.join(root, "artifacts/gustafta-sbu/src/contract-probe.ts");
+    const consumer = [
+      'import type { Regulation } from "@workspace/api-client-react";',
+      'export const contractProbe: NonNullable<Regulation["typecheckContractProbe"]> = "fixture-only";',
+      "export const readContractProbe = (regulation: Regulation): string | undefined => regulation.typecheckContractProbe;",
+      "",
+    ].join("\n");
+    writeFileSync(contractProbe, consumer);
+    const beforeCodegen = check(root);
+    assert.notEqual(beforeCodegen.status, 0, beforeCodegen.output);
+    assert.match(beforeCodegen.output, /contract-probe\.ts.*TS2339.*typecheckContractProbe/);
+
+    // Codegen must propagate the new contract AND replace a stale declaration
+    // despite otherwise valid build metadata.
     writeFileSync(declaration, current.replace("transitionFindings: Finding[];", ""));
     assertPassed(run(root, "pnpm", ["--filter", "@workspace/api-spec", "run", "codegen"]));
     assert.match(readFileSync(declaration, "utf8"), /transitionFindings: Finding\[\];/);
+    for (const file of [clientSource, declaration]) {
+      assert.match(readFileSync(file, "utf8"), /typecheckContractProbe\?: string;/);
+    }
+    assert.match(readFileSync(zodSource, "utf8"), /"typecheckContractProbe": zod\.string\(\)\.optional\(\)/);
+    assertPassed(run(root, "node", ["--import", "tsx", "--input-type=module", "-e", `
+      import assert from "node:assert/strict";
+      import { ListRegulationsResponseItem } from "../../lib/api-zod/src/generated/api.ts";
+      const field = ListRegulationsResponseItem.shape.typecheckContractProbe;
+      assert.equal(field.parse("fixture-only"), "fixture-only");
+      assert.equal(field.parse(undefined), undefined);
+      assert.equal(field.safeParse(123).success, false);
+    `], { cwd: path.join(root, "artifacts/gustafta-sbu") }));
     assertPassed(check(root));
+    writeFileSync(contractProbe, `${consumer}export const invalidContractProbe: NonNullable<Regulation["typecheckContractProbe"]> = 123;\n`);
+    const wrongContractType = check(root);
+    assert.notEqual(wrongContractType.status, 0, wrongContractType.output);
+    assert.match(wrongContractType.output, /contract-probe\.ts.*TS2322/);
+    writeFileSync(contractProbe, consumer);
 
     const frontendProbe = path.join(root, "artifacts/gustafta-sbu/src/typecheck-probe.ts");
     writeFileSync(frontendProbe, "export const invalid: string = 123;\n");
