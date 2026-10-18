@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { test } from "node:test";
@@ -13,6 +14,26 @@ import { createRestrictedRoutePool } from "./helpers/restricted-postgres.mjs";
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const requireDb = createRequire(new URL("../../../lib/db/package.json", import.meta.url));
 const { Pool } = requireDb("pg");
+
+function checkpoint() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+async function withinDeadline(promise, label) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`Batas waktu urutan query: ${label}`)), 10_000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 async function request(server, userId, options = {}) {
   const { port } = server.address();
@@ -81,7 +102,16 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
     // Only auth is replaced. The route uses the actual Drizzle query builder,
     // PostgreSQL pool and application's real profile table definition.
     let routeQueryCount = 0;
-    globalThis.__profileTestDb = drizzle(isolated, {
+    const routeRequest = new AsyncLocalStorage();
+    let controlQuery;
+    // Scheduling only: every statement and result still goes through the real
+    // restricted PostgreSQL pool. Never substitute query results or Drizzle SQL.
+    globalThis.__profileTestDb = drizzle({
+      query(...args) {
+        const execute = () => isolated.query(...args);
+        return controlQuery ? controlQuery(args, execute, routeRequest.getStore()) : execute();
+      },
+    }, {
       logger: { logQuery() { routeQueryCount += 1; } },
     });
     await build({
@@ -118,6 +148,10 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
     const { default: router } = await import(join(temporaryDir, "route.mjs"));
     const app = express();
     app.use(express.json());
+    app.use((req, _res, next) => routeRequest.run({
+      method: req.method,
+      userId: req.get("x-test-user-id"),
+    }, next));
     app.use("/api", router);
     server = app.listen(0);
 
@@ -174,6 +208,112 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
       }], "Dua GET paralel harus menghasilkan satu baris profil saja");
       assert.equal(await applicationCount(), 0, "Tabel aplikasi tidak boleh menerima profil pengguna uji");
     });
+
+    for (const first of ["GET", "PATCH"]) {
+      await t.test(`GET dan PATCH pertama bersamaan: penulisan ${first} lebih dahulu tidak kehilangan perubahan`, async () => {
+        const userId = `test-concurrent-owner-${randomUUID()}`;
+        const changes = {
+          role: "konsultan",
+          displayName: "Nama Tersimpan Bersamaan",
+          organizationName: "Organisasi Tersimpan Bersamaan",
+        };
+        const expected = { userId, ...changes };
+        const ownProfiles = async () => (await isolated.query(
+          "SELECT user_id, role, display_name, organization_name FROM sbu_profiles WHERE user_id = $1",
+          [userId],
+        )).rows;
+        const applicationProfiles = async () => (await admin.query(
+          "SELECT * FROM public.sbu_profiles WHERE user_id = $1", [userId],
+        )).rows;
+        const before = await readProfiles();
+        assert.deepEqual(await ownProfiles(), [], "Pemilik sesi belum memiliki profil");
+        assert.deepEqual(await applicationProfiles(), [], "ID uji tidak boleh ada di public");
+
+        const gates = Object.fromEntries(["GET", "PATCH"].map((method) => [method, {
+          arrived: checkpoint(), release: checkpoint(), completed: checkpoint(),
+        }]));
+        const readRelease = checkpoint();
+        const order = [];
+        const queries = { GET: 0, PATCH: 0 };
+        controlQuery = async (args, execute, context) => {
+          if (context?.userId !== userId) return execute();
+          const method = context.method;
+          const gate = gates[method];
+          const index = queries[method]++;
+          if (index === 0) {
+            const sql = typeof args[0] === "string" ? args[0] : args[0].text;
+            assert.match(sql, /^insert into "sbu_profiles"/i,
+              "Query pertama kedua rute harus benar-benar menyisipkan profil");
+            gate.arrived.resolve();
+            await gate.release.promise;
+            try {
+              const result = await execute();
+              order.push(method);
+              return result;
+            } finally {
+              gate.completed.resolve();
+            }
+          }
+          // Keep the GET response in flight until PATCH has committed, even
+          // when GET inserted the default first.
+          if (method === "GET") await readRelease.promise;
+          return execute();
+        };
+
+        const pending = [
+          request(server, userId),
+          request(server, userId, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(changes),
+          }),
+        ];
+        try {
+          await withinDeadline(Promise.all(Object.values(gates).map((gate) => gate.arrived.promise)),
+            "kedua permintaan mencapai INSERT");
+          assert.deepEqual(await ownProfiles(), [],
+            "Kedua permintaan harus dimulai sebelum profil pertama dibuat");
+          const second = first === "GET" ? "PATCH" : "GET";
+          gates[first].release.resolve();
+          await withinDeadline(gates[first].completed.promise, `INSERT ${first}`);
+          assert.deepEqual(order, [first], "Penulisan kedua harus masih tertahan");
+          assert.deepEqual(await ownProfiles(), [{
+            user_id: userId,
+            role: first === "GET" ? "belum_dipilih" : changes.role,
+            display_name: first === "GET" ? "" : changes.displayName,
+            organization_name: first === "GET" ? "" : changes.organizationName,
+          }], "Penulisan pertama harus sudah tersimpan sebelum konflik kedua");
+          gates[second].release.resolve();
+          await withinDeadline(gates[second].completed.promise, `INSERT ${second}`);
+          assert.deepEqual(order, [first, second], "Kedua urutan konflik diuji tanpa perlombaan waktu");
+          readRelease.resolve();
+
+          const responses = await withinDeadline(Promise.all(pending), "respons GET dan PATCH");
+          for (const response of responses) {
+            assert.equal(response.status, 200, response.raw);
+            assert.deepEqual(response.body, expected,
+              "GET setelah PATCH tersimpan dan respons PATCH harus memuat nilai baru");
+          }
+          assert.deepEqual(await ownProfiles(), [{
+            user_id: userId,
+            role: changes.role,
+            display_name: changes.displayName,
+            organization_name: changes.organizationName,
+          }], "Tepat satu baris pemilik sesi tersimpan tanpa ditimpa profil default");
+          const persisted = await request(server, userId);
+          assert.equal(persisted.status, 200, persisted.raw);
+          assert.deepEqual(persisted.body, expected, "GET berikutnya tetap membaca hasil PATCH");
+          assert.deepEqual((await readProfiles()).filter((row) => row.user_id !== userId), before,
+            "Profil lain di tabel salinan tidak boleh berubah");
+          assert.deepEqual(await applicationProfiles(), [], "Tidak ada data uji di public.sbu_profiles");
+        } finally {
+          controlQuery = undefined;
+          for (const gate of Object.values(gates)) gate.release.resolve();
+          readRelease.resolve();
+          await withinDeadline(Promise.allSettled(pending), "pembersihan permintaan bersamaan");
+        }
+      });
+    }
 
     for (const ownExists of [false, true]) {
       for (const otherExists of [false, true]) {
