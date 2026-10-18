@@ -14,17 +14,30 @@ const testDir = fileURLToPath(new URL(".", import.meta.url));
 const openapi = parse(await readFile(join(testDir, "../../../lib/api-spec/openapi.yaml"), "utf8"));
 const profileRef = "#/components/schemas/Profile";
 const dashboardRef = "#/components/schemas/Dashboard";
-function createResponseValidator(schemaRef, schemas = openapi.components.schemas) {
+function createResponseValidator(schema, schemas = openapi.components.schemas) {
   const ajv = new Ajv2020({ allErrors: true });
   addFormats(ajv);
   for (const [name, schema] of Object.entries(schemas)) {
     ajv.addSchema(schema, `#/components/schemas/${name}`);
   }
-  return { ajv, validate: ajv.compile({ $ref: schemaRef }) };
+  return { ajv, validate: ajv.compile(typeof schema === "string" ? { $ref: schema } : schema) };
 }
 const createProfileValidator = (schemas) => createResponseValidator(profileRef, schemas);
 const { ajv: profileAjv, validate: validateProfile } = createProfileValidator();
 const { ajv: dashboardAjv, validate: validateDashboard } = createResponseValidator(dashboardRef);
+const { ajv: evidenceAjv, validate: validateEvidence } = createResponseValidator("#/components/schemas/Evidence");
+const evidenceOperations = [
+  { path: "/cases/{id}/evidence", method: "get", status: 200,
+    matches: /^\/api\/cases\/\d+\/evidence$/ },
+  { path: "/cases/{id}/evidence", method: "post", status: 201,
+    matches: /^\/api\/cases\/\d+\/evidence$/ },
+  { path: "/cases/{id}/evidence/{evidenceId}", method: "patch", status: 200,
+    matches: /^\/api\/cases\/\d+\/evidence\/\d+$/ },
+].map((operation) => {
+  const schema = openapi.paths[operation.path][operation.method]
+    .responses[operation.status].content["application/json"].schema;
+  return { ...operation, schema, ...createResponseValidator(schema) };
+});
 const temporaryDir = await mkdtemp(join(testDir, ".sbu-route-test-"));
 after(() => rm(temporaryDir, { recursive: true, force: true }));
 
@@ -257,6 +270,20 @@ async function request(server, path, options) {
   });
   const raw = await response.text();
   const body = raw && response.headers.get("content-type")?.includes("application/json") ? JSON.parse(raw) : null;
+  const evidenceOperation = evidenceOperations.find(({ method, matches }) =>
+    method === (options?.method ?? "GET").toLowerCase() && matches.test(path));
+  if (evidenceOperation && response.ok) {
+    const { method, status, ajv, validate } = evidenceOperation;
+    const label = `${method.toUpperCase()} ${path}`;
+    assert.equal(response.status, status, `${label}: status sukses harus sesuai OpenAPI`);
+    assert.ok(validate(body),
+      `${label} tidak sesuai respons operasi OpenAPI: ${ajv.errorsText(validate.errors)}`);
+    // Check the entity too, even if an operation stops referencing Evidence.
+    for (const item of method === "get" ? body : [body]) {
+      assert.ok(validateEvidence(item),
+        `${label} tidak sesuai OpenAPI Evidence: ${evidenceAjv.errorsText(validateEvidence.errors)}`);
+    }
+  }
   if (path === "/api/dashboard" && (options?.method ?? "GET").toUpperCase() === "GET" && response.status === 200) {
     assert.equal(openapi.paths["/dashboard"].get.responses["200"].content["application/json"].schema.$ref,
       dashboardRef, "GET /api/dashboard harus menggunakan kontrak Dashboard");
@@ -316,6 +343,82 @@ test("validasi Profile dari OpenAPI menangkap field wajib, tipe, enum dan peruba
   const changedValidator = createProfileValidator(changedType).validate;
   assert.equal(changedValidator(valid), false, "perubahan tipe dalam spesifikasi harus terdeteksi");
   assert.ok(changedValidator({ ...valid, organizationName: 1 }));
+});
+
+test("validasi respons bukti memakai kontrak operasi dan Evidence dari sumber OpenAPI", () => {
+  const valid = {
+    id: 1, caseId: 43, code: "legalitas", title: "Bukti legalitas",
+    note: "", updatedAt: "2026-02-03T00:00:00.000Z",
+  };
+  const validators = [
+    { label: "Evidence", validate: validateEvidence, wrap: (item) => item },
+    ...evidenceOperations.map(({ method, validate }) => ({
+      label: method, validate, wrap: (item) => method === "get" ? [item] : item,
+    })),
+  ];
+  for (const { label, validate, wrap } of validators) {
+    assert.ok(validate(wrap(valid)), label);
+    for (const field of openapi.components.schemas.Evidence.required) {
+      const missing = structuredClone(valid);
+      delete missing[field];
+      assert.equal(validate(wrap(missing)), false, `${label}: field wajib ${field}`);
+      assert.ok(validate.errors.some((error) =>
+        error.keyword === "required" && error.params.missingProperty === field));
+    }
+    for (const [field, schema] of Object.entries(openapi.components.schemas.Evidence.properties)) {
+      const wrongTypes = schema.type === "integer" ? ["1", 1.5, null, true, [], {}] :
+        [123, null, true, [], {}];
+      for (const wrongType of wrongTypes) {
+        assert.equal(validate(wrap({ ...valid, [field]: wrongType })), false,
+          `${label}: tipe ${field} tidak boleh ${JSON.stringify(wrongType)}`);
+        assert.ok(validate.errors.some((error) => error.keyword === "type"));
+      }
+    }
+    for (const updatedAt of ["bukan-tanggal", "2026-02-03", "2026-02-30T00:00:00Z"]) {
+      assert.equal(validate(wrap({ ...valid, updatedAt })), false, `${label}: ${updatedAt}`);
+      assert.ok(validate.errors.some((error) => error.keyword === "format"));
+    }
+    for (const invalid of [null, [], { evidence: valid }]) {
+      assert.equal(validate(wrap(invalid)), false, `${label}: bukan objek Evidence`);
+    }
+  }
+  for (const { method, validate } of evidenceOperations) {
+    if (method === "get") {
+      assert.ok(validate([]), "daftar kosong sah");
+      for (const invalid of [null, valid, { items: [valid] }]) {
+        assert.equal(validate(invalid), false, "GET harus berupa array");
+      }
+      assert.equal(validate([valid, { ...valid, updatedAt: "rusak" }]), false,
+        "seluruh item daftar harus divalidasi, bukan hanya item pertama");
+    } else {
+      assert.equal(validate([valid]), false, `${method}: respons tunggal bukan array`);
+    }
+  }
+
+  // Contract changes must fail without regenerating code or updating fixtures.
+  const addedField = structuredClone(openapi.components.schemas);
+  addedField.Evidence.required.push("contractRevision");
+  addedField.Evidence.properties.contractRevision = { type: "integer" };
+  const changedType = structuredClone(openapi.components.schemas);
+  changedType.Evidence.properties.caseId = { type: "string" };
+  const changedFormat = structuredClone(openapi.components.schemas);
+  changedFormat.Evidence.properties.updatedAt.format = "date";
+  for (const { method, schema } of evidenceOperations) {
+    const wrap = (item) => method === "get" ? [item] : item;
+    for (const [schemas, corrected] of [
+      [addedField, { ...valid, contractRevision: 1 }],
+      [changedType, { ...valid, caseId: "43" }],
+      [changedFormat, { ...valid, updatedAt: "2026-02-03" }],
+    ]) {
+      const { validate } = createResponseValidator(schema, schemas);
+      assert.equal(validate(wrap(valid)), false, `${method}: perubahan kontrak harus terdeteksi`);
+      assert.ok(validate(wrap(corrected)), `${method}: respons sesuai kontrak baru diterima`);
+    }
+    const changedOperation = { allOf: [schema], not: { const: wrap(valid) } };
+    const { validate } = createResponseValidator(changedOperation);
+    assert.equal(validate(wrap(valid)), false,
+      `${method}: batasan skema operasi sendiri harus diperiksa`);
+  }
 });
 
 test("ringkasan privat memeriksa pemilik, mengambil snapshot terbaru dan tidak menyalin klaim tenggat dari catatan", async () => {
