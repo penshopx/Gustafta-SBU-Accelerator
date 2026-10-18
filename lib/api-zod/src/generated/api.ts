@@ -1184,12 +1184,29 @@ export const SendSbuChatMessageBody = zod.object({
 })).min(1).max(sendSbuChatMessageBodyMessagesMax)
 })
 
+export const sendSbuChatMessageResponseCitationsItemCheckedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const SendSbuChatMessageResponse = zod.object({
   "specialist": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']),
   "userId": zod.string(),
   "mode": zod.enum(['bujk', 'pendamping', 'asesor', 'lsbu', 'asosiasi', 'umum']),
   "answer": zod.string(),
-  "disclaimer": zod.string()
+  "disclaimer": zod.string(),
+  "retrievalNotice": zod.string(),
+  "citations": zod.array(zod.object({
+  "id": zod.string(),
+  "document": zod.string(),
+  "version": zod.string(),
+  "locator": zod.string(),
+  "excerpt": zod.string().describe('Ringkasan terkurasi, bukan kutipan verbatim.'),
+  "sourceUrl": zod.string().url(),
+  "verificationStatus": zod.enum(['verified', 'unverified']),
+  "verificationScope": zod.string(),
+  "documentStatus": zod.string(),
+  "checkedOn": zod.string().regex(sendSbuChatMessageResponseCitationsItemCheckedOnRegExp).describe('Tanggal kalender pemeriksaan, bukan waktu verifikasi live.'),
+  "limitation": zod.string()
+}))
 })
 
 

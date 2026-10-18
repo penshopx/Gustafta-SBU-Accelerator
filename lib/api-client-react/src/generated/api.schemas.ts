@@ -660,12 +660,41 @@ export const SbuChatReplyMode = {
   umum: 'umum',
 } as const;
 
+export type SbuChatCitationVerificationStatus = typeof SbuChatCitationVerificationStatus[keyof typeof SbuChatCitationVerificationStatus];
+
+
+export const SbuChatCitationVerificationStatus = {
+  verified: 'verified',
+  unverified: 'unverified',
+} as const;
+
+export interface SbuChatCitation {
+  id: string;
+  document: string;
+  version: string;
+  locator: string;
+  /** Ringkasan terkurasi, bukan kutipan verbatim. */
+  excerpt: string;
+  sourceUrl: string;
+  verificationStatus: SbuChatCitationVerificationStatus;
+  verificationScope: string;
+  documentStatus: string;
+  /**
+     * Tanggal kalender pemeriksaan, bukan waktu verifikasi live.
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  checkedOn: string;
+  limitation: string;
+}
+
 export interface SbuChatReply {
   specialist: SbuChatReplySpecialist;
   userId: string;
   mode: SbuChatReplyMode;
   answer: string;
   disclaimer: string;
+  retrievalNotice: string;
+  citations: SbuChatCitation[];
 }
 
 export type SbuChatSpecialistId = typeof SbuChatSpecialistId[keyof typeof SbuChatSpecialistId];

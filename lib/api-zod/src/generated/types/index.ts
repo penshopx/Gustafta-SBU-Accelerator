@@ -87,6 +87,8 @@ export * from './sbuCase';
 export * from './sbuCaseQualification';
 export * from './sbuCaseRequestType';
 export * from './sbuCaseStatus';
+export * from './sbuChatCitation';
+export * from './sbuChatCitationVerificationStatus';
 export * from './sbuChatInput';
 export * from './sbuChatInputMode';
 export * from './sbuChatInputSpecialist';

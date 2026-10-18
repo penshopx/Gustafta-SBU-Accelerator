@@ -32,13 +32,21 @@ await build({
   outfile: join(temp, "policy.mjs"), platform: "node", bundle: true, format: "esm",
 });
 const { sbuChatSystemPrompt, CHAT_MODES } = await import(join(temp, "policy.mjs"));
+await build({
+  entryPoints: [join(dir, "../src/lib/sbu-chat-retrieval.ts")],
+  outfile: join(temp, "retrieval.mjs"), platform: "node", bundle: true, format: "esm",
+});
+const { retrieveChatSources, validateCitedAnswer } = await import(join(temp, "retrieval.mjs"));
 const body = (mode = "bujk") => ({ mode, consent: true, messages: [{ role: "user", content: "Bantu persiapan SBU" }] });
 
 async function server(generate, run) {
   const app = express();
   app.use(express.json());
   app.use((req, _res, next) => { req.testUser = req.get("X-Test-Identity"); next(); });
-  app.use(createSbuChatRouter(generate));
+  app.use(createSbuChatRouter(async (...args) => {
+    const result = await generate(...args);
+    return JSON.stringify(typeof result === "string" ? { answer: result, citationIds: [] } : result);
+  }));
   const listener = app.listen(0, "127.0.0.1");
   await new Promise((resolve) => listener.once("listening", resolve));
   const url = `http://127.0.0.1:${listener.address().port}/openai/sbu/messages`;
@@ -183,5 +191,81 @@ test("one in-flight generation per owner, independent other owner", async () => 
     assert.equal((await send(body(), "owner-b")).status, 200);
     release();
     assert.equal((await pending).status, 200);
+  });
+});
+
+test("retrieval separates publisher metadata from unverified preparation copies; no draft BG001 rules", () => {
+  const sources = retrieveChatSources("Status berlaku Permen 6/2025, SMAP dan transisi Kepdirjen 281");
+  assert.equal(sources.length, 4);
+  const metadata = sources.find(s => s.id === "pu6-metadata");
+  assert.equal(metadata.verificationStatus, "verified");
+  assert.match(metadata.verificationScope, /Metadata.*saja/);
+  const copy = sources.find(s => s.id === "dk281-skema");
+  assert.equal(copy.verificationStatus, "unverified");
+  assert.match(copy.locator, /hlm\. 1.*hlm\. 4.*27–32/);
+  assert.match(copy.limitation, /Tidak mengaktifkan draf/);
+  assert.deepEqual(retrieveChatSources("Berapa modal dan jumlah personel BG001 K1?"), []);
+  assert.deepEqual(retrieveChatSources("PP 99 tahun 2099 pasal 999"), []);
+  const prompt = sbuChatSystemPrompt("bujk", "sbuclaw", sources);
+  assert.match(prompt, /citationIds/);
+  assert.match(prompt, /Draf matriks BG001.*tidak boleh digunakan/);
+  assert.match(prompt, /bukan kutipan verbatim/);
+});
+
+test("unknown, un-retrieved, unattached or malformed citations fail closed", () => {
+  const sources = retrieveChatSources("SMAP");
+  const raw = (answer, citationIds) => JSON.stringify({ answer, citationIds });
+  assert.throws(() => validateCitedAnswer(raw("Aturan [made-up]", ["made-up"]), sources));
+  assert.throws(() => validateCitedAnswer(raw("Metadata [pu6-metadata]", ["pu6-metadata"]), sources));
+  assert.throws(() => validateCitedAnswer(raw("Aturan [missing]", []), sources));
+  assert.throws(() => validateCitedAnswer(raw("Tidak terkait", ["pu6-smap"]), sources));
+  assert.throws(() => validateCitedAnswer(raw("https://example.com/fake.pdf", []), sources));
+  assert.throws(() => validateCitedAnswer("not json", sources));
+  assert.throws(() => validateCitedAnswer(raw("teks", "pu6-smap"), sources));
+  assert.deepEqual(validateCitedAnswer(raw("Belum terverifikasi", []), []),
+    { answer: "Belum terverifikasi", citations: [] });
+});
+
+test("wire response owns source fields and preserves verified vs unverified limits", async () => {
+  const question = { ...body(), messages: [{ role: "user", content: "Status berlaku Permen 6/2025 dan SMAP?" }] };
+  await server(async (_mode, _messages, _signal, _specialist, context, sources) => {
+    assert.equal(context, "");
+    assert.ok(sources.some(s => s.id === "pu6-metadata"));
+    return {
+      answer: "Metadata terbatas [pu6-metadata]. Ringkasan SMAP belum terverifikasi [pu6-smap].",
+      citationIds: ["pu6-metadata", "pu6-smap"],
+      citations: [{ document: "MODEL FORGERY" }],
+    };
+  }, async send => {
+    const response = await send(question);
+    assert.equal(response.status, 200);
+    const data = await response.json();
+    assert.deepEqual(data.citations.map(s => s.verificationStatus), ["verified", "unverified"]);
+    assert.equal(data.citations[0].document, "Permen PU Nomor 6 Tahun 2025");
+    assert.match(data.citations[1].locator, /266/);
+    assert.match(data.citations[0].checkedOn, /^2026-09-26/);
+    assert.match(data.retrievalNotice, /bukan dokumen lengkap atau verifikasi live/);
+    assert.doesNotMatch(JSON.stringify(data), /MODEL FORGERY/);
+  });
+});
+
+test("route rejects hallucinated and stale-history citations, then releases owner slot", async () => {
+  let count = 0;
+  await server(async () => ++count <= 2
+    ? { answer: "Sumber [pu6-metadata]", citationIds: ["pu6-metadata"] }
+    : { answer: "Belum terverifikasi.", citationIds: [] }, async send => {
+    const question = { ...body(), messages: [{ role: "user", content: "Jumlah personel BG001?" }] };
+    assert.equal((await send(question)).status, 503);
+    const history = { ...question, messages: [
+      { role: "user", content: "Status Permen berlaku?" },
+      { role: "assistant", content: "Berlaku [pu6-metadata]" },
+      ...question.messages,
+    ] };
+    const rejected = await send(history);
+    assert.equal(rejected.status, 503);
+    assert.doesNotMatch(await rejected.text(), /pu6-metadata|Sumber \[/);
+    const recovered = await send(question);
+    assert.equal(recovered.status, 200);
+    assert.deepEqual((await recovered.json()).citations, []);
   });
 });

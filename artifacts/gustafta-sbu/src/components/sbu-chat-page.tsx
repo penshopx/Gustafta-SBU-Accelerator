@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Link } from 'wouter';
 import { AlertTriangle, Check, Copy, Loader2, Plus, SendHorizontal, ShieldAlert, Square } from 'lucide-react';
-import { sendSbuChatMessage, useGetSbuChatSpecialists, getGetSbuChatSpecialistsQueryKey, type SbuChatInput, type SbuChatSpecialist } from '@workspace/api-client-react';
+import { sendSbuChatMessage, useGetSbuChatSpecialists, getGetSbuChatSpecialistsQueryKey, type SbuChatInput, type SbuChatSpecialist, type SbuChatCitation } from '@workspace/api-client-react';
 import { useFormMutationOptions } from '@/components/account-queries';
+import { ChatCitations, chatAnswerForCopy } from './chat-citations';
 
 type Mode = SbuChatInput['mode'];
 type SpecId = SbuChatSpecialist['id'];
 type Confirm = null | { kind: 'mode'; to: Mode } | { kind: 'specialist'; to: SpecId } | { kind: 'new' };
-type Msg = { id: number; role: 'user' | 'assistant'; content: string };
+type Msg = { id: number; role: 'user' | 'assistant'; content: string; citations?: SbuChatCitation[]; retrievalNotice?: string };
 
 const MODES: { id: Mode; label: string; desc: string; intro: string; prompts: string[] }[] = [
   { id: 'bujk', label: 'BUJK', desc: 'Badan usaha jasa konstruksi yang menyiapkan berkas SBU sendiri.', intro: 'Tanyakan cara menyusun berkas, memahami istilah, dan menyiapkan diri sebelum pra-verifikasi. Jawaban bersifat panduan, bukan penilaian kelayakan.', prompts: ['Bantu saya membuat daftar periksa persiapan dokumen SBU untuk badan usaha saya.', 'Apa saja yang biasanya perlu saya siapkan sebelum pra-verifikasi?', 'Jelaskan perbedaan permohonan baru dan perpanjangan dengan bahasa sederhana.'] },
@@ -34,9 +35,9 @@ const errorFor = (e: unknown): string => {
 
 function buildPayload(history: Msg[]) {
   let w = history.slice(-MAX_MSGS).map(m => ({
-    ...m, content: m.content.slice(0, m.role === 'assistant' ? 12000 : MAX_USER),
+    role: m.role, content: m.content.slice(0, m.role === 'assistant' ? 12000 : MAX_USER),
   }));
-  const total = (l: Msg[]) => l.reduce((n, m) => n + m.content.length, 0);
+  const total = (l: { content: string }[]) => l.reduce((n, m) => n + m.content.length, 0);
   while (w.length > 1 && (w[0].role !== 'user' || total(w) > MAX_TOTAL)) w = w.slice(1);
   return w.map(m => ({ role: m.role, content: m.content }));
 }
@@ -86,11 +87,12 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
     try {
       const res = await sendSbuChatMessage({ mode: sentMode, specialist: sentSpec, consent: true, messages: buildPayload(next) }, { ...options.request, signal: c.signal });
       if (c.signal.aborted) return;
-      if (res.userId !== expectedUserId || res.mode !== sentMode || res.specialist !== sentSpec || typeof res.answer !== 'string') {
+      if (res.userId !== expectedUserId || res.mode !== sentMode || res.specialist !== sentSpec || typeof res.answer !== 'string' ||
+          !Array.isArray(res.citations) || typeof res.retrievalNotice !== 'string') {
         setError('Respons tidak sesuai dengan akun atau mode atau spesialis yang aktif, sehingga tidak ditampilkan. Muat ulang halaman lalu coba lagi.');
         return;
       }
-      setMessages([...next, { id: ++seq.current, role: 'assistant', content: res.answer }]);
+      setMessages([...next, { id: ++seq.current, role: 'assistant', content: res.answer, citations: res.citations, retrievalNotice: res.retrievalNotice }]);
       setDraft('');
     } catch (e) {
       if (c.signal.aborted && !timedOut.current) return;
@@ -116,7 +118,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(draft); }
   };
   const copy = async (m: Msg) => {
-    try { await navigator.clipboard.writeText(m.content); setCopied(m.id); window.setTimeout(() => setCopied(null), 1500); } catch { /* clipboard unavailable */ }
+    try { await navigator.clipboard.writeText(chatAnswerForCopy(m.content, m.citations, m.retrievalNotice)); setCopied(m.id); window.setTimeout(() => setCopied(null), 1500); } catch { /* clipboard unavailable */ }
   };
   const over = draft.length > MAX_USER;
   const canSend = consent && catalog.isSuccess && !!spec && !loading && !!draft.trim() && !over;
@@ -130,7 +132,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
 
     <div role="note" data-testid="text-chat-disclaimer" className="mb-5 flex gap-3 rounded-xl border border-[#b9d5e9] bg-[#dff0fc] p-4 text-xs leading-5 text-[#173d5d]">
       <ShieldAlert size={18} className="mt-0.5 shrink-0 text-[#1769d1]" />
-      <p>Jawaban AI bersifat pendahuluan dan perlu ditinjau manusia yang kompeten. Bukan nasihat hukum, bukan keputusan LSBU atau instansi, dan tidak menjamin penerbitan SBU. Asisten tidak mengambil regulasi langsung dari sumber resmi; periksa ketentuan primer di <Link href="/regulations" data-testid="link-chat-regulations" className="font-bold underline">Pusat regulasi</Link>.</p>
+      <p>Jawaban AI bersifat pendahuluan dan perlu ditinjau manusia yang kompeten. Bukan nasihat hukum, bukan keputusan LSBU atau instansi, dan tidak menjamin penerbitan SBU. Asisten mencari ringkasan sumber publik terkurasi, bukan dokumen lengkap atau verifikasi live. Baca bagian sumber dan batas verifikasi di bawah jawaban; periksa ketentuan primer di <Link href="/regulations" data-testid="link-chat-regulations" className="font-bold underline">Pusat regulasi</Link>.</p>
     </div>
 
     <div className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Mode peran">
@@ -179,6 +181,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
           <div className={`max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-7 sm:max-w-[80%] ${m.role === 'user' ? 'bg-[#1769d1] text-white' : 'border border-[#cddcea] bg-white text-[#14253a]'}`}>
             <div className={`eyebrow mb-1 ${m.role === 'user' ? 'text-[#cfe6ff]' : 'text-[#1769d1]'}`}>{m.role === 'user' ? 'Anda' : 'Asisten AI / pendahuluan'}</div>
             <div className="whitespace-pre-wrap break-words select-text">{m.content}</div>
+            {m.role === 'assistant' && <ChatCitations citations={m.citations ?? []} notice={m.retrievalNotice ?? ''} />}
             {m.role === 'assistant' && <button type="button" data-testid={`button-copy-${m.id}`} onClick={() => copy(m)} className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-[#1769d1] hover:underline">{copied === m.id ? <Check size={13} /> : <Copy size={13} />}{copied === m.id ? 'Tersalin' : 'Salin jawaban'}</button>}
           </div>
         </div>)}
