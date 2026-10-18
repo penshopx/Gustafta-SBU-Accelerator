@@ -305,6 +305,179 @@ for (const status of [422, 500]) {
 }
 
 for (const status of [422, 500]) {
+  test(`catat bukti gagal (${status}) mempertahankan kategori dan isian lalu berhasil saat dicoba ulang`, async (t) => {
+    const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
+    const originalFetch = globalThis.fetch;
+    const originalWindow = testGlobals.window;
+    const originalAct = testGlobals.IS_REACT_ACT_ENVIRONMENT;
+    testGlobals.IS_REACT_ACT_ENVIRONMENT = true;
+    testGlobals.window = { addEventListener() {}, removeEventListener() {} } as unknown as Window & typeof globalThis;
+    const originalRows: Evidence[] = [
+      { id: 11, caseId: 7, code: 'legalitas', title: 'Bukti awal', note: 'Catatan awal', updatedAt: '2026-09-25T12:00:00Z' },
+    ];
+    const oldAssessment: Assessment = {
+      caseId: 7, ruleset: 'Aturan persiapan', status: 'perlu_tinjauan',
+      recordedCount: 1, requiredCount: 3, disclaimer: 'Deklarasi, bukan verifikasi.',
+      findings: [{
+        code: 'tenaga', title: 'Tenaga kerja konstruksi', status: 'perlu_bukti',
+        detail: 'Belum ada catatan tenaga', source: 'Deklarasi pengguna',
+      }],
+    };
+    const draft = { code: 'tenaga', title: 'Bukti tenaga baru', note: 'Catatan tenaga baru' };
+    const savedEvidence: Evidence = {
+      id: 12, caseId: 7, code: draft.code, title: 'Judul dari server',
+      note: 'Catatan dari server', updatedAt: '2026-09-26T12:00:00Z',
+    };
+    const newAssessment: Assessment = {
+      ...oldAssessment, recordedCount: 2,
+      findings: [{ ...oldAssessment.findings[0], status: 'tercatat', detail: savedEvidence.note! }],
+    };
+    let rows = originalRows;
+    let assessment = oldAssessment;
+    const requests: string[] = [];
+    const message = 'Catatan bukti belum dapat disimpan.';
+    let postCount = 0;
+    let failPost!: () => void;
+    const firstResponse = new Promise<Response>(resolve => {
+      failPost = () => resolve(Response.json({ error: message }, { status }));
+    });
+    let succeedPost!: () => void;
+    const retryResponse = new Promise<Response>(resolve => {
+      succeedPost = () => {
+        rows = [savedEvidence, ...originalRows];
+        assessment = newAssessment;
+        resolve(Response.json(savedEvidence, { status: 201 }));
+      };
+    });
+    globalThis.fetch = async (input, init) => {
+      const path = String(input);
+      const method = init?.method ?? 'GET';
+      requests.push(`${method} ${path}`);
+      if (path === '/api/cases/7/assessment') {
+        assert.equal(method, 'GET');
+        return Response.json(assessment);
+      }
+      assert.equal(path, '/api/cases/7/evidence');
+      if (method === 'POST') {
+        postCount++;
+        assert.ok(postCount <= 2, 'hanya dua POST yang diminta pengguna');
+        assert.deepEqual(JSON.parse(String(init?.body)), draft, 'kategori dan isian yang sama dikirim saat dicoba ulang');
+        return postCount === 1 ? firstResponse : retryResponse;
+      }
+      assert.equal(method, 'GET');
+      return Response.json(rows);
+    };
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const evidenceKey = getListEvidenceQueryKey(7);
+    const assessmentKey = getGetAssessmentQueryKey(7);
+    client.setQueryData(assessmentKey, oldAssessment);
+    const invalidate = t.mock.method(client, 'invalidateQueries');
+    function AssessmentView() {
+      const result = useGetAssessment(7, { query: { queryKey: assessmentKey, staleTime: Infinity } });
+      return createElement('p', { 'data-testid': 'assessment-detail' }, result.data?.findings[0]?.detail);
+    }
+    let renderer: TestRenderer.ReactTestRenderer | undefined;
+    const waitForRender = async (ready: () => boolean) => {
+      for (let attempt = 0; attempt < 100; attempt++) {
+        if (ready()) return;
+        await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+      }
+      assert.fail('Komponen tidak mencapai keadaan yang diharapkan');
+    };
+    try {
+      await act(async () => {
+        renderer = TestRenderer.create(createElement(QueryClientProvider, { client },
+          createElement(CaseEvidence, { id: 7, requestType: 'baru', qualification: 'kecil' }),
+          createElement(AssessmentView)));
+      });
+      const cards = () => renderer!.root.findAll(node => typeof node.props['data-testid'] === 'string' && node.props['data-testid'].startsWith('card-evidence-'));
+      await waitForRender(() => cards().length === 1);
+      const cardSnapshot = () => cards().map(card => ({
+        id: card.props['data-testid'],
+        title: card.findByType('h3').children,
+        paragraphs: card.findAllByType('p').map(p => p.children),
+      }));
+      const originalCards = cardSnapshot();
+      const assertDraft = () => {
+        const dialog = renderer!.root.findByProps({ role: 'dialog' });
+        assert.equal(dialog.props['aria-label'], 'Tambah catatan bukti');
+        const category = dialog.findByProps({ 'data-testid': 'select-evidence-code' });
+        assert.equal(category.props.value, draft.code);
+        assert.ok(category.findAllByType('option').some(option => option.props.value === draft.code));
+        assert.equal(dialog.findByProps({ 'data-testid': 'input-evidence-title' }).props.value, draft.title);
+        assert.equal(dialog.findByProps({ 'data-testid': 'input-evidence-note' }).props.value, draft.note);
+      };
+      const assertUnchanged = () => {
+        assert.deepEqual(cardSnapshot(), originalCards, 'belum ada kartu baru atau perubahan pada bukti lama');
+        assert.deepEqual(client.getQueryData(evidenceKey), originalRows);
+        assert.deepEqual(client.getQueryData(assessmentKey), oldAssessment);
+        assert.equal(client.getQueryState(evidenceKey)?.isInvalidated, false);
+        assert.equal(client.getQueryState(assessmentKey)?.isInvalidated, false);
+        assert.equal(invalidate.mock.callCount(), 0, 'belum ada invalidasi sebelum POST berhasil');
+        assert.deepEqual(renderer!.root.findByProps({ 'data-testid': 'assessment-detail' }).children, [oldAssessment.findings[0].detail]);
+      };
+      await act(async () => {
+        renderer!.root.findByProps({ 'data-testid': 'button-add-evidence' }).props.onClick();
+      });
+      await act(async () => {
+        renderer!.root.findByProps({ 'data-testid': 'select-evidence-code' }).props.onChange({ target: { value: draft.code } });
+      });
+      await act(async () => {
+        renderer!.root.findByProps({ 'data-testid': 'input-evidence-title' }).props.onChange({ target: { value: draft.title } });
+        renderer!.root.findByProps({ 'data-testid': 'input-evidence-note' }).props.onChange({ target: { value: draft.note } });
+      });
+      await act(async () => {
+        renderer!.root.findByType('form').props.onSubmit({ preventDefault() {} });
+      });
+      await waitForRender(() => postCount === 1 && renderer!.root.findByProps({ 'data-testid': 'button-save-evidence' }).props.disabled === true);
+      assertDraft();
+      assertUnchanged();
+      await act(async () => { failPost(); });
+      await waitForRender(() => renderer!.root.findAllByProps({ role: 'alert' }).length === 1);
+      assert.ok(renderer!.root.findByProps({ role: 'alert' }).children.some(child => typeof child === 'string' && child.includes(message)));
+      assertDraft();
+      assertUnchanged();
+      assert.equal(renderer!.root.findByProps({ 'data-testid': 'button-save-evidence' }).props.disabled, false, 'form dapat dikirim ulang setelah gagal');
+      assert.deepEqual(requests, ['GET /api/cases/7/evidence', 'POST /api/cases/7/evidence']);
+      await act(async () => {
+        renderer!.root.findByType('form').props.onSubmit({ preventDefault() {} });
+      });
+      await waitForRender(() => postCount === 2 && renderer!.root.findByProps({ 'data-testid': 'button-save-evidence' }).props.disabled === true);
+      assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0, 'kesalahan hilang sebelum respons percobaan ulang diterima');
+      assertDraft();
+      assertUnchanged();
+      assert.deepEqual(requests, [
+        'GET /api/cases/7/evidence', 'POST /api/cases/7/evidence', 'POST /api/cases/7/evidence',
+      ], 'POST yang belum berhasil tidak memuat ulang bukti atau penilaian');
+      await act(async () => { succeedPost(); });
+      await waitForRender(() => renderer!.root.findAllByProps({ role: 'dialog' }).length === 0
+        && cards().length === 2
+        && renderer!.root.findByProps({ 'data-testid': 'assessment-detail' }).children.includes(savedEvidence.note!));
+      assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0);
+      assert.deepEqual(cards().map(card => card.props['data-testid']), ['card-evidence-12', 'card-evidence-11'], 'bukti baru muncul tepat sekali');
+      assert.deepEqual(cards()[0].findByType('h3').children, [savedEvidence.title]);
+      assert.deepEqual(cards()[0].findAllByType('p')[0].children, [savedEvidence.note], 'kartu mengikuti hasil server, bukan draf');
+      assert.deepEqual(cardSnapshot()[1], originalCards[0], 'bukti lama tetap utuh');
+      assert.deepEqual(client.getQueryData(evidenceKey), [savedEvidence, ...originalRows]);
+      assert.deepEqual(client.getQueryData(assessmentKey), newAssessment);
+      assert.equal(invalidate.mock.callCount(), 2);
+      assert.equal(postCount, 2);
+      assert.deepEqual(requests.slice(3).sort(), [
+        'GET /api/cases/7/assessment', 'GET /api/cases/7/evidence',
+      ], 'hanya keberhasilan memuat ulang bukti dan penilaian aktif, masing-masing sekali');
+    } finally {
+      await act(async () => { renderer?.unmount(); });
+      client.clear();
+      globalThis.fetch = originalFetch;
+      testGlobals.window = originalWindow;
+      testGlobals.IS_REACT_ACT_ENVIRONMENT = originalAct;
+    }
+  });
+}
+
+for (const status of [422, 500]) {
   test(`hapus bukti gagal (${status}) mempertahankan dialog, kartu, catatan, dan cache saat dicoba ulang`, async (t) => {
     const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
     const originalFetch = globalThis.fetch;
