@@ -14,7 +14,7 @@ const testDir = fileURLToPath(new URL(".", import.meta.url));
 const { Pool } = createRequire(new URL("../../../lib/db/package.json", import.meta.url))("pg");
 const tables = ["sbu_profiles", "sbu_cases", "sbu_evidence", "sbu_transition_verifications"];
 
-test("GET preparation-summary uses one PostgreSQL snapshot during concurrent updates and revocations", {
+test("GET preparation-summary uses one PostgreSQL snapshot during concurrent updates, revocations and deletion", {
   timeout: 60_000,
 }, async (t) => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk uji PostgreSQL");
@@ -202,6 +202,64 @@ test("GET preparation-summary uses one PostgreSQL snapshot during concurrent upd
       assert.equal(denied.response.status, 404, denied.html);
       assert.deepEqual(reads, ["sbu_cases"], "Kasus asing harus ditolak sebelum membaca bukti dan verifikasi");
       assert.doesNotMatch(denied.html, /Perusahaan|Judul privat|Surat/);
+    });
+    await t.test("deletion committed after the case read preserves the in-flight snapshot, then returns 404", async () => {
+      // Keep evidence present so READ COMMITTED would produce a mixed summary
+      // (the old case with no evidence) rather than accidentally passing.
+      await writer.query("UPDATE sbu_cases SET company_name = 'Perusahaan Sebelum' WHERE id = $1", [item.id]);
+      await writer.query("UPDATE sbu_evidence SET code = 'legalitas' WHERE case_id = $1", [item.id]);
+      await writer.query(`
+        UPDATE sbu_transition_verifications SET document_number = 'Surat Sebelum',
+          issued_on = '2026-04-10', document_status = 'berlaku' WHERE track = $1
+      `, [track]);
+      const baseline = await request();
+      assert.equal(baseline.response.status, 200, baseline.html);
+      assertBefore(baseline.html);
+
+      reads = [];
+      let committed = false;
+      afterRead = async table => {
+        if (table !== "sbu_cases" || committed) return;
+        await writer.query("BEGIN");
+        try {
+          const evidence = await writer.query("DELETE FROM sbu_evidence WHERE case_id = $1", [item.id]);
+          const cases = await writer.query("DELETE FROM sbu_cases WHERE id = $1 AND owner_id = $2", [item.id, owner]);
+          assert.equal(evidence.rowCount, 1, "Bukti harus benar-benar dihapus di koneksi kedua");
+          assert.equal(cases.rowCount, 1, "Kasus harus benar-benar dihapus di koneksi kedua");
+          await writer.query("COMMIT");
+          committed = true;
+        } catch (error) {
+          await writer.query("ROLLBACK");
+          throw error;
+        }
+      };
+      let snapshot;
+      try {
+        snapshot = await request();
+      } finally {
+        afterRead = undefined;
+      }
+      assert.equal(committed, true, "Penghapusan harus selesai setelah kasus dibaca, sebelum bukti dibaca");
+      assert.deepEqual(reads, ["sbu_cases", "sbu_evidence", "sbu_transition_verifications"]);
+      assert.equal(snapshot.response.status, 200, snapshot.html);
+      assert.equal(snapshot.response.headers.get("cache-control"), "private, no-store");
+      assertBefore(snapshot.html);
+      assert.equal(content(snapshot.html), content(baseline.html),
+        "Ringkasan berjalan harus utuh, bukan kasus lama dengan bukti yang sudah hilang");
+      const { rows: [remaining] } = await writer.query(`
+        SELECT (SELECT count(*)::int FROM sbu_cases WHERE id = $1) AS cases,
+               (SELECT count(*)::int FROM sbu_evidence WHERE case_id = $1) AS evidence
+      `, [item.id]);
+      assert.deepEqual(remaining, { cases: 0, evidence: 0 });
+
+      reads = [];
+      const missing = await request();
+      assert.equal(missing.response.status, 404, missing.html);
+      assert.equal(missing.response.headers.get("cache-control"), "private, no-store");
+      assert.match(missing.response.headers.get("content-type"), /^application\/json\b/);
+      assert.equal(missing.response.headers.get("content-disposition"), null);
+      assert.deepEqual(JSON.parse(missing.html), { error: "Permohonan tidak ditemukan." });
+      assert.deepEqual(reads, ["sbu_cases"], "Kasus yang sudah dihapus tidak boleh memuat bukti atau ringkasan lama");
     });
     // Safety checks use SELECT only against live tables.
     for (const [table, column] of [
