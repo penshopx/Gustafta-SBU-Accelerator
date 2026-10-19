@@ -13,7 +13,7 @@ import { createRestrictedRoutePool } from "./helpers/restricted-postgres.mjs";
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const { Pool } = createRequire(new URL("../../../lib/db/package.json", import.meta.url))("pg");
 
-test("PATCH tanggal SBU terisi → null → tanggal baru tersimpan dan terbaca lewat GET tanpa mengubah kolom lain", async () => {
+test("PATCH tanggal SBU menolak kalender tidak sah tanpa perubahan, lalu mendukung null dan tanggal baru", async (t) => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk pengujian integrasi PostgreSQL");
   assert.notEqual(process.env.NODE_ENV, "production", "Pengujian tidak boleh dijalankan dalam mode produksi");
 
@@ -98,7 +98,7 @@ test("PATCH tanggal SBU terisi → null → tanggal baru tersimpan dan terbaca l
     app.use("/api", router);
     server = app.listen(0);
 
-    const request = async (options = {}) => {
+    const request = async (options = {}, expectedStatus = 200) => {
       const { port } = server.address();
       const response = await fetch(`http://127.0.0.1:${port}/api/cases/${original.id}`, {
         ...options,
@@ -109,11 +109,39 @@ test("PATCH tanggal SBU terisi → null → tanggal baru tersimpan dan terbaca l
         },
       });
       const raw = await response.text();
-      assert.equal(response.status, 200, raw);
+      assert.equal(response.status, expectedStatus, raw);
       return JSON.parse(raw);
     };
     const before = await request();
     assert.equal(before.existingSbuExpiresOn, "2027-04-15T00:00:00.000Z");
+
+    for (const invalidDate of ["2027-02-29", "2028-02-30"]) {
+      await t.test(`PATCH ${invalidDate} mengembalikan 400 tanpa mengubah data tersimpan`, async () => {
+        const rejected = await request({
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            existingSbuExpiresOn: invalidDate,
+            companyName: "Perubahan yang tidak boleh tersimpan",
+          }),
+        }, 400);
+        assert.equal(rejected.error, "Perubahan tidak valid.");
+
+        const reopened = await request();
+        assert.equal(reopened.existingSbuExpiresOn, before.existingSbuExpiresOn,
+          "GET setelah penolakan harus tetap mengembalikan tanggal sebelumnya");
+        assert.deepEqual(reopened, before,
+          "PATCH tidak sah tidak boleh mengubah isian API apa pun, termasuk updatedAt");
+
+        const { rows: [unchanged] } = await isolated.query(
+          "SELECT * FROM sbu_cases WHERE id = $1", [original.id],
+        );
+        assert.deepEqual(unchanged.updated_at, original.updated_at,
+          "PATCH yang ditolak tidak boleh mengubah updated_at");
+        assert.deepEqual(unchanged, original,
+          "Seluruh baris PostgreSQL harus tetap utuh, termasuk perubahan lain dalam PATCH yang sama");
+      });
+    }
 
     const patched = await request({
       method: "PATCH",

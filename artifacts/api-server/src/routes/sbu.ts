@@ -217,7 +217,9 @@ router.get("/cases/:id", async (req, res): Promise<void> => {
 router.patch("/cases/:id", async (req, res): Promise<void> => {
   const params = UpdateCaseParams.safeParse(req.params);
   const input = UpdateCaseBody.safeParse(req.body);
-  if (!params.success || !input.success || Object.keys(input.data).length === 0) {
+  if (!params.success || !input.success || Object.keys(input.data).length === 0 ||
+      (input.data.existingSbuExpiresOn != null &&
+       dateOnly(input.data.existingSbuExpiresOn) !== req.body.existingSbuExpiresOn)) {
     res.status(400).json({ error: "Perubahan tidak valid." });
     return;
   }
