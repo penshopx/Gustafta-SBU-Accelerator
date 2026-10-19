@@ -1,0 +1,146 @@
+# Prompt 21 — Penyempurnaan Kesiapan Jual & QA SBU Accelerator
+
+<aside>
+🎯
+
+Produk awal: Pemeriksaan Kesiapan SBU + Laporan Tindakan Perbaikan, dengan opsi Telaah Ahli. Perluas dari alur yang terbukti, bukan dari jumlah fitur. Dokumen ini spesifikasi implementasi dan pengujian, bukan bukti fitur sudah dipasang atau aplikasi layak produksi.
+
+</aside>
+
+## 1. Status dan batas pemeriksaan
+
+Tanggal pencatatan: October 20, 2026.
+
+- Halaman publik dan halaman masuk aplikasi telah diperiksa. Publik menjelaskan Buka kasus → Deklarasikan bukti → Baca temuan awal, rujukan dan batas independensi.
+- Ruang kerja memerlukan login; pembuatan kasus, katalog aktual, kalkulator, penyimpanan, laporan, pembayaran, isolasi data dan integrasi belum diverifikasi dalam pemeriksaan ini.
+- Tidak terlihat pada halaman publik yang diperiksa: contoh laporan, paket/harga, jalur pemesanan telaah ahli, tautan kebijakan privasi/syarat layanan. Statusnya belum terlihat pada halaman yang diperiksa, bukan pasti tidak ada di seluruh aplikasi.
+- Tidak ada kode produksi yang diubah, pengujian autentikasi yang dijalankan, maupun deployment yang dilakukan melalui dokumen ini.
+
+## 2. Prioritas produk dan gerbang rilis
+
+| Prioritas | Hasil | Syarat selesai |
+| --- | --- | --- |
+| P0 — audit | Inventaris fitur, dependensi dan bukti uji | Setiap modul berstatus Terverifikasi / Ada tetapi belum diuji / Belum ada / Tidak termasuk rilis |
+| P0 — ketepatan | Aturan dan cakupan tertelaah untuk segmen awal | Sumber, versi, penerapan, pemicu operasional dan persetujuan tersedia; aturan Draf tidak menentukan kesiapan |
+| P0 — keamanan | Akses privat dan pemulihan data | Uji negatif lintas akun/klien lulus; pemulihan cadangan teruji di lingkungan uji |
+| P1 — hasil layanan | Kasus → temuan → tindakan → laporan → telaah ahli | Satu alur end-to-end terbukti dengan data uji tersamar |
+| P1 — penawaran | Contoh hasil, lingkup, biaya dan pemesanan | Tidak ada harga/tautan layanan aktif yang belum disetujui pemilik |
+| P2 — retensi | Pengingat kewajiban yang relevan per perusahaan | Sumber tenggat terkonfirmasi dan notifikasi idempoten |
+| P3 — skala | Multi-klien, white-label, perluasan SBU/SKK/izin | Dibuka setelah kebutuhan dan kontrol akses teruji |
+
+P0 dan P1 adalah prioritas rilis pilot berbayar. Pembayaran manual boleh dipakai untuk pilot dengan order tercatat dan aktivasi oleh operator; jangan mengklaim integrasi pembayaran otomatis sebelum benar-benar diuji. Harga lama pada blueprint tetap hipotesis uji pasar. Banyaknya subklasifikasi dan jumlah agen bukan syarat keberhasilan; cakupan rilis dinyatakan secara eksplisit.
+
+## 3. Kontrak hasil pemeriksaan
+
+### 3.1 Aturan berversi dan dapat ditelusuri
+
+Setiap aturan memiliki rule_id, versi, jenis/bentuk usaha, subklasifikasi, kualifikasi dan jenis permohonan yang berlaku, sumber primer, locator pasal/lampiran, halaman PDF, status kurasi, status penerapan operasional, tanggal berlaku jika terkonfirmasi, bukti pemicu jika relevan, reviewer, waktu persetujuan dan alasan perubahan. Tidak ada angka atau tenggat yang diisi dari ingatan model.
+
+Final kurasi berbeda dari aktif operasional. Aturan tanpa bukti penerapan yang cukup tidak boleh menjadi keputusan siap. Masa transisi tidak dihitung hanya dari tanggal penetapan keputusan atau sosialisasi. Kualifikasi mengikuti jenis/bentuk usaha dan subklasifikasi; jangan memaksa seluruh konsultansi menggunakan K1/K2/K3. Pemetaan data lama yang ambigu wajib dikonfirmasi pengguna, bukan dipilih otomatis.
+
+### 3.2 Status, kelengkapan cakupan dan skor
+
+- Status evaluasi per syarat: Memenuhi secara indikatif / Belum memenuhi / Belum dapat dinilai / Tidak berlaku. Status bukti terpisah dari status evaluasi.
+- Status bukti: Deklarasi / Diunggah / Ditelaah internal / Perlu perbaikan. Diunggah tidak berarti sah atau terverifikasi resmi. Catat reviewer dan lingkup telaah internal.
+- Katalog memiliki manifest cakupan per kombinasi kasus: daftar seluruh syarat wajib yang disetujui reviewer, versi dan tanggal persetujuan. Jumlah baris yang berhasil diimpor bukan bukti cakupan lengkap.
+- Jika manifest belum disetujui, aturan wajib belum termodelkan, pemicu belum jelas atau input wajib belum tersedia: status keseluruhan Belum dapat disimpulkan; tampilkan penyebabnya. Nol aturan tidak pernah menghasilkan 100% atau status siap.
+- Skor hanya alat pengelolaan kemajuan, bukan peluang lulus. Semua penghambat wajib tampil terpisah; skor tinggi tidak menghapus satu pun penghambat kritis.
+- Hanya aturan Final, disetujui untuk penggunaan operasional dan sesuai kasus yang masuk evaluasi produksi. Draf dapat dibaca sebagai bahan belajar berlabel, tidak dihitung.
+- Bukti minimum tidak terpenuhi atau kedaluwarsa menyebabkan syarat terkait belum memenuhi. Syarat tidak berlaku harus memiliki alasan, bukan dihapus untuk menaikkan skor.
+- Status otomatis paling tinggi Persiapan awal lengkap berdasarkan data yang diberikan, bukan Lulus atau Disetujui LSBU. Label Ditelaah ahli hanya setelah keputusan reviewer tersimpan untuk versi kasus tertentu.
+- Perubahan input/bukti/aturan menandai hasil serta persetujuan lama sebagai perlu telaah ulang; laporan lama tetap tersimpan sebagai snapshot historis.
+
+### 3.3 Temuan dan tindakan
+
+Setiap temuan memuat finding_id, rule_id dan versi, kondisi yang diamati, bukti terkait, sumber, alasan, tingkat kepentingan, tindakan, pihak yang perlu bertindak, kebutuhan konfirmasi dan status. Tindakan memiliki PIC, target internal, bukti penyelesaian dan persetujuan bila diperlukan. Bedakan target internal dari tenggat hukum beserta sumbernya. Menandai tugas selesai tidak otomatis membuat syarat memenuhi; evaluator dan reviewer yang relevan memeriksa kembali. Penghitungan ulang tidak menggandakan tugas.
+
+### 3.4 Laporan yang dapat diserahkan
+
+PDF minimal: identitas tersamar seperlunya, nomor laporan, waktu, lingkup pemeriksaan, versi aturan dan snapshot kasus, cakupan yang didukung/tidak didukung, status keseluruhan, penghambat, matriks syarat–kondisi–bukti, tindakan dan PIC, hal yang belum dapat dinilai, sumber, serta catatan reviewer bila ada. Bedakan Laporan Mandiri dan Laporan Ditelaah Ahli. Contoh publik wajib berlabel DATA CONTOH dan tidak berisi klien nyata.
+
+Ekspor laporan tetap dapat dilakukan ketika belum siap agar pengguna bisa melihat kekurangan. Paket berkas lengkap/Siap Ajukan tidak otomatis tersedia hanya karena ekspor PDF berhasil; tetap mengikuti cakupan, penghambat dan gerbang yang berlaku. Pengajuan selalu oleh pengguna/kuasanya, bukan agen aplikasi.
+
+## 4. Penawaran layanan dan operasi
+
+Landing page menambahkan: target pengguna, cakupan yang didukung, contoh laporan, perbedaan mandiri dan telaah ahli, identitas pengelola, bantuan/kontak, syarat layanan dan kebijakan privasi. Harga serta SLA adalah konfigurasi yang disetujui pemilik; bila belum disetujui, tampilkan Minta penawaran, bukan angka buatan atau janji waktu.
+
+Alur: Cek awal → Laporan → Minta Telaah Ahli → Setujui lingkup/biaya/persetujuan akses → Order → Penugasan reviewer → Hasil → Penutupan akses. SLA dimulai setelah data minimum lengkap dan penerimaan order, sesuai perjanjian; perubahan lingkup harus disetujui kembali. Pisahkan jasa pendampingan dari biaya resmi lembaga.
+
+Gunakan Klinik dan Workroom Gustafta OS jika kontrak integrasinya tersedia. Jangan membuat Workroom duplikat. Jika integrasi belum siap, gunakan antrean internal sederhana dengan penugasan manusia, pencatatan order, persetujuan akses dan catatan hasil. Tandai dikelola operator; jangan menyimulasikan sinkronisasi berhasil. Status pembayaran wajib diverifikasi server/operator, bukan dari parameter URL kembali checkout. Webhook harus terverifikasi, idempoten, menangani replay dan urutan event.
+
+Ahli hanya mengakses kasus yang ditugaskan dalam lingkup dan masa persetujuan. Pencabutan akses setelah selesai tidak menghapus arsip sah milik pengguna; retensi arsip dijelaskan dalam kebijakan. Tidak menjanjikan terbit, menyewakan nama/SKK, merekayasa bukti atau mengaku mewakili regulator.
+
+## 5. Kontrol keamanan minimum
+
+- Otorisasi server pada seluruh endpoint daftar/detail/edit/hapus/ekspor/unduh/laporan/telaah. Filter tenant dan client tidak bergantung pada UI atau ID dari klien.
+- Dokumen privat, signed URL singkat dan terikat objek yang telah diotorisasi. Pencabutan akses mempertimbangkan sisa masa URL; jangan menjanjikan pencabutan seketika jika belum diimplementasikan.
+- Validasi ukuran, jenis dan signature file; nama aman; pemindaian/karantina unggahan jika didukung. File mencurigakan tidak dipublikasikan.
+- Secrets tidak masuk browser/log; minimalkan data pribadi yang dikirim ke AI. Konten dokumen diperlakukan sebagai data, bukan instruksi untuk mengubah aturan atau mengirim data keluar.
+- Audit akses/perubahan/telaah/persetujuan; log tidak memuat dokumen atau identitas sensitif lengkap.
+- Retensi, permintaan ekspor/penghapusan dan kontak pengaduan ditentukan pemilik dengan penelaahan hukum. Jangan menerbitkan placeholder [TINJAU] sebagai kebijakan final.
+- Backup privat dan restore diuji di staging. Catat lingkungan, tanggal, hasil dan penanggung jawab. Jangan menggunakan dokumen klien asli dalam demo atau pengujian tanpa dasar akses yang sesuai.
+
+## 6. Register QA dan bukti
+
+Gunakan tabel uji dengan kolom: ID, modul, lingkungan, build/commit, skenario, hasil diharapkan, hasil aktual, status, bukti/log tersamar, penguji dan tanggal. Awali semua hasil dengan Belum diuji. Tabel berikut spesifikasi uji, bukan hasil lulus.
+
+| ID | Skenario | Hasil diharapkan |
+| --- | --- | --- |
+| QA01 | Nol aturan atau manifest belum lengkap | Belum dapat disimpulkan; tidak 100%/siap |
+| QA02 | Aturan Draf atau pemicu operasional belum pasti | Tidak menjadi keputusan siap; perlu konfirmasi |
+| QA03 | Skor tinggi, satu syarat kritis gagal | Penghambat tetap terlihat; paket siap ajukan terkunci |
+| QA04 | Konsultansi vs pekerjaan konstruksi, data lama Kecil | Pilihan sesuai master tertelaah; nilai ambigu tidak ditebak |
+| QA05 | Deklarasi/unggah tanpa telaah | Tidak diberi label bukti terverifikasi/ditelaah ahli |
+| QA06 | Bukti kedaluwarsa, input wajib kosong | Status terkait tidak dianggap memenuhi |
+| QA07 | Hitung ulang dua kali, tugas ditutup manual | Deterministik, tidak duplikat, syarat tidak otomatis lolos |
+| QA08 | Aturan atau bukti berubah setelah telaah | Hasil lama usang; perlu telaah ulang; snapshot lama utuh |
+| QA09 | Akun/klien B mengakses objek A lewat API dan unduhan | Ditolak; tidak ada data atau metadata sensitif bocor |
+| QA10 | Ahli tidak ditugaskan atau persetujuan dicabut | Akses ditolak sesuai kebijakan; audit tersedia |
+| QA11 | PDF kasus belum lengkap dan contoh publik | Kekurangan tetap bisa diekspor; snapshot konsisten; contoh tersamar |
+| QA12 | Webhook palsu/ganda, URL checkout sukses palsu | Tidak memberi akses; event valid ganda tidak menggandakan order |
+| QA13 | Klinik/Workroom tidak tersedia | Fallback operator jelas; tidak ada status sukses palsu |
+| QA14 | Ekspor/penghapusan dan restore cadangan | Hak akses diperiksa; hasil terdokumentasi; bukan klaim dari tombol saja |
+| QA15 | AI menerima dokumen berisi instruksi manipulatif | Tidak mengubah rule/status, mengakses tenant lain atau mengekspor data |
+| QA16 | Alur penuh pengguna baru di perangkat mobile | Kasus tersimpan → temuan → tindakan → laporan → permintaan telaah dapat selesai |
+
+Gerbang pilot: QA yang relevan dengan rilis lulus, tidak ada kebocoran akses atau salah status siap pada kasus kritis, reviewer menyetujui sumber/cakupan, halaman legal serta lingkup layanan disetujui pemilik. Fitur di luar rilis dicatat beserta alasannya. Target pilot: lima pelanggan berbayar sebagai eksperimen; belum merupakan hasil atau bukti permintaan. Ukur waktu operator, koreksi ahli, manfaat yang diakui klien, biaya pelayanan dan minat layanan lanjutan. Jangan menganggap selisih skor rata-rata kecil cukup untuk mengabaikan kesalahan kritis.
+
+## 7. Prompt 21A — Audit kode dan rencana perubahan
+
+```
+Kerjakan pada repo SBU Accelerator yang sudah ada. Jangan membangun ulang atau mengubah produksi dahulu.
+1. Baca replit.md, stack, skema, migrasi, auth, routes, storage, scoring, katalog, report, pembayaran dan integrasi. Jangan menampilkan nilai Secrets.
+2. Cocokkan implementasi dengan spesifikasi pada bagian 1–6 dokumen ini dan blueprint. Kelompokkan setiap kemampuan: Terverifikasi dengan bukti; Ada tetapi belum diuji; Belum ada; Tidak termasuk rilis.
+3. Buat docs/readiness-audit.md berisi file/endpoint relevan, temuan risiko, dependensi, prioritas P0/P1/P2/P3 dan register QA01–QA16 berstatus awal Belum diuji. Status Terverifikasi hanya dari tes yang benar-benar dijalankan.
+4. Periksa konflik prompt lama: daftar kualifikasi universal, aturan Draf ikut skor, nol aturan menghasilkan siap, penyelesaian tugas disamakan pemenuhan, AI memberi skor sendiri, atau izin lintas tenant. Bagian 3 dokumen ini adalah pengaman hasil, bukan izin mengarang norma.
+5. Usulkan migrasi aditif, rollback dan cakupan pilot sempit. Jangan hapus data atau menebak ambang resmi. Laporkan rencana dan tunggu persetujuan sebelum 21B.
+Kriteria terima: inventaris spesifik repo; tidak ada klaim fitur hilang hanya karena tersembunyi login; tidak ada perubahan produksi; semua gap punya bukti atau label belum diverifikasi.
+```
+
+## 8. Prompt 21B — Ketepatan hasil, tindakan dan laporan
+
+```
+Setelah rencana audit disetujui, perbaiki hanya gap P0/P1 terkait bagian 3 spesifikasi ini. Reuse evaluator dan tabel yang sudah ada; tambah skema hanya bila diperlukan, lewat migrasi aditif. Implementasikan manifest cakupan tertelaah, pemisahan status kurasi dan operasional, status belum dapat disimpulkan, penghambat kritis, pemisahan bukti dan hasil, snapshot serta penandaan hasil usang. AI menjelaskan, evaluator deterministik menghitung.
+Jangan seed aturan produksi dari contoh atau mengaktifkan aturan belum disetujui. Perbaiki rencana aksi idempoten dan PDF sesuai snapshot. Tambahkan contoh laporan tersamar berlabel DATA CONTOH. Jalankan QA01–QA08 dan QA11 dengan fixture uji terpisah. Hasil uji tidak mengesahkan isi hukum; penelaah sumber tetap diperlukan.
+Kriteria terima: tidak ada false-ready pada fixture kritis; nol aturan tidak siap; tugas selesai tidak memalsukan pemenuhan; laporan dapat diekspor untuk kasus belum lengkap; perubahan aturan/bukti menandai hasil lama usang. Laporkan file, migrasi, tes, bukti dan batas yang belum selesai; checkpoint sebelum lanjut.
+```
+
+## 9. Prompt 21C — Penawaran dan layanan manusia
+
+```
+Implementasikan bagian 4 dari spesifikasi ini dengan reuse halaman publik, order, Telaah Ahli, Klinik dan Workroom yang ada. Tambahkan contoh laporan, cakupan, CTA Minta Telaah Ahli/Minta penawaran, kontak dan tautan legal. Jangan mengganti identitas pengelola, mengarang harga/SLA/testimoni atau menayangkan template legal belum disetujui sebagai final.
+Simpan persetujuan versi lingkup, biaya dan akses. Ahli hanya melihat kasus yang ditugaskan. Integrasi belum tersedia memakai antrean operator yang jujur, bukan Workroom kedua. Validasi pembayaran server-side, webhook idempoten dan urutan event. Jangan membuat endpoint dummy seolah integrasi produksi berhasil.
+Jalankan QA10, QA12, QA13 dan bagian layanan QA16. Laporkan demo data uji, batas manual vs otomatis serta konfigurasi yang masih diperlukan. Jangan mengaktifkan checkout live atau mengirim notifikasi pelanggan saat uji.
+```
+
+## 10. Prompt 21D — Keamanan, uji penuh dan keputusan rilis
+
+```
+Implementasikan gap keamanan bagian 5 tanpa mengubah fitur tak terkait. Jalankan QA09–QA10 dan QA14–QA16 di staging menggunakan akun serta data sintetis yang terpisah. Lakukan tes otorisasi negatif untuk daftar/detail/mutasi/unduh/PDF/review, expiry signed URL, pencabutan akses, file tidak valid, log tersamar, backup dan restore.
+Lengkapi register dengan hasil aktual, build, lingkungan dan bukti. Buat docs/pilot-release-checklist.md berisi lulus/gagal/belum diuji/tidak relevan beserta alasan. Jangan menandai tes lulus dari inspeksi UI atau mengklaim audit keamanan menyeluruh. Cantumkan persetujuan manusia yang masih dibutuhkan untuk norma, privasi, harga dan lingkup.
+Rilis pilot hanya diusulkan jika gerbang bagian 6 terpenuhi. Jangan deploy otomatis; sajikan ringkasan perubahan, risiko, rollback dan permintaan persetujuan pemilik. Multi-klien/white-label dan perluasan cakupan ditunda kecuali termasuk lingkup yang disetujui.
+```
+
+## 11. Langkah setelah pilot
+
+Prioritaskan pengingat berdasarkan masa berlaku/tenggat yang terkonfirmasi, pemeliharaan dokumen dan penelaahan dampak perubahan aturan. Tidak membuat kewajiban perpanjangan NIB tahunan universal. Kembangkan langganan dan dukungan biro/asosiasi hanya setelah manfaat berulang serta biaya layanan terbukti. Prompt ini tidak meminta pembangunan Worker, integrasi eksternal baru, atau orkestrasi multi-agent tambahan.
