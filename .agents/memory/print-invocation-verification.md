@@ -14,3 +14,9 @@ Native-print instrumentation must bind the method from the loaded `srcdoc` Windo
 **Why:** Binding before navigation can silently target an inactive Window. Headless Chromium can emit trusted `beforeprint` without a closing `afterprint`; waiting for the latter does not reliably establish whether native invocation succeeded.
 
 **How to apply:** Separate native invocation evidence from deterministic disposal tests. Dispatch a controlled `afterprint` for cleanup coverage when headless printing does not emit it, and explicitly document that this does not verify a visible operating-system print dialog.
+
+Compare PDF text semantically across engines, preserving all geometry and complete-warning requirements; compatibility ligatures are not missing letters.
+
+**Why:** Firefox PDF fonts can encode `fi` as a single ligature while Chromium emits separate letters. Raw extracted-string matching then falsely reports a missing disclaimer on an otherwise correct PDF.
+
+**How to apply:** Normalize compatibility glyphs in extracted words, not coordinates or source HTML. Keep real-PDF negative controls so normalization cannot conceal missing warnings or overlapping text. Playwright's lack of Firefox PDF output does not mean Firefox cannot print: its native WebDriver print command can produce actual PDFs. Never substitute Chromium or print-media screenshots for unverified Safari/WebKit pagination.

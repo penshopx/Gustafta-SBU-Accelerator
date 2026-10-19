@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { firefoxPdf } from "./firefox-summary-pdf.mjs";
 
 const exec = promisify(execFile);
 const decode = (text) => text.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi, (_, entity) =>
@@ -19,7 +20,9 @@ export function pdfPages(xml) {
     words: [...match[3].matchAll(/<word xMin="([\d.-]+)" yMin="([\d.-]+)" xMax="([\d.-]+)" yMax="([\d.-]+)">([\s\S]*?)<\/word>/g)]
       .map((word) => ({
         x1: Number(word[1]), y1: Number(word[2]), x2: Number(word[3]), y2: Number(word[4]),
-        text: decode(word[5]),
+        // Firefox's PDF fonts may encode "fi" as U+FB01. Normalize text
+        // compatibility glyphs only; retain every original coordinate.
+        text: decode(word[5]).normalize("NFKC"),
       })),
   }));
 }
@@ -61,10 +64,24 @@ export function assertSafePages(pages, disclaimer) {
   }
 }
 
-export async function renderPdf(html, directory, name) {
+export async function readPdfPages(output) {
+  const { stdout } = await exec("pdftotext", ["-bbox", output, "-"], {
+    timeout: 15_000, maxBuffer: 8 * 1024 * 1024,
+  });
+  const pages = pdfPages(stdout);
+  assert.ok(pages.length, "Poppler did not extract PDF pages");
+  return pages;
+}
+
+export async function renderPdf(html, directory, name, engine = "chromium") {
+  assert.ok(["chromium", "firefox"].includes(engine), `Unsupported PDF engine: ${engine}`);
   const input = join(directory, `${name}.html`);
   const output = join(directory, `${name}.pdf`);
   await writeFile(input, html);
+  if (engine === "firefox") {
+    await firefoxPdf(input, output);
+    return readPdfPages(output);
+  }
   // Fresh browser profile, local file, no live server, no auth or user data.
   // CSP in the real summary blocks requests; DNS is disabled as a second guard.
   await exec(process.env.CHROMIUM_BIN || "chromium", [
@@ -74,10 +91,5 @@ export async function renderPdf(html, directory, name) {
     `--user-data-dir=${join(directory, `browser-${name}`)}`,
     "--no-pdf-header-footer", `--print-to-pdf=${output}`, pathToFileURL(input).href,
   ], { timeout: 60_000, maxBuffer: 2 * 1024 * 1024 });
-  const { stdout } = await exec("pdftotext", ["-bbox", output, "-"], {
-    timeout: 15_000, maxBuffer: 8 * 1024 * 1024,
-  });
-  const pages = pdfPages(stdout);
-  assert.ok(pages.length, "Poppler did not extract PDF pages");
-  return pages;
+  return readPdfPages(output);
 }
