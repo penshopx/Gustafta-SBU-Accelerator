@@ -40,14 +40,19 @@ export function CasePreparationExport({ caseId }: { caseId: number }) {
         frame.style.cssText = 'position:fixed;width:1px;height:1px;left:-9999px;top:0;border:0';
         let disposed = false;
         const dispose = () => {
+          if (disposed) return;
           disposed = true;
           frame.onload = null;
+          frame.contentWindow?.removeEventListener('afterprint', dispose);
           window.clearTimeout(timer);
           frame.remove();
+          if (cleanup.current === dispose) cleanup.current = null;
         };
         const timer = window.setTimeout(dispose, 300_000);
         cleanup.current = dispose;
         frame.onload = () => {
+          // A frame must never open a second dialog on a repeated load event.
+          frame.onload = null;
           if (disposed || controller.signal.aborted) { dispose(); return; }
           try {
             if (!frame.contentWindow) throw new Error('Print window unavailable');
