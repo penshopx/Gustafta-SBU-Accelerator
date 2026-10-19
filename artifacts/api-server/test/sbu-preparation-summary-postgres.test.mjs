@@ -14,7 +14,7 @@ const testDir = fileURLToPath(new URL(".", import.meta.url));
 const { Pool } = createRequire(new URL("../../../lib/db/package.json", import.meta.url))("pg");
 const tables = ["sbu_profiles", "sbu_cases", "sbu_evidence", "sbu_transition_verifications"];
 
-test("GET preparation-summary uses one PostgreSQL snapshot during concurrent updates, revocations and deletion", {
+test("GET preparation-summary preserves PostgreSQL snapshots and recovers from read failures", {
   timeout: 60_000,
 }, async (t) => {
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk uji PostgreSQL");
@@ -29,6 +29,8 @@ test("GET preparation-summary uses one PostgreSQL snapshot during concurrent upd
   let restricted, reader, writer, server;
   let afterRead;
   let reads = [];
+  let statements = [];
+  let routeErrors = [];
 
   try {
     await admin.query(`CREATE SCHEMA "${schema}"`);
@@ -45,6 +47,8 @@ test("GET preparation-summary uses one PostgreSQL snapshot during concurrent upd
     writer = await restricted.pool.connect();
     const readerPid = (await reader.query("SELECT pg_backend_pid() AS pid")).rows[0].pid;
     const writerPid = (await writer.query("SELECT pg_backend_pid() AS pid")).rows[0].pid;
+    const readerRole = (await reader.query("SELECT current_user AS role")).rows[0].role;
+    assert.match(readerRole, /^sbu_route_test_[a-f0-9]+$/);
     assert.notEqual(readerPid, writerPid, "Pembaca dan penulis harus menggunakan koneksi fisik berbeda");
     for (const client of [reader, writer]) {
       for (const table of tables) {
@@ -76,8 +80,17 @@ test("GET preparation-summary uses one PostgreSQL snapshot during concurrent upd
     // No database responses or transaction settings are substituted.
     const query = reader.query.bind(reader);
     reader.query = async (...args) => {
-      const result = await query(...args);
       const sql = typeof args[0] === "string" ? args[0] : args[0].text;
+      const statement = { sql };
+      statements.push(statement);
+      let result;
+      try {
+        result = await query(...args);
+        statement.command = result.command;
+      } catch (error) {
+        statement.code = error.code;
+        throw error;
+      }
       const table = /^\s*select\b/i.test(sql)
         ? /from "(sbu_cases|sbu_evidence|sbu_transition_verifications)"/i.exec(sql)?.[1]
         : undefined;
@@ -116,7 +129,19 @@ test("GET preparation-summary uses one PostgreSQL snapshot during concurrent upd
     });
     const { default: router } = await import(join(temporaryDir, "route.mjs"));
     const app = express();
+    // Match Express's production error body, without substituting the route's
+    // response or swallowing its rejected transaction.
+    app.set("env", "production");
     app.use("/api", router);
+    app.use((error, _req, res, next) => {
+      routeErrors.push({
+        error,
+        headersSent: res.headersSent,
+        disposition: res.getHeader("Content-Disposition"),
+        contentType: res.getHeader("Content-Type"),
+      });
+      next(error);
+    });
     server = app.listen(0);
     const request = async (userId = owner) => {
       const response = await fetch(
@@ -203,6 +228,83 @@ test("GET preparation-summary uses one PostgreSQL snapshot during concurrent upd
       assert.deepEqual(reads, ["sbu_cases"], "Kasus asing harus ditolak sebelum membaca bukti dan verifikasi");
       assert.doesNotMatch(denied.html, /Perusahaan|Judul privat|Surat/);
     });
+    for (const failedTable of ["sbu_evidence", "sbu_transition_verifications"]) {
+      await t.test(`permission failure reading ${failedTable} rolls back before sending and permits same-connection retry`, async () => {
+        await writer.query("UPDATE sbu_cases SET company_name = 'Perusahaan Sebelum' WHERE id = $1", [item.id]);
+        await writer.query("UPDATE sbu_evidence SET code = 'legalitas' WHERE case_id = $1", [item.id]);
+        await writer.query(`
+          UPDATE sbu_transition_verifications SET document_number = 'Surat Sebelum',
+            issued_on = '2026-04-10', document_status = 'berlaku' WHERE track = $1
+        `, [track]);
+        const baseline = await request();
+        assert.equal(baseline.response.status, 200, baseline.html);
+        assertBefore(baseline.html);
+
+        // Revoke only the disposable login's permission on a cloned table.
+        // The failure comes from PostgreSQL itself, not a thrown JS substitute.
+        await admin.query(`REVOKE SELECT ON "${schema}".${failedTable} FROM "${readerRole}"`);
+        try {
+          reads = [];
+          statements = [];
+          routeErrors = [];
+          const failed = await request();
+          assert.equal(failed.response.status, 500, failed.html);
+          assert.equal(failed.response.headers.get("cache-control"), "private, no-store");
+          assert.equal(failed.response.headers.get("content-disposition"), null,
+            "Kegagalan tidak boleh memulai unduhan ringkasan");
+          assert.equal(failed.response.headers.get("content-security-policy"), "default-src 'none'");
+          assert.match(failed.response.headers.get("content-type"), /^text\/html\b/);
+          assert.match(failed.html, /Internal Server Error/);
+          assert.doesNotMatch(failed.html, /Perusahaan|Judul privat|Surat Sebelum|ringkasan-persiapan-sbu|Snapshot/);
+          assert.equal(routeErrors.length, 1, "Express harus menerima tepat satu kegagalan transaksi");
+          assert.equal(routeErrors[0].headersSent, false,
+            "Tidak ada bagian HTML yang boleh dikirim sebelum rollback selesai");
+          assert.equal(routeErrors[0].disposition, undefined);
+          assert.equal(routeErrors[0].contentType, undefined);
+          let cause = routeErrors[0].error;
+          while (cause.cause) cause = cause.cause;
+          assert.equal(cause.code, "42501", "Penyebab asli harus penolakan izin PostgreSQL");
+          assert.match(cause.message, new RegExp(`permission denied for table ${failedTable}`));
+
+          assert.match(statements[0].sql, /^begin isolation level repeatable read read only$/i);
+          const deniedIndex = statements.findIndex(statement => statement.code === "42501");
+          assert.equal(deniedIndex, failedTable === "sbu_evidence" ? 2 : 3);
+          assert.match(statements[deniedIndex].sql, new RegExp(`from "${failedTable}"`, "i"));
+          assert.deepEqual(statements.slice(deniedIndex + 1), [{ sql: "rollback", command: "ROLLBACK" }],
+            "Sesudah pembacaan gagal hanya ROLLBACK yang boleh dijalankan, bukan COMMIT atau SELECT lanjutan");
+          assert.deepEqual(reads, failedTable === "sbu_evidence"
+            ? ["sbu_cases"] : ["sbu_cases", "sbu_evidence"]);
+
+          const { rows: [activity] } = await writer.query(`
+            SELECT state, xact_start FROM pg_stat_activity WHERE pid = $1
+          `, [readerPid]);
+          assert.deepEqual(activity, { state: "idle", xact_start: null },
+            "Koneksi tidak boleh tertinggal dalam transaksi aktif atau gagal");
+          const { rows: [connection] } = await reader.query("SELECT pg_backend_pid() AS pid");
+          assert.equal(connection.pid, readerPid, "Koneksi fisik yang gagal tidak boleh diganti");
+        } finally {
+          await admin.query(`GRANT SELECT ON "${schema}".${failedTable} TO "${readerRole}"`);
+        }
+
+        reads = [];
+        statements = [];
+        routeErrors = [];
+        const recovered = await request();
+        assert.equal(recovered.response.status, 200, recovered.html);
+        assert.equal(recovered.response.headers.get("cache-control"), "private, no-store");
+        assert.match(recovered.response.headers.get("content-type"), /^text\/html\b/);
+        assert.equal(recovered.response.headers.get("content-disposition"),
+          'attachment; filename="ringkasan-persiapan-sbu.html"');
+        assertBefore(recovered.html);
+        assert.equal(content(recovered.html), content(baseline.html),
+          "Percobaan ulang harus menghasilkan ringkasan lengkap yang sama, bukan berkas parsial");
+        assert.deepEqual(reads, ["sbu_cases", "sbu_evidence", "sbu_transition_verifications"]);
+        assert.equal(statements.at(-1).command, "COMMIT");
+        assert.deepEqual(routeErrors, []);
+        const { rows: [connection] } = await reader.query("SELECT pg_backend_pid() AS pid");
+        assert.equal(connection.pid, readerPid, "Percobaan ulang harus memakai koneksi fisik semula");
+      });
+    }
     await t.test("deletion committed after the case read preserves the in-flight snapshot, then returns 404", async () => {
       // Keep evidence present so READ COMMITTED would produce a mixed summary
       // (the old case with no evidence) rather than accidentally passing.
