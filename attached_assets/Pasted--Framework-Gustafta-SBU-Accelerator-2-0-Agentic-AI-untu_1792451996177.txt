@@ -1,0 +1,297 @@
+# Framework Gustafta SBU Accelerator 2.0 — Agentic AI untuk Persiapan SBU
+
+<aside>
+🧭
+
+Elaborasi dari aplikasi yang sudah berjalan (alur **Buka kasus → Deklarasikan bukti → Baca temuan awal**). Positioning tetap: **workbench persiapan dokumen, bukan sertifikasi**, independen dari Ditjen Bina Konstruksi, LPJK, Kementerian PU, dan LSBU. Keputusan SBU tetap di pihak berwenang.
+
+Arsitektur agen mengikuti pola Blueprint Kontraktor Otonom Gustafta Apps — Sistem Agentic AI (Hermes × MultiClaw-OpenClaw) (**Hermes = orkestrator**, **MultiClaw/OpenClaw = eksekutor**), dengan penyesuaian untuk SaaS multi-klien.
+
+</aside>
+
+## 1. Kondisi Saat Ini (v1)
+
+| Aspek | Sudah ada | Batasan |
+| --- | --- | --- |
+| Alur | Buka kasus, deklarasi bukti, temuan awal | Linear, satu kasus per permohonan |
+| Bukti | Catatan deklarasi dokumen | Tidak ada unggah/verifikasi PDF |
+| Rujukan | Ringkasan aturan + sumber primer + catatan masa transisi | Belum ada notifikasi saat aturan berubah |
+| Human review | Celah butuh penilaian manusia ditandai | Belum ada alur reviewer/konsultan |
+| Pasca-terbit | — | Tidak ada pemantauan komitmen & masa berlaku |
+
+## 2. Konteks Regulasi yang Harus Dimodelkan
+
+- **PP 28/2025** tentang PBBR menggantikan PP 5/2021; pemberlakuan bertahap mulai 5 Oktober 2025.
+- **Permen PU 6/2025** (standar kegiatan usaha, pengawasan, sanksi sektor PU) mencabut Permen PUPR 6/2021. Izin yang terbit sebelumnya berlaku sampai masa berlaku habis; permohonan baru mengikuti Permen PU 6/2025.
+- **Permen PUPR 8/2022** — tata cara pemenuhan sertifikat standar jasa konstruksi.
+- Pengajuan lewat **OSS (SSO) yang terhubung ke SIJK Terintegrasi**; diproses LSBU.
+- Komponen persyaratan inti: **kemampuan keuangan** (ekuitas neraca; audit KAP untuk kualifikasi menengah/besar), **tenaga kerja konstruksi** (PJBU, PJTBU, PJSKBU ber-SKK sesuai subklasifikasi & jenjang), **peralatan**, **SMM (ISO 9001)** dan **SMAP (ISO 37001)**, termasuk opsi **surat pernyataan komitmen** dengan tenggat setelah SBU terbit.
+
+<aside>
+⚠️
+
+Semua ambang angka (ekuitas, jenjang SKK, tenggat komitmen) **tidak di-hardcode di prompt**. Simpan sebagai aturan berversi di Rule Engine, masing-masing dengan pasal sumber, tanggal berlaku, dan status transisi.
+
+</aside>
+
+## 3. Pain Point BUJK → Fitur Solusi
+
+| # | Pain point BUJK | Dampak | Fitur solusi |
+| --- | --- | --- | --- |
+| 1 | Bingung memilih subklasifikasi & kualifikasi yang realistis | Salah ajukan, ditolak, biaya terbuang | Eligibility Simulator |
+| 2 | KBLI di NIB, maksud-tujuan akta, dan subklasifikasi tidak sinkron | Revisi berulang, harus ubah akta/NIB | KBLI–Akta–Subklasifikasi Consistency Check |
+| 3 | Tenaga ahli: SKK tidak sesuai subklasifikasi/jenjang, kedaluwarsa, rangkap jabatan | Syarat TKK gugur | Tenaga Ahli Matcher |
+| 4 | Neraca tidak sesuai format, ekuitas kurang, tidak tahu kapan wajib audit KAP | Kualifikasi turun / ditolak | Financial Readiness Analyzer |
+| 5 | Dokumen tercecer; nama, NPWP, alamat, tanggal beda antar dokumen | Temuan administratif | Smart Evidence Vault (OCR + cross-check) |
+| 6 | Regulasi berubah, masa transisi membingungkan | Mengikuti info lama/rumor | Regulation Watch & Impact Alert |
+| 7 | Tidak tahu "seberapa siap" sebelum submit | Bolak-balik dengan LSBU | Simulasi Asesor + Readiness Score |
+| 8 | Menyusun surat pernyataan, penunjukan PJ, daftar alat memakan waktu | Lambat, format salah | Auto-Drafting dokumen pendukung |
+| 9 | Lupa komitmen pasca-terbit (alat, SMM, SMAP) & masa berlaku SBU/SKK | Sanksi, SBU dibekukan | Compliance Tracker pasca-terbit |
+| 10 | Ketergantungan biro jasa/calo, proses tidak transparan | Biaya tinggi, risiko data | Konsultan Console + jejak audit transparan |
+| 11 | Ingin naik kualifikasi tapi tidak tahu jalannya | Pertumbuhan usaha terhambat | Upgrade Path Planner |
+
+## 4. Fitur Killer (Prioritas)
+
+### ⭐ K1 — Eligibility Simulator "SBU apa yang bisa saya dapat hari ini?"
+
+- Input singkat: ekuitas, penjualan, daftar tenaga ahli & SKK, alat, sistem manajemen.
+- Output: matriks **subklasifikasi × kualifikasi** dengan status *Siap / Kurang / Tidak memenuhi*, plus alasan dan pasal rujukan.
+- "What-if": *Jika tambah 1 PJSKBU jenjang X, subklasifikasi mana yang terbuka?*
+- Ini **magnet lead** gratis di landing page (tanpa daftar akun).
+
+### ⭐ K2 — Smart Evidence Vault (upgrade dari deklarasi)
+
+- Unggah PDF/foto (opsional; deklarasi tetap tersedia). OCR + ekstraksi field: nama badan usaha, NIB, NPWP, nomor & tanggal akta, KBLI, nomor SKK, masa berlaku.
+- **Cross-document consistency check**: semua field dibandingkan antar dokumen; selisih ditandai merah.
+- Deteksi kedaluwarsa & dokumen yang tidak terbaca.
+- Label tegas: *"Terekstrak otomatis, bukan terverifikasi"*.
+
+### ⭐ K3 — KBLI ↔ Akta ↔ Subklasifikasi ↔ SKK Mapper
+
+- Satu graf pemetaan: KBLI di NIB → maksud-tujuan akta → subklasifikasi SBU → jabatan kerja SKK yang relevan.
+- Mendeteksi "rantai putus" (mis. subklasifikasi dimohon tapi KBLI belum ada di NIB) dan memberi urutan perbaikan.
+
+### ⭐ K4 — Tenaga Ahli Matcher
+
+- Cek kesesuaian SKK PJTBU/PJSKBU dengan subklasifikasi & kualifikasi.
+- Peringatan SKK kedaluwarsa dalam masa proses, dan deklarasi rangkap jabatan.
+- Rekomendasi profil SKK yang dibutuhkan (jabatan kerja + jenjang) untuk menutup gap.
+
+### ⭐ K5 — Financial Readiness Analyzer
+
+- Baca neraca (PDF/Excel), hitung ekuitas, beri tahu kualifikasi yang didukung dan apakah wajib laporan audit KAP.
+- Hasilkan **checklist untuk akuntan/KAP** agar format laporan sesuai kebutuhan permohonan.
+
+### ⭐ K6 — Simulasi Asesor + Readiness Score
+
+- Agen reviewer membaca kasus seperti asesor, memakai kriteria skema publik.
+- Output: daftar *temuan yang kemungkinan muncul*, tingkat keparahan, dan Readiness Score 0–100 yang bisa dijelaskan (skor = jumlah aturan terpenuhi berbobot, bukan tebakan LLM).
+- Ekspor **Submission Pack**: urutan unggah, nilai field yang perlu diisi di OSS/SIJK, dan file yang sudah dinamai rapi.
+
+### ⭐ K7 — Compliance Tracker Pasca-Terbit
+
+- Setelah SBU terbit: timeline komitmen (peralatan, SMM, SMAP), masa berlaku SBU & SKK, perubahan data.
+- Pengingat bertahap (H-90, H-30, H-7) via email/WhatsApp.
+- Mengubah produk dari **sekali pakai** menjadi **langganan**.
+
+### Fitur pendukung
+
+- **Regulation Watch & Impact Alert** — pantau JDIH/Bina Konstruksi/LPJK; saat aturan berubah, rule baru dibuat sebagai draf → direview manusia → kasus terdampak diberi notifikasi.
+- **Auto-Drafting** — surat pernyataan komitmen, surat penunjukan PJTBU/PJSKBU, daftar peralatan, ringkasan permohonan (diisi dari data kasus, ditinjau pengguna).
+- **WhatsApp Document Collector** — agen meminta dokumen yang kurang ke klien/staf via WA, menerima foto/PDF, dan memasukkannya ke kasus.
+- **Konsultan Console** — multi-BUJK, peran tim (admin, preparer, reviewer), portal klien, white-label untuk biro jasa & asosiasi.
+- **Upgrade Path Planner** — rencana Kecil → Menengah → Besar: target ekuitas, SKK, pengalaman, dan estimasi waktu.
+- **SBU × Tender Link** — tunjukkan paket tender yang tidak bisa diikuti karena gap SBU (terhubung ke Tender Hunter di blueprint kontraktor).
+
+## 5. Arsitektur Agentic
+
+### 5.1 Prinsip
+
+1. **Rules decide, AI explains** — status "memenuhi/tidak" diputuskan Rule Engine deterministik; LLM hanya mengekstrak data, menjelaskan, dan menyusun draf.
+2. **Setiap temuan punya rule_id + pasal sumber + versi aturan**.
+3. **Human-in-the-loop** pada interpretasi aturan, pembaruan rule, dan dokumen keluar.
+4. **Tanpa login otomatis ke OSS/SIJK** — unggah & submit selalu oleh pengguna.
+5. **Isolasi tenant** — data tiap BUJK terpisah; agen hanya melihat kasus yang ditugaskan.
+
+### 5.2 Lapisan
+
+| Lapisan | Komponen | Peran |
+| --- | --- | --- |
+| L1 Kanal | Web app, WhatsApp, email | Input & notifikasi |
+| L2 Orkestrator | **SBU Navigator** (peran Hermes) | Memahami tujuan, memecah tugas, routing, memori kasus, eskalasi |
+| L3 Agen spesialis | Armada agen (pola MultiClaw) | Eksekusi tugas spesifik dengan izin terbatas |
+| L4 Core deterministik | Case Service, **Rule Engine berversi**, Evidence Vault, Scoring | Sumber kebenaran & keputusan aturan |
+| L5 Pengetahuan | Korpus regulasi resmi (RAG), tabel subklasifikasi, KBLI, jabatan kerja SKK | Rujukan tertelusur |
+| L6 Governance | Audit log, RBAC, consent UU PDP, observability biaya token | Kepercayaan & kontrol |
+
+```mermaid
+flowchart TB
+  U[Pengguna BUJK / Konsultan] --> APP[Web App]
+  WA[WhatsApp] --> GW[Gateway Kanal]
+  APP & GW --> NAV[SBU Navigator<br/>Orkestrator]
+  NAV --> A1[Intake & Klasifikasi]
+  NAV --> A2[Dokumen & OCR]
+  NAV --> A3[Tenaga Ahli]
+  NAV --> A4[Keuangan]
+  NAV --> A5[Alat & Sistem Manajemen]
+  NAV --> A6[Regulasi RAG]
+  NAV --> A7[Drafting]
+  NAV --> A8[Asesor Simulasi]
+  NAV --> A9[Compliance Tracker]
+  NAV --> A10[Komunikasi & Kolektor]
+  A1 & A2 & A3 & A4 & A5 --> RE[(Rule Engine berversi)]
+  A6 --> KB[(Korpus Regulasi)]
+  RE --> SC[Readiness Score & Temuan]
+  SC --> A8
+  A8 --> HR{Review Manusia}
+  HR --> OUT[Submission Pack]
+```
+
+### 5.3 Roster Agen
+
+| Agen | Tugas | Input | Output | Batas |
+| --- | --- | --- | --- | --- |
+| SBU Navigator | Rencana kerja kasus, routing, ringkasan progres | Tujuan pengguna, status kasus | Task plan, next best action | Tidak memutuskan kelayakan |
+| Intake & Klasifikasi | Profil usaha, pemetaan KBLI → subklasifikasi | NIB, akta, jawaban wawancara | Daftar subklasifikasi kandidat | Mengusulkan, pengguna memilih |
+| Dokumen & OCR | Ekstraksi field, cek konsistensi & kedaluwarsa | PDF/foto | Field terstruktur + selisih | Tanpa klaim "terverifikasi" |
+| Tenaga Ahli | Cocokkan SKK dengan subklasifikasi & jenjang | SKK, CV | Gap TKK + rekomendasi | Rangkap jabatan via deklarasi |
+| Keuangan | Hitung ekuitas, cek kebutuhan KAP | Neraca/laporan audit | Kualifikasi didukung | Angka dari dokumen, bukan asumsi |
+| Alat & Sistem Manajemen | Daftar alat, status ISO 9001/37001, opsi komitmen | Bukti alat, sertifikat ISO | Status + tenggat komitmen | — |
+| Regulasi (RAG) | Jawab pertanyaan hanya dari korpus resmi | Pertanyaan | Jawaban + kutipan pasal | Tolak menjawab jika sumber tidak ada |
+| Drafting | Susun surat & lampiran | Data kasus, template | Draf DOCX/PDF | Wajib ditinjau pengguna |
+| Asesor Simulasi (Critic) | Review menyeluruh sebelum submit | Seluruh kasus | Temuan potensial + skor | Bukan keputusan LSBU |
+| Compliance Tracker | Pantau komitmen & masa berlaku | SBU terbit, SKK | Pengingat & tugas | — |
+| Komunikasi & Kolektor | Minta & terima dokumen via WA/email | Daftar kekurangan | Dokumen masuk ke Vault | Template pesan disetujui |
+
+### 5.4 Posisi Hermes & MultiClaw/OpenClaw
+
+| Komponen | Cocok untuk | Hati-hati |
+| --- | --- | --- |
+| Hermes (orkestrator, memori, skill learning) | SBU Navigator, Regulation Watch internal | Skill hasil "self-improving" wajib direview sebelum aktif; jangan biarkan mengubah logika kelayakan |
+| OpenClaw / MultiClaw | Gateway WhatsApp, Kolektor Dokumen, agen ops internal (scrape JDIH, riset) | Dirancang untuk satu operator; untuk SaaS multi-tenant pakai instans terisolasi per tenant (paket premium/konsultan) atau batasi ke ops internal |
+| Core app (backend biasa) | Case, Rule Engine, Vault, Scoring, billing | Tetap deterministik dan teruji |
+
+### 5.5 Contoh Rule (rules-as-code)
+
+```yaml
+rule_id: TKK-PJSKBU-001
+title: PJSKBU wajib memiliki SKK sesuai subklasifikasi yang dimohon
+source:
+  regulation: "Permen PU 6/2025"
+  article: "<isi pasal/lampiran>"
+  effective_from: "<tanggal berlaku>"
+  transition_note: "<catatan masa transisi>"
+applies_to:
+  application_type: [baru, perpanjangan, perubahan]
+  qualification: [kecil, menengah, besar]
+check:
+  for_each: requested_subclassification
+  require: "exists pjskbu where skk.jabatan_kerja in mapping[subclassification] and skk.jenjang >= min_jenjang[qualification] and skk.expiry > today"
+severity: blocker
+needs_human_review: false
+reviewed_by: "<nama reviewer>"
+version: 3
+```
+
+## 6. Model Data Inti
+
+- **Perusahaan** — identitas, NIB, NPWP, akta, KBLI, kategori (BUJKN/BUJKA/PMA).
+- **Kasus Permohonan** — jenis (baru/perpanjangan/perubahan/naik kualifikasi), status, Readiness Score.
+- **Subklasifikasi Dimohon** — kode, kualifikasi, status per rule.
+- **Tenaga Ahli** — peran (PJBU/PJTBU/PJSKBU), SKK, jenjang, masa berlaku.
+- **Bukti/Dokumen** — jenis, sumber (deklarasi/unggah), field terekstrak, status konsistensi.
+- **Aturan** — rule_id, sumber pasal, versi, tanggal berlaku, reviewer.
+- **Temuan** — rule_id, severity, penjelasan, rekomendasi, butuh review manusia.
+- **Komitmen & Masa Berlaku** — jenis, tenggat, status, pengingat.
+- **Audit Log** — siapa, kapan, apa, versi aturan yang dipakai.
+
+## 7. Pengalaman Pengguna (Alur v2)
+
+1. **Cek cepat (tanpa akun)** → Eligibility Simulator → hasil + ajakan buat ruang kerja.
+2. **Buka kasus** → wawancara singkat dipandu SBU Navigator.
+3. **Kumpulkan bukti** → deklarasi atau unggah; kolektor WA untuk dokumen yang kurang.
+4. **Temuan & perbaikan** → daftar gap berurutan prioritas, dengan rujukan dan draf dokumen.
+5. **Simulasi asesor** → Readiness Score ≥ target → Submission Pack.
+6. **Submit manual** di OSS/SIJK → catat hasil & revisi dari LSBU (data ini untuk kalibrasi).
+7. **Pasca-terbit** → Compliance Tracker & Upgrade Path Planner.
+
+## 8. Model Bisnis
+
+| Paket | Target | Isi |
+| --- | --- | --- |
+| Gratis | BUJK yang baru mencari tahu | Eligibility Simulator, 1 kasus deklarasi |
+| BUJK Pro | Kontraktor/konsultan konstruksi | Evidence Vault, semua analyzer, simulasi asesor, Compliance Tracker |
+| Konsultan / Biro | Biro jasa perizinan | Multi-klien, tim & reviewer, portal klien, white-label, kolektor WA |
+| Asosiasi / Enterprise | Asosiasi BUJK, grup usaha | Akses massal, dashboard kesiapan anggota, instans terisolasi |
+
+## 9. Keamanan, Privasi, dan Batas Klaim
+
+- Consent eksplisit & kebijakan retensi sesuai UU PDP; enkripsi dokumen; masking KTP/NPWP pada tampilan.
+- Tidak menyimpan kredensial OSS/SIJK.
+- Setiap output menampilkan label: *penilaian awal, bukan keputusan LSBU*.
+- Log prompt & biaya token per kasus (observability), batas langkah per agen untuk mencegah loop.
+
+## 10. KPI Produk
+
+| KPI | Definisi |
+| --- | --- |
+| Time-to-Ready | Hari dari buka kasus sampai Readiness Score ≥ target |
+| Revisi LSBU per kasus | Jumlah putaran perbaikan setelah submit (target turun) |
+| Akurasi temuan | % temuan yang sesuai hasil aktual LSBU |
+| Konversi Simulator → Akun | % pengguna simulator yang membuat ruang kerja |
+| Retensi pasca-terbit | % BUJK aktif di Compliance Tracker setelah 6 bulan |
+
+## 11. Roadmap
+
+### Fase 1 — Fondasi & Lead Magnet (Minggu 1–6)
+
+- [ ]  Rule Engine berversi + migrasi aturan yang sudah ada.
+- [ ]  Eligibility Simulator publik (K1).
+- [ ]  KBLI–Akta–Subklasifikasi Mapper (K3).
+- [ ]  Readiness Score berbasis rule.
+
+### Fase 2 — Dokumen & Analisis (Minggu 7–12)
+
+- [ ]  Smart Evidence Vault dengan OCR & cross-check (K2).
+- [ ]  Tenaga Ahli Matcher (K4) dan Financial Readiness Analyzer (K5).
+- [ ]  Auto-Drafting dokumen pendukung.
+
+### Fase 3 — Agentic Penuh (Bulan 4–5)
+
+- [ ]  SBU Navigator + Asesor Simulasi + Submission Pack (K6).
+- [ ]  Kolektor Dokumen WhatsApp (OpenClaw gateway).
+- [ ]  Regulation Watch dengan alur review rule.
+
+### Fase 4 — Retensi & Skala (Bulan 6+)
+
+- [ ]  Compliance Tracker pasca-terbit (K7).
+- [ ]  Konsultan Console & white-label.
+- [ ]  Upgrade Path Planner dan SBU × Tender Link.
+
+## 12. Perbaikan Landing Page
+
+- Paket harga dan testimoni/studi kasus.
+
+- Tambahkan **Eligibility Simulator** langsung di hero ("Cek SBU Anda dalam 3 menit").
+- Contoh laporan temuan (dummy) dan cakupan subklasifikasi yang didukung.
+- Daftar regulasi yang sudah dimodelkan + tanggal pembaruan terakhir.
+
+## Referensi
+
+- Permen PU No. 6 Tahun 2025 — Ditjen Bina Konstruksi
+- PP No. 28 Tahun 2025 — JDIH BPK
+- Pemberlakuan bertahap PP 28/2025 — Bina Konstruksi
+- Ringkasan Permen PU 6/2025 — Veritask
+- SE LPJK 2021 — Pedoman Teknis Sertifikasi BUJK melalui LSBU
+- OpenClaw — Multi-agent routing
+- Hermes Agent — Nous Research
+
+Panduan Integrasi ke Replit — Prompt Build SBU Accelerator 2.0
+
+Spesifikasi Integrasi Ruang Simpan (Gustafta) ↔ SBU Accelerator
+
+Blueprint SBU Accelerator Layak Jual v1
+
+Review & Perbaikan Ebook "SBU & SKK Tanpa Bingung"
+
+Pustaka Sumber Regulasi — SBU Accelerator
