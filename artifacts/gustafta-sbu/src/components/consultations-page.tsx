@@ -9,6 +9,7 @@ import {
 } from '@workspace/api-client-react';
 import { useAccountReadOptions, useFormMutationOptions } from '@/components/account-queries';
 import { ErrorState, Loading } from '@/components/request-states';
+import { ConsultationAnalysisPicker, type AnalysisChoice } from './consultation-analysis-picker';
 
 type Mode = CreateConsultationInput['mode'];
 const MODES: { id: Mode; label: string; desc: string }[] = [
@@ -27,7 +28,8 @@ const sendError = (e: unknown) => {
   const s = statusOf(e);
   if (s === 401) return 'Sesi Anda berakhir atau tidak valid. Muat ulang halaman atau masuk kembali.';
   if (s === 403) return 'Akun aktif tidak cocok dengan sesi ini. Muat ulang halaman sebelum melanjutkan.';
-  if (s === 404) return 'Konsultasi tidak ditemukan atau bukan milik akun ini.';
+  if (s === 404) return 'Konsultasi atau sumber analisis tidak tersedia. Snapshot lama tetap tersimpan; pilih sumber yang tersedia melalui konsultasi baru.';
+  if (s === 409) return 'Percakapan atau sumber analisis berubah. Muat ulang untuk meninjau; bila versi sumber berubah, buat konsultasi baru dan setujui cuplikan terbaru.';
   if (s === 429) return 'Terlalu banyak permintaan. Tunggu sebentar lalu coba lagi.';
   if (s === 503) return 'Layanan AI sedang tidak tersedia. Coba lagi beberapa saat lagi.';
   return 'Pesan belum dapat dikirim. Draf Anda dipertahankan; silakan coba lagi.';
@@ -61,17 +63,19 @@ function CreateDialog({ close, canUseCases, onCreated }: { close: () => void; ca
   const [spec, setSpec] = useState<CreateConsultationInput['specialist']>('sbuclaw');
   const [caseId, setCaseId] = useState('');
   const [attach, setAttach] = useState(false);
+  const [analysisChoice, setAnalysisChoice] = useState<AnalysisChoice>({ ready: true });
   const specs = catalog.data;
   const groups = useMemo(() => specs ? Array.from(new Set(specs.map(x => x.group))) : [], [specs]);
   const chosen = cases.data?.find(c => String(c.id) === caseId);
   const specInfo = specs?.find(s => s.id === spec);
-  const valid = title.trim().length > 0 && !!specInfo && catalog.isSuccess;
+  const valid = title.trim().length > 0 && !!specInfo && catalog.isSuccess && analysisChoice.ready && (!caseId || !!chosen);
   const submit = () => {
     if (!valid || create.isPending) return;
     const data: CreateConsultationInput = { title: title.trim(), mode, specialist: spec };
     if (chosen) {
       data.caseId = chosen.id;
       data.includeCaseContext = attach;
+      if (analysisChoice.selection) data.analysisSelection = analysisChoice.selection;
       if (attach) data.expectedCaseContext = {
         companyName: chosen.companyName, requestType: chosen.requestType,
         classification: chosen.classification, qualification: chosen.qualification, status: chosen.status,
@@ -79,7 +83,7 @@ function CreateDialog({ close, canUseCases, onCreated }: { close: () => void; ca
     }
     create.mutate({ data }, {
       onSuccess: c => { qc.setQueryData(getGetConsultationQueryKey(c.id), c); void qc.invalidateQueries({ queryKey: getListConsultationsQueryKey() }); onCreated(c); },
-      onError: e => { if (statusOf(e) === 409 && chosen) { setAttach(false); void cases.refetch(); } },
+      onError: e => { if ((statusOf(e) === 409 || statusOf(e) === 404) && chosen) { setAttach(false); setAnalysisChoice({ ready: true }); setCaseId(''); void cases.refetch(); } },
     });
   };
   return <Dialog title="Konsultasi baru" close={close}>
@@ -100,7 +104,7 @@ function CreateDialog({ close, canUseCases, onCreated }: { close: () => void; ca
         {!canUseCases ? <p className="text-xs text-[#688096]">Peran Anda tidak memiliki ruang kasus. Konsultasi dibuat tanpa kasus.</p> : <>
           {cases.isLoading && <div className="loading-block h-[44px]" aria-busy="true" />}
           {cases.isError && <div role="alert" className="text-xs text-[#8e2f2e]">Daftar kasus belum dapat dimuat. Anda tetap dapat membuat konsultasi tanpa kasus.<button type="button" onClick={() => void cases.refetch()} className="ml-2 font-bold underline">Coba lagi</button></div>}
-          {cases.data && <select id="select-consult-case" data-testid="select-consult-case" className="field" value={caseId} onChange={e => { setCaseId(e.target.value); setAttach(false); }}><option value="">Tanpa kasus</option>{cases.data.map(c => <option key={c.id} value={c.id}>{c.companyName} / {c.classification}</option>)}</select>}
+          {cases.data && <select id="select-consult-case" data-testid="select-consult-case" className="field" value={caseId} onChange={e => { setCaseId(e.target.value); setAttach(false); setAnalysisChoice({ ready: true }); }}><option value="">Tanpa kasus</option>{cases.data.map(c => <option key={c.id} value={c.id}>{c.companyName} / {c.classification}</option>)}</select>}
           {chosen && <div className="fade-up mt-4">
             <div className="eyebrow mb-2 text-[#678096]">CUPLIKAN OPSIONAL — HANYA DISIMPAN BILA DISETUJUI</div>
             <dl data-testid="panel-case-preview" className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 rounded-lg border border-[#cddcea] bg-white p-3 text-xs">
@@ -112,9 +116,10 @@ function CreateDialog({ close, canUseCases, onCreated }: { close: () => void; ca
             </dl>
             <label className="mt-3 flex items-start gap-2.5 text-xs leading-5 text-[#34506a]"><input type="checkbox" data-testid="checkbox-attach-case" checked={attach} onChange={e => setAttach(e.target.checked)} className="mt-1 h-4 w-4 accent-[#1769d1]" /><span>Lampirkan kelima isian di atas sebagai konteks konsultasi ini. Hanya cuplikan ini yang disimpan; dokumen, bukti, dan profil tidak diakses. Tanpa centang, kasus hanya ditautkan tanpa konteks.</span></label>
           </div>}
+          {chosen && <ConsultationAnalysisPicker key={chosen.id} caseId={chosen.id} onChange={setAnalysisChoice} />}
         </>}
       </div>
-      {create.isError && <p role="alert" data-testid="text-create-error" className="text-sm text-[#b34442]">{statusOf(create.error) === 409 && chosen ? 'Konsultasi belum dibuat. Kasus mungkin berubah; periksa cuplikan terbaru dan beri persetujuan ulang sebelum mencoba lagi.' : 'Konsultasi belum dapat dibuat. Periksa isian lalu coba lagi.'}</p>}
+      {create.isError && <p role="alert" data-testid="text-create-error" className="text-sm text-[#b34442]">{[404, 409].includes(statusOf(create.error) ?? 0) ? 'Konsultasi belum dibuat. Sumber mungkin berubah atau hilang; pilih ulang kasus dan analisis, lalu beri persetujuan baru.' : 'Konsultasi belum dapat dibuat. Periksa isian lalu coba lagi.'}</p>}
       <div className="flex justify-end gap-2 border-t border-[#e0e9ef] pt-5">
         <button type="button" data-testid="button-cancel-create" onClick={close} className="btn btn-outline">Batal</button>
         <button data-testid="button-create-consultation" disabled={!valid || create.isPending} className="btn btn-primary">{create.isPending ? 'Membuat...' : 'Buat konsultasi'} <ArrowRight size={15} /></button>
@@ -219,9 +224,13 @@ function ConsultationDetail({ id }: { id: string }) {
       onError: e => {
         if (statusOf(e) === 409) {
           setConflict(true);
-          setError('Percakapan ini berubah sejak terakhir dimuat (mungkin dari tab lain). Pesan Anda belum terkirim. Versi terbaru sudah dimuat; tinjau lalu kirim ulang secara manual.');
+          setConsent(false);
+          setError('Percakapan atau sumber Bedah Dokumen berubah. Pesan belum dikirim. Tinjau ulang setelah pemuatan; jika sumber berubah, buat konsultasi baru dan setujui cuplikan terbaru.');
           void detail.refetch().then(() => setConflict(false));
-        } else setError(sendError(e));
+        } else {
+          if (statusOf(e) === 404) setConsent(false);
+          setError(sendError(e));
+        }
       },
     });
   };
@@ -239,7 +248,7 @@ function ConsultationDetail({ id }: { id: string }) {
       <div className="flex shrink-0 gap-2"><button type="button" data-testid="button-rename-consultation" onClick={() => setRenaming(true)} className="btn btn-outline"><Pencil size={14} /> Ubah judul</button><button type="button" data-testid="button-delete-consultation" onClick={() => setDeleting(true)} className="btn btn-danger"><Trash2 size={14} /> Hapus</button></div>
     </div>
     <div role="note" data-testid="text-detail-disclaimer" className="mb-5 flex gap-3 rounded-xl border border-[#b9d5e9] bg-[#dff0fc] p-4 text-xs leading-5 text-[#173d5d]"><ShieldAlert size={18} className="mt-0.5 shrink-0 text-[#1769d1]" /><p>{c.disclaimer}</p></div>
-    {c.context.trim() && <details className="surface mb-5 p-4" data-testid="panel-context" open><summary className="eyebrow cursor-pointer text-[#678096]">KONTEKS KASUS TERSIMPAN (CUPLIKAN SAAT DIBUAT)</summary><pre className="mt-3 whitespace-pre-wrap break-words rounded-lg bg-[#f4f9fc] p-3 text-xs leading-5 text-[#34506a]" style={{ fontFamily: 'inherit' }}>{c.context}</pre></details>}
+    {c.context.trim() && <details className="surface mb-5 p-4" data-testid="panel-context" open><summary className="eyebrow cursor-pointer text-[#678096]">KONTEKS TERSIMPAN — KASUS / BEDAH DOKUMEN (SNAPSHOT SAAT DIBUAT)</summary><p className="mt-2 text-xs">Tinjau cuplikan dan referensi berikut sebelum mengirim. Snapshot tidak mengikuti perubahan sumber dan tidak mengubah bukti atau penilaian kasus.</p><pre className="mt-3 whitespace-pre-wrap break-words rounded-lg bg-[#f4f9fc] p-3 text-xs leading-5 text-[#34506a]" style={{ fontFamily: 'inherit' }}>{c.context}</pre></details>}
     <section className="surface overflow-hidden" aria-label="Percakapan">
       <div className="max-h-[56dvh] min-h-[280px] space-y-4 overflow-y-auto bg-[#f7fbfe] p-4 sm:p-6" data-testid="list-consultation-messages">
         {count === 0 && <div data-testid="empty-messages" className="fade-up py-10 text-center"><MessagesSquare className="mx-auto mb-3 text-[#9bb3c7]" size={28} /><p className="text-sm font-bold text-[#14253a]">Percakapan masih kosong.</p><p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-[#688096]">Tulis pertanyaan pertama di bawah. Setiap percakapan perlu persetujuan sebelum teks dikirim ke penyedia AI.</p></div>}
@@ -250,7 +259,7 @@ function ConsultationDetail({ id }: { id: string }) {
       <div role="status" aria-live="polite" className="sr-only">{send.isPending ? 'Menunggu jawaban' : send.isSuccess && !error ? 'Jawaban diterima' : ''}</div>
       {error && <div role="alert" data-testid="text-send-error" className="mx-4 mt-4 flex gap-2 rounded-lg border border-[#e5b8b3] bg-[#fdf1ef] p-3 text-sm text-[#8e2f2e] sm:mx-6"><AlertTriangle size={16} className="mt-1 shrink-0" /><span>{error}</span></div>}
       <div className="border-t border-[#d8e4ec] bg-white p-4 sm:p-6">
-        <label className="mb-3 flex items-start gap-2.5 text-xs leading-5 text-[#34506a]"><input type="checkbox" data-testid="checkbox-consent" checked={consent} disabled={send.isPending} onChange={e => setConsent(e.target.checked)} className="mt-1 h-4 w-4 accent-[#1769d1]" /><span>Saya setuju teks yang saya ketik{c.context.trim() ? ' dan cuplikan konteks kasus yang tersimpan di atas' : ''} dikirim kepada penyedia AI untuk percakapan ini. Jangan menulis data sensitif yang tidak perlu. Persetujuan berlaku untuk percakapan ini selama halaman terbuka.</span></label>
+        <label className="mb-3 flex items-start gap-2.5 text-xs leading-5 text-[#34506a]"><input type="checkbox" data-testid="checkbox-consent" checked={consent} disabled={send.isPending} onChange={e => setConsent(e.target.checked)} className="mt-1 h-4 w-4 accent-[#1769d1]" /><span>Saya setuju teks yang saya ketik{c.context.trim() ? ' dan snapshot cuplikan beserta referensi kasus / Bedah Dokumen yang tersimpan persis di atas' : ''} dikirim kepada penyedia AI untuk percakapan ini. Dokumen asli, profil, dan hasil analisis lain tidak dikirim. Jangan menulis data sensitif yang tidak perlu. Persetujuan berlaku untuk percakapan ini selama halaman terbuka.</span></label>
         <textarea data-testid="input-consultation-message" aria-label="Pesan Anda" className="field min-h-[88px] resize-y" rows={3} value={draft} disabled={send.isPending} onChange={e => onDraft(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); } }} placeholder="Tulis pertanyaan. Enter untuk kirim, Shift+Enter untuk baris baru." />
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <span className={`mono text-[11px] ${over ? 'font-bold text-[#b34442]' : 'text-[#688096]'}`}>{draft.length}/{MAX}</span>

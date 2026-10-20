@@ -8,7 +8,9 @@ import {
   AnalyzeCaseDocumentBody, AnalyzeCaseDocumentResponse, DeleteDocumentAnalysisParams,
   type DocumentAnalysisInput, type DocumentAnalysisResult,
   GetDocumentAnalysisSourceParams, GetDocumentAnalysisSourceResponse,
+  GetConsultationAnalysisPreviewParams,
 } from "@workspace/api-zod";
+import { consultationAnalysis, ConsultationSourceError, sourceErrorMessage } from "../lib/consultation-analysis";
 import { documentStorage } from "../lib/document-storage";
 import { ANALYSIS_DISCLAIMER, ANALYSIS_MODEL, AnalysisFormatError, MAX_ANALYSIS_BYTES, analyzeDocumentBytes } from "../lib/document-analysis";
 import { prepareAnalysisPayload, sourcePageCount, sourceRevision } from "../lib/document-analysis-pages";
@@ -173,6 +175,16 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
       eq(documentAnalysesTable.ownerId, userId))).returning({ id: documentAnalysesTable.id });
     if (!rows.length) { res.status(404).json({ error: "Analisis tidak ditemukan." }); return; }
     res.sendStatus(204);
+  });
+  router.get("/cases/:id/documents/:documentId/analyses/:analysisId/consultation-preview", async (req, res): Promise<void> => {
+    const params = GetConsultationAnalysisPreviewParams.safeParse(req.params);
+    if (!params.success) { res.status(400).json({ error: "Analisis tidak valid." }); return; }
+    try {
+      res.json(await consultationAnalysis(params.data.id, params.data.documentId, params.data.analysisId, getAuth(req).userId!));
+    } catch (error) {
+      if (!(error instanceof ConsultationSourceError)) throw error;
+      res.status(error.status).json({ error: sourceErrorMessage() });
+    }
   });
   return router;
 }

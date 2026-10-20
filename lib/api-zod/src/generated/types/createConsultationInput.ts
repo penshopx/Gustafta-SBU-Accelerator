@@ -5,6 +5,7 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+import type { ConsultationAnalysisSelection } from './consultationAnalysisSelection';
 import type { CreateConsultationInputExpectedCaseContext } from './createConsultationInputExpectedCaseContext';
 import type { CreateConsultationInputMode } from './createConsultationInputMode';
 import type { CreateConsultationInputSpecialist } from './createConsultationInputSpecialist';
@@ -20,5 +21,6 @@ export interface CreateConsultationInput {
   /** @minimum 1 */
   caseId?: number;
   includeCaseContext?: boolean;
+  analysisSelection?: ConsultationAnalysisSelection;
   expectedCaseContext?: CreateConsultationInputExpectedCaseContext;
 }

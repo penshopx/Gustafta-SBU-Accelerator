@@ -22,6 +22,8 @@ export * from './caseUpdateQualification';
 export * from './caseUpdateRequestType';
 export * from './caseUpdateStatus';
 export * from './consultation';
+export * from './consultationAnalysisPreview';
+export * from './consultationAnalysisSelection';
 export * from './consultationMessage';
 export * from './consultationMessageInput';
 export * from './consultationMessageRole';

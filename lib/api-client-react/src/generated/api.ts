@@ -26,6 +26,7 @@ import type {
   CaseInput,
   CaseUpdate,
   Consultation,
+  ConsultationAnalysisPreview,
   ConsultationMessageInput,
   ConsultationSummary,
   CreateConsultationInput,
@@ -1429,6 +1430,87 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getCreateConsultationMutationOptions(options));
     }
+
+export const getGetConsultationAnalysisPreviewUrl = (id: number,
+    documentId: string,
+    analysisId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/documents/${documentId}/analyses/${analysisId}/consultation-preview`
+}
+
+export const getConsultationAnalysisPreview = async (id: number,
+    documentId: string,
+    analysisId: string, options?: Parameters<typeof customFetch>[1]): Promise<ConsultationAnalysisPreview> => {
+
+  return customFetch<ConsultationAnalysisPreview>(getGetConsultationAnalysisPreviewUrl(id,documentId,analysisId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsultationAnalysisPreviewQueryKey = (id: number,
+    documentId: string,
+    analysisId: string,) => {
+    return [
+    `/api/cases/${id}/documents/${documentId}/analyses/${analysisId}/consultation-preview`
+    ] as const;
+    }
+
+
+export const getGetConsultationAnalysisPreviewQueryOptions = <TData = Awaited<ReturnType<typeof getConsultationAnalysisPreview>>, TError = ErrorType<void>>(id: number,
+    documentId: string,
+    analysisId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsultationAnalysisPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsultationAnalysisPreviewQueryKey(id,documentId,analysisId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsultationAnalysisPreview>>> = ({ signal }) => getConsultationAnalysisPreview(id,documentId,analysisId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && documentId !== null && documentId !== undefined && analysisId !== null && analysisId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsultationAnalysisPreview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsultationAnalysisPreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getConsultationAnalysisPreview>>>
+export type GetConsultationAnalysisPreviewQueryError = ErrorType<void>
+
+
+
+export function useGetConsultationAnalysisPreview<TData = Awaited<ReturnType<typeof getConsultationAnalysisPreview>>, TError = ErrorType<void>>(
+ id: number,
+    documentId: string,
+    analysisId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsultationAnalysisPreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsultationAnalysisPreviewQueryOptions(id,documentId,analysisId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetConsultationUrl = (id: string,) => {
 

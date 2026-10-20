@@ -828,6 +828,9 @@ export const ListConsultationsResponse = zod.array(ListConsultationsResponseItem
 export const createConsultationBodyTitleMax = 120;
 
 
+export const createConsultationBodyAnalysisSelectionRevisionRegExp = new RegExp('^[a-f0-9]{64}$');
+export const createConsultationBodyAnalysisSelectionExcerptMax = 4000;
+
 
 
 export const CreateConsultationBody = zod.object({
@@ -836,6 +839,13 @@ export const CreateConsultationBody = zod.object({
   "specialist": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']),
   "caseId": zod.number().int().min(1).optional(),
   "includeCaseContext": zod.boolean().optional(),
+  "analysisSelection": zod.object({
+  "documentId": zod.string().uuid(),
+  "analysisId": zod.string().uuid(),
+  "revision": zod.string().regex(createConsultationBodyAnalysisSelectionRevisionRegExp),
+  "excerpt": zod.string().min(1).max(createConsultationBodyAnalysisSelectionExcerptMax),
+  "consent": zod.literal(true)
+}).optional(),
   "expectedCaseContext": zod.object({
   "companyName": zod.string(),
   "requestType": zod.string(),
@@ -865,6 +875,36 @@ export const CreateConsultationResponse = zod.object({
 })),
   "disclaimer": zod.string()
 }))
+
+
+
+
+
+export const GetConsultationAnalysisPreviewParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "documentId": zod.coerce.string().uuid(),
+  "analysisId": zod.coerce.string().uuid()
+})
+
+
+
+
+export const getConsultationAnalysisPreviewResponseTextMax = 60000;
+
+
+
+export const GetConsultationAnalysisPreviewResponse = zod.object({
+  "caseId": zod.number().int().min(1),
+  "documentId": zod.string().uuid(),
+  "analysisId": zod.string().uuid(),
+  "revision": zod.string(),
+  "sourceVersion": zod.number().int().min(1),
+  "sourcePages": zod.array(zod.number().int().min(1)),
+  "model": zod.string(),
+  "focus": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "text": zod.string().max(getConsultationAnalysisPreviewResponseTextMax)
+})
 
 
 export const GetConsultationParams = zod.object({

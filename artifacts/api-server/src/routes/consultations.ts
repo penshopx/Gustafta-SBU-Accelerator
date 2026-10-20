@@ -11,6 +11,7 @@ import {
 import { CHAT_DISCLAIMER, CHAT_MODES } from "../lib/sbu-chat-policy";
 import { specialistCatalog, type SpecialistId } from "../lib/sbu-chat-specialists";
 import { generateSbuChatAnswer } from "./sbu-chat";
+import { consultationAnalysis, ConsultationSourceError, MAX_CONSULTATION_CONTEXT, sourceErrorMessage } from "../lib/consultation-analysis";
 
 type Mode = keyof typeof CHAT_MODES;
 type Generate = typeof generateSbuChatAnswer;
@@ -61,7 +62,9 @@ export function createConsultationsRouter(generate: Generate = generateSbuChatAn
     if (!input.success || !input.data.title.trim() || !modes.includes(input.data.mode) ||
         !specialists.has(input.data.specialist) ||
         (input.data.includeCaseContext && (!input.data.caseId || !input.data.expectedCaseContext)) ||
-        (!input.data.includeCaseContext && !!input.data.expectedCaseContext)) {
+        (!input.data.includeCaseContext && !!input.data.expectedCaseContext) ||
+        (input.data.analysisSelection && !input.data.caseId) ||
+        Object.keys(req.body ?? {}).some(key => !["title", "mode", "specialist", "caseId", "includeCaseContext", "expectedCaseContext", "analysisSelection"].includes(key))) {
       res.status(400).json({ error: "Isi judul, peran, spesialis, dan pilih persetujuan konteks kasus yang sesuai." }); return;
     }
     const ownerId = getAuth(req).userId!;
@@ -80,6 +83,26 @@ export function createConsultationsRouter(generate: Generate = generateSbuChatAn
         }
         context = JSON.stringify(selected);
       }
+    }
+    if (input.data.analysisSelection) {
+      const selection = input.data.analysisSelection;
+      try {
+        const preview = await consultationAnalysis(input.data.caseId!, selection.documentId, selection.analysisId, ownerId);
+        if (selection.revision !== preview.revision || !selection.excerpt.trim() || !preview.text.includes(selection.excerpt)) {
+          res.status(409).json({ error: "Hasil atau cuplikan berubah. Tinjau ulang dan setujui cuplikan persis sebelum membuat konsultasi." }); return;
+        }
+        const { text: _text, ...reference } = preview;
+        context = JSON.stringify({
+          ...(context ? { caseContext: JSON.parse(context) } : {}),
+          analysisSnapshot: { ...reference, excerpt: selection.excerpt },
+        });
+      } catch (error) {
+        if (!(error instanceof ConsultationSourceError)) throw error;
+        res.status(error.status).json({ error: sourceErrorMessage() }); return;
+      }
+    }
+    if (context.length > MAX_CONSULTATION_CONTEXT) {
+      res.status(400).json({ error: "Konteks maksimal 8.000 karakter. Kurangi cuplikan." }); return;
     }
     const [count] = await db.select({ count: sql<number>`count(*)::integer` }).from(consultationsTable)
       .where(eq(consultationsTable.ownerId, ownerId));
@@ -134,6 +157,22 @@ export function createConsultationsRouter(generate: Generate = generateSbuChatAn
     }
     if (row.messages.length >= 40) {
       res.status(409).json({ error: "Percakapan mencapai 20 pasang pesan. Mulai konsultasi baru." }); return;
+    }
+    // A snapshot is retained for review, but it does not grant continuing access
+    // to deleted, transferred, quarantined or superseded source material.
+    if (row.context.length > MAX_CONSULTATION_CONTEXT ||
+        row.messages.slice(-18).reduce((sum, m) => sum + m.content.length, row.context.length + input.data.content.length) > 48000) {
+      res.status(400).json({ error: "Konteks percakapan terlalu panjang. Mulai konsultasi baru dengan cuplikan lebih singkat." }); return;
+    }
+    const snapshot = row.context ? JSON.parse(row.context).analysisSnapshot : undefined;
+    if (snapshot) {
+      try {
+        const current = await consultationAnalysis(snapshot.caseId, snapshot.documentId, snapshot.analysisId, ownerId);
+        if (current.revision !== snapshot.revision) throw new ConsultationSourceError(409);
+      } catch (error) {
+        if (!(error instanceof ConsultationSourceError)) throw error;
+        res.status(error.status).json({ error: sourceErrorMessage() }); return;
+      }
     }
     const now = Date.now();
     for (const [id, slot] of slots) if (!slot.busy && now - slot.since >= 60_000) slots.delete(id);

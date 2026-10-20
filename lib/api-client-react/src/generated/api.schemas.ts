@@ -433,6 +433,36 @@ export interface Personnel {
   certificates: SkkCertificate[];
 }
 
+export interface ConsultationAnalysisSelection {
+  documentId: string;
+  analysisId: string;
+  /** @pattern ^[a-f0-9]{64}$ */
+  revision: string;
+  /**
+     * @minLength 1
+     * @maxLength 4000
+     */
+  excerpt: string;
+  consent: true;
+}
+
+export interface ConsultationAnalysisPreview {
+  /** @minimum 1 */
+  caseId: number;
+  documentId: string;
+  analysisId: string;
+  revision: string;
+  /** @minimum 1 */
+  sourceVersion: number;
+  /** @items.minimum 1 */
+  sourcePages: number[];
+  model: string;
+  focus: string;
+  createdAt: string;
+  /** @maxLength 60000 */
+  text: string;
+}
+
 export type ConsultationMessageRole = typeof ConsultationMessageRole[keyof typeof ConsultationMessageRole];
 
 
@@ -547,6 +577,7 @@ export interface CreateConsultationInput {
   /** @minimum 1 */
   caseId?: number;
   includeCaseContext?: boolean;
+  analysisSelection?: ConsultationAnalysisSelection;
   expectedCaseContext?: CreateConsultationInputExpectedCaseContext;
 }
 
