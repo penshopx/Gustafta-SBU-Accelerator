@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
-import { randomUUID } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { randomInt, randomUUID } from "node:crypto";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
@@ -12,10 +12,12 @@ const dir = fileURLToPath(new URL(".", import.meta.url));
 const temp = await mkdtemp(join(dir, ".document-cleanup-"));
 after(() => rm(temp, { recursive: true, force: true }));
 await build({
-  entryPoints: [join(dir, "../src/lib/document-cleanup.ts")], outfile: join(temp, "core.mjs"),
+  stdin: { contents: `export * from "../src/lib/document-cleanup";
+    export * from "../src/lib/document-cleanup-budget";`, resolveDir: dir, loader: "ts" },
+  outfile: join(temp, "core.mjs"),
   bundle: true, platform: "node", format: "esm", external: ["pdf-lib"],
 });
-const { reconcileDocuments, isManagedDocumentPath } = await import(join(temp, "core.mjs"));
+const { reconcileDocuments, isManagedDocumentPath, CleanupBudget, CleanupStopped } = await import(join(temp, "core.mjs"));
 const now = Date.now();
 const old = now - 49 * 60 * 60_000;
 const stage = (id = randomUUID()) => `/objects/uploads/${id}`;
@@ -149,6 +151,102 @@ test("bounded reservation batches rotate past retained uploads instead of starvi
   assert.deepEqual(new Set(f.expired), new Set(rows.slice(200).map((r) => r.id)));
 });
 
+test("operation budget stops before starting another call and leaves partial reservations retryable", async () => {
+  const row = pending();
+  const f = fixture([object(row.objectPath), object(final(row.id)), object(stage())]);
+  const result = await reconcileDocuments([row], [...f.files.values()], f.storage, f.expire, {
+    dryRun: false, now, budget: new CleanupBudget({ maxOperations: 3 }),
+  });
+  assert.equal(result.stopped, 1);
+  assert.equal(result.timeouts, 0);
+  assert.equal(result.operations, 3); // two inspections, then one deletion
+  assert.equal(result.deletedObjects, 1);
+  assert.deepEqual(f.expired, []);
+  assert.equal(f.files.has(final(row.id)), true);
+  const retry = await reconcileDocuments([row], [...f.files.values()], f.storage, f.expire, { dryRun: false, now });
+  assert.equal(retry.expiredReservations, 1);
+  assert.equal(f.files.size, 0);
+});
+
+test("round deadline also bounds a call whose individual timeout is longer", async () => {
+  const budget = new CleanupBudget({ roundMs: 25, operationMs: 10_000 });
+  const start = performance.now();
+  await assert.rejects(budget.run(() => new Promise(() => {})), CleanupStopped);
+  assert.ok(performance.now() - start < 1_000);
+  let invoked = false;
+  await assert.rejects(budget.run(async () => { invoked = true; }), CleanupStopped);
+  assert.equal(invoked, false);
+  assert.equal(budget.timeouts, 1);
+  for (const invalid of [0, -1, NaN, Infinity, 1.5]) {
+    assert.throws(() => new CleanupBudget({ roundMs: invalid }));
+    assert.throws(() => new CleanupBudget({ operationMs: invalid }));
+    assert.throws(() => new CleanupBudget({ maxOperations: invalid }));
+  }
+});
+
+test("timed-out inspect stops the entire round, even in dry-run, and ignores late success or rejection", async () => {
+  for (const dryRun of [false, true]) {
+    for (const rejectLate of [false, true]) {
+      const row = pending();
+      const f = fixture([object(row.objectPath), object(stage())]);
+      let settle, calls = 0;
+      f.storage.inspect = () => {
+        calls++;
+        return new Promise((resolve, reject) => {
+          settle = () => rejectLate ? reject(new Error("private signed-url")) : resolve(object(row.objectPath));
+        });
+      };
+      const result = await reconcileDocuments([row], [...f.files.values()], f.storage, f.expire, {
+        dryRun, now, budget: new CleanupBudget({ operationMs: 25 }),
+      });
+      assert.equal(result.stopped, 1);
+      assert.equal(result.timeouts, 1);
+      assert.equal(calls, 1); // no parallel inspect and no orphan deletes
+      const snapshot = { ...result };
+      settle();
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.deepEqual(result, snapshot);
+      assert.equal(calls, 1);
+      assert.deepEqual(f.expired, []);
+      assert.deepEqual(f.deleted, []);
+      assert.ok(Object.values(result).every((v) => typeof v === "number"));
+    }
+  }
+});
+
+test("late conditional delete never expires metadata or deletes a replay generation or ready document", async () => {
+  for (const replay of [false, true]) {
+    const row = pending();
+    const ready = { ...pending(), status: "ready" };
+    ready.objectPath = final(ready.id);
+    const f = fixture([object(row.objectPath), object(final(row.id)), object(ready.objectPath), object(stage())]);
+    const remove = f.storage.removeGeneration;
+    let settle;
+    f.storage.removeGeneration = (snapshot) => new Promise((resolve) => {
+      settle = async () => resolve(await remove(snapshot));
+    });
+    const result = await reconcileDocuments([row, ready], [...f.files.values()], f.storage, f.expire, {
+      dryRun: false, now, budget: new CleanupBudget({ operationMs: 25 }),
+    });
+    assert.equal(result.stopped, 1);
+    assert.equal(result.timeouts, 1);
+    assert.equal(result.deletedObjects, 0); // provider outcome is unknown
+    const snapshot = { ...result };
+    if (replay) f.files.set(row.objectPath, object(row.objectPath, now, "2"));
+    await settle();
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.deepEqual(result, snapshot);
+    assert.deepEqual(f.expired, []);
+    assert.equal(f.files.has(final(row.id)), true); // no continuation to second delete
+    assert.equal(f.files.has(ready.objectPath), true);
+    assert.equal(f.files.has(row.objectPath), replay);
+    f.storage.removeGeneration = remove;
+    const retry = await reconcileDocuments([row, ready], [...f.files.values()], f.storage, f.expire, { dryRun: false, now });
+    assert.equal(retry.expiredReservations, replay ? 0 : 1);
+    assert.equal(f.files.has(ready.objectPath), true);
+  }
+});
+
 test("real storage adapter scopes listing, pins deletion generation, and rejects unsafe paths", async () => {
   const calls = [];
   const path = stage();
@@ -237,6 +335,12 @@ test("scheduled job uses PostgreSQL transaction exclusion across uploads, crashe
       },
     };
     globalThis.__cleanupLogs = [];
+    // Advisory locks are database-wide, not search_path/schema-local. Keep the
+    // production lock SQL/modes but isolate its key from the running API and
+    // parallel route tests, otherwise unrelated shared locks cause false skips.
+    const productionLocks = await readFile(join(dir, "../src/lib/document-lifecycle-lock.ts"), "utf8");
+    const fixtureLocks = productionLocks.replaceAll("(137, 1)", `(${randomInt(1_000_000, 2_000_000_000)}, 1)`);
+    assert.notEqual(fixtureLocks, productionLocks);
     await build({
       stdin: {
         contents: `export * from "../src/lib/document-cleanup-job";
@@ -250,13 +354,15 @@ test("scheduled job uses PostgreSQL transaction exclusion across uploads, crashe
         setup(builder) {
           builder.onResolve({ filter: /^@workspace\/db$/ }, () => ({ path: "db", namespace: "fixture" }));
           builder.onResolve({ filter: /^\.\/document-storage$/ }, () => ({ path: "storage", namespace: "fixture" }));
+          builder.onResolve({ filter: /\/document-lifecycle-lock$/ }, () => ({ path: "locks", namespace: "fixture" }));
           builder.onResolve({ filter: /^\.\/logger$/ }, () => ({ path: "logger", namespace: "fixture" }));
           builder.onLoad({ filter: /.*/, namespace: "fixture" }, ({ path }) => ({
             contents: path === "db" ? `
               import {drizzle} from "drizzle-orm/node-postgres";
               export {documentsTable} from ${JSON.stringify(join(dir, "../../../lib/db/src/schema/standalone.ts"))};
               export const db = drizzle(globalThis.__cleanupPool);
-            ` : path === "storage" ? `export const documentStorage = globalThis.__cleanupStorage;` :
+            ` : path === "storage" ? `export const documentStorage = globalThis.__cleanupStorage;`
+              : path === "locks" ? fixtureLocks :
               `export const logger = {info: (counts)=>globalThis.__cleanupLogs.push(counts),
                 warn: (counts)=>globalThis.__cleanupLogs.push(counts)};`,
             loader: "ts", resolveDir: dir,
@@ -311,6 +417,99 @@ test("scheduled job uses PostgreSQL transaction exclusion across uploads, crashe
     assert.deepEqual((await restricted.pool.query("SELECT id,status,object_path FROM sbu_documents")).rows,
       [{ id: ready.id, status: "ready", object_path: ready.objectPath }]);
     assert.equal((await runDocumentCleanup(false)).deletedObjects, 0);
+    // Exercise the real job/transaction lock with an indefinitely stalled
+    // provider. A new upload must acquire the shared lock BEFORE that provider
+    // settles, for list, inspect, and conditional-delete timeouts alike.
+    for (const method of ["listCleanupObjects", "inspect", "removeGeneration"]) {
+      const abandoned = pending();
+      await restricted.pool.query("INSERT INTO sbu_documents VALUES ($1,$2,$3,$4)",
+        [abandoned.id, abandoned.status, abandoned.objectPath, abandoned.createdAt]);
+      f.files.set(abandoned.objectPath, object(abandoned.objectPath));
+      f.files.set(final(abandoned.id), object(final(abandoned.id)));
+      const adapter = globalThis.__cleanupStorage;
+      const original = adapter[method];
+      const cursors = [];
+      const originalList = adapter.listCleanupObjects;
+      adapter.listCleanupObjects = async (cursor) => {
+        cursors.push({ ...cursor });
+        const page = await originalList(cursor);
+        return { ...page, nextCursor: { namespace: "documents", pageToken: "must-not-advance" } };
+      };
+      const delegate = adapter[method];
+      let entered, settle, settled = false, calls = 0;
+      const started = new Promise((resolve) => { entered = resolve; });
+      adapter[method] = (...args) => {
+        calls++;
+        entered();
+        return new Promise((resolve, reject) => {
+          settle = async () => {
+            try { resolve(await delegate(...args)); }
+            catch (error) { reject(error); }
+            settled = true;
+          };
+        });
+      };
+      const cleaning = runDocumentCleanup(false, { operationMs: 80, roundMs: 2_000 });
+      await started;
+      assert.deepEqual(await runDocumentCleanup(false), { skipped: 1 });
+      const client = await restricted.pool.connect();
+      const uploaded = { ...pending(), createdAt: new Date() };
+      let stopped;
+      try {
+        await client.query("BEGIN");
+        // A bounded query makes a stuck lock fail this regression promptly.
+        await client.query("SET LOCAL statement_timeout = '1500ms'");
+        await client.query(shared.sql, shared.params);
+        stopped = await cleaning;
+        assert.equal(stopped.stopped, 1);
+        assert.equal(stopped.timeouts, 1);
+        assert.equal(settled, false);
+        await client.query("INSERT INTO sbu_documents VALUES ($1,'pending',$2,$3)",
+          [uploaded.id, uploaded.objectPath, uploaded.createdAt]);
+        await client.query("COMMIT");
+        // Completion is another shared-lock transaction; use a fresh final
+        // path as the real upload handler does, never adopt an orphan.
+        await client.query("BEGIN");
+        await client.query(shared.sql, shared.params);
+        f.files.set(final(uploaded.id), object(final(uploaded.id), Date.now()));
+        await client.query("UPDATE sbu_documents SET status='ready', object_path=$2 WHERE id=$1",
+          [uploaded.id, final(uploaded.id)]);
+        await client.query("COMMIT");
+        assert.equal((await client.query("SELECT status FROM sbu_documents WHERE id=$1",
+          [abandoned.id])).rows[0].status, "pending");
+        const before = { ...stopped };
+        const beforeCalls = calls;
+        await settle(); // simulate a DELETE acknowledged only after lock release
+        await new Promise((resolve) => setImmediate(resolve));
+        assert.deepEqual(stopped, before);
+        assert.equal(calls, beforeCalls);
+        assert.equal(f.files.has(ready.objectPath), true);
+        assert.equal(f.files.has(final(uploaded.id)), true);
+        assert.equal(f.files.has(final(abandoned.id)), true);
+      } finally {
+        await client.query("ROLLBACK");
+        client.release();
+        adapter[method] = original;
+        adapter.listCleanupObjects = originalList;
+        if (!settled && settle) await settle();
+      }
+      // Retry the same page, reclaim the incomplete reservation, keep BOTH
+      // the old ready document and the one completed after the stop.
+      adapter.listCleanupObjects = async (cursor) => {
+        cursors.push({ ...cursor });
+        return originalList(cursor);
+      };
+      try {
+        const retried = await runDocumentCleanup(false);
+        assert.equal(retried.stopped, 0);
+        assert.equal(retried.expiredReservations, 1);
+        assert.deepEqual(cursors[1], cursors[0], "stopped rounds retry the same listing cursor");
+        assert.equal(f.files.has(final(uploaded.id)), true);
+        assert.equal(f.files.has(ready.objectPath), true);
+      } finally {
+        adapter.listCleanupObjects = originalList;
+      }
+    }
     // DB read failure fails closed BEFORE listing/deletion.
     await admin.query(`ALTER TABLE "${schema}".sbu_documents RENAME TO hidden_documents`);
     const before = listCalls;

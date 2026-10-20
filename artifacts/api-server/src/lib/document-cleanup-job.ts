@@ -4,15 +4,17 @@ import { documentStorage, type CleanupCursor } from "./document-storage";
 import { documentCleanupLock } from "./document-lifecycle-lock";
 import { reconcileDocuments } from "./document-cleanup";
 import { logger } from "./logger";
+import { CleanupBudget, CleanupStopped, type CleanupBudgetOptions } from "./document-cleanup-budget";
 
 const INTERVAL_MS = 60 * 60_000;
 let cursor: CleanupCursor = { namespace: "uploads" };
 let reservationOffset = 0;
 
-export async function runDocumentCleanup(dryRun: boolean) {
+export async function runDocumentCleanup(dryRun: boolean, limits?: CleanupBudgetOptions) {
   return db.transaction(async (tx) => {
     const lock = await tx.execute(documentCleanupLock);
     if (!lock.rows[0]?.acquired) return { skipped: 1 };
+    const budget = new CleanupBudget(limits);
     // All mutation paths take the shared lock before touching metadata/storage.
     // A failed DB read/listing aborts without deletion; ready references are
     // retained regardless of age, including final paths implied by pending IDs.
@@ -20,12 +22,20 @@ export async function runDocumentCleanup(dryRun: boolean) {
       id: documentsTable.id, status: documentsTable.status,
       objectPath: documentsTable.objectPath, createdAt: documentsTable.createdAt,
     }).from(documentsTable);
-    const page = await documentStorage.listCleanupObjects(cursor);
+    let page;
+    try {
+      page = await budget.run(() => documentStorage.listCleanupObjects(cursor));
+    } catch (error) {
+      if (!(error instanceof CleanupStopped)) throw error;
+      return { stopped: 1, timeouts: budget.timeouts, operations: budget.operations };
+    }
     const counts = await reconcileDocuments(rows, page.objects, documentStorage, async (id) => {
       await tx.delete(documentsTable).where(and(eq(documentsTable.id, id), eq(documentsTable.status, "pending")));
-    }, { dryRun, reservationOffset });
-    cursor = page.nextCursor;
-    reservationOffset += 200;
+    }, { dryRun, reservationOffset, budget });
+    // Never skip the unprocessed portion of a page. Rotate reservations even
+    // after a stop so a persistently slow first row cannot monopolize each run.
+    if (!counts.stopped) cursor = page.nextCursor;
+    reservationOffset += counts.reservationsScanned;
     return counts;
   });
 }

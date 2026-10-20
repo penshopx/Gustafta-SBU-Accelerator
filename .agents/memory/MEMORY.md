@@ -24,3 +24,4 @@
 - [Validation console formatting](validation-console-formatting.md) — configured checks may force ANSI coloring even for piped subprocesses; normalize CLI messages before assertions.
 - [PDF page isolation](pdf-page-isolation.md) — render selected pixels into a fresh PDF; copying source page objects cannot establish isolation from unselected content.
 - [Route fixture SQL boundaries](route-fixture-sql-boundaries.md) — declaring a SQL expression at import time is not a database query; keep execution blocked in isolated route tests.
+- [Cleanup timeout safety](cleanup-timeout-safety.md) — stopping a storage wait does not cancel DELETE; cleanup targets must never become eligible for ready/adoption afterward.

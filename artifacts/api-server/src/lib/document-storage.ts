@@ -43,6 +43,8 @@ export const documentStorage = {
     }
   },
   async removeGeneration(object: CleanupObject) {
+    // Cleanup may stop waiting before GCS settles. Keep this a single,
+    // generation-conditional operation: no path-only delete or follow-up writes.
     if (!isManagedDocumentPath(object.path) || !object.generation) throw new Error("Unsafe cleanup object");
     const { bucket, prefix } = cleanupBucket();
     try {

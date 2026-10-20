@@ -146,6 +146,21 @@ test("standalone profiles/documents isolate owners and preserve records after st
     }
     assert.deepEqual(globalThis.__standaloneStorageCalls, ["reserve"]);
     assert.equal((await call("GET", `/cases/${a.id}/documents`)).body.length, 1);
+    // Cleanup can stop awaiting a provider DELETE and release its lock. Such a
+    // target must remain permanently ineligible for completion, even when its
+    // pending row is kept for retry. Exercise the real handler, not a mock of
+    // the age check, at both the completion window and cleanup grace.
+    for (const age of [31 * 60_000, 49 * 60 * 60_000]) {
+      await restricted.pool.query("UPDATE sbu_documents SET created_at=$2 WHERE id=$1",
+        [documentId, new Date(Date.now() - age)]);
+      const beforeExpiredCompletion = [...globalThis.__standaloneStorageCalls];
+      assert.equal((await call("POST", `/cases/${a.id}/documents/${documentId}/complete`)).status, 422);
+      assert.deepEqual(globalThis.__standaloneStorageCalls, beforeExpiredCompletion,
+        "expired reservations cannot seal or scan, including after cleanup timeout");
+      assert.equal((await restricted.pool.query("SELECT status FROM sbu_documents WHERE id=$1",
+        [documentId])).rows[0].status, "pending");
+    }
+    await restricted.pool.query("UPDATE sbu_documents SET created_at=now() WHERE id=$1", [documentId]);
     globalThis.__standaloneStorageFailure = true;
     assert.equal((await call("POST", `/cases/${a.id}/documents/${documentId}/complete`)).status, 422);
     assert.equal((await call("GET", `/cases/${a.id}/documents`)).body[0].status, "pending");

@@ -28,3 +28,9 @@ Route-test database shims should expose the schema-only exports while continuing
 **Why:** Bundling a parent router resolves model imports from all mounted subrouters, even when the test never calls those endpoints. Importing the real database bootstrap to fix missing exports risks defeating connection isolation.
 
 **How to apply:** Re-export schema definitions from the schema-only barrel; inject only the restricted fixture connection as the runtime database.
+
+Advisory locks are database-wide even when tables and connections are isolated by schema and role.
+
+**Why:** A running API or parallel route test can hold the same shared lifecycle lock as a cleanup fixture, making an expected database failure silently skip instead.
+
+**How to apply:** For a standalone lock integration fixture, preserve production SQL lock modes but use a disposable key namespace consistently across all fixture participants. Do not take the application's exclusive lifecycle lock merely to test cloned tables.
