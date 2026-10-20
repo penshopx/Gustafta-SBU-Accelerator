@@ -956,6 +956,136 @@ for (const status of [422, 500, 'koneksi terputus'] as const) {
   });
 }
 
+test('hapus bukti terakhir (204) menampilkan daftar kosong dan memuat ulang jumlah serta temuan penilaian aktif', async (t) => {
+  const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const originalFetch = globalThis.fetch;
+  const originalWindow = testGlobals.window;
+  const originalAct = testGlobals.IS_REACT_ACT_ENVIRONMENT;
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity }, mutations: { retry: false } },
+  });
+  let renderer: TestRenderer.ReactTestRenderer | undefined;
+  t.after(async () => {
+    try {
+      await act(async () => { renderer?.unmount(); });
+    } finally {
+      client.clear();
+      globalThis.fetch = originalFetch;
+      testGlobals.window = originalWindow;
+      testGlobals.IS_REACT_ACT_ENVIRONMENT = originalAct;
+    }
+  });
+  testGlobals.IS_REACT_ACT_ENVIRONMENT = true;
+  testGlobals.window = { addEventListener() {}, removeEventListener() {} } as unknown as Window & typeof globalThis;
+  const rows: Evidence[] = [
+    { id: 12, caseId: 7, code: 'tenaga', title: 'Bukti tenaga terakhir', note: 'Catatan tenaga', updatedAt: '2026-09-24T12:00:00Z' },
+  ];
+  const oldAssessment: Assessment = {
+    caseId: 7, ruleset: 'Aturan persiapan', status: 'perlu_tinjauan',
+    recordedCount: 1, requiredCount: 3, disclaimer: 'Deklarasi, bukan verifikasi.',
+    findings: [{
+      code: 'tenaga', title: 'Tenaga kerja konstruksi', status: 'tercatat',
+      detail: 'Catatan tenaga', source: 'Deklarasi pengguna',
+    }],
+  };
+  const newAssessment: Assessment = {
+    ...oldAssessment, recordedCount: 0,
+    findings: [{
+      ...oldAssessment.findings[0], status: 'perlu_bukti',
+      detail: 'Belum ada bukti tenaga yang dicatat menurut server.',
+    }],
+  };
+  const evidenceKey = getListEvidenceQueryKey(7);
+  const assessmentKey = getGetAssessmentQueryKey(7);
+  client.setQueryData(evidenceKey, rows);
+  client.setQueryData(assessmentKey, oldAssessment);
+  function AssessmentView() {
+    const result = useGetAssessment(7, { query: { queryKey: assessmentKey, staleTime: Infinity } });
+    return createElement('p', { 'data-testid': 'assessment-result' },
+      `${result.data?.recordedCount} · ${result.data?.findings[0]?.status} · ${result.data?.findings[0]?.detail}`);
+  }
+  const requests: string[] = [];
+  let succeedDelete!: () => void;
+  const deleteResponse = new Promise<Response>(resolve => {
+    succeedDelete = () => resolve(new Response(null, { status: 204 }));
+  });
+  let reloadEvidence!: () => void;
+  const evidenceResponse = new Promise<Response>(resolve => {
+    reloadEvidence = () => resolve(Response.json([]));
+  });
+  let reloadAssessment!: () => void;
+  const assessmentResponse = new Promise<Response>(resolve => {
+    reloadAssessment = () => resolve(Response.json(newAssessment));
+  });
+  globalThis.fetch = async (input, init) => {
+    const path = String(input);
+    const method = init?.method ?? 'GET';
+    requests.push(`${method} ${path}`);
+    if (method === 'DELETE') {
+      assert.equal(path, '/api/cases/7/evidence/12');
+      return deleteResponse;
+    }
+    assert.equal(method, 'GET');
+    if (path === '/api/cases/7/evidence') return evidenceResponse;
+    assert.equal(path, '/api/cases/7/assessment');
+    return assessmentResponse;
+  };
+  const waitForRender = async (ready: () => boolean) => {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      if (ready()) return;
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+    }
+    assert.fail('Komponen tidak mencapai keadaan yang diharapkan');
+  };
+  await act(async () => {
+    renderer = TestRenderer.create(createElement(QueryClientProvider, { client },
+      createElement(CaseEvidence, { id: 7, requestType: 'baru', qualification: 'kecil' }),
+      createElement(AssessmentView)));
+  });
+  const cards = () => renderer!.root.findAll(node =>
+    typeof node.props['data-testid'] === 'string' && node.props['data-testid'].startsWith('card-evidence-'));
+  const emptyHeadings = () => renderer!.root.findAllByType('h3')
+    .filter(node => node.children.includes('Belum ada catatan bukti'));
+  const assessmentText = () => renderer!.root.findByProps({ 'data-testid': 'assessment-result' }).children;
+  assert.deepEqual(cards().map(card => card.props['data-testid']), ['card-evidence-12']);
+  assert.equal(emptyHeadings().length, 0);
+  assert.equal(renderer!.root.findAllByProps({ 'data-testid': 'button-add-first-evidence' }).length, 0);
+  assert.deepEqual(assessmentText(), ['1 · tercatat · Catatan tenaga']);
+  assert.deepEqual(requests, [], 'cache segar tidak dimuat ulang sebelum penghapusan');
+  await act(async () => {
+    renderer!.root.findByProps({ 'data-testid': 'button-delete-evidence-12' }).props.onClick();
+  });
+  assert.equal(renderer!.root.findByProps({ role: 'dialog' }).props['aria-label'], 'Hapus catatan bukti?');
+  await act(async () => {
+    renderer!.root.findByProps({ 'data-testid': 'button-confirm-delete' }).props.onClick();
+  });
+  await waitForRender(() => requests.length === 1
+    && renderer!.root.findByProps({ 'data-testid': 'button-confirm-delete' }).props.disabled === true);
+  assert.equal(cards().length, 1, 'kartu terakhir tetap ada sebelum DELETE berhasil');
+  assert.deepEqual(client.getQueryData(evidenceKey), rows);
+  await act(async () => { succeedDelete(); });
+  await waitForRender(() => renderer!.root.findAllByProps({ role: 'dialog' }).length === 0 && requests.length === 3);
+  assert.deepEqual(requests, [
+    'DELETE /api/cases/7/evidence/12',
+    'GET /api/cases/7/evidence',
+    'GET /api/cases/7/assessment',
+  ], 'mutasi asli memuat ulang daftar dan penilaian aktif tepat sekali setelah DELETE 204');
+  assert.deepEqual(client.getQueryData(assessmentKey), oldAssessment, 'penilaian menunggu respons server');
+  await act(async () => { reloadEvidence(); });
+  await waitForRender(() => cards().length === 0 && emptyHeadings().length === 1);
+  assert.deepEqual(client.getQueryData(evidenceKey), [], 'cache menyimpan array kosong, bukan bukti terakhir');
+  const addFirstButton = renderer!.root.findByProps({ 'data-testid': 'button-add-first-evidence' });
+  assert.ok(addFirstButton.children.some(child => typeof child === 'string' && child.trim() === 'Catat bukti'));
+  assert.deepEqual(assessmentText(), ['1 · tercatat · Catatan tenaga'], 'daftar kosong tidak merekayasa penilaian lokal');
+  await act(async () => { reloadAssessment(); });
+  await waitForRender(() => assessmentText().includes(`0 · perlu_bukti · ${newAssessment.findings[0].detail}`));
+  assert.deepEqual(client.getQueryData(assessmentKey), newAssessment, 'jumlah dan temuan mengikuti respons server terbaru');
+  assert.equal(renderer!.root.findAllByProps({ role: 'dialog' }).length, 0);
+  assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0);
+  assert.equal(cards().length, 0);
+  assert.equal(emptyHeadings().length, 1);
+});
+
 test('hapus bukti berhasil menutup dialog, hanya menghilangkan kartu terpilih, dan memuat ulang penilaian aktif', async (t) => {
   const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
   const originalFetch = globalThis.fetch;
