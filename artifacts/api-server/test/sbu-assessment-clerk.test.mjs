@@ -266,7 +266,7 @@ test("penjaga fetch menolak redirect HTTP nyata sebelum tujuan lokal maupun ekst
   let redirectRequests = 0;
   const destination = createServer((_req, res) => {
     destinationRequests++;
-    res.end("redirect destination must not be reached");
+    res.end("redirect destination");
   });
   const source = createServer((req, res) => {
     redirectRequests++;
@@ -297,19 +297,36 @@ test("penjaga fetch menolak redirect HTTP nyata sebelum tujuan lokal maupun ekst
   // before DNS/connect if the fetch redirect policy ever regresses.
   const externalDestination = "https://redirect-destination.invalid/destination";
   for (const status of [302, 307]) {
-    for (const [kind, to] of [["local", localDestination], ["external", externalDestination]]) {
-      for (const inputKind of ["string", "URL", "Request-follow", "init-follow"]) {
+    // Prove native fetch can follow this redirect and reach the destination.
+    const controlUrl = new URL(`http://127.0.0.1:${source.address().port}/redirect`);
+    controlUrl.searchParams.set("status", String(status));
+    controlUrl.searchParams.set("to", localDestination);
+    const control = await nativeFetch(controlUrl, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(5_000),
+    });
+    assert.equal(await control.text(), "redirect destination");
+    assert.equal(control.redirected, true);
+    assert.equal(destinationRequests, 1);
+    destinationRequests = 0;
+
+    for (const [kind, to] of [
+      ["local", localDestination],
+      ["external-https", externalDestination],
+      ["external-http", "http://redirect-target.invalid/destination"],
+    ]) {
+      for (const inputKind of ["string", "URL", "Request-follow", "init-follow", "Request-and-init-follow"]) {
         await t.test(`${status} ${kind} ${inputKind}`, async () => {
           const url = new URL(`http://127.0.0.1:${source.address().port}/redirect`);
           url.searchParams.set("status", String(status));
           url.searchParams.set("to", to);
           const input = inputKind === "URL" ? url
-            : inputKind === "Request-follow" ? new Request(url, { redirect: "follow" })
+            : inputKind.startsWith("Request") ? new Request(url, { redirect: "follow" })
               : url.href;
           const before = redirectRequests;
           await assert.rejects(
             target.fetch(input, {
-              ...(inputKind === "init-follow" ? { redirect: "follow" } : {}),
+              ...(inputKind.endsWith("init-follow") ? { redirect: "follow" } : {}),
               signal: AbortSignal.timeout(3000),
             }),
             (error) => {
