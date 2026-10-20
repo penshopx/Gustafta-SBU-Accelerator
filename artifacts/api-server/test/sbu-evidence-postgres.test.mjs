@@ -129,11 +129,13 @@ test("Rute bukti menjaga kepemilikan, keunikan kategori, dan urutan di PostgreSQ
           builder.onResolve({ filter: /^@workspace\/api-zod$/ }, () => ({
             path: join(testDir, "../../../lib/api-zod/src/index.ts"),
           }));
+          // Include schema exports needed by every mounted subrouter, but never
+          // load the application DB entry point or its connection.
           builder.onLoad({ filter: /.*/, namespace: "evidence-test" }, (args) => ({
             contents: args.path === "auth"
               ? `export const getAuth = (req) => ({ userId: req.get("x-test-user-id") });`
-               : `export { profilesTable, casesTable, evidenceTable, transitionVerificationsTable } from ${
-                JSON.stringify(join(testDir, "../../../lib/db/src/schema/sbu.ts"))
+              : `export * from ${
+                JSON.stringify(join(testDir, "../../../lib/db/src/schema/index.ts"))
               }; export const db = globalThis.__evidenceTestDb;`,
             loader: "js",
             resolveDir: testDir,

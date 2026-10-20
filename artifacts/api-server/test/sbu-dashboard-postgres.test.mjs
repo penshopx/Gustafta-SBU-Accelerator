@@ -136,6 +136,8 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
           builder.onResolve({ filter: /^@workspace\/api-zod$/ }, () => ({
             path: join(testDir, "../../../lib/api-zod/src/index.ts"),
           }));
+          // Include schema exports needed by every mounted subrouter, but never
+          // load the application DB entry point or its connection.
           builder.onLoad({ filter: /.*/, namespace: "dashboard-test" }, (args) => ({
             contents: args.path === "auth"
               ? `export const getAuth = (req) => ({ userId: req.get("x-test-user-id") });`
