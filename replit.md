@@ -16,6 +16,7 @@ Ruang kerja persiapan permohonan SBU baru dan perpanjangan untuk ekosistem jasa 
 ### Validasi otomatis sebelum penggabungan
 
 - `scripts/post-merge.sh` menjalankan instalasi, lalu codegen beserta pembangunan ulang deklarasi library sebelum langkah database yang sudah ada. Codegen memakai `--force` agar metadata incremental tidak mempertahankan deklarasi lama.
+- Runner codegen memakai kunci eksklusif `lib/api-spec/.codegen-lock` selama generasi, promosi kedua sumber, rollback, dan pembersihan. Pemanggilan bersamaan ditolak tanpa mengubah sumber; ulangi setelah pemanggilan pertama selesai. Kunci sisa proses yang terputus tidak diambil alih otomatis: pastikan tidak ada runner aktif sebelum pemulihan manual. Jaminan pasangan sumber berlaku saat perintah selesai, bukan pembacaan atomik dua direktori oleh watcher saat promosi.
 - Batas waktu post-merge adalah 120 detik untuk menampung instalasi, regenerasi, dan langkah persiapan yang sudah ada.
 - `frontend-typecheck-regression`: `pnpm --filter @workspace/gustafta-sbu run test:typecheck` — validasi proyek untuk urutan persiapan frontend dan pemulihan deklarasi lama.
 
