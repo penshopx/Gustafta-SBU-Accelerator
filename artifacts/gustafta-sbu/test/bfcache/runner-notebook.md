@@ -83,9 +83,42 @@ All browser timestamps use `performance.timeOrigin + performance.now()` (or
 Server timestamps use epoch milliseconds. The ordering assertion uses browser
 timestamps within the same clock, not a comparison against a different host.
 
-The sanitized JSON is written automatically to
-`generated-artifacts/bfcache/report.json` in the workspace root. This directory
-is excluded from Git and deployment. Reports contain fixed scenario/route labels,
+The sanitized JSON is written automatically to a unique
+`generated-artifacts/bfcache/run-<random>/report.json` in the workspace root,
+including failed runs. The console prints the exact path for that execution.
+The random directory name is unrelated to account IDs, emails or the synthetic
+account suffix. Each report is published complete, with file permissions `0600`.
+
+`generated-artifacts/bfcache/latest.json` contains only a relative pointer, for
+example `{"report":"run-AbCd12/report.json"}`. It is replaced by an atomic rename
+**after** the report is complete. Concurrent runs keep all their reports; latest
+means the last pointer publication, not the last start or the last successful
+privacy check. Read the pointer once, then open its referenced file:
+
+```sh
+node --input-type=module -e '
+  import { readFile } from "node:fs/promises";
+  import { join } from "node:path";
+  const root = "generated-artifacts/bfcache";
+  const { report } = JSON.parse(await readFile(join(root, "latest.json"), "utf8"));
+  console.log(join(root, report));
+  console.log(await readFile(join(root, report), "utf8"));
+'
+find generated-artifacts/bfcache -mindepth 2 -maxdepth 2 -name report.json -print
+```
+
+An old top-level `report.json`, if present from an earlier runner version, is
+historical only and is no longer updated. If publishing fails, the command fails;
+the previous latest pointer remains usable and any completed run report remains
+discoverable with `find`. An interrupted run may leave an empty run directory or
+temporary file; neither is completed evidence. Atomic publication protects
+concurrent readers, not durability against a host/power failure.
+
+`test:bfcache:unit` includes two synchronized, independent report writers and a
+reader checking pointer/report consistency. It uses only synthetic report data,
+without importing the runner, launching Chromium or creating Clerk accounts.
+
+This directory is excluded from Git and deployment. Reports contain fixed scenario/route labels,
 booleans, timings, status codes and safe failure codes, **not** Clerk IDs, emails,
 cookies, tickets, secret values, raw exceptions, request headers or case markers.
 No HAR, browser trace, screenshot or storage-state dump is saved.

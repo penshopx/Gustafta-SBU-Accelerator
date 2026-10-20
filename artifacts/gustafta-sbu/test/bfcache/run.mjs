@@ -1,6 +1,6 @@
 import { createClerkClient } from '@clerk/backend';
 import { chromium } from 'playwright';
-import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,9 +8,10 @@ import { randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { startFixtureServer } from './fixture-server.mjs';
 import { installProbe, assertEvidence } from './probe.mjs';
+import { publishReport } from './report.mjs';
 
 const app = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const reportPath = resolve(app, '../../generated-artifacts/bfcache/report.json');
+const reportDirectory = resolve(app, '../../generated-artifacts/bfcache');
 const knownFailures = new Set([
   'TEST_CLERK_KEYS_REQUIRED', 'BUILD_FAILED', 'BFCACHE_DISABLED_BY_LAUNCH',
   'BFCACHE_INACTIVE', 'FIRST_RESTORED_FRAME_MISSING', 'PRIVATE_SURFACE_LEAK',
@@ -263,9 +264,8 @@ export async function run() {
     }
     if (temporary) await cleanup('temporaryBuildRemoved', () => rm(temporary, { recursive: true, force: true }));
     if (report.cleanup.failures.length) report.status = 'failed';
-    await mkdir(dirname(reportPath), { recursive: true });
-    await writeFile(reportPath, JSON.stringify(report, null, 2) + '\n', { mode: 0o600 });
-    console.log(`BFCache: ${report.status}; report: generated-artifacts/bfcache/report.json`);
+    const reportPath = await publishReport(reportDirectory, report);
+    console.log(`BFCache: ${report.status}; report: generated-artifacts/bfcache/${reportPath}`);
     if (report.failure) console.log(`${report.failure.stage}: ${report.failure.code}`);
   }
   return report;
