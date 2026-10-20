@@ -471,7 +471,7 @@ for (const status of [422, 500]) {
   }
 }
 
-for (const status of [422, 500]) {
+for (const status of [422, 500, 'koneksi terputus'] as const) {
   test(`catat bukti gagal (${status}) mempertahankan kategori dan isian lalu berhasil saat dicoba ulang`, async (t) => {
     const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
     const originalFetch = globalThis.fetch;
@@ -502,11 +502,17 @@ for (const status of [422, 500]) {
     let rows = originalRows;
     let assessment = oldAssessment;
     const requests: string[] = [];
-    const message = 'Catatan bukti belum dapat disimpan.';
+    const networkError = new TypeError('Failed to fetch');
+    const message = status === 'koneksi terputus'
+      ? networkError.message
+      : 'Catatan bukti belum dapat disimpan.';
     let postCount = 0;
     let failPost!: () => void;
-    const firstResponse = new Promise<Response>(resolve => {
-      failPost = () => resolve(Response.json({ error: message }, { status }));
+    const firstResponse = new Promise<Response>((resolve, reject) => {
+      failPost = () => {
+        if (status === 'koneksi terputus') reject(networkError);
+        else resolve(Response.json({ error: message }, { status }));
+      };
     });
     let succeedPost!: () => void;
     const retryResponse = new Promise<Response>(resolve => {
