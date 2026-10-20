@@ -485,6 +485,164 @@ for (const status of [422, 500]) {
 }
 
 for (const status of [422, 500, 'koneksi terputus'] as const) {
+  test(`Tambah catatan setelah Batal dari edit gagal (${status}) memakai formulir bersih dan POST tanpa mengubah bukti lama`, async (t) => {
+    const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
+    const originalFetch = globalThis.fetch;
+    const originalWindow = testGlobals.window;
+    const originalAct = testGlobals.IS_REACT_ACT_ENVIRONMENT;
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity }, mutations: { retry: false } },
+    });
+    let renderer: TestRenderer.ReactTestRenderer | undefined;
+    t.after(async () => {
+      try {
+        await act(async () => { renderer?.unmount(); });
+      } finally {
+        client.clear();
+        globalThis.fetch = originalFetch;
+        testGlobals.window = originalWindow;
+        testGlobals.IS_REACT_ACT_ENVIRONMENT = originalAct;
+      }
+    });
+    testGlobals.IS_REACT_ACT_ENVIRONMENT = true;
+    testGlobals.window = { addEventListener() {}, removeEventListener() {} } as unknown as Window & typeof globalThis;
+    const originalRows: Evidence[] = [
+      { id: 11, caseId: 7, code: 'legalitas', title: 'Legalitas tersimpan', note: 'Catatan legalitas', updatedAt: '2026-09-25T12:00:00Z' },
+      { id: 12, caseId: 7, code: 'tenaga', title: 'Tenaga tersimpan', note: 'Catatan tenaga', updatedAt: '2026-09-24T12:00:00Z' },
+    ];
+    const editDraft = { title: 'Judul edit dibatalkan', note: 'Catatan edit dibatalkan' };
+    const newDraft = { code: 'peralatan', title: 'Judul bukti baru', note: 'Catatan bukti baru' };
+    const savedEvidence: Evidence = {
+      id: 23, caseId: 7, code: newDraft.code, title: 'Judul baru dari server',
+      note: 'Catatan baru dari server', updatedAt: '2026-09-26T12:00:00Z',
+    };
+    const evidenceKey = getListEvidenceQueryKey(7);
+    const assessmentKey = getGetAssessmentQueryKey(7);
+    client.setQueryData(evidenceKey, originalRows);
+    const invalidate = t.mock.method(client, 'invalidateQueries');
+    let rows = originalRows;
+    const requests: string[] = [];
+    const message = status === 'koneksi terputus' ? 'Failed to fetch' : 'Perubahan bukti belum dapat disimpan.';
+    let succeedPost!: () => void;
+    const postResponse = new Promise<Response>(resolve => {
+      succeedPost = () => {
+        rows = [savedEvidence, ...originalRows];
+        resolve(Response.json(savedEvidence, { status: 201 }));
+      };
+    });
+    globalThis.fetch = async (input, init) => {
+      const path = String(input);
+      const method = init?.method ?? 'GET';
+      requests.push(`${method} ${path}`);
+      if (method === 'PATCH') {
+        assert.equal(path, '/api/cases/7/evidence/12');
+        assert.deepEqual(JSON.parse(String(init?.body)), editDraft);
+        if (status === 'koneksi terputus') throw new TypeError(message);
+        return Response.json({ error: message }, { status });
+      }
+      assert.equal(path, '/api/cases/7/evidence', 'pencatatan baru tidak memakai URL bukti yang diedit');
+      if (method === 'POST') {
+        assert.deepEqual(JSON.parse(String(init?.body)), newDraft, 'POST hanya membawa kategori dan isian baru');
+        return postResponse;
+      }
+      assert.equal(method, 'GET');
+      return Response.json(rows);
+    };
+    const waitForRender = async (ready: () => boolean) => {
+      for (let attempt = 0; attempt < 100; attempt++) {
+        if (ready()) return;
+        await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+      }
+      assert.fail('Komponen tidak mencapai keadaan yang diharapkan');
+    };
+    const click = async (testId: string) => {
+      await act(async () => { renderer!.root.findByProps({ 'data-testid': testId }).props.onClick(); });
+    };
+    const submit = async () => {
+      await act(async () => { renderer!.root.findByType('form').props.onSubmit({ preventDefault() {} }); });
+    };
+    const fillText = async (draft: { title: string; note: string }) => {
+      await act(async () => {
+        renderer!.root.findByProps({ 'data-testid': 'input-evidence-title' }).props.onChange({ target: { value: draft.title } });
+        renderer!.root.findByProps({ 'data-testid': 'input-evidence-note' }).props.onChange({ target: { value: draft.note } });
+      });
+    };
+    const cardSnapshot = () => renderer!.root.findAll(node =>
+      typeof node.props['data-testid'] === 'string' && node.props['data-testid'].startsWith('card-evidence-'))
+      .map(card => ({
+        id: card.props['data-testid'],
+        category: card.findByType('span').children,
+        title: card.findByType('h3').children,
+        paragraphs: card.findAllByType('p').map(p => p.children),
+      }));
+    await act(async () => {
+      renderer = TestRenderer.create(createElement(QueryClientProvider, { client },
+        createElement(CaseEvidence, { id: 7, requestType: 'baru', qualification: 'kecil' })));
+    });
+    const originalCards = cardSnapshot();
+    assert.equal(originalCards.length, 2);
+    const assertUnchanged = () => {
+      assert.deepEqual(cardSnapshot(), originalCards, 'kategori, judul, catatan, tanggal, dan urutan kartu lama tetap utuh');
+      assert.deepEqual(client.getQueryData(evidenceKey), originalRows);
+      assert.equal(client.getQueryState(evidenceKey)?.isInvalidated, false);
+      assert.equal(invalidate.mock.callCount(), 0);
+    };
+    await click('button-edit-evidence-12');
+    assert.equal(renderer!.root.findByProps({ role: 'dialog' }).props['aria-label'], 'Ubah catatan bukti');
+    await fillText(editDraft);
+    await submit();
+    await waitForRender(() => renderer!.root.findAllByProps({ role: 'alert' }).length === 1
+      && renderer!.root.findByProps({ 'data-testid': 'button-save-evidence' }).props.disabled === false);
+    assert.ok(renderer!.root.findByProps({ role: 'alert' }).children.some(child => typeof child === 'string' && child.includes(message)));
+    assert.equal(renderer!.root.findByProps({ 'data-testid': 'input-evidence-title' }).props.value, editDraft.title);
+    assert.equal(renderer!.root.findByProps({ 'data-testid': 'input-evidence-note' }).props.value, editDraft.note);
+    assertUnchanged();
+    await click('button-cancel-evidence');
+    assert.equal(renderer!.root.findAllByProps({ role: 'dialog' }).length, 0);
+    assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0);
+    assertUnchanged();
+    await click('button-add-evidence');
+    const dialog = renderer!.root.findByProps({ role: 'dialog' });
+    assert.equal(dialog.props['aria-label'], 'Tambah catatan bukti');
+    assert.equal(dialog.findByProps({ 'data-testid': 'select-evidence-code' }).props.value, '', 'kategori edit tidak terbawa');
+    assert.equal(dialog.findByProps({ 'data-testid': 'input-evidence-title' }).props.value, '');
+    assert.equal(dialog.findByProps({ 'data-testid': 'input-evidence-note' }).props.value, '');
+    assert.equal(dialog.findAllByProps({ role: 'alert' }).length, 0, 'kesalahan edit tidak muncul di formulir baru');
+    assert.equal(dialog.findByProps({ 'data-testid': 'button-save-evidence' }).props.disabled, true);
+    assertUnchanged();
+    assert.deepEqual(requests, ['PATCH /api/cases/7/evidence/12'], 'Batal dan Tambah catatan tidak mengirim draf atau memuat ulang data');
+    await act(async () => {
+      dialog.findByProps({ 'data-testid': 'select-evidence-code' }).props.onChange({ target: { value: newDraft.code } });
+    });
+    await fillText(newDraft);
+    await submit();
+    await waitForRender(() => requests.length === 2
+      && renderer!.root.findByProps({ 'data-testid': 'button-save-evidence' }).props.disabled === true);
+    assert.deepEqual(requests, ['PATCH /api/cases/7/evidence/12', 'POST /api/cases/7/evidence'],
+      'pencatatan baru memakai POST, bukan PATCH terhadap bukti lama');
+    assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0);
+    assertUnchanged();
+    await act(async () => { succeedPost(); });
+    await waitForRender(() => renderer!.root.findAllByProps({ role: 'dialog' }).length === 0
+      && cardSnapshot().length === 3);
+    const savedCards = cardSnapshot();
+    assert.deepEqual(savedCards.map(card => card.id), ['card-evidence-23', 'card-evidence-11', 'card-evidence-12']);
+    assert.deepEqual(savedCards[0].category, [savedEvidence.code]);
+    assert.deepEqual(savedCards[0].title, [savedEvidence.title]);
+    assert.deepEqual(savedCards[0].paragraphs[0], [savedEvidence.note], 'kartu baru mengikuti respons server, bukan draf');
+    assert.deepEqual(savedCards.slice(1), originalCards, 'bukti yang editnya dibatalkan dan kartu lain tidak berubah');
+    assert.deepEqual(client.getQueryData(evidenceKey), [savedEvidence, ...originalRows]);
+    assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0);
+    assert.deepEqual(invalidate.mock.calls.map(call => call.arguments[0]), [
+      { queryKey: evidenceKey }, { queryKey: assessmentKey },
+    ]);
+    assert.deepEqual(requests, [
+      'PATCH /api/cases/7/evidence/12', 'POST /api/cases/7/evidence', 'GET /api/cases/7/evidence',
+    ], 'hanya satu POST berhasil dan satu pemuatan ulang daftar tanpa PATCH tambahan');
+  });
+}
+
+for (const status of [422, 500, 'koneksi terputus'] as const) {
   test(`membatalkan tambah bukti gagal (${status}) lalu membuka Tambah catatan kembali membersihkan formulir tanpa mengubah bukti dan penilaian`, async (t) => {
     const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
     const originalFetch = globalThis.fetch;
