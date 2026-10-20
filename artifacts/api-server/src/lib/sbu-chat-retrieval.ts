@@ -4,7 +4,8 @@ export const RETRIEVAL_NOTICE = "Pencarian lokal pada ringkasan sumber publik te
 
 // Only the preparation references documented in docs/regulatory-basis.md are
 // admitted here. Candidate matrices in *-draft.md / sbu-requirements-review.md
-// are deliberately NOT indexed. No user files, URLs, or database are searched.
+// are deliberately NOT indexed. No user files, URLs, or private database content
+// are searched; the shared review ledger only controls snapshot admission.
 const permenUrl = "https://jdih.pu.go.id/detail-dokumen/PermenPU-nomor-6-tahun-2025-Standar-Kegiatan-Usaha-danatau-Standar-ProdukJasa-Pelaksanaan-Pengawasan-dan-Pengenaan-Sanksi-pada-Penyelenggaraan-Perizinan-Berusaha-Berbasis-Risiko-Sektor-Pekerjaan-Umum";
 const permen = {
   document: "Permen PU Nomor 6 Tahun 2025",
@@ -54,11 +55,32 @@ const keywords: Record<string, readonly string[]> = {
   "dk281-skema": ["kepdirjen", "281", "skema", "lsbu", "smap", "sijk"],
 };
 
-export function retrieveChatSources(question: string): SbuChatCitation[] {
+// Version IDs are immutable release identities, not legal verification claims.
+// Keep retired catalog entries when adding a reviewed replacement.
+export type ChatSourceVersion = {
+  sourceKey: string;
+  versionId: string;
+  baseline: boolean;
+  citations: readonly SbuChatCitation[];
+  keywords: Readonly<Record<string, readonly string[]>>;
+};
+
+export const CHAT_SOURCE_VERSIONS: readonly ChatSourceVersion[] = [
+  { sourceKey: "permen-pu-6-2025", versionId: "pu6-20260926-r1", prefix: "pu6-" },
+  { sourceKey: "kepdirjen-281-2026", versionId: "dk281-20260926-r1", prefix: "dk281-" },
+].map(({ sourceKey, versionId, prefix }) => ({
+  sourceKey, versionId, baseline: true,
+  citations: CORPUS.filter(source => source.id.startsWith(prefix))
+    .map(source => ({ ...source, id: `${source.id}@${versionId}` })),
+  keywords: Object.fromEntries(Object.entries(keywords).filter(([id]) => id.startsWith(prefix))
+    .map(([id, terms]) => [`${id}@${versionId}`, terms])),
+}));
+
+export function retrieveChatSources(question: string, versions: readonly ChatSourceVersion[] = CHAT_SOURCE_VERSIONS): SbuChatCitation[] {
   const normalized = question.toLocaleLowerCase("id");
-  return CORPUS.map(source => ({
-    source, score: keywords[source.id].filter(term => normalized.includes(term)).length,
-  })).filter(item => item.score > 0)
+  return versions.flatMap(version => version.citations.map(source => ({
+    source, score: (version.keywords[source.id] ?? []).filter(term => normalized.includes(term)).length,
+  }))).filter(item => item.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, 4).map(item => ({ ...item.source }));
 }

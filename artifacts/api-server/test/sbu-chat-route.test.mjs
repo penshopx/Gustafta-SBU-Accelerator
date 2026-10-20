@@ -31,6 +31,7 @@ try {
   await bootstrap.query(`SET search_path TO "${schema}"`);
   await bootstrap.query(await readFile(new URL("../../../lib/db/migrations/chat-quota.sql", import.meta.url), "utf8"));
   await bootstrap.query(await readFile(new URL("../../../lib/db/migrations/chat-quota.sql", import.meta.url), "utf8"));
+  await bootstrap.query(await readFile(new URL("../../../lib/db/migrations/chat-source-reviews.sql", import.meta.url), "utf8"));
 } finally {
   await bootstrap.query("RESET search_path");
   bootstrap.release();
@@ -406,10 +407,10 @@ test("two HTTP instances share daily limits, charge failed attempts, disable SDK
 test("retrieval separates publisher metadata from unverified preparation copies; no draft BG001 rules", () => {
   const sources = retrieveChatSources("Status berlaku Permen 6/2025, SMAP dan transisi Kepdirjen 281");
   assert.equal(sources.length, 4);
-  const metadata = sources.find(s => s.id === "pu6-metadata");
+  const metadata = sources.find(s => s.id === "pu6-metadata@pu6-20260926-r1");
   assert.equal(metadata.verificationStatus, "verified");
   assert.match(metadata.verificationScope, /Metadata.*saja/);
-  const copy = sources.find(s => s.id === "dk281-skema");
+  const copy = sources.find(s => s.id === "dk281-skema@dk281-20260926-r1");
   assert.equal(copy.verificationStatus, "unverified");
   assert.match(copy.locator, /hlm\. 1.*hlm\. 4.*27–32/);
   assert.match(copy.limitation, /Tidak mengaktifkan draf/);
@@ -439,10 +440,10 @@ test("wire response owns source fields and preserves verified vs unverified limi
   const question = { ...body(), messages: [{ role: "user", content: "Status berlaku Permen 6/2025 dan SMAP?" }] };
   await server(async (_mode, _messages, _signal, _specialist, context, sources) => {
     assert.equal(context, "");
-    assert.ok(sources.some(s => s.id === "pu6-metadata"));
+    assert.ok(sources.some(s => s.id === "pu6-metadata@pu6-20260926-r1"));
     return {
-      answer: "Metadata terbatas [pu6-metadata]. Ringkasan SMAP belum terverifikasi [pu6-smap].",
-      citationIds: ["pu6-metadata", "pu6-smap"],
+      answer: "Metadata terbatas [pu6-metadata@pu6-20260926-r1]. Ringkasan SMAP belum terverifikasi [pu6-smap@pu6-20260926-r1].",
+      citationIds: ["pu6-metadata@pu6-20260926-r1", "pu6-smap@pu6-20260926-r1"],
       citations: [{ document: "MODEL FORGERY" }],
     };
   }, async send => {

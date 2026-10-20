@@ -1227,6 +1227,136 @@ export const DeleteDocumentAnalysisResponse = zod.void()
 
 
 /**
+ * @summary Reviewer-only source versions and append-only review history, separate from transition verification
+ */
+export const listSbuChatSourceReviewsResponseVersionsItemCitationsItemCheckedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const listSbuChatSourceReviewsResponseDecisionsItemOneSourceKeyMax = 100;
+
+export const listSbuChatSourceReviewsResponseDecisionsItemOneVersionIdMax = 100;
+
+export const listSbuChatSourceReviewsResponseDecisionsItemOneExpectedRevisionMin = 0;
+
+export const listSbuChatSourceReviewsResponseDecisionsItemOneReasonMax = 2000;
+
+export const listSbuChatSourceReviewsResponseDecisionsItemOneReviewReferenceMax = 1000;
+
+
+export const listSbuChatSourceReviewsResponseDecisionsItemTwoCitationsItemCheckedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const ListSbuChatSourceReviewsResponse = zod.object({
+  "versions": zod.array(zod.object({
+  "sourceKey": zod.string(),
+  "versionId": zod.string(),
+  "baseline": zod.boolean(),
+  "citations": zod.array(zod.object({
+  "id": zod.string(),
+  "document": zod.string(),
+  "version": zod.string(),
+  "locator": zod.string(),
+  "excerpt": zod.string().describe('Ringkasan terkurasi, bukan kutipan verbatim.'),
+  "sourceUrl": zod.string().url(),
+  "verificationStatus": zod.enum(['verified', 'unverified']),
+  "verificationScope": zod.string(),
+  "documentStatus": zod.string(),
+  "checkedOn": zod.string().regex(listSbuChatSourceReviewsResponseVersionsItemCitationsItemCheckedOnRegExp).describe('Tanggal kalender pemeriksaan, bukan waktu verifikasi live.'),
+  "limitation": zod.string()
+}))
+})),
+  "decisions": zod.array(zod.object({
+  "sourceKey": zod.string().min(1).max(listSbuChatSourceReviewsResponseDecisionsItemOneSourceKeyMax),
+  "versionId": zod.string().min(1).max(listSbuChatSourceReviewsResponseDecisionsItemOneVersionIdMax),
+  "expectedRevision": zod.number().int().min(listSbuChatSourceReviewsResponseDecisionsItemOneExpectedRevisionMin),
+  "status": zod.enum(['approved', 'withdrawn', 'not_approved']),
+  "reason": zod.string().min(1).max(listSbuChatSourceReviewsResponseDecisionsItemOneReasonMax),
+  "reviewReference": zod.string().min(1).max(listSbuChatSourceReviewsResponseDecisionsItemOneReviewReferenceMax)
+}).and(zod.object({
+  "revision": zod.number().int().min(1),
+  "reviewedBy": zod.string(),
+  "decidedAt": zod.string(),
+  "citations": zod.array(zod.object({
+  "id": zod.string(),
+  "document": zod.string(),
+  "version": zod.string(),
+  "locator": zod.string(),
+  "excerpt": zod.string().describe('Ringkasan terkurasi, bukan kutipan verbatim.'),
+  "sourceUrl": zod.string().url(),
+  "verificationStatus": zod.enum(['verified', 'unverified']),
+  "verificationScope": zod.string(),
+  "documentStatus": zod.string(),
+  "checkedOn": zod.string().regex(listSbuChatSourceReviewsResponseDecisionsItemTwoCitationsItemCheckedOnRegExp).describe('Tanggal kalender pemeriksaan, bukan waktu verifikasi live.'),
+  "limitation": zod.string()
+}))
+})))
+})
+
+
+/**
+ * @summary Record a reviewed approval, replacement or withdrawal of a curated source version
+ */
+export const recordSbuChatSourceReviewBodySourceKeyMax = 100;
+
+export const recordSbuChatSourceReviewBodyVersionIdMax = 100;
+
+export const recordSbuChatSourceReviewBodyExpectedRevisionMin = 0;
+
+export const recordSbuChatSourceReviewBodyReasonMax = 2000;
+
+export const recordSbuChatSourceReviewBodyReviewReferenceMax = 1000;
+
+
+
+export const RecordSbuChatSourceReviewBody = zod.object({
+  "sourceKey": zod.string().min(1).max(recordSbuChatSourceReviewBodySourceKeyMax),
+  "versionId": zod.string().min(1).max(recordSbuChatSourceReviewBodyVersionIdMax),
+  "expectedRevision": zod.number().int().min(recordSbuChatSourceReviewBodyExpectedRevisionMin),
+  "status": zod.enum(['approved', 'withdrawn', 'not_approved']),
+  "reason": zod.string().min(1).max(recordSbuChatSourceReviewBodyReasonMax),
+  "reviewReference": zod.string().min(1).max(recordSbuChatSourceReviewBodyReviewReferenceMax)
+})
+
+export const recordSbuChatSourceReviewResponseOneSourceKeyMax = 100;
+
+export const recordSbuChatSourceReviewResponseOneVersionIdMax = 100;
+
+export const recordSbuChatSourceReviewResponseOneExpectedRevisionMin = 0;
+
+export const recordSbuChatSourceReviewResponseOneReasonMax = 2000;
+
+export const recordSbuChatSourceReviewResponseOneReviewReferenceMax = 1000;
+
+
+export const recordSbuChatSourceReviewResponseTwoCitationsItemCheckedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const RecordSbuChatSourceReviewResponse = zod.object({
+  "sourceKey": zod.string().min(1).max(recordSbuChatSourceReviewResponseOneSourceKeyMax),
+  "versionId": zod.string().min(1).max(recordSbuChatSourceReviewResponseOneVersionIdMax),
+  "expectedRevision": zod.number().int().min(recordSbuChatSourceReviewResponseOneExpectedRevisionMin),
+  "status": zod.enum(['approved', 'withdrawn', 'not_approved']),
+  "reason": zod.string().min(1).max(recordSbuChatSourceReviewResponseOneReasonMax),
+  "reviewReference": zod.string().min(1).max(recordSbuChatSourceReviewResponseOneReviewReferenceMax)
+}).and(zod.object({
+  "revision": zod.number().int().min(1),
+  "reviewedBy": zod.string(),
+  "decidedAt": zod.string(),
+  "citations": zod.array(zod.object({
+  "id": zod.string(),
+  "document": zod.string(),
+  "version": zod.string(),
+  "locator": zod.string(),
+  "excerpt": zod.string().describe('Ringkasan terkurasi, bukan kutipan verbatim.'),
+  "sourceUrl": zod.string().url(),
+  "verificationStatus": zod.enum(['verified', 'unverified']),
+  "verificationScope": zod.string(),
+  "documentStatus": zod.string(),
+  "checkedOn": zod.string().regex(recordSbuChatSourceReviewResponseTwoCitationsItemCheckedOnRegExp).describe('Tanggal kalender pemeriksaan, bukan waktu verifikasi live.'),
+  "limitation": zod.string()
+}))
+}))
+
+
+/**
  * @summary Standalone SBU specialist catalog, not the Gustafta knowledge base
  */
 export const GetSbuChatSpecialistsResponseItem = zod.object({

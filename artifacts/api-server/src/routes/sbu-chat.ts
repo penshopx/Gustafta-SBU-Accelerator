@@ -6,6 +6,8 @@ import { CHAT_DISCLAIMER, sbuChatSystemPrompt, type ChatMode } from "../lib/sbu-
 import { specialistCatalog, type SpecialistId } from "../lib/sbu-chat-specialists";
 import { retrieveChatSources, validateCitedAnswer, RETRIEVAL_NOTICE } from "../lib/sbu-chat-retrieval";
 import type { SbuChatCitation } from "@workspace/api-zod";
+import { chatSourceReviewStore, type ChatSourceReviewStore } from "../lib/sbu-chat-source-reviews";
+import { createChatSourceReviewsRouter } from "./sbu-chat-source-reviews";
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 type Generate = (mode: ChatMode, messages: ChatMessage[], signal: AbortSignal, specialist: SpecialistId, context?: string, sources?: readonly SbuChatCitation[], maxRetries?: number) => Promise<string>;
@@ -27,8 +29,9 @@ export const generateSbuChatAnswer: Generate = async (mode, messages, signal, sp
 };
 
 // Only aggregate usage metadata is persisted, never the conversation.
-export function createSbuChatRouter(answer: Generate = generateSbuChatAnswer, quotas: ChatQuotaStore = chatQuotaStore): IRouter {
+export function createSbuChatRouter(answer: Generate = generateSbuChatAnswer, quotas: ChatQuotaStore = chatQuotaStore, reviews: ChatSourceReviewStore = chatSourceReviewStore): IRouter {
   const router: IRouter = Router();
+  router.use(createChatSourceReviewsRouter(reviews));
   router.get("/openai/sbu/quota", async (req, res): Promise<void> => {
     res.set("Cache-Control", "private, no-store");
     const userId = getAuth(req).userId;
@@ -72,6 +75,13 @@ export function createSbuChatRouter(answer: Generate = generateSbuChatAnswer, qu
         messages.reduce((sum, message) => sum + message.content.length, 0) > 40000) {
       res.status(400).json({ error: "Percakapan tidak valid atau terlalu panjang. Mulai percakapan baru; pesan maksimal 4.000 karakter." }); return;
     }
+    let sources: SbuChatCitation[];
+    try {
+      sources = retrieveChatSources(messages.at(-1)!.content, await reviews.active());
+    } catch {
+      res.status(503).json({ error: "Status persetujuan sumber belum dapat diperiksa. Tidak ada permintaan AI yang dikirim." });
+      return;
+    }
     let reservation;
     try { reservation = await quotas.reserve(userId); } catch {
       res.status(503).json({ error: "Kuota belum dapat diperiksa. Tidak ada permintaan AI yang dikirim; coba lagi nanti." }); return;
@@ -101,11 +111,16 @@ export function createSbuChatRouter(answer: Generate = generateSbuChatAnswer, qu
       const aborted = new Promise<never>((_resolve, reject) => {
         controller.signal.addEventListener("abort", () => reject(new Error("ai_cancelled")), { once: true });
       });
-      const sources = retrieveChatSources(messages.at(-1)!.content);
       const generation = answer(input.data.mode, messages, controller.signal, input.data.specialist, "", sources, 0)
         .then((text) => { generationSettled = true; return text; },
           (error: unknown) => { generationSettled = true; throw error; });
       const text = await Promise.race([generation, aborted]);
+      // A withdrawal/replacement committed while the provider was running must
+      // not leak an answer based on its now-retired context, even with no markers.
+      const current = retrieveChatSources(messages.at(-1)!.content, await reviews.active());
+      if (sources.some(source => !current.some(item => item.id === source.id))) {
+        throw new Error("retrieved_source_retired");
+      }
       const cited = validateCitedAnswer(text, sources);
       payload = {
         userId, mode: input.data.mode, specialist: input.data.specialist, ...cited,

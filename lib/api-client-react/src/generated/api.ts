@@ -63,6 +63,9 @@ import type {
   SbuChatLimitError,
   SbuChatQuota,
   SbuChatReply,
+  SbuChatSourceDecision,
+  SbuChatSourceReviewInput,
+  SbuChatSourceReviews,
   SbuChatSpecialist,
   SbuChatUnavailable,
   SkkCertificateInput,
@@ -2202,6 +2205,171 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getDeleteDocumentAnalysisMutationOptions(options));
+    }
+
+export const getListSbuChatSourceReviewsUrl = () => {
+
+
+
+
+  return `/api/openai/sbu/source-reviews`
+}
+
+/**
+ * @summary Reviewer-only source versions and append-only review history, separate from transition verification
+ */
+export const listSbuChatSourceReviews = async ( options?: Parameters<typeof customFetch>[1]): Promise<SbuChatSourceReviews> => {
+
+  return customFetch<SbuChatSourceReviews>(getListSbuChatSourceReviewsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSbuChatSourceReviewsQueryKey = () => {
+    return [
+    `/api/openai/sbu/source-reviews`
+    ] as const;
+    }
+
+
+export const getListSbuChatSourceReviewsQueryOptions = <TData = Awaited<ReturnType<typeof listSbuChatSourceReviews>>, TError = ErrorType<void | FormOwnerMismatchResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSbuChatSourceReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSbuChatSourceReviewsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSbuChatSourceReviews>>> = ({ signal }) => listSbuChatSourceReviews({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSbuChatSourceReviews>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSbuChatSourceReviewsQueryResult = NonNullable<Awaited<ReturnType<typeof listSbuChatSourceReviews>>>
+export type ListSbuChatSourceReviewsQueryError = ErrorType<void | FormOwnerMismatchResponse>
+
+
+/**
+ * @summary Reviewer-only source versions and append-only review history, separate from transition verification
+ */
+
+export function useListSbuChatSourceReviews<TData = Awaited<ReturnType<typeof listSbuChatSourceReviews>>, TError = ErrorType<void | FormOwnerMismatchResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSbuChatSourceReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSbuChatSourceReviewsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRecordSbuChatSourceReviewUrl = () => {
+
+
+
+
+  return `/api/openai/sbu/source-reviews`
+}
+
+/**
+ * @summary Record a reviewed approval, replacement or withdrawal of a curated source version
+ */
+export const recordSbuChatSourceReview = async (sbuChatSourceReviewInput: SbuChatSourceReviewInput, options?: Parameters<typeof customFetch>[1]): Promise<SbuChatSourceDecision> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SbuChatSourceDecision>(getRecordSbuChatSourceReviewUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(sbuChatSourceReviewInput)
+  }
+);}
+
+
+
+
+
+export const getRecordSbuChatSourceReviewMutationKey = () => ['recordSbuChatSourceReview'] as const;
+
+export const getRecordSbuChatSourceReviewMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordSbuChatSourceReview>>, TError,RecordSbuChatSourceReviewMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordSbuChatSourceReview>>, TError,RecordSbuChatSourceReviewMutationVariables, TContext> => {
+
+const mutationKey = getRecordSbuChatSourceReviewMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordSbuChatSourceReview>>, RecordSbuChatSourceReviewMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  recordSbuChatSourceReview(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordSbuChatSourceReviewMutationResult = NonNullable<Awaited<ReturnType<typeof recordSbuChatSourceReview>>>
+    export type RecordSbuChatSourceReviewMutationBody = BodyType<SbuChatSourceReviewInput>
+    export type RecordSbuChatSourceReviewMutationError = ErrorType<void>
+    export type RecordSbuChatSourceReviewMutationVariables = {data: BodyType<SbuChatSourceReviewInput>}
+
+    /**
+ * @summary Record a reviewed approval, replacement or withdrawal of a curated source version
+ */
+export const useRecordSbuChatSourceReview = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordSbuChatSourceReview>>, TError,RecordSbuChatSourceReviewMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordSbuChatSourceReview>>,
+        TError,
+        RecordSbuChatSourceReviewMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRecordSbuChatSourceReviewMutationOptions(options));
     }
 
 export const getGetSbuChatSpecialistsUrl = () => {

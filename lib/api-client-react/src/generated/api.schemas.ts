@@ -766,6 +766,61 @@ export interface SbuChatReply {
   citations: SbuChatCitation[];
 }
 
+export type SbuChatSourceReviewInputStatus = typeof SbuChatSourceReviewInputStatus[keyof typeof SbuChatSourceReviewInputStatus];
+
+
+export const SbuChatSourceReviewInputStatus = {
+  approved: 'approved',
+  withdrawn: 'withdrawn',
+  not_approved: 'not_approved',
+} as const;
+
+export interface SbuChatSourceReviewInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  sourceKey: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  versionId: string;
+  /** @minimum 0 */
+  expectedRevision: number;
+  status: SbuChatSourceReviewInputStatus;
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  reason: string;
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  reviewReference: string;
+}
+
+export type SbuChatSourceDecision = SbuChatSourceReviewInput & {
+  /** @minimum 1 */
+  revision: number;
+  reviewedBy: string;
+  decidedAt: string;
+  citations: SbuChatCitation[];
+};
+
+export interface SbuChatSourceVersion {
+  sourceKey: string;
+  versionId: string;
+  baseline: boolean;
+  citations: SbuChatCitation[];
+}
+
+export interface SbuChatSourceReviews {
+  versions: SbuChatSourceVersion[];
+  decisions: SbuChatSourceDecision[];
+}
+
 export type SbuChatSpecialistId = typeof SbuChatSpecialistId[keyof typeof SbuChatSpecialistId];
 
 

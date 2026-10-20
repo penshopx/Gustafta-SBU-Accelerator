@@ -428,6 +428,43 @@ paths:
       responses:
         "204": { description: Selected analysis removed }
         "404": { description: Analysis unavailable }
+  /openai/sbu/source-reviews:
+    get:
+      operationId: listSbuChatSourceReviews
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      summary: Reviewer-only source versions and append-only review history, separate from transition verification
+      responses:
+        "200":
+          description: Curated versions and review decisions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SbuChatSourceReviews" }
+        "401": { description: Authentication required }
+        "403": { description: Trusted reviewer required }
+        "409": { $ref: "#/components/responses/FormOwnerMismatch" }
+        "503": { description: Review storage unavailable }
+    post:
+      operationId: recordSbuChatSourceReview
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      summary: Record a reviewed approval, replacement or withdrawal of a curated source version
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SbuChatSourceReviewInput" }
+      responses:
+        "201":
+          description: Append-only review decision
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SbuChatSourceDecision" }
+        "400": { description: Invalid review or unknown curated version }
+        "401": { description: Authentication required }
+        "403": { description: Trusted reviewer required }
+        "409": { description: Session or source revision changed; read the current review before retrying }
+        "503": { description: Review storage unavailable }
   /openai/sbu/specialists:
     get:
       operationId: getSbuChatSpecialists
@@ -1403,6 +1440,49 @@ components:
         citations:
           type: array
           items: { $ref: "#/components/schemas/SbuChatCitation" }
+    SbuChatSourceReviewInput:
+      type: object
+      additionalProperties: false
+      required: [sourceKey, versionId, expectedRevision, status, reason, reviewReference]
+      properties:
+        sourceKey: { type: string, minLength: 1, maxLength: 100 }
+        versionId: { type: string, minLength: 1, maxLength: 100 }
+        expectedRevision: { type: integer, minimum: 0 }
+        status: { type: string, enum: [approved, withdrawn, not_approved] }
+        reason: { type: string, minLength: 1, maxLength: 2000 }
+        reviewReference: { type: string, minLength: 1, maxLength: 1000 }
+    SbuChatSourceDecision:
+      allOf:
+        - $ref: "#/components/schemas/SbuChatSourceReviewInput"
+        - type: object
+          required: [revision, reviewedBy, decidedAt, citations]
+          properties:
+            revision: { type: integer, minimum: 1 }
+            reviewedBy: { type: string }
+            decidedAt: { type: string }
+            citations:
+              type: array
+              items: { $ref: "#/components/schemas/SbuChatCitation" }
+    SbuChatSourceVersion:
+      type: object
+      required: [sourceKey, versionId, baseline, citations]
+      properties:
+        sourceKey: { type: string }
+        versionId: { type: string }
+        baseline: { type: boolean }
+        citations:
+          type: array
+          items: { $ref: "#/components/schemas/SbuChatCitation" }
+    SbuChatSourceReviews:
+      type: object
+      required: [versions, decisions]
+      properties:
+        versions:
+          type: array
+          items: { $ref: "#/components/schemas/SbuChatSourceVersion" }
+        decisions:
+          type: array
+          items: { $ref: "#/components/schemas/SbuChatSourceDecision" }
     SbuChatCitation:
       type: object
       required: [id, document, version, locator, excerpt, sourceUrl, verificationStatus, verificationScope, documentStatus, checkedOn, limitation]

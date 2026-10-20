@@ -25,3 +25,4 @@ export * from "./personnel";
 export * from "./workroom";
 export * from "./workroom-reviews";
 export * from "./chat-quota";
+export * from "./chat-source-reviews";
