@@ -45,7 +45,10 @@ async function request(server, userId, options = {}) {
     },
   });
   const raw = await response.text();
-  return { status: response.status, body: JSON.parse(raw), raw };
+  const contentType = response.headers.get("content-type") ?? "";
+  // Express rejects unreadable JSON before the router and returns HTML.
+  const body = contentType.includes("application/json") ? JSON.parse(raw) : undefined;
+  return { status: response.status, body, raw, contentType };
 }
 
 test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil di PostgreSQL", async (t) => {
@@ -428,16 +431,39 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
             { label: `${field} bertipe angka`, body: { ...validBody, [field]: 123 } },
           );
         }
-        for (const { label, body } of invalidInputs) {
+        const invalidRequests = [
+          ...invalidInputs.map(({ label, body }) => ({ label, body: JSON.stringify(body) })),
+          { label: "JSON terpotong", body: JSON.stringify(validBody).slice(0, -1), parserError: true },
+          { label: "JSON dengan koma berlebih", body: '{"role":"konsultan",}', parserError: true },
+          { label: "body tidak dikirim", body: undefined },
+          { label: "body kosong", body: "" },
+          { label: "body hanya spasi", body: " \t\r\n ", parserError: true },
+          { label: "array kosong", body: "[]" },
+          { label: "array berisi profil valid", body: JSON.stringify([validBody]) },
+          { label: "nilai null", body: "null", parserError: true },
+          { label: "nilai string", body: JSON.stringify("profil"), parserError: true },
+          { label: "nilai angka", body: "123", parserError: true },
+          { label: "nilai boolean", body: "true", parserError: true },
+        ];
+        for (const { label, body, parserError = false } of invalidRequests) {
           await t.test(label, async () => {
             const beforeQueryCount = routeQueryCount;
             const response = await request(server, ownId, {
               method: "PATCH",
               headers: { "content-type": "application/json" },
-              body: JSON.stringify(body),
+              body,
             });
             assert.equal(response.status, 400, response.raw);
-            assert.equal(response.body.error, "Profil tidak valid.");
+            if (parserError) {
+              assert.match(response.contentType, /^text\/html\b/,
+                "JSON rusak atau primitif harus ditolak parser Express sebelum mencapai rute");
+              assert.equal(response.body, undefined);
+              assert.match(response.raw, /Bad Request|SyntaxError/,
+                "Respons parser harus menunjukkan permintaan tidak valid tanpa bergantung pada stack trace");
+            } else {
+              assert.match(response.contentType, /^application\/json\b/);
+              assert.equal(response.body.error, "Profil tidak valid.");
+            }
             assert.equal(routeQueryCount, beforeQueryCount,
               "Validasi harus menolak sebelum SQL apa pun, termasuk INSERT atau UPDATE profil");
             const after = await allIsolatedProfiles();
