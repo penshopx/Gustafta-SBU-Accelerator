@@ -386,6 +386,118 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
       }
     });
 
+    await t.test("dua POST bersamaan mendapat ID lokal unik dan keduanya langsung masuk ringkasan pemilik saja", async () => {
+      const baseline = await request(server, ownerId);
+      assert.equal(baseline.status, 200, baseline.raw);
+      const otherBaseline = await request(server, otherOwnerId);
+      assert.equal(otherBaseline.status, 200, otherBaseline.raw);
+      const rowsBefore = (await isolated.query(
+        "SELECT to_jsonb(c) AS row FROM sbu_cases c ORDER BY id",
+      )).rows;
+      const sequenceState = async () => (await isolated.query(
+        `SELECT last_value, is_called FROM "${schema}".sbu_cases_id_seq`,
+      )).rows[0];
+      const { rows: [identity] } = await isolated.query(
+        "SELECT pg_get_serial_sequence($1, 'id') AS sequence", [`${schema}.sbu_cases`],
+      );
+      assert.equal(identity.sequence, `${schema}.sbu_cases_id_seq`,
+        "ID otomatis harus berasal dari sequence salinan, bukan sequence aplikasi");
+      const sequenceBefore = await sequenceState();
+      const nextId = Number(sequenceBefore.last_value) + (sequenceBefore.is_called ? 1 : 0);
+      const inputs = ["A", "B"].map((suffix) => ({
+        companyName: `Perusahaan POST Bersamaan ${suffix}`,
+        requestType: "baru",
+        qualification: "kecil",
+        classification: "gedung",
+      }));
+
+      try {
+        // Start both HTTP requests before awaiting either; do not assume which
+        // request commits first. Settle both before assertions/fixture cleanup.
+        const results = await Promise.allSettled(inputs.map((body) =>
+          request(server, ownerId, "/cases", { method: "POST", body })));
+        const created = results.map((result, index) => {
+          assert.equal(result.status, "fulfilled", `POST ${index}: ${result.reason}`);
+          const response = result.value;
+          assert.equal(response.status, 201, response.raw);
+          assert.equal(response.body.status, "draf");
+          for (const [key, value] of Object.entries(inputs[index])) {
+            assert.equal(response.body[key], value);
+          }
+          assert.ok(Number.isInteger(response.body.id) && response.body.id > 0);
+          return response.body;
+        });
+        const ids = created.map((item) => item.id);
+        assert.equal(new Set(ids).size, 2, "Dua POST harus menghasilkan ID berbeda");
+        assert.deepEqual([...ids].sort((a, b) => a - b), [nextId, nextId + 1],
+          "Kedua ID harus dialokasikan oleh sequence lokal");
+        assert.deepEqual(await sequenceState(), {
+          last_value: String(nextId + 1), is_called: true,
+        }, "Dua POST harus memajukan sequence salinan tepat dua kali");
+
+        const assertSummary = async (expectedCreated) => {
+          const dashboard = await request(server, ownerId);
+          assert.equal(dashboard.status, 200, dashboard.raw);
+          const { recent, ...counts } = dashboard.body;
+          assert.deepEqual(counts, {
+            total: baseline.body.total + 2,
+            draft: baseline.body.draft + 2,
+            reviewing: baseline.body.reviewing,
+            prepared: baseline.body.prepared,
+          }, "Kedua POST harus menambah total dan draf tepat dua, tanpa kehilangan salah satunya");
+          const expectedRecent = [...expectedCreated, ...baseline.body.recent]
+            .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt) || b.id - a.id)
+            .slice(0, 5);
+          assert.deepEqual(recent, expectedRecent,
+            "Lima terbaru harus memuat kedua hasil POST dengan updatedAt lalu ID menurun");
+          assert.ok(ids.every((id) => recent.filter((item) => item.id === id).length === 1),
+            "Masing-masing permohonan baru harus muncul tepat sekali");
+          const stored = (await isolated.query(
+            "SELECT id FROM sbu_cases WHERE owner_id = $1 ORDER BY updated_at DESC, id DESC",
+            [ownerId],
+          )).rows;
+          assert.equal(stored.length, baseline.body.total + 2);
+          assert.deepEqual(stored.slice(0, 5).map((item) => item.id), recent.map((item) => item.id));
+          assert.deepEqual((await isolated.query(
+            "SELECT to_jsonb(c) AS row FROM sbu_cases c WHERE NOT (id = ANY($1::int[])) ORDER BY id",
+            [ids],
+          )).rows, rowsBefore, "Seluruh permohonan lama kedua pengguna harus tetap utuh");
+          const otherAfter = await request(server, otherOwnerId);
+          assert.equal(otherAfter.status, 200, otherAfter.raw);
+          assert.deepEqual(otherAfter.body, otherBaseline.body,
+            "Dua POST pemilik tidak boleh mengubah ringkasan pengguna lain");
+          assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
+            "Seluruh permohonan uji harus tetap berada di tabel salinan");
+        };
+
+        // Verify the very next dashboard GET after both successful responses.
+        await assertSummary(created);
+        // Exercise both ordering keys deterministically instead of relying on
+        // whether the concurrent inserts happen to share a timestamp.
+        const byId = [...created].sort((a, b) => a.id - b.id);
+        const newest = "2030-03-11T10:00:00.000Z";
+        const previous = "2030-03-10T10:00:00.000Z";
+        await isolated.query(
+          "UPDATE sbu_cases SET updated_at = CASE WHEN id = $1 THEN $3::timestamp ELSE $4::timestamp END WHERE owner_id = $5 AND id = ANY($2::int[])",
+          [byId[0].id, ids, newest, previous, ownerId],
+        );
+        await assertSummary(byId.map((item, index) => ({
+          ...item, updatedAt: index === 0 ? newest : previous,
+        })));
+        await isolated.query(
+          "UPDATE sbu_cases SET updated_at = $1 WHERE owner_id = $2 AND id = ANY($3::int[])",
+          [newest, ownerId, ids],
+        );
+        await assertSummary(created.map((item) => ({ ...item, updatedAt: newest })));
+      } finally {
+        // Scope cleanup to these inputs, even if a committed POST failed an assertion.
+        await isolated.query(
+          "DELETE FROM sbu_cases WHERE owner_id = $1 AND company_name = ANY($2::text[])",
+          [ownerId, inputs.map((input) => input.companyName)],
+        );
+      }
+    });
+
     await t.test("PATCH permohonan tertua langsung menaikkannya ke awal daftar lengkap tanpa mengubah kolom lain atau pengguna lain", async () => {
       const baseline = await request(server, ownerId, "/cases");
       assert.equal(baseline.status, 200, baseline.raw);
