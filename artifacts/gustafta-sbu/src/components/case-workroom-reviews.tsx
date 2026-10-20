@@ -78,6 +78,7 @@ function PreviewDialog({ caseId, preview, seq, draft, setDraft, onClose, onDone,
       <div className="flex items-center justify-between border-b border-[#d8e4ec] p-5"><h2 className="display text-lg font-extrabold">Pratinjau snapshot tinjauan</h2><button type="button" disabled={busy} onClick={close} aria-label="Tutup" data-testid="button-review-close" className="rounded-lg p-2 hover:bg-[#ecf4f9] disabled:opacity-50"><X size={18} /></button></div>
       <div className="max-h-[70dvh] space-y-5 overflow-y-auto p-5">
         <p className="text-xs leading-5 text-[#47667e]">Ini isi persis yang akan disimpan sebagai riwayat privat. Nilai terbaru tidak dicampurkan ke pratinjau.</p>
+        <p data-testid="text-review-preview-version" className="break-all font-mono text-[11px] text-[#56718a]">Referensi versi snapshot: {preview.snapshotHash}</p>
         <SnapshotView snap={preview.snapshot} testid="review-preview" />
         <fieldset disabled={busy} className="space-y-4 border-t border-[#e0e9ef] pt-4">
           <label className="flex items-start gap-2 text-sm"><input type="checkbox" data-testid="checkbox-review-confirm" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="mt-1" /><span>Saya sudah memeriksa snapshot di atas dan ingin mencatat tinjauan internal yang tidak dapat diedit atau dihapus tersendiri. Riwayat ikut terhapus jika kasus dihapus.</span></label>
@@ -88,7 +89,7 @@ function PreviewDialog({ caseId, preview, seq, draft, setDraft, onClose, onDone,
           <button type="button" data-testid="button-review-refresh-preview" disabled={busy} onClick={onRefreshPreview} className="mt-2 block font-bold underline">{refreshing ? 'Menyegarkan...' : 'Segarkan pratinjau'}</button></div>}
         {save.isError && status(save.error) !== 409 && <p role="alert" data-testid="text-review-error" className="text-sm text-[#b34442]">{errMsg(save.error)}</p>}
         {!!refreshError && <p role="alert" data-testid="text-review-refresh-error" className="text-sm text-[#b34442]">{errMsg(refreshError)} Jika bahan tidak tersedia lagi, tutup pratinjau, kosongkan pilihan dan pilih ulang bahan yang tersedia.</p>}
-        <p className="text-[11px] leading-5 text-[#688096]">Tinjauan ini hanya catatan internal pemilik kasus. Bukan persetujuan LSBU atau lembaga resmi, tidak dibagikan, dan tidak mengubah kasus, bukti, atau penilaian.</p>
+        <p className="text-[11px] leading-5 text-[#688096]">Tinjauan ini hanya catatan internal pemilik kasus. Bukan persetujuan LSBU/OSS, tidak dibagikan, dan tidak mengubah kasus, bukti, atau penilaian. Tidak menerbitkan SBU, mengaktifkan Gustafta, atau mengirim pengajuan eksternal.</p>
       </div>
       <div className="flex justify-end gap-2 border-t border-[#e0e9ef] p-4"><button type="button" disabled={busy} onClick={close} data-testid="button-review-cancel" className="btn btn-outline">Batal</button><button type="button" disabled={!valid || busy} onClick={submit} data-testid="button-review-save" className="btn btn-primary">{save.isPending ? 'Menyimpan...' : 'Simpan tinjauan'}</button></div>
     </section></div>;
@@ -100,6 +101,7 @@ function Row({ r, onOpen, stale }: { r: ReviewRecord; onOpen: () => void; stale:
       <span data-testid={`status-review-current-${r.id}`} className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${stale ? 'bg-[#e8edf2] text-[#52677e]' : r.current ? 'bg-[#e1f4ee] text-[#19745f]' : 'bg-[#fdf1dc] text-[#8a5a10]'}`}>{stale ? 'Status terbaru belum terverifikasi' : r.current ? 'Materi terpilih tidak berubah' : 'Perlu tinjau ulang'}</span>
       <span className="ml-auto text-[11px] text-[#688096]">{stamp(r.decidedAt)}</span></div>
     <p className="mt-2 whitespace-pre-wrap break-words text-sm text-[#2b4159]">{r.note}</p>
+    <p data-testid={`text-review-version-${r.id}`} className="mt-2 break-all font-mono text-[11px] text-[#56718a]">Referensi versi snapshot: {r.snapshotHash}</p>
     <p className="mt-2 text-[11px] text-[#688096]">Cakupan: {r.snapshot.workroomItems.length} catatan, {r.snapshot.evidence.length} bukti, {r.snapshot.documents.length} dokumen. Materi yang tidak dipilih atau ditambahkan kemudian tidak tercakup.</p>
     <button type="button" data-testid={`button-review-open-${r.id}`} onClick={onOpen} className="mt-2 text-xs font-bold text-[#1769d1] underline">Lihat snapshot asli</button></li>;
 }
@@ -168,7 +170,7 @@ export function CaseWorkroomReviews({ caseId, expectedUserId }: { caseId: number
     <div className="border-b border-[#d8e4ec] p-5 sm:p-6">
       <div className="eyebrow text-[#1769d1]">TINJAUAN MANUSIA INTERNAL</div>
       <h2 id="reviews-title" className="display mt-2 text-xl font-extrabold text-[#19324a]">Tinjauan snapshot kasus</h2>
-      <p data-testid="text-review-disclaimer" className="mt-2 text-sm leading-6 text-[#47667e]">Anda, sebagai pemilik kasus, dapat mengunci tinjauan atas materi yang Anda pilih. Keputusan tidak dapat diubah atau dihapus selama kasus ada; menghapus kasus ikut menghapus seluruh catatan tinjauan dan snapshotnya, tidak dibagikan, bukan persetujuan LSBU atau lembaga resmi, dan tidak dikirim ke pihak luar. Materi yang tidak dipilih atau ditambahkan kemudian tidak ikut disetujui.</p>
+      <p data-testid="text-review-disclaimer" className="mt-2 text-sm leading-6 text-[#47667e]">Anda, sebagai pemilik kasus, dapat mencatat persetujuan internal atas materi yang Anda pilih. Keputusan tidak dapat diubah atau dihapus selama kasus ada; menghapus kasus ikut menghapus seluruh catatan tinjauan dan snapshotnya. Ini bukan persetujuan LSBU/OSS, tidak menerbitkan SBU, mengaktifkan Gustafta, atau mengirim pengajuan eksternal. Materi yang tidak dipilih atau ditambahkan kemudian tidak ikut disetujui.</p>
     </div>
     <div className="space-y-6 p-5 sm:p-6">
       {q.isLoading ? <div data-testid="state-review-loading" aria-busy="true"><Loading rows={2} /></div>
@@ -198,6 +200,6 @@ export function CaseWorkroomReviews({ caseId, expectedUserId }: { caseId: number
     {viewing && <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#0d1b2ad9] p-4" onKeyDown={e => { if (e.key === 'Escape') setViewing(null); }}>
       <section role="dialog" aria-modal="true" aria-label="Snapshot tinjauan" data-testid="dialog-review-snapshot" className="surface my-auto w-full max-w-[720px] overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between border-b border-[#d8e4ec] p-5"><h2 className="display text-lg font-extrabold">Snapshot asli / {decisionLabel[viewing.decision]}</h2><button type="button" onClick={() => setViewing(null)} aria-label="Tutup" data-testid="button-review-snapshot-close" className="rounded-lg p-2 hover:bg-[#ecf4f9]"><X size={18} /></button></div>
-        <div className="max-h-[70dvh] overflow-y-auto p-5"><SnapshotView snap={viewing.snapshot} testid="review-history" /></div></section></div>}
+        <div className="max-h-[70dvh] space-y-4 overflow-y-auto p-5"><p className="break-all font-mono text-[11px] text-[#56718a]">Referensi versi snapshot: {viewing.snapshotHash}</p><SnapshotView snap={viewing.snapshot} testid="review-history" /></div></section></div>}
   </section>;
 }
