@@ -7,39 +7,12 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { logger as clerkLogger } from "@clerk/shared/logger";
+import { guardOutboundFetch, guardOutboundNetwork } from "./helpers/offline-network.mjs";
 
-function guardOutboundFetch(target = globalThis) {
-  const originalFetch = target.fetch;
-  const attempts = [];
-  target.fetch = async (input, init) => {
-    const url = new URL(input instanceof URL ? input.href
-      : typeof input === "string" ? input : input.url);
-    // Literal loopback addresses only; do not resolve arbitrary DNS names.
-    const isLoopback = /^127(?:\.\d{1,3}){3}$/.test(url.hostname)
-      || url.hostname === "[::1]";
-    if (!isLoopback || !["http:", "https:"].includes(url.protocol)) {
-      attempts.push(url.origin);
-      throw new Error(`Unexpected outbound request: ${url.origin}`);
-    }
-    // Native fetch follows redirects internally without re-entering this
-    // wrapper. Do not let a loopback response redirect to an external service.
-    return originalFetch.call(target, input, { ...init, redirect: "error" });
-  };
-  return {
-    assertNoOutbound() {
-      assert.equal(attempts.length, 0,
-        `Fixture tidak boleh menghubungi layanan luar:\n${attempts.join("\n")}`);
-    },
-    restore() {
-      target.fetch = originalFetch;
-    },
-  };
-}
-
-// Install once before async setup and app imports. SDKs can catch fetch errors,
+// Install once before async setup and app imports. SDKs can catch network errors,
 // so both per-test and suite assertions inspect the persistent attempt log.
-const outboundFetch = guardOutboundFetch();
-afterEach(() => outboundFetch.assertNoOutbound());
+const outboundNetwork = guardOutboundNetwork();
+afterEach(() => outboundNetwork.assertNoOutbound());
 
 // Match session-fixture compatibility warnings, not normal development-key or
 // dev-browser diagnostics. Do not pin the guard to only today's missing-azp text.
@@ -119,12 +92,12 @@ function checkSessionWarningGuard() {
 const sessionWarnings = captureSessionCompatibilityWarnings();
 let temporaryDir;
 after(async () => {
-  outboundFetch.restore();
+  outboundNetwork.restore();
   sessionWarnings.restore();
   try {
     if (temporaryDir) await rm(temporaryDir, { recursive: true, force: true });
   } finally {
-    outboundFetch.assertNoOutbound();
+    outboundNetwork.assertNoOutbound();
     sessionWarnings.assertCompatible();
   }
 });
