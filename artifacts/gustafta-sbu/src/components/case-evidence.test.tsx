@@ -341,8 +341,9 @@ for (const status of [422, 500]) {
 }
 
 for (const status of [422, 500]) {
-  for (const reopenId of [12, 11]) {
-    test(`membatalkan edit gagal (${status}) lalu membuka bukti ${reopenId === 12 ? 'yang sama' : 'lain'} mengembalikan data tersimpan tanpa kesalahan lama`, async (t) => {
+  for (const [reopenId, closeMode] of [12, 11].flatMap(id =>
+    ['Batal', 'Escape', 'klik latar', 'Tutup'].map(mode => [id, mode] as const))) {
+    test(`membatalkan edit gagal (${status}) lewat ${closeMode} lalu membuka bukti ${reopenId === 12 ? 'yang sama' : 'lain'} mengembalikan data tersimpan tanpa kesalahan lama`, async (t) => {
       const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
       const originalFetch = globalThis.fetch;
       const originalWindow = testGlobals.window;
@@ -362,7 +363,9 @@ for (const status of [422, 500]) {
         }
       });
       testGlobals.IS_REACT_ACT_ENVIRONMENT = true;
-      testGlobals.window = { addEventListener() {}, removeEventListener() {} } as unknown as Window & typeof globalThis;
+      // Exercise the dialog's real keydown subscription, including effect cleanup.
+      const dialogEvents = new EventTarget();
+      testGlobals.window = dialogEvents as unknown as Window & typeof globalThis;
       const rows: Evidence[] = [
         { id: 11, caseId: 7, code: 'legalitas', title: 'Legalitas tersimpan', note: 'Catatan legalitas', updatedAt: '2026-09-25T12:00:00Z' },
         { id: 12, caseId: 7, code: 'tenaga', title: 'Tenaga tersimpan', note: 'Catatan tenaga', updatedAt: '2026-09-24T12:00:00Z' },
@@ -446,9 +449,19 @@ for (const status of [422, 500]) {
       assert.equal(failedDialog.findByProps({ 'data-testid': 'input-evidence-note' }).props.value, draft.note);
       assertStoredState();
       await act(async () => {
-        failedDialog.findByProps({ 'data-testid': 'button-cancel-evidence' }).props.onClick();
+        if (closeMode === 'Escape') {
+          dialogEvents.dispatchEvent(Object.assign(new Event('keydown'), { key: 'Escape' }));
+        } else if (closeMode === 'klik latar') {
+          const backdrop = failedDialog.parent!;
+          const target = {};
+          backdrop.props.onMouseDown({ target, currentTarget: target });
+        } else {
+          failedDialog.findByProps({
+            'data-testid': closeMode === 'Tutup' ? 'button-close-dialog' : 'button-cancel-evidence',
+          }).props.onClick();
+        }
       });
-      assert.equal(renderer!.root.findAllByProps({ role: 'dialog' }).length, 0, 'Batal menutup dialog gagal');
+      assert.equal(renderer!.root.findAllByProps({ role: 'dialog' }).length, 0, `${closeMode} menutup dialog gagal`);
       assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0);
       assertStoredState();
       await act(async () => {
