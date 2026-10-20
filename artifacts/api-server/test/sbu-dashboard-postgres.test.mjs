@@ -621,6 +621,9 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
     });
 
     await t.test("PATCH dan DELETE di dalam/luar lima teratas langsung tercermin tanpa mengubah pengguna lain", async (t) => {
+      const otherList = await request(server, otherOwnerId, "/cases");
+      assert.equal(otherList.status, 200, otherList.raw);
+      assert.deepEqual(otherList.body.map((item) => item.id), [999, 998]);
       const otherDashboard = await request(server, otherOwnerId);
       assert.equal(otherDashboard.status, 200, otherDashboard.raw);
       assert.deepEqual(otherDashboard.body, {
@@ -688,13 +691,31 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
         assert.ok(new Date(patched.body.updatedAt) > previous.updated_at,
           "PATCH harus memperbarui waktu permohonan");
       };
-      const deleteCase = async (id) => {
+      const deleteCase = async (id, expectedIds) => {
+        const baseline = await request(server, ownerId, "/cases");
+        assert.equal(baseline.status, 200, baseline.raw);
+        assert.ok(baseline.body.some((item) => item.id === id),
+          "Daftar sebelum DELETE harus memuat permohonan sasaran");
         const deleted = await request(server, ownerId, `/cases/${id}`, { method: "DELETE" });
         assert.equal(deleted.status, 204, deleted.raw);
         assert.equal(deleted.raw, "");
+        deletedIds.add(id);
+
+        // The first HTTP read after DELETE must check the full list, not only recent.
+        const list = await request(server, ownerId, "/cases");
+        assert.equal(list.status, 200, list.raw);
+        assert.ok(list.body.every((item) => !deletedIds.has(item.id)),
+          "Permohonan yang sudah dihapus tidak boleh muncul kembali dalam daftar lengkap");
+        assert.deepEqual(list.body.map((item) => item.id), expectedIds,
+          "Seluruh anggota tersisa harus langsung muncul dalam urutan waktu/ID yang tepat");
+        assert.deepEqual(list.body, baseline.body.filter((item) => item.id !== id),
+          "DELETE hanya boleh menghilangkan sasaran, tanpa mengubah isi atau urutan permohonan lain");
+        const otherAfter = await request(server, otherOwnerId, "/cases");
+        assert.equal(otherAfter.status, 200, otherAfter.raw);
+        assert.deepEqual(otherAfter.body, otherList.body,
+          "DELETE pemilik tidak boleh mengubah isi maupun urutan daftar lengkap pengguna lain");
         assert.deepEqual((await isolated.query("SELECT id FROM sbu_cases WHERE id = $1", [id])).rows, [],
           "DELETE harus benar-benar menghapus baris salinan");
-        deletedIds.add(id);
       };
 
       // Change a current top-five item, then promote an item previously outside it.
@@ -706,14 +727,14 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
       );
 
       // Removing an older item changes counts, but not the five latest members.
-      await deleteCase(900);
+      await deleteCase(900, [202, 100, 206, 205, 204, 203, 201]);
       const afterOutsideDelete = await assertDashboard(
         { total: 7, draft: 2, reviewing: 3, prepared: 2 }, [202, 100, 206, 205, 204],
       );
       assert.deepEqual(afterOutsideDelete, beforeDelete);
 
       // Removing a top-five item must backfill with the next stored item.
-      await deleteCase(205);
+      await deleteCase(205, [202, 100, 206, 204, 203, 201]);
       await assertDashboard({ total: 6, draft: 2, reviewing: 2, prepared: 2 }, [202, 100, 206, 204, 203]);
 
       // Cross the five-item boundary, then remove every remaining status through
@@ -726,7 +747,7 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
         { id: 203, counts: { total: 1, draft: 1, reviewing: 0, prepared: 0 }, recentIds: [201] },
         { id: 201, counts: { total: 0, draft: 0, reviewing: 0, prepared: 0 }, recentIds: [] },
       ]) {
-        await deleteCase(id);
+        await deleteCase(id, recentIds);
         await assertDashboard(counts, recentIds);
       }
 
