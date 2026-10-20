@@ -187,6 +187,9 @@ await build({
           export const eq = (field, value) => (row) => row[field] === value;
           export const and = (...predicates) => (row) => predicates.every((predicate) => predicate(row));
           export const desc = () => { throw new Error("unexpected ordering"); };
+          export const asc = () => { throw new Error("unexpected ordering"); };
+          export const inArray = () => { throw new Error("unexpected array query"); };
+          export const getTableColumns = () => { throw new Error("unexpected personnel query"); };
           export const ilike = () => { throw new Error("unexpected vault query"); };
           export const or = () => { throw new Error("unexpected vault query"); };
           // Document lock constants are constructed at import time, not run.
@@ -206,6 +209,13 @@ await build({
           export const companyProfilesTable = {};
           export const documentsTable = {};
           export const documentAnalysesTable = {};
+          // Required by unrelated routers bundled with the real app. Their
+          // queries remain unsupported; these tests must not access them.
+          export const consultationsTable = {};
+          export const personnelTable = {};
+          export const skkCertificatesTable = {};
+          export const workroomItemsTable = {};
+          export const workroomReviewsTable = {};
           export const db = {
             select() {
               globalThis.__clerkTestDataReads = (globalThis.__clerkTestDataReads ?? 0) + 1;
