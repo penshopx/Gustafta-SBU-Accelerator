@@ -366,28 +366,50 @@ test('formulir profil lengkap menjaga nama Unicode pada onboarding dan pengatura
       try {
         await render(stored.userId);
         await waitFor(() => !!container.querySelector('form'));
-        assert.equal(status(), null);
-        for (const change of ['name', 'organization', 'role']) {
+        const liveRegion = status()!;
+        assert.ok(liveRegion, 'area pengumuman harus terpasang sebelum ada pesan');
+        assert.equal(liveRegion.textContent, '');
+        assert.equal(liveRegion.getAttribute('aria-live'), 'polite');
+        assert.equal(liveRegion.getAttribute('aria-atomic'), 'true');
+        const announcements: string[] = [];
+        // Observe the live-region update contract, not merely its final markup.
+        // This is not a substitute for listening with a real screen reader.
+        const observer = new window.MutationObserver(() => {
+          if (liveRegion.textContent) announcements.push(liveRegion.textContent);
+        });
+        observer.observe(liveRegion, { childList: true, characterData: true, subtree: true });
+        t.after(() => observer.disconnect());
+        for (const change of ['name', 'organization', 'role', 'unchanged', 'unchanged']) {
           const oldForm = container.querySelector('form');
           if (change === 'name') await setInput('input-display-name', '  Nama baru  ');
           if (change === 'organization') await setInput('input-organization', '  Organisasi baru  ');
           if (change === 'role') await click('button-role-konsultan');
+          const count = announcements.length;
           await click('button-save-profile');
-          await waitFor(() => !client.isMutating() && !!status());
+          assert.equal(status(), liveRegion, 'area pengumuman tidak boleh ikut diremount');
+          assert.equal(status()?.textContent, '', 'teks lama dikosongkan sebelum sukses berikutnya');
+          await waitFor(() => !client.isMutating() && !!status()?.textContent);
+          await waitFor(() => announcements.length > count);
+          assert.equal(announcements.length, count + 1, 'satu perubahan pengumuman per simpan');
+          assert.equal(container.querySelectorAll('[role="status"]').length, 1);
           assert.equal(status()?.textContent, 'Profil berhasil disimpan.');
-          assert.notEqual(container.querySelector('form'), oldForm, 'respons baru tetap mengisi ulang draf');
+          if (change !== 'unchanged') assert.notEqual(container.querySelector('form'), oldForm, 'respons baru tetap mengisi ulang draf');
+          assert.equal(status(), liveRegion, 'pengumuman tetap memakai area yang sudah terpasang');
           assert.equal(input('input-display-name').value, stored.displayName);
           assert.equal(input('input-organization').value, stored.organizationName);
           assert.deepEqual(client.getQueryData(getGetMeQueryKey()), stored);
-          assert.equal(stored.role, change === 'role' ? 'konsultan' : 'kontraktor');
+          assert.equal(stored.role, ['role', 'unchanged'].includes(change) ? 'konsultan' : 'kontraktor');
         }
         assert.equal(stored.displayName, 'Nama baru');
         assert.equal(stored.organizationName, 'Organisasi baru');
-        assert.equal(requests.length, 3);
+        assert.equal(requests.length, 5);
         // A fresh read must retain the server's saved values and the confirmation.
         await act(async () => { await client.refetchQueries({ queryKey: getGetMeQueryKey() }); });
+        await act(async () => { await new Promise(resolve => setTimeout(resolve, 150)); });
         assert.equal(input('input-display-name').value, 'Nama baru');
-        assert.ok(status());
+        assert.equal(status(), liveRegion);
+        assert.equal(status()?.textContent, 'Profil berhasil disimpan.');
+        assert.equal(announcements.length, 5, 'refetch tidak mengumumkan ulang sukses');
 
         reject = true;
         delay = true;
@@ -395,32 +417,46 @@ test('formulir profil lengkap menjaga nama Unicode pada onboarding dan pengatura
         await setInput('input-display-name', 'Nama ditolak');
         await click('button-save-profile');
         await waitFor(() => !!finishRequest);
-        assert.equal(status(), null, 'konfirmasi lama hilang saat mulai menyimpan lagi');
+        assert.equal(status()?.textContent, '', 'konfirmasi lama hilang saat mulai menyimpan lagi');
         await act(async () => { finishRequest!(); });
         await waitFor(() => !!container.querySelector('[role="alert"]'));
-        assert.equal(status(), null, 'respons ditolak tidak boleh menampilkan sukses');
+        assert.equal(status()?.textContent, '', 'respons ditolak tidak boleh menampilkan sukses');
+        assert.equal(announcements.length, 5);
         assert.deepEqual(stored, saved);
         assert.deepEqual(client.getQueryData(getGetMeQueryKey()), saved);
 
         reject = false;
         delay = false;
         await click('button-save-profile');
-        await waitFor(() => !!status());
+        await waitFor(() => !!status()?.textContent);
         // Even a direct owner-prop change must discard feedback and old inputs.
         await act(async () => {
           client.setQueryData(getGetMeQueryKey(), { ...stored, userId: 'settings-owner-b', displayName: 'Nama akun B' });
         });
         await waitFor(() => input('input-display-name').value === 'Nama akun B');
-        assert.equal(status(), null);
+        assert.equal(status()?.textContent, '');
         // The normal identity-keyed cache boundary must do the same.
         stored = { ...stored, userId: 'settings-owner-b', displayName: 'Nama akun B' };
         await render(stored.userId);
         await waitFor(() => !!container.querySelector('form'));
         assert.equal(input('input-display-name').value, 'Nama akun B');
-        assert.equal(status(), null);
+        assert.equal(status()?.textContent, '');
         await click('button-save-profile');
-        await waitFor(() => !!status());
+        await waitFor(() => !!status()?.textContent);
         assert.equal(new Headers(requests.at(-1)?.headers).get('X-SBU-Form-Owner'), 'settings-owner-b');
+        // Switch owners after success but before the deferred announcement.
+        await click('button-save-profile');
+        await waitFor(() => !client.isMutating());
+        assert.equal(status()?.textContent, '');
+        await act(async () => {
+          client.setQueryData(getGetMeQueryKey(), { ...stored, userId: 'settings-owner-c', displayName: 'Nama akun C' });
+        });
+        await waitFor(() => input('input-display-name').value === 'Nama akun C');
+        const nextRegion = status();
+        await act(async () => { await new Promise(resolve => setTimeout(resolve, 150)); });
+        assert.ok(status() === nextRegion, 'area pengumuman akun baru tidak diganti lagi');
+        assert.equal(status()?.textContent, '', 'timer akun sebelumnya dibatalkan tanpa pengumuman terlambat');
+        observer.disconnect();
       } finally {
         await act(async () => { root.unmount(); });
         container.remove();

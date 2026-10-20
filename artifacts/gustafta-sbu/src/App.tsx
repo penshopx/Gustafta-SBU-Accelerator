@@ -122,10 +122,19 @@ export function SettingsProfileForm({ profile }: { profile: Profile }) {
 }
 
 function SettingsProfileDraft({ profile }: { profile: Profile }) {
-  const [saved, setSaved] = useState(false);
+  const [confirmation, setConfirmation] = useState<{ message: string } | null>(null);
+  const [announcement, setAnnouncement] = useState('');
+  useEffect(() => {
+    setAnnouncement('');
+    if (!confirmation) return;
+    // Keep the live region mounted and give assistive technology a separate
+    // empty update before inserting text, including identical consecutive saves.
+    const timer = window.setTimeout(() => setAnnouncement(confirmation.message), 100);
+    return () => window.clearTimeout(timer);
+  }, [confirmation]);
   return <>
-    <ProfileForm key={JSON.stringify([profile.role, profile.displayName, profile.organizationName])} profile={profile} onSaveStart={() => setSaved(false)} onSaved={() => setSaved(true)}/>
-    {saved && <p role="status" className="mt-4 text-sm font-semibold text-[#19745f]">Profil berhasil disimpan.</p>}
+    <ProfileForm key={JSON.stringify([profile.role, profile.displayName, profile.organizationName])} profile={profile} onSaveStart={() => setConfirmation(null)} onSaved={() => setConfirmation({ message: 'Profil berhasil disimpan.' })}/>
+    <p role="status" aria-live="polite" aria-atomic="true" className={`${announcement ? 'mt-4 ' : ''}text-sm font-semibold text-[#19745f]`}>{announcement}</p>
   </>;
 }
 

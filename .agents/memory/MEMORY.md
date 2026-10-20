@@ -29,3 +29,4 @@
 - [Async fixture imports](async-fixture-imports.md) — keep asynchronous fixture initialization separate from the entry point that dynamically loads its consumers.
 - [Browser virtual clocks](browser-clock-notifications.md) — paused timers also stop query notifications; headless visibility simulation must reach the real window listener.
 - [Mutation observer resets](mutation-observer-resets.md) — resetting a mutation observer drops per-call callbacks; server-result cache refresh must survive dialog replacement.
+- [Live-region announcements](live-region-announcements.md) — test stable empty-to-text updates for repeated saves; DOM evidence alone does not prove spoken output.
