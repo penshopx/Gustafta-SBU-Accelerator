@@ -25,9 +25,24 @@ export async function summaryPrintFixture(directory) {
     id: i + 1, caseId: item.id, code,
     title: "PRIVATE_FIXTURE_TITLE", note: "PRIVATE_FIXTURE_NOTE", updatedAt: generatedAt,
   }));
-  const longHtml = preparationSummary(item, evidence, [], generatedAt);
+  const personnel = [{
+    id: "00000000-0000-4000-8000-000000000001", caseId: item.id, fullName: "Personel Fixture Cetak",
+    assignment: "pjt", position: "Manajer", notes: "PRIVATE_FIXTURE_PERSONNEL_NOTE", revision: 0,
+    asOfDate: "2026-01-15", createdAt: generatedAt.toISOString(), updatedAt: generatedAt.toISOString(),
+    certificates: Array.from({ length: 12 }, (_, i) => ({
+      id: `00000000-0000-4000-8000-${String(i + 10).padStart(12, "0")}`,
+      personnelId: "00000000-0000-4000-8000-000000000001",
+      certificateNumber: `SKK-FIXTURE-${String(i).padStart(2, "0")}`,
+      issuer: "Penerbit Fixture", jobTitle: "Jabatan Fixture", level: 6,
+      issuedOn: "2025-01-01", expiresOn: "2026-01-31", dateStatus: "expiring", daysRemaining: 16,
+      documentId: null, documentName: null, documentCaseId: null, documentAvailable: false,
+      notes: "PRIVATE_FIXTURE_CERTIFICATE_NOTE", revision: 0,
+      createdAt: generatedAt.toISOString(), updatedAt: generatedAt.toISOString(),
+    })),
+  }];
+  const longHtml = preparationSummary(item, evidence, [], generatedAt, personnel);
   const shortHtml = preparationSummary({ ...item, requestType: "baru" }, [], [], generatedAt);
-  assert.equal((longHtml.match(/<article>/g) || []).length, 11, "all nine findings and two regulations");
+  assert.equal((longHtml.match(/<article>/g) || []).length, 12, "personnel, all nine findings and two regulations");
   for (const html of [longHtml, shortHtml]) {
     assert.doesNotMatch(html, /PRIVATE_FIXTURE|synthetic-not-a-real-account/);
   }
@@ -43,6 +58,14 @@ export function assertSummaryContent(pages, fixture, variant) {
     for (const code of fixture.codes) {
       assert.equal(text.split(`${code} — 1 catatan deklarasi`).length - 1, 1,
         `category missing or duplicated: ${code}`);
+    }
+    assert.ok(text.includes("Personel Fixture Cetak"));
+    assert.ok(text.includes("Penugasan: PJT"));
+    assert.ok(text.includes("Jenjang: 6"));
+    assert.ok(text.includes("2026-01-15 (Asia/Jakarta)"));
+    for (let i = 0; i < 12; i++) {
+      const number = `SKK-FIXTURE-${String(i).padStart(2, "0")}`;
+      assert.equal(text.split(number).length - 1, 1, `certificate missing or duplicated: ${number}`);
     }
   }
   for (const heading of [

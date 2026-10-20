@@ -79,14 +79,14 @@ await build({
                          if (table === casesTable) globalThis.__routeCaseReads = (globalThis.__routeCaseReads ?? 0) + 1;
                         if (table === evidenceTable) globalThis.__routeEvidenceReads++;
                         if (table === profilesTable) globalThis.__routeProfileReads = (globalThis.__routeProfileReads ?? 0) + 1;
-                         const rows = table === casesTable ? caseRows() :
+                         const rows = table === personnelTable ? [] : table === casesTable ? caseRows() :
                             table === profilesTable ? profileRows() : evidenceRows();
                          const result = rows.filter((row) => row && predicate(row));
                           return Object.assign(Promise.resolve(result), {
                              orderBy: (...orders) => {
                                if (orders.length < 1 || orders.length > 2 ||
                                    orders[0].direction !== "desc" || orders[0].column !== "updatedAt" ||
-                                    (orders[1] && (table !== casesTable && table !== evidenceTable ||
+                                    (orders[1] && (table !== casesTable && table !== evidenceTable && table !== personnelTable ||
                                     orders[1].direction !== "desc" || orders[1].column !== "id")))
                                 throw new Error("unexpected orderBy");
                                return Promise.resolve([...result].sort((a, b) => {
@@ -222,7 +222,7 @@ await build({
              export const documentsTable = {};
              export const documentAnalysesTable = {};
              export const consultationsTable = {};
-             export const personnelTable = {};
+             export const personnelTable = { id: "id", caseId: "caseId", ownerId: "ownerId", updatedAt: "updatedAt" };
              export const skkCertificatesTable = {};
              export const workroomItemsTable = {};
              export const workroomReviewsTable = {};

@@ -79,7 +79,7 @@ export function CasePreparationExport({ caseId }: { caseId: number }) {
 
   return <section aria-label="Ringkasan konsultasi" className="surface mb-6 p-5 sm:p-6">
     <h2 className="font-bold text-[#19324a]">Bawa persiapan ke konsultasi</h2>
-    <p className="mt-2 text-sm leading-6 text-[#47667e]">Ringkasan kasus, kategori catatan bukti, temuan dan sumber aturan terbaru. Data adalah deklarasi pengguna, bukan verifikasi dokumen, kelayakan atau keputusan LSBU.</p>
+    <p className="mt-2 text-sm leading-6 text-[#47667e]">Ringkasan kasus, kategori catatan bukti, personel dan SKK tertaut, temuan dan sumber aturan terbaru. Penugasan, jenjang, nomor SKK dan indikator tanggal disertakan sebagai deklarasi pengguna, bukan verifikasi keaslian SKK, kelayakan atau persetujuan sertifikasi oleh LSBU.</p>
     <div className="mt-4 flex flex-wrap gap-3">
       <button type="button" className="btn btn-outline" data-testid="button-download-summary" disabled={pending} onClick={() => exportSummary('download')}><Download size={16}/> Unduh HTML</button>
       <button type="button" className="btn btn-primary" data-testid="button-print-summary" disabled={pending} onClick={() => exportSummary('print')}><Printer size={16}/> Cetak / Simpan PDF</button>

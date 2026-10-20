@@ -1,5 +1,7 @@
 import type { SbuCaseRow, EvidenceRow, TransitionVerificationRow } from "@workspace/db";
+import type { Personnel } from "@workspace/api-zod";
 import { assessCase, regulationsFor } from "./sbu-rules";
+import { jakartaToday } from "./skk-calendar";
 
 export const SUMMARY_DISCLAIMER = "Data adalah deklarasi pengguna, bukan verifikasi dokumen, penetapan kelayakan, atau keputusan LSBU.";
 
@@ -9,12 +11,38 @@ const labels: Record<string, string> = {
   draf: "Draf", ditinjau: "Dalam peninjauan", selesai_persiapan: "Persiapan selesai (internal)",
   tercatat: "Tercatat, belum diverifikasi", perlu_bukti: "Perlu catatan bukti", perlu_tinjauan: "Perlu tinjauan",
 };
+const dateLabels: Record<string, string> = {
+  unknown: "Tanggal berakhir belum dicatat",
+  not_yet_effective: "Belum memasuki tanggal terbit deklarasi",
+  active_declared: "Dalam rentang tanggal deklarasi",
+  expiring: "Mendekati tanggal berakhir deklarasi (0–30 hari)",
+  expired: "Melewati tanggal berakhir deklarasi",
+};
+
+function personnelArticles(people: Personnel[]) {
+  return people.map(person => `<article>
+    <h3>${escape(person.fullName)}</h3>
+    <p>Penugasan: ${escape(person.assignment.toUpperCase())} · Jabatan: ${escape(person.position || "Belum dicatat")}</p>
+    <p class="meta">Deklarasi personel dicatat: ${escape(person.createdAt)}; diperbarui: ${escape(person.updatedAt)} (UTC).</p>
+    ${person.certificates.length ? person.certificates.map(cert => `<div class="certificate">
+      <h4>SKK tercatat: ${escape(cert.certificateNumber)}</h4>
+      <p>Penerbit: ${escape(cert.issuer)} · Jabatan kerja: ${escape(cert.jobTitle)} · Jenjang: ${escape(cert.level ?? "Belum dicatat")}</p>
+      <p>Tanggal terbit (deklarasi): ${escape(cert.issuedOn ?? "Belum dicatat")} · Tanggal berakhir (deklarasi): ${escape(cert.expiresOn ?? "Belum dicatat")}</p>
+      <p>Indikator tanggal: ${escape(dateLabels[cert.dateStatus])}${cert.daysRemaining === null ? "" : ` · Selisih ke tanggal berakhir: ${escape(cert.daysRemaining)} hari`} · asOf: ${escape(person.asOfDate)} (Asia/Jakarta).</p>
+      <p class="meta">Deklarasi SKK dicatat: ${escape(cert.createdAt)}; diperbarui: ${escape(cert.updatedAt)} (UTC).</p>
+      <p>Rujukan dokumen: ${cert.documentId
+        ? `${escape(cert.documentName)} · ID ${escape(cert.documentId)} · ${cert.documentAvailable ? "Tersedia pada snapshot" : "Tidak tersedia untuk diunduh pada snapshot"}`
+        : "Tidak ada rujukan dokumen yang dapat ditampilkan untuk kasus dan akun ini"}.</p>
+    </div>`).join("") : "<p>Belum ada SKK tercatat untuk personel ini.</p>"}
+  </article>`).join("");
+}
 
 // No remote assets, scripts, owner IDs, evidence text or applicant URLs are exported.
 // Evidence categories are sufficient for this preparation list, not document review.
 export function preparationSummary(
   item: SbuCaseRow, evidence: EvidenceRow[], verifications: TransitionVerificationRow[],
   generatedAt = new Date(),
+  personnel: Personnel[] = [],
 ) {
   const assessment = assessCase(item, evidence, verifications);
   const categories = [...new Set(evidence.map((entry) => entry.code))].sort();
@@ -32,7 +60,7 @@ export function preparationSummary(
   <style>
   *{box-sizing:border-box}body{font:14px/1.6 Arial,sans-serif;color:#19324a;margin:32px auto;max-width:850px;padding:0 20px;overflow-wrap:anywhere}
   h1{font-size:25px}h2{font-size:20px;border-bottom:1px solid #ccdbea;padding-bottom:8px}
-  h3{font-size:16px;margin-bottom:8px}article{margin:0 0 24px}p{margin:8px 0}
+   h3{font-size:16px;margin-bottom:8px}h4{font-size:14px;margin:12px 0 8px}article{margin:0 0 24px}p{margin:8px 0}
   .notice{border:2px solid #1769d1;padding:12px;background:#eaf5fd;font-weight:bold}
   .source,.meta{font-size:12px}footer{font-size:11px;border-top:1px solid #19324a;padding-top:5px;margin-top:24px}
   .print-layout{width:100%;border-collapse:collapse}.print-layout td{padding:0}
@@ -40,7 +68,7 @@ export function preparationSummary(
   @page{size:A4;margin:18mm 16mm 28mm}
   @media print{body{margin:0;max-width:none;padding:0;font-size:11pt}
   thead{display:table-header-group}thead td{padding-bottom:4mm}
-  h2,h3{break-after:avoid}article{break-inside:avoid}section{break-before:page}
+   h2,h3,h4{break-after:avoid}article,.certificate{break-inside:avoid}.personnel article{break-inside:auto}section{break-before:page}
   .notice{background:white}a{color:inherit}}
   </style></head><body>
   <table class="print-layout"><thead><tr><td><div class="page-notice">${SUMMARY_DISCLAIMER}</div></td></tr></thead><tbody><tr><td>
@@ -57,6 +85,10 @@ export function preparationSummary(
   <h2>Kategori catatan bukti</h2>
   <p>Kategori di bawah hanya menunjukkan catatan tersedia; bukan dokumen lengkap atau sah. Isi catatan pribadi tidak disertakan.</p>
   ${categories.length ? `<ul>${categories.map(code => `<li>${escape(code)} — ${evidence.filter(entry => entry.code === code).length} catatan deklarasi</li>`).join("")}</ul>` : "<p>Belum ada catatan bukti.</p>"}
+  <section class="personnel"><h2>Personel &amp; SKK tertaut pada kasus</h2>
+  <p>Hanya personel milik akun ini yang ditautkan ke kasus ini. Tanggal dan penugasan adalah deklarasi pengguna; indikator tanggal bukan verifikasi keaslian, kecukupan personel, atau persetujuan sertifikasi. Data ini tidak mengubah bukti maupun penilaian kasus.</p>
+  <p class="meta">Tanggal acuan indikator (asOf): ${escape(jakartaToday(generatedAt))} (Asia/Jakarta). Tanggal pencatatan/pembaruan deklarasi ditampilkan dalam UTC. Rujukan dokumen hanya metadata, bukan lampiran atau tautan unduh.</p>
+  ${personnel.length ? personnelArticles(personnel) : "<p>Belum ada personel yang ditautkan ke kasus ini melalui modul Personel &amp; SKK.</p>"}</section>
   <section><h2>Temuan dan langkah persiapan</h2>
   <p>Lengkapi kategori bertanda “Perlu catatan bukti”; bawa dokumen asli untuk pemeriksaan manual. Temuan transisi memerlukan verifikasi sumber dan telaah ahli, bukan tambahan catatan pemohon.</p>
   <p>Aturan: ${escape(assessment.ruleset)}. ${escape(assessment.disclaimer)}</p>

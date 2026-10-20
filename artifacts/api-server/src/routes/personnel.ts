@@ -1,16 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { Router, type IRouter, type Response } from "express";
 import { getAuth } from "@clerk/express";
-import { and, desc, eq, getTableColumns } from "drizzle-orm";
-import { db, casesTable, documentsTable, personnelTable, skkCertificatesTable, type PersonnelRow } from "@workspace/db";
+import { and, desc, eq } from "drizzle-orm";
+import { db, casesTable, documentsTable, personnelTable, skkCertificatesTable } from "@workspace/db";
 import {
   CreatePersonnelBody, UpdatePersonnelBody, CreateSkkCertificateBody, UpdateSkkCertificateBody,
-  GetPersonnelParams, UpdateSkkCertificateParams, GetPersonnelResponse,
+  GetPersonnelParams, UpdateSkkCertificateParams,
 } from "@workspace/api-zod";
-import { declaredDateStatus, jakartaToday, validCalendarDay } from "../lib/skk-calendar";
+import { jakartaToday, validCalendarDay } from "../lib/skk-calendar";
+import { serializePersonnel as serialize } from "../lib/personnel-snapshot";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type Source = Pick<typeof db, "select">;
 type Result = { status: number; error?: string; person?: unknown };
 const cleanRequired = (value: unknown) => typeof value === "string" && value.trim().length > 0 && !/[\p{Cc}\p{Cf}]/u.test(value);
 const fail = (status: number, error: string): Result => ({ status, error });
@@ -18,23 +18,6 @@ function reply(res: Response, result: Result) {
   if (result.status === 204) res.status(204).end();
   else if (result.error) res.status(result.status).json({ error: result.error });
   else res.status(result.status).json(result.person);
-}
-async function serialize(source: Source, person: PersonnelRow, today = jakartaToday()) {
-  const certificates = await source.select({
-    ...getTableColumns(skkCertificatesTable), documentName: documentsTable.name,
-    documentCaseId: documentsTable.caseId, documentStatus: documentsTable.status, documentScanStatus: documentsTable.scanStatus,
-  }).from(skkCertificatesTable).leftJoin(documentsTable,
-    and(eq(documentsTable.id, skkCertificatesTable.documentId), eq(documentsTable.ownerId, person.ownerId)))
-    .where(eq(skkCertificatesTable.personnelId, person.id))
-    .orderBy(desc(skkCertificatesTable.updatedAt), desc(skkCertificatesTable.id));
-  return GetPersonnelResponse.parse({
-    ...person, createdAt: person.createdAt.toISOString(), updatedAt: person.updatedAt.toISOString(), asOfDate: today,
-    certificates: certificates.map(c => ({
-      ...c, createdAt: c.createdAt.toISOString(), updatedAt: c.updatedAt.toISOString(),
-      documentAvailable: c.documentStatus === "ready" && c.documentScanStatus === "clean",
-      ...declaredDateStatus(c.issuedOn, c.expiresOn, today),
-    })),
-  });
 }
 async function ownedCase(tx: Tx, caseId: number | null | undefined, ownerId: string) {
   if (caseId == null) return true;

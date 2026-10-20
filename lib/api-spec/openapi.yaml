@@ -888,7 +888,7 @@ paths:
       tags: [workspace]
       responses:
         "200":
-          description: Private, self-contained printable HTML snapshot from current case and rules
+          description: Private self-contained printable HTML from one read-only repeatable-read snapshot of the owned case, evidence categories, rules, and case-linked owned personnel/SKK (Personnel contract). Includes assignments, levels, certificate numbers, declared issue/expiry dates, declaration timestamps, Asia/Jakarta asOf date indicators and owner/case-scoped document metadata only. Excludes private notes, storage paths and download links. Preparation declaration only, not SKK authenticity verification, assessment input or certification approval.
           content:
             text/html:
               schema: { type: string }

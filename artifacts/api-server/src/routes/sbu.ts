@@ -15,6 +15,7 @@ import {
 } from "@workspace/api-zod";
 import { assessCase, regulationsFor, TRANSITION_TRACKS } from "../lib/sbu-rules";
 import { preparationSummary } from "../lib/preparation-summary";
+import { casePersonnelSnapshot } from "../lib/personnel-snapshot";
 import { GetPreparationSummaryParams, GetPreparationSummaryResponse } from "@workspace/api-zod";
 import { GetWorkspaceResponse } from "@workspace/api-zod";
 import { getContext, recordCaseAudit, workspaceDisclaimer } from "../lib/workspace-context";
@@ -366,7 +367,9 @@ router.get("/cases/:id/preparation-summary", async (req, res): Promise<void> => 
     if (!item) return null;
     const evidence = await tx.select().from(evidenceTable).where(eq(evidenceTable.caseId, item.id));
     const verifications = await tx.select().from(transitionVerificationsTable);
-    return preparationSummary(item, evidence, verifications);
+    const generatedAt = new Date();
+    const personnel = await casePersonnelSnapshot(tx, item.id, userId, generatedAt);
+    return preparationSummary(item, evidence, verifications, generatedAt, personnel);
   }, { isolationLevel: "repeatable read", accessMode: "read only" });
   if (!html) { res.status(404).json({ error: "Permohonan tidak ditemukan." }); return; }
   res.set("Content-Disposition", 'attachment; filename="ringkasan-persiapan-sbu.html"');
