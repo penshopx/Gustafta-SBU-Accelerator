@@ -131,8 +131,53 @@ test("frontend typecheck handles stale declarations and regenerated contract cha
     assert.match(wrongContractType.output, /contract-probe\.ts.*TS2322/);
     writeFileSync(contractProbe, consumer);
 
+    // Change the existing fixture field's type after string output has been
+    // generated. Keep declarations/build metadata so stale types would still
+    // accept the string consumer until the next codegen.
+    const stringField = "        typecheckContractProbe: { type: string }\n";
+    const stringSpec = readFileSync(spec, "utf8");
+    assert.ok(stringSpec.includes(stringField), "String fixture field must exist");
+    writeFileSync(spec, stringSpec.replace(
+      stringField,
+      "        typecheckContractProbe: { type: number }\n",
+    ));
+    for (const file of [clientSource, declaration]) {
+      assert.match(readFileSync(file, "utf8"), /typecheckContractProbe\?: string;/);
+    }
+    assertPassed(check(root));
+    assertPassed(run(root, "pnpm", ["--filter", "@workspace/api-spec", "run", "codegen"]));
+    for (const file of [clientSource, declaration]) {
+      const generated = readFileSync(file, "utf8");
+      assert.match(generated, /typecheckContractProbe\?: number;/);
+      assert.doesNotMatch(generated, /typecheckContractProbe\?: string;/);
+    }
+    const numericZod = readFileSync(zodSource, "utf8");
+    assert.match(numericZod, /"typecheckContractProbe": zod\.number\(\)\.optional\(\)/);
+    assert.doesNotMatch(numericZod, /"typecheckContractProbe": zod\.string\(\)/);
+    assertPassed(run(root, "node", ["--import", "tsx", "--input-type=module", "-e", `
+      import assert from "node:assert/strict";
+      import { ListRegulationsResponseItem } from "../../lib/api-zod/src/generated/api.ts";
+      const field = ListRegulationsResponseItem.shape.typecheckContractProbe;
+      assert.equal(field.parse(123), 123);
+      assert.equal(field.parse(undefined), undefined);
+      assert.equal(field.safeParse("fixture-only").success, false);
+      assert.equal(field.safeParse("123").success, false);
+    `], { cwd: path.join(root, "artifacts/gustafta-sbu") }));
+    const oldContractType = check(root);
+    assert.notEqual(oldContractType.status, 0, oldContractType.output);
+    assert.match(oldContractType.output, /contract-probe\.ts\(2,\d+\).*TS2322/);
+    assert.match(oldContractType.output, /contract-probe\.ts\(3,\d+\).*TS2322/);
+    const numericConsumer = [
+      'import type { Regulation } from "@workspace/api-client-react";',
+      'export const contractProbe: NonNullable<Regulation["typecheckContractProbe"]> = 123;',
+      "export const readContractProbe = (regulation: Regulation): number | undefined => regulation.typecheckContractProbe;",
+      "",
+    ].join("\n");
+    writeFileSync(contractProbe, numericConsumer);
+    assertPassed(check(root));
+
     // Remove only the fixture's OpenAPI field, keeping the generated files and
-    // build metadata from the successful addition. Stale output still accepts
+    // build metadata from the successful type change. Stale output still accepts
     // the old consumer until codegen removes the field from every layer.
     writeFileSync(spec, originalSpec);
     for (const file of [clientSource, declaration, zodSource]) {
