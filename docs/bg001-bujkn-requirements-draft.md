@@ -189,8 +189,8 @@ Pembacaan tabel ini tidak memenuhi gerbang tersebut.
 | G1 | Jendela pengalaman perpanjangan: dua periode/6 tahun versus “masa berlakunya SBU”; lampiran sudah ditelaah visual, penerapan belum disahkan. | P PDF/cetak 260 h.1.c/e/f; D PDF 38–39/cetak 29–30 5.1.2.3–6/21; D PDF 83–85/cetak 74–76 bagian I | Adendum 7.1–7.2 mencatat diagram BG001 dan pertanyaan per jenis permohonan. Jangan menolak perpanjangan otomatis atau menganggap dua periode sebagai masa berlaku satu SBU. |
 | G2 | Unit penjualan per BUJK versus pembuktian/akumulasi per subklasifikasi; major item dan larangan penggunaan ulang pengalaman. | P PDF/cetak 260 h.1–2; D PDF 38/cetak 29 5.1.2.7–14; D PDF 95/cetak 86 butir 1–4 | Adendum 7.3–7.4 membedakan alokasi, porsi KSO, tahun jamak dan penggunaan ulang yang belum diputuskan. Tabel angka bukan formula alokasi atau pengecualian otomatis untuk BUJKN baru. |
 | G3 | Daftar kesesuaian TKK belum memetakan setiap jenjang K1–B ke jabatan kerja/SKK yang diakui dan validitasnya. | P PDF/cetak 18 angka 3.c–d; 263–264 j.2.b; D PDF 29–30/cetak 20–21 | Periksa acuan jabatan kerja, penerbit/masa berlaku SKK, tenaga tetap serta hak rangkap. Jangan membuat jenjang baru atau menyatakan semua pilihan memiliki semua jenjang. |
-| G4 | Pemilihan jenis/spesifikasi alat dan cara menghitung unit, khususnya B dua unit, scaffolding, serta bentuk nama dengan garis miring. | P PDF/cetak 18–19 angka 3.e; 265 k.2; D PDF 30/cetak 21 3.2.4 | Penelaah skema menentukan bukti/unit/jenis yang cukup; tidak menganggap seluruh daftar wajib atau dua jenis selalu wajib. |
-| G5 | Jalur komitmen vs jumlah alat, beda pengelompokan bukti sewa beli, pencatatan Kecil/komitmen SIJK, serta batas “subklasifikasi lain paling banyak 5”. | P PDF/cetak 265–266 k.4–14; D PDF 40–41/cetak 31–32 5.1.5; PDF 66/cetak 57 | Minta keputusan telaah tertulis tentang jalur bukti/pencatatan dan saat pemenuhan. SIMPK alat dan SIJK komitmen bukan kewajiban yang identik; jangan memaksa beli atau menghapus jumlah unit. |
+| G4 | Pemilihan jenis/spesifikasi alat dan cara menghitung unit, khususnya B dua unit, scaffolding, serta bentuk nama dengan garis miring. | P PDF/cetak 18–19 angka 3.e; 265 k.2; D PDF 30/cetak 21 3.2.4 | Lihat adendum 8.1–8.2: daftar jenis bukan daftar belanja; sumber pelengkap SIMPK memberi satuan *kapasitas*, belum definisi satu unit SBU. Dua unit B tidak otomatis dua jenis, tetapi pengulangan jenis belum disahkan. |
+| G5 | Jalur komitmen vs jumlah alat, beda pengelompokan bukti sewa beli, pencatatan Kecil/komitmen SIJK, serta batas “subklasifikasi lain paling banyak 5”. | P PDF/cetak 265–266 k.4–14; D PDF 40–41/cetak 31–32 5.1.5; PDF 66/cetak 57 | Lihat adendum 8.3–8.4: minta keputusan telaah tertulis tentang jalur bukti/pencatatan dan saat pemenuhan. SIMPK alat dan SIJK komitmen bukan kewajiban yang identik; jangan memaksa beli atau menghapus jumlah unit. |
 | G6 | Rekonsiliasi modal/ekuitas tanpa tanah/bangunan, periode neraca/audit/pajak dan bukti SPT belum menjadi prosedur tervalidasi. | P PDF/cetak 261 i.1; D PDF 39/cetak 30 5.1.3 | Tetapkan cara membaca bukti dan kurs sesuai sumber dengan penelaah keuangan; jangan memakai total aset sebagai ambang ekuitas. Tidak mengambil data perusahaan dalam telaah ini. |
 | G7 | Status hukum terkini, pemicu operasional, penerapan transisi dan pengecualian SBU lama belum terverifikasi. | P PDF/cetak 12–13 Pasal 20–21; D PDF 1, 4–5/cetak tanpa nomor, 2–3 | Bukti resmi dan telaah ahli sebagaimana regulatory-basis.md; tidak mengasumsikan terbit/tidak terbit atau mengaktifkan tanggal. |
 
@@ -342,6 +342,115 @@ bagian major item/RAB, serta histori pemakaian dan locator bukti. Ini
 daftar kebutuhan konseptual, **bukan perubahan skema atau pengumpulan
 data perusahaan pada pekerjaan ini**.
 
+## 8. Adendum G4–G5 — minimum unit bukan daftar belanja BG001 BUJKN
+
+Telaah lanjutan **20 Oktober 2026** atas halaman P/D pada kunci sumber di
+atas dan bahan pelengkap publik dari penerbit/SIMPK di bawah. Nomor PDF
+1-based; nomor cetak untuk P/D diperiksa pada render, bukan dihitung dari
+offset. P/D adalah dasar pembacaan draf BG001; materi SIMPK menjelaskan
+pencatatan peralatan umum, **bukan** keputusan LSBU bahwa suatu jenis,
+spesifikasi, atau satuan tertentu memenuhi BG001. Belum ada klarifikasi
+resmi spesifik BG001 yang ditemukan dalam pemeriksaan sumber pelengkap ini
+tentang hitungan set scaffolding, dua unit sejenis B, atau padanan nama
+alat. Ketiadaan temuan **bukan** bukti klarifikasi tersebut tidak ada.
+Gerbang status/operasional bagian 5 tetap berlaku. Tidak ada konsultasi
+ke pihak luar, permintaan data perusahaan, pengadaan, aktivasi aturan,
+checklist wajib universal, atau koneksi SIJK/SIMPK dalam pekerjaan ini.
+
+### 8.1. Rantai locator dan bobot sumber pelengkap
+
+| Sumber dan locator | Hasil yang dapat dipakai | Batas yang tidak dijawab sumber |
+| --- | --- | --- |
+| P PDF/cetak 18 angka 3.e baris **BG001 (K)**; PDF/cetak 19 kelanjutan 3.e baris **BG001 (M/B)** | Masing-masing baris berisi **daftar nama jenis alat** untuk cakupan kualifikasinya. `scaffolding` tertulis pada kedua baris; beberapa entri memakai garis miring, misalnya `grinder/mesin gerinda` (K), `compactor roller/vibrator roller` dan `flat bed truck/trailer` (M/B). Baris **GT001 (B)** di bawah BG001 bukan lanjutan daftar BG001. | Tidak ada kata “seluruh”, jumlah per nama, spesifikasi/kapasitas minimum, atau definisi unit/set scaffolding pada dua baris itu. Garis miring tidak dengan sendirinya berarti dua unit maupun dua kewajiban jenis. |
+| P PDF/cetak 265 A.3.k.1–5; D PDF 30/cetak 21 tabel 3.2.4 | Untuk Pekerjaan Konstruksi: Kecil **≥1 unit**, Menengah **≥1 unit**, Besar **≥2 unit**, masing-masing **per subklasifikasi**. P k.4 membatasi pemakaian jenis sama untuk subklasifikasi lain; k.5 membolehkan milik sendiri/sewa beli/sewa. | Tabel hanya menyebut **unit**, bukan “jenis berbeda”; tidak dapat diubah menjadi kewajiban membeli semua item P 18–19. Belum ada aturan penghitungan fisik komponen alat modular. |
+| [Daftar Subvarian Peralatan dan Satuan — SIMPK](https://simpk.pu.go.id/pencatatan/subvarian-satuan), tabel `REKAP PENCATATAN SDPK`, baris **122 Scaffolding** (kode SCA) dan **207 Scaffolding Shoring** (kode SCH); diakses 20 Oktober 2026 | Tabel publik memakai kolom **“satuan kapasitas”**: Scaffolding baris 122 `Meter`; Scaffolding Shoring baris 207 `M` dan `Kg` (ketinggian dan berat penopang). Pemisahan subvarian menguatkan perlunya identifikasi teknis. | Meter/kg adalah ukuran **kapasitas**, bukan konversi ke **jumlah unit SBU**. Tabel tidak memutuskan apakah satu rangka, satu set, satu sistem terpasang, atau satu catatan SIMPK setara satu unit BG001; juga tidak membuktikan `Scaffolding Shoring` dapat menggantikan nama `scaffolding` tanpa asesmen. |
+| [Buku Praktis Digital Pencatatan SDMPK, DJBK (2021)](https://simpk.pu.go.id/dist/publikasi/of1d0m3cdzyn0fg1-Buku_Praktis_Digital_Pencatatan_SDMPK.pdf), PDF 12/cetak 5 definisi pemilik SDPK; PDF 57 (diagram “Alur Umum Pencatatan SDPK”, tanpa nomor cetak yang terlihat) | Pemilik dapat berupa badan usaha atau perseorangan; alur SIMPK pemilik mencakup identitas, jenis/subvarian, merek, model, **nomor seri**, kapasitas, bukti kepemilikan, foto unit/nameplate, pemeriksaan lalu penetapan pencatatan. Materi ini terbit sebelum P/D. | Alur pencatatan **milik pemohon SIMPK** tidak otomatis menjadi daftar dokumen wajib pemohon SBU yang menyewa atau memakai jalur komitmen; nomor seri/foto tidak otomatis menyelesaikan satuan set scaffolding yang modular. |
+| [Artikel DJBK “Mengenal SIMPK”](https://binakonstruksi.pu.go.id/publikasi/karya-tulis/mengenal-simpk-sistem-digital-untuk-material-dan-peralatan-konstruksi-yang-lebih-transparan/), bagian “Apa Saja Isi dan Fitur SIMPK?”/“Pencatatan SDPK”; diakses 20 Oktober 2026 | Menjelaskan SIMPK sebagai bagian SIJK; membedakan input, evaluasi, status sementara/tetap/final/tercatat. Artikel membahas antara lain evaluasi pengadaan. | Artikel penjelasan, bukan aturan kelayakan BG001 atau alasan menyamakan validasi tender dengan asesmen SBU. Jangan menaikkan status data unggahan menjadi verifikasi final. |
+
+Halaman [pengumuman DJBK Permen PU 6/2025](https://binakonstruksi.pu.go.id/pengumuman/peraturan-menteri-pekerjaan-umum-republik-indonesia-nomor-6-tahun-2025/)
+menautkan PDF penerbit, tetapi penautan itu bukan klarifikasi rinci G4–G5,
+verifikasi keaslian salinan D, atau bukti pemicu operasional bagian 5.
+Buku 2021 dan tabel SIMPK tidak dipakai untuk menambah ambang SBU 2025/2026.
+
+### 8.2. G4 — pisahkan daftar kandidat, unit fisik, dan pilihan teknis
+
+| Skenario pembacaan, **bukan keputusan pemenuhan** | Apa yang sudah tertulis | Apa yang tetap ditahan |
+| --- | --- | --- |
+| Satu subklasifikasi BG001 K1/K2/K3 atau M | Minimum satu unit per subklasifikasi (P k.2.a–b; D 3.2.4), dengan rujukan nama jenis pada baris kualifikasi terkait P 18 atau 19. | **Tidak** satu unit *masing-masing nama* pada daftar. Jenis yang dipilih harus ditelaah kesesuaiannya, bukan otomatis semua nama sah bagi setiap pekerjaan. |
+| Satu subklasifikasi BG001 B | Minimum **dua unit**, bukan frasa “dua jenis” (P k.2.c; D 3.2.4). | Dua unit **jenis sama** belum dikonfirmasi dapat diterima, tetapi draf juga tidak menciptakan kewajiban dua jenis berbeda. Perlu jawaban apakah identitas/kapasitas dua unit itu masing-masing harus berbeda dan bisa dipakai bersamaan. |
+| `scaffolding` atau nama dengan garis miring | P 18–19 menyebut nama; SIMPK mengukur kapasitas scaffolding dan membedakan subvariannya (8.1). | Jangan menyamakan satu batang, satu frame, satu set, satu sistem, satu nomor pencatatan, meter, atau kilogram dengan “1 unit” tanpa definisi resmi yang relevan bagi BG001; jangan memecah entri dengan garis miring menjadi kewajiban membeli kedua nama. |
+| Jenis dan spesifikasi yang diajukan | P 18–19 tidak memberi kapasitas teknis per alat; buku/tabel SIMPK dapat membantu mengidentifikasi varian/kapasitas untuk telaah. | Jangan menetapkan kapasitas/jenis ideal sendiri, memakai spesifikasi tender sebagai ambang SBU, atau menyetarakan sinonim, varian, dan alat pengganti tanpa dasar penelaah. |
+
+### 8.3. G5 — matriks jalur penyediaan, bukti dan pencatatan
+
+| Jalur/isu | Pembacaan yang ditopang locator | Batas bukti dan hal yang masih perlu diputuskan |
+| --- | --- | --- |
+| Kecil (K1/K2/K3) vs M/B | P PDF/cetak 265 k.2, k.8–11 menyebut minimum dan pencatatan SIJK; D PDF 40/cetak 31 5.1.5.3–6 memperjelas **M/B dicatat di SIJK melalui SIMPK**, sementara **Kecil tidak wajib mencatat alat di SIMPK**. | Kecil tetap punya minimum dan kebutuhan pembuktian kelayakan; pengecualian SIMPK **bukan** pengecualian alat, izin bukti apa saja tanpa pemeriksaan, atau penghapusan SIJK untuk **komitmen**. Untuk M/B, status sementara/tetap/final/tercatat disebut sebagai kemungkinan pemenuhan pencatatan untuk penilaian, **bukan** semua status telah diverifikasi sama atau kepemilikan wajib. |
+| Alat tersedia melalui milik sendiri | P PDF/cetak 265 k.5–6 dan D PDF 40/cetak 31 5.1.5.1.a/2 memberi contoh bukti hak milik: faktur, akta, kuitansi, hibah, neraca aset, atau bukti sah lain. | Bukti yang diajukan harus dikaitkan ke alat, hak dan pemohon yang dinilai; salinan/unggahan saja bukan keabsahan atau verifikasi. Buku SIMPK PDF 57 menerangkan alur pemilik, bukan daftar tambahan universal syarat SBU. |
+| Sewa beli / sewa | P k.5/7 membolehkan keduanya dan menulis perjanjian dengan pemilik; D 5.1.5.1.b–c memperinci **sewa beli dengan Perusahaan Pembiayaan**, **sewa dengan pemilik alat**, sedangkan D 5.1.5.2.e juga mencantumkan perjanjian sewa beli pada kelompok “bukti hak milik”. | Jangan memaksa pembelian tunai, mencampur pihak sewa dengan pembiayaan, ataupun membaca pengelompokan D sebagai bukti sewa beli selalu berarti hak milik sudah beralih. Validitas dan waktu berlaku perjanjian serta kaitan dengan unit perlu telaah. |
+| Komitmen kesanggupan | P PDF/cetak 265 k.12–13 dan 266 k.14; D PDF 40–41/cetak 31–32 5.1.5.7–9: **jalur pemenuhan kemampuan** lewat pernyataan untuk menyediakan pada setiap pekerjaan selama masa berlaku SBU, **tercatat di SIJK**, ditandatangani PJBU. D PDF 66/cetak 57 bagian 21.A: format satu surat memilih Kecil/Menengah/Besar, menyatakan memiliki/sewa/sewa beli **saat pelaksanaan pekerjaan**. | Surat adalah bukti **komitmen**, bukan bukti unit sudah ada/dibeli/disewa atau tercatat di SIMPK. Jangan menghapus angka 1/1/2 unit; jangan pula memaksa bukti transaksi seluruh daftar sebelum memilih jalur yang sah. Sumber tidak membatasi jalur ini pada SBU pertama, tetapi kecukupan dan pengecekan saat pelaksanaan perlu penelaah. Jangan meminjam tenggat komitmen SMAP. |
+| Jenis sama untuk subklasifikasi lain | P PDF/cetak 265 k.4 dan D PDF 41/cetak 32 5.1.5.10: dapat dipakai untuk syarat peralatan utama **subklasifikasi lain paling banyak lima dalam satu klasifikasi yang sama**. | Tidak ada izin eksplisit penggunaan lintas klasifikasi/BUJK tanpa batas; jangan menyimpulkan 5 adalah total termasuk subklasifikasi asal atau 5 tambahan, ataupun alat yang sama boleh dihitung dua kali sebagai dua unit B dalam **satu** subklasifikasi. Periksa identitas, ketersediaan dan kapasitas nyata untuk penggunaan bersama. |
+
+Pemisahan yang harus dipertahankan: **(1) jenis kandidat**, **(2) jumlah
+unit minimum per subklasifikasi**, **(3) jalur kemampuan menyediakan**,
+**(4) bukti hak/perjanjian atau bukti komitmen**, **(5) pencatatan alat
+M/B pada SIJK melalui SIMPK**, dan **(6) pencatatan komitmen pada SIJK
+untuk jalur komitmen**. Yang satu tidak menggantikan semua yang lain.
+Konsekuensi spesifik per jenis permohonan belum disahkan.
+
+### 8.4. Pertanyaan siap ditelaah, bukan permintaan yang telah dikirim
+
+Mintakan jawaban **tertulis dengan locator sumber dan versi skema yang
+berlaku**, identitas/kompetensi penelaah serta cakupan jenis permohonan
+(baru/perubahan/perpanjangan) dan kualifikasi (Kecil/M/B). Bila belum ada
+dasar, catat “belum diputuskan”; jangan ubah ketidaktahuan menjadi
+persyaratan belanja atau otomatis lulus.
+
+1. **Unit/scaffolding (G4):** Untuk P 18–19 3.e dan P 265 k.2/D 30
+   3.2.4, apa definisi satu unit `scaffolding` BG001 per kualifikasi:
+   frame, set lengkap yang laik pakai, sistem, atau identitas alat lain?
+   Bagaimana membuktikan kuantitas, ketersediaan, kapasitas dan pemisahan
+   dua unit B bila komponennya modular/berbagi? Apakah SIMPK baris 122
+   (Meter) atau 207 (M/Kg) relevan untuk **identifikasi kapasitas saja**,
+   dan dokumen apa menghubungkan subvarian dengan nama BG001?
+2. **Dua unit dan pilihan jenis (G4):** Untuk B, bolehkah dua unit
+   independen dari **jenis yang sama**, atau harus dua jenis berlainan?
+   Bila ada ketentuan spesifikasi/kapasitas untuk tiap pilihan P 19,
+   mohon locator dan dasar yang berlaku pada BG001. Bagaimana menilai
+   nama bergaris miring/sinonim atau varian berbeda; apakah satu jenis
+   boleh dipilih dari daftar terkait tanpa mewajibkan seluruh daftar?
+3. **Lintas subklasifikasi (G5):** Pada P 265 k.4/D 41 5.1.5.10,
+   “subklasifikasi lain paling banyak 5” berarti lima **lainnya** selain
+   asal atau lima total? Apa bukti identitas, hak pakai, kapasitas dan
+   ketersediaan bila jenis/unit sama diklaim untuk beberapa
+   subklasifikasi **dalam satu klasifikasi**; adakah batas tambahan
+   untuk waktu pemakaian bersamaan? Tegaskan apakah klaim lintas
+   klasifikasi/BUJK dan dua hitungan unit B atas satu alat fisik ditolak.
+4. **Milik, sewa beli, sewa (G5):** Bagaimana P 265 k.6–7 dan D 40
+   5.1.5.1–2 dipertemukan untuk bukti sewa beli dengan perusahaan
+   pembiayaan, termasuk perbedaan pengelompokan “bukti hak milik”?
+   Bukti apa yang cukup untuk mengikat identitas setiap unit, hak pakai,
+   periode berlaku dan pihak terkait tanpa memaksa pemohon memiliki alat?
+5. **Komitmen vs alat (G5):** Untuk masing-masing Kecil, M dan B,
+   jenis permohonan apa yang dapat memakai P 265–266 k.12–14/D
+   40–41 5.1.5.7–9 dan format D 66 bagian 21.A? Bukti apa memastikan
+   surat PJBU **tercatat di SIJK**; kapan, oleh siapa dan dengan bukti apa
+   pemenuhan 1/1/2 unit diperiksa **saat pelaksanaan pekerjaan**?
+   Bagaimana dibedakan antara komitmen, perjanjian yang sudah berlaku,
+   alat yang tersedia, dan status pencatatan SIMPK?
+6. **Pencatatan dan pengecualian Kecil (G5):** Ketika memakai bukti
+   alat tersedia, bagaimana mengevaluasi Kecil yang **tidak wajib**
+   mencatat alat di SIMPK menurut D 40 5.1.5.5? Untuk M/B, status
+   SIMPK yang disebut D 5.1.5.6 mana yang diterima, dengan verifikasi
+   apa dan kapan? Jika memakai komitmen, apakah ada pencatatan SIMPK
+   terpisah saat alat disediakan, atau SIJK untuk surat cukup pada tahap
+   sertifikasi? Minta rujukan sebelum menganggap dua pencatatan identik.
+
+**Status:** G4–G5 diperdalam tetapi **tetap terbuka untuk penerapan**.
+Jawaban tersebut dan gerbang bagian 5 diperlukan sebelum spesifikasi
+aturan terpisah. Tidak ada daftar pengadaan atau validasi perusahaan
+yang dihasilkan dari telaah ini.
+
 ## Mengulang pemeriksaan
 
 ```sh
@@ -350,6 +459,10 @@ python .agents/scripts/review-sbu-source-pages.py attached_assets/KEP_DIRJEN_BK_
 # Tambahan adendum G1–G2:
 python .agents/scripts/review-sbu-source-pages.py attached_assets/KEP_DIRJEN_BK_281_STANDAR_SKEMA_SERTIFIKASI_26_AGUSTUS_2026_SU_1791292262823.pdf 38 39 83 84 85 95
 python .agents/scripts/review-sbu-source-pages.py attached_assets/permen-pu-6-2025_1791292204964.pdf 260
+# Tambahan adendum G4–G5:
+python .agents/scripts/review-sbu-source-pages.py attached_assets/permen-pu-6-2025_1791292204964.pdf 18 19 265 266
+python .agents/scripts/review-sbu-source-pages.py attached_assets/KEP_DIRJEN_BK_281_STANDAR_SKEMA_SERTIFIKASI_26_AGUSTUS_2026_SU_1791292262823.pdf 30 40 41 66
+# Buku SIMPK pelengkap di 8.1 memiliki locator PDF 12 dan 57 pada URL yang ditautkan.
 ```
 
 Tidak ada perubahan aplikasi sehingga tidak diperlukan restart workflow,
