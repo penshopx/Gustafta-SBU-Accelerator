@@ -1,0 +1,236 @@
+# Panduan Integrasi ke Replit — Prompt Build SBU Accelerator 2.0
+
+<aside>
+🧩
+
+Panduan ini menggabungkan Blueprint Kontraktor Otonom Gustafta Apps — Sistem Agentic AI (Hermes × MultiClaw-OpenClaw) dan Framework Gustafta SBU Accelerator 2.0 — Agentic AI untuk Persiapan SBU menjadi **prompt bertahap untuk Replit Agent**. Jalankan satu prompt per sesi, uji, lalu commit/checkpoint sebelum lanjut.
+
+</aside>
+
+## 1. Peta Integrasi
+
+| Dari Blueprint | Dari Framework | Modul di Aplikasi |
+| --- | --- | --- |
+| Ruang lingkup 73 subklasifikasi, Dasar Regulasi | Rule Engine berversi | **Referensi**: master subklasifikasi, KBLI, jabatan kerja SKK, regulasi |
+| Register SBU & Perizinan | Kasus Permohonan, Readiness Score | **Kasus** (sudah ada) + skor |
+| Agen HR & SKK, data SDM & Sertifikat | Tenaga Ahli Matcher | **Tenaga Ahli** |
+| Agen Finance & Termin | Financial Readiness Analyzer | **Keuangan** |
+| Register Alat, ISO 9001/37001 | Alat & Sistem Manajemen | **Alat & SM** |
+| Legal & Kontrak (skill perizinan-sbu) | Regulasi RAG + Drafting | **Asisten Regulasi**  • **Draf Dokumen** |
+| Hermes Commander | SBU Navigator | **Orkestrator** (server-side) |
+| Alert H-90 SBU/SKK | Compliance Tracker | **Pemantauan**  • pengingat terjadwal |
+| Tender Hunter | SBU × Tender Link | Fase akhir (opsional) |
+| OpenClaw Gateway (WhatsApp) | Kolektor Dokumen | **Webhook** ke layanan terpisah |
+| Matriks Approval, Audit log | Governance | **Peran & Audit** |
+
+## 2. Arsitektur di Replit
+
+| Komponen | Di Replit | Catatan |
+| --- | --- | --- |
+| Web app + API | Project yang sudah ada | Ikuti stack & auth yang sudah dipakai (/sign-in, /sign-up) |
+| Database | Replit PostgreSQL | Semua data kasus, aturan, temuan, audit |
+| File dokumen | **Ruang Simpan Gustafta** (via API) | Object Storage lokal hanya untuk artefak sementara (ZIP/DOCX) sebelum ditulis balik |
+| LLM | API key di **Secrets** | `LLM_API_KEY`, model bisa diganti lewat env |
+| Pengingat | Scheduled Deployment | Job harian untuk Compliance Tracker |
+| Hermes / OpenClaw | **VPS terpisah**, bukan Replit | Terhubung via webhook bertanda tangan (`AGENT_WEBHOOK_SECRET`) |
+
+<aside>
+⚠️
+
+OpenClaw dan Hermes adalah proses jangka panjang dengan kanal WhatsApp; lebih stabil di VPS. Aplikasi Replit tetap menjadi **sumber kebenaran**; agen eksternal hanya membaca/menulis lewat API dengan token per tenant.
+
+</aside>
+
+## 3. Skema Data Inti
+
+```sql
+companies(id, tenant_id, name, nib, npwp, category, akta_no, akta_date, kbli[], created_at)
+cases(id, company_id, type, qualification, status, readiness_score, rule_set_version, created_at)
+case_subclassifications(id, case_id, code, qualification, status)
+personnel(id, company_id, role, name, skk_no, jabatan_kerja, jenjang, skk_expiry)
+evidence(id, case_id, kind, source, file_key, extracted jsonb, consistency jsonb, status)
+regulations(id, code, title, replaces, effective_from, url, status)
+rules(id, rule_id, version, regulation_id, article, applies_to jsonb, check jsonb, severity, needs_human_review, reviewed_by, active)
+findings(id, case_id, rule_id, rule_version, severity, message, recommendation, needs_human_review)
+obligations(id, company_id, kind, due_date, status, reminded_at)
+ref_subclassifications(code, name, classification, nature, qualifications[])
+audit_log(id, actor, action, entity, entity_id, payload jsonb, at)
+```
+
+## 4. Prompt Replit Agent per Fase
+
+### Prompt 0 — Audit & Persiapan
+
+```
+Baca seluruh codebase aplikasi Gustafta SBU Accelerator ini. Jangan ubah apa pun dulu.
+Buat file docs/ARCHITECTURE.md berisi: stack, struktur folder, skema database saat ini,
+alur "Buka kasus -> Deklarasikan bukti -> Baca temuan awal", cara auth bekerja, dan
+daftar halaman/route. Tandai bagian yang perlu direfaktor agar logika kelayakan dipindah
+ke modul rule engine terpisah. Jangan memakai data dummy di produksi.
+```
+
+### Prompt 1 — Data Referensi & Regulasi
+
+```
+Tambahkan tabel ref_subclassifications, regulations, dan rules (lihat skema di docs).
+Buat seed:
+- regulations: UU 2/2017; PP 28/2025 (menggantikan PP 5/2021); Permen PU 6/2025
+  (menggantikan Permen PUPR 6/2021); Kepdirjen Bina Konstruksi 281/2026 (menggantikan
+  Kepdirjen 37/2025). Simpan url sumber dan status "aktif"/"dicabut".
+- ref_subclassifications: BG001-BG009, BS001-BS020, IN, KK, KP, PA, PB, PL dari file
+  seed/subklasifikasi.csv (akan saya unggah). Tandai BS013, BS014, BS015, BS018, BS019
+  hanya Menengah & Besar.
+Buat halaman admin /admin/referensi untuk melihat dan mengedit data ini (role admin saja).
+```
+
+### Prompt 2 — Rule Engine Berversi
+
+```
+Buat modul server/rules-engine yang deterministik (tanpa LLM):
+- Aturan disimpan di tabel rules dengan field: rule_id, version, regulation_id, article,
+  applies_to (jenis permohonan, kualifikasi), check (JSON logic), severity
+  (blocker/major/minor), needs_human_review, active.
+- Fungsi evaluateCase(caseId) mengembalikan daftar findings + readiness_score (0-100,
+  berbobot severity) dan menyimpan rule_set_version yang dipakai.
+- Setiap finding wajib menyimpan rule_id, rule_version, dan rujukan pasal.
+- Ganti logika temuan awal yang sudah ada agar memakai evaluateCase.
+- Tambahkan unit test untuk minimal 10 aturan contoh.
+Ambang angka (ekuitas, jenjang SKK, tenggat komitmen) hanya dari tabel rules, tidak boleh
+hardcode di kode atau prompt.
+```
+
+### Prompt 3 — Eligibility Simulator (Lead Magnet)
+
+```
+Buat halaman publik /cek-sbu tanpa login:
+form singkat (jenis usaha, ekuitas, penjualan tahunan, daftar tenaga ahli + jabatan kerja
++ jenjang SKK, peralatan, status ISO 9001/37001). Jalankan rules engine pada data sementara
+dan tampilkan matriks subklasifikasi x kualifikasi: Siap / Kurang / Tidak memenuhi, beserta
+alasan dan pasal. Tambahkan fitur "what-if" (tambah tenaga ahli/ubah ekuitas) dan tombol
+"Simpan sebagai ruang kerja" yang mengarah ke sign-up dan membuat kasus dari data form.
+Tampilkan disclaimer: penilaian awal, bukan keputusan LSBU. Pasang di hero landing page.
+```
+
+### Prompt 4 — Evidence dari Ruang Simpan Gustafta
+
+<aside>
+🔗
+
+Diganti: dokumen perusahaan disimpan dan diekstrak di Ruang Simpan Gustafta, bukan di SBU Accelerator. Detail kontrak API ada di Spesifikasi Integrasi Ruang Simpan (Gustafta) ↔ SBU Accelerator.
+
+</aside>
+
+```
+Integrasikan Ruang Simpan Gustafta sebagai sumber dokumen dan fakta perusahaan. Jangan membuat
+penyimpanan file sendiri untuk dokumen perusahaan.
+1. Buat modul server/integrations/gustafta: getFacts, listDocuments, getSignedUrl
+   (fase 1 API key per tenant; siapkan antarmuka agar mudah ganti ke OAuth).
+2. Halaman Pengaturan "Hubungkan Ruang Simpan" + uji koneksi + pilih perusahaan.
+3. Mapper facts -> companies, personnel, keuangan, alat, ISO; evidence.source=ruang_simpan
+   dengan document_id, version, hash, dan status fakta (tanpa menyalin file).
+4. Cross-check konsistensi nama, NIB, NPWP, alamat, tanggal antar fakta; tampilkan selisih merah.
+5. Checklist doc_type per subklasifikasi; yang kurang diberi tombol "Unggah ke Ruang Simpan"
+   (deep link dengan return_to), lalu sinkronkan ulang dan jalankan evaluateCase().
+6. Badge sumber & status (terekstrak/dikonfirmasi/terverifikasi). Mask NIK/NPWP.
+7. Deklarasi manual tetap tersedia jika belum terhubung. Catat semua aksi di audit_log.
+```
+
+### Prompt 5 — Mapper, Tenaga Ahli, Keuangan
+
+```
+Buat tiga panel di halaman kasus:
+(a) KBLI-Akta-Subklasifikasi Mapper: graf yang menunjukkan rantai KBLI di NIB -> maksud
+    tujuan akta -> subklasifikasi -> jabatan kerja SKK; tandai rantai yang putus dan urutan
+    perbaikannya.
+(b) Tenaga Ahli: daftar PJBU/PJTBU/PJSKBU, cek kesesuaian jabatan kerja & jenjang per
+    subklasifikasi dan kualifikasi, peringatan SKK kedaluwarsa, deklarasi rangkap jabatan.
+(c) Keuangan: hitung ekuitas dari neraca terekstrak, tampilkan kualifikasi yang didukung dan
+    apakah perlu laporan audit KAP, plus checklist untuk akuntan.
+Semua status berasal dari rules engine; LLM hanya membuat penjelasan teks.
+```
+
+### Prompt 6 — Agen: Navigator, Regulasi RAG, Drafting, Asesor Simulasi
+
+```
+Buat lapisan agen di server/agents dengan satu orkestrator "SBU Navigator" dan tool calling:
+- tools: getCase, evaluateCase, listFindings, searchRegulations, draftDocument,
+  listMissingEvidence. Agen TIDAK boleh mengubah status kelayakan.
+- Regulasi RAG: indeks potongan teks regulasi resmi (tabel regulations + file PDF) di
+  pgvector; jawaban wajib menyertakan kutipan pasal; jika tidak ada sumber, jawab tidak tahu.
+- Drafting: hasilkan DOCX surat pernyataan komitmen, surat penunjukan PJTBU/PJSKBU,
+  daftar peralatan, ringkasan permohonan dari data kasus; wajib ditinjau pengguna.
+- Asesor Simulasi: review seluruh kasus, kelompokkan temuan per severity, lalu buat
+  "Submission Pack" (ZIP) berisi file bernama rapi + checklist isian OSS/SIJK.
+Batasi langkah agen (maks 8), log token & biaya per kasus, dan tampilkan chat panel
+"Tanya Navigator" di halaman kasus. Jangan pernah meminta atau menyimpan kredensial OSS.
+```
+
+### Prompt 7 — Compliance Tracker & Peran
+
+```
+(a) Setelah pengguna menandai "SBU terbit", buat obligations otomatis dari rules
+    (komitmen alat, SMM, SMAP, masa berlaku SBU & SKK). Buat job harian (Scheduled
+    Deployment) yang mengirim pengingat H-90, H-30, H-7 via email; siapkan endpoint
+    /api/notify/whatsapp untuk layanan WA eksternal.
+(b) Multi-tenant & peran: owner, preparer, reviewer, konsultan (bisa kelola banyak
+    perusahaan). Reviewer wajib menyetujui temuan bertanda needs_human_review.
+(c) Halaman /konsultan berisi daftar semua klien, readiness score, dan tenggat terdekat.
+```
+
+### Prompt 8 — Integrasi Hermes / OpenClaw (eksternal)
+
+```
+Buat API terautentikasi untuk agen eksternal:
+- POST /api/agent/webhook (HMAC dengan AGENT_WEBHOOK_SECRET) untuk menerima event
+  evidence.received (file dari WhatsApp), message.inbound.
+- GET /api/agent/cases/:id/missing-evidence untuk daftar dokumen yang harus diminta.
+- Event keluar: case.findings_updated, obligation.due, regulation.updated.
+Token per tenant, scope minimal, rate limit, dan semua panggilan dicatat di audit_log.
+Sertakan docs/AGENT_API.md untuk konfigurasi skill OpenClaw "kolektor-dokumen-sbu".
+```
+
+## 5. Skill OpenClaw: Kolektor Dokumen SBU
+
+```markdown
+---
+name: kolektor-dokumen-sbu
+description: Minta dan terima dokumen persiapan SBU dari klien lewat WhatsApp, lalu kirim ke SBU Accelerator.
+---
+# Langkah
+1. Ambil daftar dokumen kurang: GET /api/agent/cases/{id}/missing-evidence.
+2. Kirim pesan WA dengan template yang disetujui (maks 3 dokumen per pesan).
+3. Terima file/foto, kirim ke POST /api/agent/webhook (evidence.received).
+4. Konfirmasi ke klien dokumen mana yang sudah diterima.
+# Aturan
+- Jangan menilai kelayakan; itu tugas rules engine.
+- Jangan meminta kata sandi atau akun OSS.
+- Eskalasi ke preparer jika klien bertanya hal di luar daftar dokumen.
+```
+
+## 6. Secrets yang Dibutuhkan
+
+| Secret | Fungsi |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL Replit |
+| `LLM_API_KEY`, `LLM_MODEL` | Ekstraksi, penjelasan, drafting |
+| `EMBEDDING_MODEL` | RAG regulasi |
+| `AGENT_WEBHOOK_SECRET` | Verifikasi webhook Hermes/OpenClaw |
+| `SMTP_*` atau penyedia email | Pengingat |
+
+## 7. Checklist Uji Sebelum Rilis
+
+- [ ]  Kasus contoh menghasilkan temuan yang sama pada dua kali evaluasi (deterministik).
+- [ ]  Setiap temuan menampilkan pasal & versi aturan.
+- [ ]  Dokumen bertentangan (nama/NPWP beda) terdeteksi.
+- [ ]  Agen menolak menjawab regulasi tanpa sumber.
+- [ ]  Pengguna tenant A tidak bisa melihat data tenant B.
+- [ ]  Disclaimer "bukan keputusan LSBU" tampil di simulator, laporan, dan Submission Pack.
+- [ ]  Pengingat terjadwal terkirim di lingkungan staging.
+
+## 8. Urutan Kerja yang Disarankan
+
+1. Prompt 0–2 (fondasi) → rilis internal.
+2. Prompt 3 (simulator) → rilis publik untuk menarik pengguna.
+3. Prompt 4–5 → rilis paket Pro.
+4. Prompt 6–7 → rilis agentic + konsultan.
+5. Prompt 8 setelah VPS Hermes/OpenClaw siap.
