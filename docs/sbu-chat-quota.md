@@ -1,5 +1,9 @@
 # Kebijakan kuota Asisten peran SBU
 
+Pembatas biaya gabungan seluruh akun dan fitur dijelaskan terpisah di
+[`ai-operational-budget.md`](ai-operational-budget.md). Kuota akun di bawah
+tetap berlaku dan tidak menggantikan anggaran operasional tersebut.
+
 Kebijakan ini hanya berlaku pada Asisten peran (`/openai/sbu/messages`), bukan
 Klinik Konsultasi atau Bedah Dokumen. Tidak mengubah paket pembayaran, profil,
 atau akun pengguna.

@@ -6,8 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SbuChatQuota } from './sbuChatQuota';
+import type { SbuChatUnavailableCode } from './sbuChatUnavailableCode';
 
 export interface SbuChatUnavailable {
   error: string;
+  code?: SbuChatUnavailableCode;
   quota?: SbuChatQuota;
 }

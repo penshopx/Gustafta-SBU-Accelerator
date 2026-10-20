@@ -21,6 +21,7 @@ import type {
 
 import type {
   AddEvidence409,
+  AiUnavailable,
   Assessment,
   CaseDocument,
   CaseInput,
@@ -1777,7 +1778,7 @@ return customFetch<Consultation>(getSendConsultationMessageUrl(id),
 
 export const getSendConsultationMessageMutationKey = () => ['sendConsultationMessage'] as const;
 
-export const getSendConsultationMessageMutationOptions = <TError = ErrorType<unknown>,
+export const getSendConsultationMessageMutationOptions = <TError = ErrorType<AiUnavailable>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendConsultationMessage>>, TError,SendConsultationMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof sendConsultationMessage>>, TError,SendConsultationMessageMutationVariables, TContext> => {
 
@@ -1806,10 +1807,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type SendConsultationMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sendConsultationMessage>>>
     export type SendConsultationMessageMutationBody = BodyType<ConsultationMessageInput>
-    export type SendConsultationMessageMutationError = ErrorType<unknown>
+    export type SendConsultationMessageMutationError = ErrorType<AiUnavailable>
     export type SendConsultationMessageMutationVariables = {id: string;data: BodyType<ConsultationMessageInput>}
 
-    export const useSendConsultationMessage = <TError = ErrorType<unknown>,
+    export const useSendConsultationMessage = <TError = ErrorType<AiUnavailable>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendConsultationMessage>>, TError,SendConsultationMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof sendConsultationMessage>>,
@@ -2092,7 +2093,7 @@ return customFetch<DocumentAnalysis>(getAnalyzeCaseDocumentUrl(id,documentId),
 
 export const getAnalyzeCaseDocumentMutationKey = () => ['analyzeCaseDocument'] as const;
 
-export const getAnalyzeCaseDocumentMutationOptions = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+export const getAnalyzeCaseDocumentMutationOptions = <TError = ErrorType<void | FormOwnerMismatchResponse | AiUnavailable>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeCaseDocument>>, TError,AnalyzeCaseDocumentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof analyzeCaseDocument>>, TError,AnalyzeCaseDocumentMutationVariables, TContext> => {
 
@@ -2121,10 +2122,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type AnalyzeCaseDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof analyzeCaseDocument>>>
     export type AnalyzeCaseDocumentMutationBody = BodyType<DocumentAnalysisInput>
-    export type AnalyzeCaseDocumentMutationError = ErrorType<void | FormOwnerMismatchResponse>
+    export type AnalyzeCaseDocumentMutationError = ErrorType<void | FormOwnerMismatchResponse | AiUnavailable>
     export type AnalyzeCaseDocumentMutationVariables = {id: number;documentId: string;data: BodyType<DocumentAnalysisInput>}
 
-    export const useAnalyzeCaseDocument = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    export const useAnalyzeCaseDocument = <TError = ErrorType<void | FormOwnerMismatchResponse | AiUnavailable>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof analyzeCaseDocument>>, TError,AnalyzeCaseDocumentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof analyzeCaseDocument>>,

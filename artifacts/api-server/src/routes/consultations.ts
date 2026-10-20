@@ -12,6 +12,7 @@ import { CHAT_DISCLAIMER, CHAT_MODES } from "../lib/sbu-chat-policy";
 import { specialistCatalog, type SpecialistId } from "../lib/sbu-chat-specialists";
 import { generateSbuChatAnswer } from "./sbu-chat";
 import { consultationAnalysis, ConsultationSourceError, MAX_CONSULTATION_CONTEXT, sourceErrorMessage } from "../lib/consultation-analysis";
+import { AiBudgetError, reserveAiBudget, type ReserveAiBudget } from "../lib/ai-budget";
 
 type Mode = keyof typeof CHAT_MODES;
 type Generate = typeof generateSbuChatAnswer;
@@ -33,7 +34,7 @@ function summary(row: typeof consultationsTable.$inferSelect) {
   });
 }
 
-export function createConsultationsRouter(generate: Generate = generateSbuChatAnswer): IRouter {
+export function createConsultationsRouter(generate: Generate = generateSbuChatAnswer, reserveBudget: ReserveAiBudget = reserveAiBudget): IRouter {
   const router: IRouter = Router();
   const slots = new Map<string, { since: number; count: number; busy: boolean }>();
   router.use((req, res, next) => {
@@ -191,6 +192,8 @@ export function createConsultationsRouter(generate: Generate = generateSbuChatAn
     const disconnect = () => { if (!res.writableEnded) controller.abort(); };
     res.on("close", disconnect);
     try {
+      await reserveBudget("consultation");
+      controller.signal.throwIfAborted();
       const content = input.data.content.trim();
       const history = row.messages.slice(-18).map(m => ({ role: m.role, content: m.content }));
       const answer = await Promise.race([
@@ -213,9 +216,11 @@ export function createConsultationsRouter(generate: Generate = generateSbuChatAn
         return;
       }
       if (!res.destroyed) res.json(serialize(saved));
-    } catch {
+    } catch (error) {
       // Never log private questions or provider payloads. No user message is saved on AI failure.
-      if (!res.destroyed) res.status(503).json({ error: "Jawaban belum tersedia; pertanyaan belum disimpan. Periksa riwayat sebelum mencoba lagi." });
+      if (!res.destroyed) res.status(503).json(error instanceof AiBudgetError
+        ? { error: error.message, code: error.code }
+        : { error: "Jawaban belum tersedia; pertanyaan belum disimpan. Periksa riwayat sebelum mencoba lagi." });
     } finally {
       clearTimeout(timer); res.off("close", disconnect); slot.busy = false;
     }

@@ -66,7 +66,7 @@ test("private consultations persist, isolate owners, use opted-in case context a
       sent.push({ messages, context });
       if (fail) throw Error("synthetic provider outage");
       return "Jawaban draf: tinjau bersama penelaah.";
-    }));
+    }, async () => {}));
     app.use("/api", createDocumentAnalysisRouter(async () => { throw Error("must not analyze original"); }));
     server = app.listen(0, "127.0.0.1");
     await new Promise(resolve => server.once("listening", resolve));

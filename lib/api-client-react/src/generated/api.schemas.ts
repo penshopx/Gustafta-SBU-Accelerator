@@ -692,8 +692,30 @@ export interface SbuChatLimitError {
   quota: SbuChatQuota;
 }
 
+export type AiUnavailableCode = typeof AiUnavailableCode[keyof typeof AiUnavailableCode];
+
+
+export const AiUnavailableCode = {
+  ai_budget_exhausted: 'ai_budget_exhausted',
+  ai_budget_unavailable: 'ai_budget_unavailable',
+} as const;
+
+export interface AiUnavailable {
+  error: string;
+  code?: AiUnavailableCode;
+}
+
+export type SbuChatUnavailableCode = typeof SbuChatUnavailableCode[keyof typeof SbuChatUnavailableCode];
+
+
+export const SbuChatUnavailableCode = {
+  ai_budget_exhausted: 'ai_budget_exhausted',
+  ai_budget_unavailable: 'ai_budget_unavailable',
+} as const;
+
 export interface SbuChatUnavailable {
   error: string;
+  code?: SbuChatUnavailableCode;
   quota?: SbuChatQuota;
 }
 

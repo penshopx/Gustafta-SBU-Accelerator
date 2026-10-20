@@ -7,6 +7,8 @@
  */
 
 export * from './addEvidence409';
+export * from './aiUnavailable';
+export * from './aiUnavailableCode';
 export * from './assessment';
 export * from './assessmentStatus';
 export * from './calendarDay';
@@ -111,6 +113,7 @@ export * from './sbuChatSourceVersion';
 export * from './sbuChatSpecialist';
 export * from './sbuChatSpecialistId';
 export * from './sbuChatUnavailable';
+export * from './sbuChatUnavailableCode';
 export * from './skkCertificate';
 export * from './skkCertificateDateStatus';
 export * from './skkCertificateInput';

@@ -6,6 +6,7 @@ import { sendSbuChatMessage, useGetSbuChatQuota, getGetSbuChatQuotaQueryKey, use
 import { useAccountReadOptions, useFormMutationOptions } from '@/components/account-queries';
 import { ChatCitations, chatAnswerForCopy } from './chat-citations';
 import { ChatQuotaNotice, chatLimitMessage, chatQuotaFromError } from './chat-quota';
+import { aiBudgetErrorMessage } from '@/lib/ai-budget-error';
 
 type Mode = SbuChatInput['mode'];
 type SpecId = SbuChatSpecialist['id'];
@@ -27,6 +28,8 @@ export const defaultModeForRole = (role?: string): Mode => (role && ROLE_DEFAULT
 const MAX_USER = 4000, MAX_MSGS = 20, MAX_TOTAL = 40000, TIMEOUT_MS = 80000;
 
 const errorFor = (e: unknown): string => {
+  const budgetMessage = aiBudgetErrorMessage(e);
+  if (budgetMessage) return budgetMessage;
   const status = (e as { status?: number } | null)?.status;
   if (status === 401) return 'Sesi Anda berakhir atau tidak valid. Muat ulang halaman atau masuk kembali.';
   if (status === 409) return 'Akun aktif tidak cocok dengan sesi ini. Muat ulang halaman sebelum melanjutkan.';
@@ -112,7 +115,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
       const errorQuota = chatQuotaFromError(e, expectedUserId);
       if (errorQuota) queryClient.setQueryData(getGetSbuChatQuotaQueryKey(), errorQuota);
       setError(timedOut.current ? 'Permintaan melebihi 80 detik dan dihentikan. Draf dipertahankan; percobaan yang diterima tetap memakai kuota.' :
-        errorFor(e) + (errorQuota && (e as { status?: number }).status === 503 ? ' Percobaan ini tetap memakai kuota karena sudah dikirim ke AI.' : ''));
+        errorFor(e) + (errorQuota && (e as { status?: number }).status === 503 ? ' Percobaan yang telah dicadangkan tetap memakai kuota akun.' : ''));
     } finally {
       if (ctrl.current === c) { abort(); setLoading(false); }
       void queryClient.invalidateQueries({ queryKey: getGetSbuChatQuotaQueryKey() });

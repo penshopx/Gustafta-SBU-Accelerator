@@ -15,10 +15,11 @@ import { documentStorage } from "../lib/document-storage";
 import { ANALYSIS_DISCLAIMER, ANALYSIS_MODEL, AnalysisFormatError, MAX_ANALYSIS_BYTES, analyzeDocumentBytes } from "../lib/document-analysis";
 import { prepareAnalysisPayload, sourcePageCount, sourceRevision } from "../lib/document-analysis-pages";
 import { MAX_DOCUMENT_BYTES } from "../lib/document-validation";
+import { AiBudgetError, reserveAiBudget, type ReserveAiBudget } from "../lib/ai-budget";
 
 type Generate = (bytes: Buffer, contentType: string, input: DocumentAnalysisInput, signal: AbortSignal) => Promise<DocumentAnalysisResult>;
 // Real SBU auth + immutable form owner middleware must precede this router.
-export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumentBytes): IRouter {
+export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumentBytes, reserveBudget: ReserveAiBudget = reserveAiBudget): IRouter {
   const router: IRouter = Router();
   const active = new Set<string>();
   const limits = new Map<string, { since: number; count: number }>();
@@ -127,6 +128,8 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
         const bytes = await readSource(document);
         const payload = await prepareAnalysisPayload(bytes, document.contentType, input.data.pages, controller.signal);
         controller.signal.throwIfAborted();
+        await reserveBudget("document_analysis");
+        controller.signal.throwIfAborted();
         const result = AnalyzeCaseDocumentResponse.shape.result.parse(
           await generate(payload.bytes, document.contentType, input.data, controller.signal));
         controller.signal.throwIfAborted();
@@ -158,6 +161,10 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
       res.status(201).json(AnalyzeCaseDocumentResponse.parse({ ...row, disclaimer: ANALYSIS_DISCLAIMER }));
     } catch (error) {
       // Do not log bytes, extracted information, model output, prompts or provider errors.
+      if (error instanceof AiBudgetError) {
+        if (!res.destroyed) res.status(503).json({ error: error.message, code: error.code });
+        return;
+      }
       if (!res.destroyed) res.status(error instanceof AnalysisFormatError ? 422 : 503).json({
         error: error instanceof AnalysisFormatError
           ? "Pilihan halaman tidak dapat dibedah. Pilih 1–10 halaman yang ada; payload hasil maksimal 4 MiB. PDF harus dapat dibuka dan tidak terproteksi."

@@ -324,6 +324,11 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Consultation" }
+        "503":
+          description: Operational AI budget exhausted/unverifiable or provider unavailable; no message saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiUnavailable" }
   /documents:
     get:
       operationId: listDocumentVault
@@ -415,7 +420,11 @@ paths:
         "409": { $ref: "#/components/responses/FormOwnerMismatch" }
         "422": { description: File exceeds analysis limits or cannot be read }
         "429": { description: Analysis limit reached }
-        "503": { description: AI unavailable or result could not be stored }
+        "503":
+          description: Operational AI budget exhausted/unverifiable, AI unavailable or result could not be stored
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AiUnavailable" }
   /cases/{id}/documents/{documentId}/analyses/{analysisId}:
     delete:
       operationId: deleteDocumentAnalysis
@@ -526,7 +535,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/SbuChatLimitError" }
         "503":
-          description: AI provider unavailable; no fabricated reply
+          description: Operational AI budget exhausted/unverifiable or AI provider unavailable; no fabricated reply
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SbuChatUnavailable" }
@@ -1418,11 +1427,22 @@ components:
         error: { type: string }
         code: { type: string, enum: [chat_busy, chat_minute_limit, chat_daily_limit] }
         quota: { $ref: "#/components/schemas/SbuChatQuota" }
+    AiUnavailable:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+        code:
+          type: string
+          enum: [ai_budget_exhausted, ai_budget_unavailable]
     SbuChatUnavailable:
       type: object
       required: [error]
       properties:
         error: { type: string }
+        code:
+          type: string
+          enum: [ai_budget_exhausted, ai_budget_unavailable]
         quota: { $ref: "#/components/schemas/SbuChatQuota" }
     SbuChatReply:
       type: object

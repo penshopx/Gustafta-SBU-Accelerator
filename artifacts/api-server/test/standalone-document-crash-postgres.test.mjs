@@ -63,7 +63,7 @@ async function bundleChild(temp) {
             logger: `export const logger = {info(){}, warn(){}};`,
             analysis: `import {createDocumentAnalysisRouter} from "../src/routes/document-analysis";
               import {generate} from ${JSON.stringify(child)};
-              export default createDocumentAnalysisRouter(generate);`,
+              export default createDocumentAnalysisRouter(generate, async () => {});`,
           }[path], loader: "ts", resolveDir: dir,
         }));
       },

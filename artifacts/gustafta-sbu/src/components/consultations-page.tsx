@@ -10,6 +10,7 @@ import {
 import { useAccountReadOptions, useFormMutationOptions } from '@/components/account-queries';
 import { ErrorState, Loading } from '@/components/request-states';
 import { ConsultationAnalysisPicker, type AnalysisChoice } from './consultation-analysis-picker';
+import { aiBudgetErrorMessage } from '@/lib/ai-budget-error';
 
 type Mode = CreateConsultationInput['mode'];
 const MODES: { id: Mode; label: string; desc: string }[] = [
@@ -25,6 +26,8 @@ const MAX = 4000;
 const fmt = (s: string) => { const d = new Date(s); return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }); };
 const statusOf = (e: unknown) => (e as { status?: number } | null)?.status;
 const sendError = (e: unknown) => {
+  const budgetMessage = aiBudgetErrorMessage(e);
+  if (budgetMessage) return budgetMessage;
   const s = statusOf(e);
   if (s === 401) return 'Sesi Anda berakhir atau tidak valid. Muat ulang halaman atau masuk kembali.';
   if (s === 403) return 'Akun aktif tidak cocok dengan sesi ini. Muat ulang halaman sebelum melanjutkan.';

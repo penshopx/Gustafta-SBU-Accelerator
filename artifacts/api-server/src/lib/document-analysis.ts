@@ -3,8 +3,9 @@ import { AnalyzeCaseDocumentResponse, type DocumentAnalysisInput, type DocumentA
 import { sbuChatSystemPrompt } from "./sbu-chat-policy";
 import { CHAT_DISCLAIMER } from "./sbu-chat-policy";
 import { AnalysisFormatError, MAX_ANALYSIS_BYTES } from "./document-analysis-pages";
+import { BUDGET_MODEL, BUDGET_OUTPUT_TOKENS } from "./ai-budget-policy";
 export { AnalysisFormatError, MAX_ANALYSIS_BYTES } from "./document-analysis-pages";
-export const ANALYSIS_MODEL = "gpt-5.6-terra";
+export const ANALYSIS_MODEL = BUDGET_MODEL;
 export const ANALYSIS_DISCLAIMER = `${CHAT_DISCLAIMER} Hasil ekstraksi dan lokasi sumber adalah indikasi AI yang perlu dicocokkan dengan dokumen asli. Tidak mengubah bukti atau penilaian kasus.`;
 
 export async function analyzeDocumentBytes(
@@ -23,7 +24,7 @@ export async function analyzeDocumentBytes(
     ? { type: "file" as const, file: { filename: "dokumen.pdf", file_data: `data:application/pdf;base64,${bytes.toString("base64")}` } }
     : { type: "image_url" as const, image_url: { url: `data:${contentType};base64,${bytes.toString("base64")}` } };
   const response = await openai.chat.completions.create({
-    model: ANALYSIS_MODEL, max_completion_tokens: 8192,
+    model: ANALYSIS_MODEL, max_completion_tokens: BUDGET_OUTPUT_TOKENS,
     response_format: { type: "json_object" },
     messages: [
       { role: "system", content: `${sbuChatSystemPrompt("pendamping")}

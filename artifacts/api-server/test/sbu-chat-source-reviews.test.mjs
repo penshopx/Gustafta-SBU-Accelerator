@@ -140,7 +140,7 @@ test("review API authenticates actor and owner, fails closed without allowlist, 
     read: async () => ({}), finish: async () => ({}) };
   const app = express();
   app.use(express.json());
-  app.use(createSbuChatRouter(async () => raw(replacement.citations[0].id), quota, store));
+  app.use(createSbuChatRouter(async () => raw(replacement.citations[0].id), quota, store, async () => {}));
   const listener = app.listen(0, "127.0.0.1");
   await new Promise(resolve => listener.once("listening", resolve));
   const url = `http://127.0.0.1:${listener.address().port}/openai/sbu/source-reviews`;
@@ -201,7 +201,7 @@ test("chat route reads decisions for each request and rejects retired IDs/histor
   app.use(createSbuChatRouter(async (_mode, _messages, _signal, _specialist, _context, sources) => {
     providerCalls++;
     return generate(sources);
-  }, quotas, live));
+  }, quotas, live, async () => {}));
   const listener = app.listen(0, "127.0.0.1");
   await new Promise(resolve => listener.once("listening", resolve));
   const url = `http://127.0.0.1:${listener.address().port}/openai/sbu/messages`;

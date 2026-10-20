@@ -85,7 +85,7 @@ async function server(generate, run) {
   app.use(createSbuChatRouter(async (...args) => {
     const result = await generate(...args);
     return JSON.stringify(typeof result === "string" ? { answer: result, citationIds: [] } : result);
-  }));
+  }, undefined, undefined, async () => {}));
   const listener = app.listen(0, "127.0.0.1");
   await new Promise((resolve) => listener.once("listening", resolve));
   const url = `http://127.0.0.1:${listener.address().port}/openai/sbu/messages`;
@@ -318,7 +318,7 @@ test("two HTTP instances share daily limits, charge failed attempts, disable SDK
     const app = express();
     app.use(express.json());
     app.use((req, _res, next) => { req.testUser = req.get("x-test-identity"); next(); });
-    app.use(createSbuChatRouter(provider, store));
+    app.use(createSbuChatRouter(provider, store, undefined, async () => {}));
     const listener = app.listen(0, "127.0.0.1");
     listeners.push(listener);
     await new Promise(resolve => listener.once("listening", resolve));

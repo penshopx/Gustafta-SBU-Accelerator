@@ -78,7 +78,7 @@ test("standalone profiles/documents isolate owners and preserve records after st
             ` : path === "auth" ? `export const getAuth = req => ({ userId: req.get("x-test-user") ?? null });`
               : path === "analysis-router" ? `
               import {createDocumentAnalysisRouter} from ${JSON.stringify(join(dir, "../src/routes/document-analysis.ts"))};
-              export default createDocumentAnalysisRouter(globalThis.__standaloneGenerate);
+              export default createDocumentAnalysisRouter(globalThis.__standaloneGenerate, async () => {});
             ` : `
               import { Readable } from "node:stream";
               export class DocumentValidationError extends Error {}

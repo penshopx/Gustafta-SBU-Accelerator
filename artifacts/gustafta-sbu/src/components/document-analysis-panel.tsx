@@ -12,6 +12,7 @@ import { useFormMutationOptions, useAccountReadOptions } from './account-queries
 import { SimpleModal, categoryLabels } from './document-metadata-dialog';
 import { Loading, ErrorState } from './request-states';
 import { parseAnalysisPages } from './document-analysis-selection';
+import { aiBudgetErrorMessage } from '@/lib/ai-budget-error';
 
 const AI_LIMIT = 4194304;
 const TIMEOUT = 90000;
@@ -21,6 +22,8 @@ const focusLabels: Record<DocumentAnalysisInput['focus'], string> = {
 const focusKeys = Object.keys(focusLabels) as DocumentAnalysisInput['focus'][];
 
 function analysisError(e: unknown): string {
+  const budgetMessage = aiBudgetErrorMessage(e);
+  if (budgetMessage) return budgetMessage;
   const s = (e as { status?: number } | null)?.status;
   if (s === 401) return 'Sesi Anda berakhir. Masuk kembali; pertanyaan Anda tetap tersimpan di layar ini.';
   if (s === 409) return 'Permintaan ditolak karena akun atau dokumen tidak sesuai. Muat ulang halaman lalu coba lagi.';
