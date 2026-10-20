@@ -103,8 +103,9 @@ kualifikasi. Tidak menambah batas bawah K1 atau batas atas B yang tidak tertulis
   merujuk penjelasan lampiran. Lampiran kini diperiksa visual pada D PDF
   83–85/cetak 74–76; contoh BG001 membatasi pembacaan “masa berlakunya
   SBU” sebagai satu periode terakhir saja. Hubungan operasional kedua
-  jendela tersebut **masih memerlukan telaah**, bukan alasan mengarang
-  masa pengamatan atau menolak otomatis. Lihat adendum G1–G2 di bawah.
+  jendela tersebut **belum disahkan untuk penerapan**, bukan alasan
+  mengarang masa pengamatan atau menolak otomatis. Lihat adendum
+  bagian 7 untuk G1–G2.
 
 ## 3. Matriks jumlah dan jenjang per peran
 
@@ -185,8 +186,8 @@ Pembacaan tabel ini tidak memenuhi gerbang tersebut.
 
 | ID | Gap atau ambiguitas | Locator pemicu | Yang perlu diperiksa sebelum dipakai |
 | --- | --- | --- | --- |
-| G1 | Lampiran penjelasan telah diperiksa visual; hubungan dua periode/6 tahun, periode pertama, dan “masa berlakunya SBU” masih terbuka untuk telaah penerapan. | P PDF/cetak 260 h.1.a–c/e/f; D PDF 38–39/cetak 29–30 5.1.2.1–6/21; D PDF 83–85/cetak 74–76 bagian I | Gunakan adendum G1 untuk membedakan contoh BG001, batas waktu, dan pertanyaan yang belum terjawab. Jangan menolak perpanjangan otomatis. |
-| G2 | Alokasi kontrak menurut major item/RAB dan larangan penggunaan ulang terbaca, tetapi unit pengalaman, batas alokasi dan histori pemakaian belum diputuskan. | P PDF/cetak 260 h.1.a–b, h.2.b; D PDF 38/cetak 29 5.1.2.7–14 | Gunakan adendum G2 untuk telaah kontrak/bagian kontrak, porsi KSO, tahun jamak dan hitung ganda. Tabel angka bukan formula alokasi atau pengecualian otomatis untuk BUJKN baru. |
+| G1 | Jendela pengalaman perpanjangan: dua periode/6 tahun versus “masa berlakunya SBU”; lampiran sudah ditelaah visual, penerapan belum disahkan. | P PDF/cetak 260 h.1.c/e/f; D PDF 38–39/cetak 29–30 5.1.2.3–6/21; D PDF 83–85/cetak 74–76 bagian I | Adendum 7.1–7.2 mencatat diagram BG001 dan pertanyaan per jenis permohonan. Jangan menolak perpanjangan otomatis atau menganggap dua periode sebagai masa berlaku satu SBU. |
+| G2 | Unit penjualan per BUJK versus pembuktian/akumulasi per subklasifikasi; major item dan larangan penggunaan ulang pengalaman. | P PDF/cetak 260 h.1–2; D PDF 38/cetak 29 5.1.2.7–14; D PDF 95/cetak 86 butir 1–4 | Adendum 7.3–7.4 membedakan alokasi, porsi KSO, tahun jamak dan penggunaan ulang yang belum diputuskan. Tabel angka bukan formula alokasi atau pengecualian otomatis untuk BUJKN baru. |
 | G3 | Daftar kesesuaian TKK belum memetakan setiap jenjang K1–B ke jabatan kerja/SKK yang diakui dan validitasnya. | P PDF/cetak 18 angka 3.c–d; 263–264 j.2.b; D PDF 29–30/cetak 20–21 | Periksa acuan jabatan kerja, penerbit/masa berlaku SKK, tenaga tetap serta hak rangkap. Jangan membuat jenjang baru atau menyatakan semua pilihan memiliki semua jenjang. |
 | G4 | Pemilihan jenis/spesifikasi alat dan cara menghitung unit, khususnya B dua unit, scaffolding, serta bentuk nama dengan garis miring. | P PDF/cetak 18–19 angka 3.e; 265 k.2; D PDF 30/cetak 21 3.2.4 | Penelaah skema menentukan bukti/unit/jenis yang cukup; tidak menganggap seluruh daftar wajib atau dua jenis selalu wajib. |
 | G5 | Jalur komitmen vs jumlah alat, beda pengelompokan bukti sewa beli, pencatatan Kecil/komitmen SIJK, serta batas “subklasifikasi lain paling banyak 5”. | P PDF/cetak 265–266 k.4–14; D PDF 40–41/cetak 31–32 5.1.5; PDF 66/cetak 57 | Minta keputusan telaah tertulis tentang jalur bukti/pencatatan dan saat pemenuhan. SIMPK alat dan SIJK komitmen bukan kewajiban yang identik; jangan memaksa beli atau menghapus jumlah unit. |
@@ -198,142 +199,157 @@ terbuka untuk telaah penerapan. Katalog menyeluruh, kelanjutan PP I.H untuk
 Besar/asing, dan ketentuan lain (termasuk SMAP/administrasi) tidak dinyatakan
 lengkap oleh dokumen ini. Hasil BG001 tidak disebarkan ke seluruh katalog.
 
-## Adendum draf G1–G2 — periode dan alokasi pengalaman BG001 BUJKN
+## 7. Adendum G1–G2 — periode dan alokasi pengalaman BG001 BUJKN
 
-**Status:** pemeriksaan visual lanjutan atas salinan lokal, 20 Oktober
-2026; bukan persetujuan ahli, verifikasi status hukum terkini, aturan aktif,
-atau keputusan perpanjangan. Hanya BG001 pada BUJKN. Kode lain yang tampil
-pada ilustrasi disebut sebagai konteks pembacaan, bukan perluasan matriks.
-Nomor PDF di bawah 1-based; nomor cetak dibaca dari gambar halaman.
+Adendum telaah visual tanggal **19 Oktober 2026**, hanya untuk BG001 BUJKN.
+Pemeriksaan visual lanjutan atas salinan lokal dicatat pada **20 Oktober 2026**.
+Kunci P/D dan batas kepercayaan sumber di atas tetap berlaku. Ini **draf
+berlocator untuk penelaah**, bukan penetapan hukum terkini, aturan aktif,
+keputusan persetujuan/penolakan, atau pengganti asesmen LSBU. G1–G2
+diperdalam, **bukan ditutup untuk penerapan**. Tidak ada data perusahaan
+yang diambil, kasus lama yang diubah, atau integrasi live yang diaktifkan.
 
-### A. Locator tambahan dan batas pembuktian
+### 7.1. Rantai locator dan hasil pemeriksaan visual
 
-| Locator | Yang terlihat dan diperiksa |
-| --- | --- |
-| D PDF 38/cetak 29, 5.1.2.1–6 | Akumulasi selama masa berlaku; dua periode berturut-turut atau enam tahun terakhir; rumusan tidak memperoleh pengalaman dan pengajuan kembali setelah tiga tahun. |
-| D PDF 39/cetak 30, 5.1.2.21 | Rujukan eksplisit ke lampiran untuk penjelasan angka 3 dan 4. |
-| D PDF 83/cetak 74, I. Simulasi Perpanjangan SBU, Simulasi 1 | Diagram tiga periode, tiap periode berlabel tiga tahun; BG001 `ada` pada periode 1, `n/a` pada periode 2 dan 3; penjelasan perpanjangan pertama butir 1–6 dan kedua butir 1–2. |
-| D PDF 84/cetak 75, Simulasi 4 | Diagram Baru (2023), Konversi + Perpanjangan (2026), Perpanjangan (2029), Perpanjangan (2032); BG001 `ada`, `ada`, lalu `n/a`, dengan tanda centang pada perpanjangan 2032. |
-| D PDF 85/cetak 76, Simulasi 5 | Diagram Baru (2020), Perpanjangan (2023), Konversi + Perpanjangan (2026), Perpanjangan (2029), Perpanjangan (2032); BG001 `ada` pada periode 1–3 dan `n/a` periode 4, tetap bertanda centang pada 2032. |
-| D PDF 38/cetak 29, 5.1.2.7–14 | Bukti kontrak, porsi KSO/subpenyedia, progres tahun jamak, major item/RAB, bagian kontrak, larangan penggunaan ulang, akumulasi per subklasifikasi, dan dokumen E-SIMPAN. |
-| P PDF/cetak 260, A.3.h.1.a–c/e/f dan h.2.b.1–5 | Pembanding ketentuan umum pengalaman dan batas penjualan Pekerjaan Konstruksi per BUJK. Huruf h.1.d tentang KPBUJKA tidak dipakai untuk BG001 BUJKN. |
+Nomor PDF berikut 1-based; nomor cetak dibaca pada gambar, bukan diasumsikan
+dari offset. Diagram dan penjelasan dibaca bersama, termasuk tanda centang,
+silang, label `ada`/`n/a`, dan urutan perpanjangan yang hilang dari teks native.
 
-Simulasi 2 dan 6 (D PDF 84–85/cetak 75–76) memakai kode BS, sedangkan
-Simulasi 3 (D PDF 84/cetak 75) melibatkan GT001 dan konversi. Halamannya
-dilihat untuk konteks, tetapi tidak dijadikan keputusan bagi BG001 BUJKN.
+| Locator | Isi sumber yang terlihat | Implikasi terbatas untuk draf BG001 |
+| --- | --- | --- |
+| P PDF/cetak 260, A.3.h.1.a–c/e–f | Akumulasi penjualan selama masa berlaku SBU, pengalaman sah tercatat di SIJK; minimal satu pengalaman sesuai subklasifikasi dalam dua periode; rumusan tidak dapat diperpanjang bila tidak mendapat pengalaman “dalam masa berlakunya SBU”; pengajuan kembali setelah tiga tahun sejak habis masa berlaku. | Pertentangan pembacaan satu periode versus dua periode sudah ada pada P. P h.1.c tidak menulis tambahan “berturut-turut atau dalam 6 tahun terakhir” seperti D. Huruf d mengenai KPBUJKA tidak dibawa ke BG001 BUJKN. |
+| D PDF 38/cetak 29, 5.1.2.1–6; PDF 39/cetak 30, 5.1.2.21 | Angka 3 menyebut dua periode berturut-turut **atau** enam tahun terakhir; angka 4 memakai “masa berlakunya SBU”; angka 5–6 mengatur jeda tiga tahun dan jalur permohonan baru. Angka 21 merujuk penjelasan sebagaimana lampiran. | Lampiran yang relevan ditemukan pada bagian **I. SIMULASI PERPANJANGAN SBU**, PDF 83–85/cetak 74–76, sesudah format H dan sebelum bagian 22. Angka 21 tidak menyebut nomor halaman; hubungan ini berdasarkan judul dan isi, bukan nomor lampiran yang dikarang. |
+| D PDF 83/cetak 74, bagian I, Simulasi 1, diagram dan penjelasan “Perpanjangan Pertama Kali” serta “Perpanjangan Kedua” | BG001 `ada` pada periode 1 (3 tahun), `n/a` pada periode 2 (3 tahun), tetap centang pada perpanjangan kedua. Penjelasan kedua butir 2 secara eksplisit menyatakan BG001 mendapat pengalaman periode pertama, tidak pada periode kedua, tetap dapat disetujui. Diagram kemudian menunjukkan BG001 `n/a` periode 3 dan silang pada perpanjangan ketiga. | Bukti visual langsung BG001 menentang pembacaan “periode terakhir kosong = langsung gagal”. Urutan juga menunjukkan pengalaman periode 1 bukan bekal tanpa batas untuk semua perpanjangan berikutnya. Tahun contoh 2027/2030/2033 bukan tanggal operasional atau tenggat aplikasi. |
+| D PDF 84/cetak 75, Simulasi 4, bagian bawah | BG001 `ada` pada periode 1 (2023–2026) dan periode 2 (2026–2029), `n/a` pada periode 3 (2029–2032), tetap centang tahun 2032. Diagram menandai “Konversi+Perpanjangan (2026)”. | Menguatkan pembacaan dua periode pada contoh BG001 yang melintasi konversi; tidak membuktikan semua konversi mengulang atau menghapus riwayat pengalaman. |
+| D PDF 85/cetak 76, Simulasi 5, bagian atas | BG001 `ada` pada periode 1, 2, 3; `n/a` periode 4; tetap centang pada perpanjangan 2032. | Konsisten dengan BG001 masih memiliki pengalaman pada periode sebelumnya. Tidak memberi batas tanggal kontrak/BA atau metode hitung enam tahun sampai tingkat hari. |
+| D PDF 95/cetak 86, lanjutan formulir cek/verifikasi/validasi, butir 1–4 | Nilai proyek = nilai kontrak terakhir dikalikan porsi major item sesuai subklasifikasi; pernyataan belum pernah digunakan untuk subklasifikasi lain; K1/K2/K3/M/B sesuai lingkup SBU; dua periode ditulis “6 tahun berturut-turut”. | Formulir menguatkan perlunya porsi, jejak penggunaan, dan periode; tidak menyelesaikan sendiri beda rumusan “atau” pada 5.1.2.3 maupun hubungan angka 10 dan 12. |
+
+Simulasi 1 juga menggambarkan subklasifikasi lain dan penambahan BG004;
+Simulasi 2/6 memakai BS, sedangkan Simulasi 3 membahas GT001/konversi.
+Halaman-halaman tersebut dilihat untuk konteks urutan lampiran, **bukan**
+dasar memperluas matriks, membebaskan BG001 baru dari penilaian, atau
+memindahkan pengalaman subklasifikasi lain ke BG001. Kalimat Simulasi 1
+tentang seluruh subklasifikasi tanpa pengalaman tetap dicatat sebagai
+kondisi pada contoh, bukan keputusan otomatis bagi perusahaan tertentu.
 Label `n/a` ditranskripsikan sebagai label diagram; maknanya dibaca bersama
 penjelasan, bukan dianggap otomatis data hilang pada aplikasi.
 
-### B. G1 — membedakan periode pengalaman dan periode akumulasi nilai
+Simulasi 1 Perpanjangan Pertama butir 2–3 menggambarkan pengalaman hanya
+BG001, sedangkan BG002/BG003 tetap dapat diperpanjang; butir 5 menggambarkan
+seluruhnya tanpa pengalaman dan tidak dapat disetujui. Ini membedakan
+konteks perusahaan dan subklasifikasi pada contoh, bukan bukti kebalikan
+bahwa BG001 tanpa pengalaman pasti boleh diperpanjang. Contoh BG001 tanpa
+pengalaman tetapi subklasifikasi lain berpengalaman belum diputuskan
+oleh telaah ini.
 
-1. **Bunyi sumber tidak identik.** P h.1.c menyebut minimal satu pengalaman
-   sesuai subklasifikasi dalam dua periode masa berlaku SBU. D 5.1.2.3
-   menambahkan “secara berturut-turut atau dalam 6 (enam) tahun terakhir”.
-   P h.1.e dan D 5.1.2.4 memakai “dalam masa berlakunya SBU” pada rumusan
-   tidak dapat diperpanjang. Jangan menghapus salah satu rumusan atau
-   menganggap frasa enam tahun tertulis persis di P.
-2. **Contoh langsung BG001:** D Simulasi 1 menyatakan SBU baru 2027,
-   perpanjangan pertama 2030, kedua 2033. Pengalaman BG001 pada periode
-   pertama dan tidak pada periode kedua **tetap dapat mendukung
-   perpanjangan kedua dalam contoh tersebut** (penjelasan Perpanjangan
-   Kedua butir 2). Diagram kemudian memberi silang BG001 setelah periode
-   ketiga tanpa pengalaman lagi. Pembacaan sementara: contoh ini
-   mendukung pemeriksaan dua periode berturut-turut, bukan kewajiban
-   pengalaman baru di setiap periode terakhir. Silang bukan putusan
-   aplikasi untuk setiap kasus yang tampak serupa.
-3. **Perpanjangan pertama tidak boleh direduksi menjadi rumus umum.**
-   Simulasi 1 Perpanjangan Pertama butir 2–3 menunjukkan pengalaman hanya
-   BG001, sedangkan BG002/BG003 tetap dapat diperpanjang; butir 5 menyatakan
-   bila seluruh BG001/BG002/BG003 tidak mendapat pengalaman maka ketiganya
-   tidak dapat disetujui. Ini membedakan konteks perusahaan dan
-   subklasifikasi pada contoh, **bukan izin menghitung pengalaman BG001
-   sebagai nilai penjualan subklasifikasi lain**, ataupun bukti kebalikan
-   bahwa BG001 tanpa pengalaman pasti boleh diperpanjang. Contoh BG001
-   tanpa pengalaman tetapi subklasifikasi lain berpengalaman belum
-   diputuskan oleh telaah ini.
-4. **Ilustrasi historis bukan tanggal aktivasi.** Simulasi 4 dan 5 tetap
-   menandai BG001 dapat diperpanjang ketika periode terakhir `n/a` dan
-   periode sebelumnya `ada`. Tahun 2020–2032 dan label konversi adalah
-   konteks ilustrasi; tidak menetapkan tanggal operasional transisi,
-   tidak mengubah riwayat SBU lama, dan tidak membuktikan setiap masa
-   berlaku aktual pasti tiga tahun.
-5. **Pisahkan dua tujuan pemeriksaan.** Kecukupan jumlah pengalaman
-   perpanjangan (P h.1.c/e; D angka 3–4) tidak otomatis menetapkan jendela
-   akumulasi **nilai** penjualan (P h.1.a; D angka 1–2/13). Pengalaman
-   periode sebelumnya yang relevan untuk hitungan minimal satu belum
-   berarti seluruh nilainya boleh dipakai lagi untuk ambang kualifikasi.
+### 7.2. G1 — pisahkan jendela pengalaman dari masa berlaku dan nilai penjualan
 
-**Pertanyaan telaah G1 (belum ditutup):**
+**Pembacaan sementara, belum disahkan:** pengalaman minimal untuk
+perpanjangan BG001 perlu ditelaah terhadap dua periode berturut-turut,
+bukan hanya periode terakhir. Diagram Simulasi 1 memperlihatkan dua
+periode masing-masing tiga tahun; **enam tahun adalah jendela pengamatan
+dalam rumusan D, bukan masa berlaku enam tahun untuk satu SBU**. Jangan
+menyamakan dua periode aktual dengan hitungan mundur enam tahun tanpa
+memeriksa riwayat SBU, jeda, perubahan dan konversi.
 
-- Bagaimana penelaah menyelaraskan h.1.c/e dengan D angka 3–4 dan
-  Simulasi 1 untuk perpanjangan pertama versus berikutnya, terutama bila
-  BG001 tanpa pengalaman tetapi subklasifikasi lain berpengalaman?
-- Apakah “dua periode” dan “enam tahun terakhir” merupakan alternatif
-  setara atau memiliki kondisi penerapan berbeda? Dari tanggal apa jendela
-  ditarik: permohonan, akhir masa berlaku, atau tanggal penilaian? Bagaimana
-  jeda, perubahan/konversi, dan masa berlaku yang tidak tepat tiga tahun?
-- Tanggal apa yang menempatkan pengalaman ke periode: kontrak, progres,
-  serah terima, atau pencatatan? Bagaimana batas tanggal tepat di awal/akhir
-  periode dan kontrak yang melintasi periode?
-- Apakah periode akumulasi nilai pada angka 1/13 sama dengan jendela
-  minimal satu pengalaman pada angka 3, dan apa bukti pendukungnya?
-- P h.1.f dan D angka 5–6 menyebut pengajuan kembali setelah tiga tahun
-  sejak masa berlaku habis. Bagaimana penetapan subklasifikasi terdampak
-  dan tanggalnya setelah telaah, tanpa menyimpulkan dari kolom bukti kosong?
+Pisahkan pula tiga pertanyaan: (a) ada pengalaman BG001 yang memenuhi
+jendela minimal; (b) berapa nilai penjualan sah yang boleh diakumulasi
+untuk penentuan kualifikasi; (c) apakah permohonan dapat diperpanjang.
+P h.1.a dan D 5.1.2.1 tentang nilai selama masa berlaku tidak otomatis
+memperluas semua nominal menjadi akumulasi enam tahun. Satu pengalaman
+yang relevan pada periode sebelumnya tidak otomatis berarti seluruh
+nilai kontraknya boleh dihitung lagi pada periode berjalan.
 
-### C. G2 — alokasi kontrak BG001 dan histori penggunaan
+**Pertanyaan telaah G1 (jawaban tertulis ahli skema/LSBU diperlukan):**
 
-| Ketentuan sumber | Pembacaan draf dan batas |
-| --- | --- |
-| D 5.1.2.7–9 | Kontrak sah menjadi bukti; KSO/subpenyedia dipisahkan sesuai porsi; tahun jamak memerlukan berita acara progres dan nilai sesuai pentahapan kontrak. Nilai total kontrak tidak langsung menjadi nilai BG001 milik BUJKN pada setiap periode. |
-| D 5.1.2.10 | Satu kontrak dapat digunakan untuk lebih dari satu subklasifikasi berdasarkan kesesuaian **major item dan RAB**. Bukan izin menyalin nilai penuh kontrak ke setiap subklasifikasi. |
-| D 5.1.2.11 | Kontrak atau **bagian kontrak** dinilai untuk setiap subklasifikasi sesuai lingkup rekaman kontrak dan RAB. Untuk BG001 perlu ditelusuri lingkup, bagian/nilai yang diajukan, dan dasar alokasinya; formula pembagi belum ditetapkan. |
-| D 5.1.2.12 | Pengalaman pada angka 10 yang sudah digunakan pada subklasifikasi tertentu tidak dapat digunakan kembali untuk permohonan subklasifikasi berbeda. Hubungan dengan penggunaan beberapa bagian kontrak pada angka 10–11 memerlukan telaah unit pengalaman dan waktu pemakaian. |
-| D 5.1.2.13–14 | Perpanjangan/peningkatan kualifikasi memakai akumulasi penjualan pada subklasifikasi yang dimiliki; sumber menyebut dokumen elektronik dari E-SIMPAN. Ini persyaratan bukti yang perlu diperiksa manusia, **bukan instruksi menghubungkan aplikasi ke SIJK/E-SIMPAN**. |
-| P A.3.h.1.a–b dan h.2.b | P mengatur akumulasi/bukti dan rentang nilai **per BUJK**; halaman ini tidak menyediakan formula membagi major item, aturan prioritas pemakaian, atau penjumlahan ulang nilai antar-subklasifikasi. Jangan menjadikan tabel ambang sebagai algoritme alokasi. |
+1. Bagaimana P A.3.h.1.c/e dan D 5.1.2.3/4 dibaca bersama Simulasi 1
+   untuk perpanjangan pertama, kedua, dan berikutnya? Apa batas pembacaan
+   kondisi seluruh subklasifikasi tanpa pengalaman pada perpanjangan pertama,
+   khususnya bila BUJKN hanya memiliki BG001 atau bila BG001 tanpa
+   pengalaman tetapi subklasifikasi lain berpengalaman? Jangan menganggap
+   ada toleransi enam tahun universal sejak SBU baru.
+2. Apakah “dua periode berturut-turut” dan “enam tahun terakhir” alternatif
+   yang setara hanya untuk periode penuh tiga tahun? Tanggal acuan apa yang
+   dipakai (permohonan, habis berlaku, atau keputusan), bagaimana batas hari,
+   dan apa akibat jeda SBU, perubahan kualifikasi, atau konversi yang masa
+   berlakunya mengikuti SBU lama? Simulasi bukan jawaban lengkap kasus ini.
+3. Kapan pengalaman dianggap diperoleh: tanggal kontrak, progres/BA,
+   serah terima, atau pencatatan SIJK? Bagaimana kontrak tahun jamak yang
+   melintasi dua periode diperlakukan tanpa membuat pengalaman semu?
+4. Nilai apa dan periode mana yang dinilai untuk kualifikasi bila syarat
+   minimal pengalaman dipenuhi dari periode sebelumnya? Bagaimana
+   memisahkannya dari larangan penggunaan ulang lintas subklasifikasi?
+5. Bila penelaah menyimpulkan tidak dapat diperpanjang, bagaimana hubungan
+   P h.1.f dan D 5.1.2.5–6 mengenai tiga tahun sejak habis berlaku serta
+   jalur permohonan baru? Tidak ada tanggal larangan yang dihitung dalam draf.
 
-**Pertanyaan telaah G2 (belum ditutup):**
+### 7.3. G2 — alokasi kontrak bukan penggandaan nilai atau izin penggunaan ulang
 
-- Pada angka 10–12, apakah unit “pengalaman” adalah kontrak utuh,
-  paket pekerjaan, atau bagian kontrak/major item yang dapat diidentifikasi?
-  Apa pembedaan pengajuan serentak beberapa bagian dan penggunaan ulang
-  pada permohonan berikutnya? Jangan menganggap keduanya pasti diizinkan
-  atau pasti dilarang tanpa telaah.
-- Bukti apa yang menetapkan bagian BG001 dalam kontrak/RAB, termasuk
-  adendum, pekerjaan bersama yang tidak terpisah, dan nilai yang tumpang
-  tindih? Jangan memakai pembagian rata atau kategori judul kontrak saja.
-- Bagaimana porsi KSO/subpenyedia diterapkan pada bagian BG001 tanpa
-  mengurangi dua kali atau mengatribusikan porsi pihak lain? Untuk tahun
-  jamak, bagaimana progres yang sama dicegah terhitung pada dua periode?
-- Bagaimana histori alokasi/pemakaian sebelumnya dibuktikan dan
-  direkonsiliasi dengan bukti tercatat? “Belum diketahui pernah digunakan”
-  bukan “belum pernah digunakan”; dokumen yang belum diunggah bukan
-  bukti tidak adanya pengalaman.
-- Apakah larangan angka 12 mencakup penggunaan ulang untuk BG001 yang
-  sama pada perpanjangan/peningkatan? Teksnya menyebut subklasifikasi
-  **berbeda**; jangan memperluas larangan atau mengasumsikan izin
-  penghitungan ulang nilainya untuk BG001 tanpa mengkaji angka 1/13.
+| Pokok dan locator | Pembacaan draf | Hal yang belum boleh disimpulkan |
+| --- | --- | --- |
+| Satuan penjualan — P PDF/cetak 260 A.3.h.2.b.1–5; D PDF 38/cetak 29 5.1.2.2/11/13 | Ambang K1–B tertulis **per BUJK**, sedangkan bukti dinilai sesuai lingkup setiap subklasifikasi dan akumulasi pada subklasifikasi yang dimiliki untuk perpanjangan/peningkatan. | Jangan menyalin seluruh omzet perusahaan ke BG001, menjumlahkan nilai sama berulang, atau menganggap “per BUJK” menghapus kebutuhan pembuktian BG001. Hubungan agregasi masih perlu telaah. |
+| Kontrak dan porsi — D PDF 38/cetak 29 5.1.2.7–9 | Kontrak sah dapat berasal dari dalam/luar negeri; KSO/subpenyedia dipisahkan sesuai porsi; tahun jamak menggunakan BA progres dan nilai sesuai pentahapan kontrak. | Nilai total konsorsium bukan otomatis penjualan BUJKN pemohon. Nilai penuh kontrak tidak boleh diasumsikan muncul kembali setiap tahun/tahap. Ini bukan konfirmasi keabsahan bukti. |
+| Alokasi lingkup — D PDF 38/cetak 29 5.1.2.10–11; PDF 95/cetak 86 butir 1 | Satu kontrak dapat terkait lebih dari satu subklasifikasi berdasarkan major item dan RAB; kontrak/bagian kontrak dinilai per lingkup. Formulir menulis nilai kontrak terakhir × porsi major item subklasifikasi yang dimohonkan. | Kaitan lintas subklasifikasi bukan hak memakai 100% nilai yang sama di setiap subklasifikasi. Formula formulir belum menentukan urutan kombinasi porsi KSO, major item, addendum dan progres. |
+| Jejak penggunaan — D PDF 38/cetak 29 5.1.2.12; PDF 95/cetak 86 butir 2 | Pengalaman yang sudah digunakan pada subklasifikasi tertentu tidak dapat digunakan kembali untuk permohonan subklasifikasi berbeda; formulir meminta pernyataan belum pernah digunakan untuk subklasifikasi lain. | Jangan mengabaikan larangan karena angka 10 mengizinkan alokasi. Sebaliknya, jangan mengarang bahwa seluruh kontrak beserta semua bagian yang berbeda pasti selamanya terkunci. Unit larangan perlu dipastikan. |
+| Pencatatan — P PDF/cetak 260 A.3.h.1.a–b; D PDF 38/cetak 29 5.1.2.1/14 | Pengalaman sah tercatat di SIJK; D menyebut dokumen elektronik diunduh dari integrasi E-SIMPAN untuk penilaian. | Menyebut mekanisme sumber bukan izin mengaktifkan integrasi atau menganggap unggahan/catatan manual sudah tervalidasi. Tidak ada akses SIJK/E-SIMPAN pada telaah ini. |
 
-### D. Hasil dan batas tindak lanjut
+**Ilustrasi sintetis untuk pertanyaan alokasi, bukan formula aktif:** kontrak
+Rp10 miliar dengan RAB major item BG001 Rp6 miliar dan lingkup lain Rp4
+miliar tidak membenarkan mengisikan Rp10 miliar penuh ke masing-masing
+lingkup. Rp6 miliar baru calon alokasi BG001, belum nilai pengalaman yang
+disahkan; porsi pemohon, addendum, progres, periode dan riwayat penggunaan
+masih harus diperiksa. Tidak ada perusahaan atau kontrak nyata yang dipakai.
 
-G1 maju dari “lampiran belum ditelaah” menjadi **contoh visual ditemukan,
-hubungan penerapan belum disahkan**. G2 maju menjadi **ketentuan alokasi
-dan pemakaian ulang terpetakan, unit/formula belum disahkan**. Keduanya
-tetap terbuka; tidak menandai penjualan/pengalaman sebagai memenuhi atau
-tidak memenuhi secara otomatis.
+### 7.4. Pertanyaan telaah G2 dan status hasil
+
+1. Apa unit “pengalaman” pada D 5.1.2.12: seluruh kontrak, major item,
+   bagian RAB, atau rekaman pengalaman? Bagaimana angka 10–11 dan
+   pernyataan PDF 95 butir 2 mengizinkan/membatasi alokasi simultan
+   dibanding permohonan subklasifikasi berbeda pada waktu berikutnya?
+   Bagaimana bagian kontrak yang belum pernah digunakan diperlakukan?
+2. Bukti apa yang menetapkan porsi BG001 dan porsi BUJKN dalam
+   KSO/subpenyedia? Bila porsi tumpang tindih, bagaimana urutan rekonsiliasi
+   nilai kontrak terakhir/addendum, major item/RAB, dan BA progres, termasuk
+   perubahan lingkup, pekerjaan bersama yang tidak terpisah dan pekerjaan
+   lintas periode? Jangan memakai pembagian rata atau judul kontrak saja;
+   jangan mengalikan semua persentase tanpa memastikan basisnya sama,
+   mengurangi porsi dua kali, atau mengatribusikan porsi pihak lain.
+3. Bagaimana memastikan setiap bagian/progres hanya dihitung sesuai hak
+   pemohon, dengan rekonsiliasi terhadap nilai kontrak yang relevan,
+   tanpa menggandakan nilai antaranggota KSO, subpenyedia, subklasifikasi,
+   tahap, tahun atau periode? Jejak penggunaan apa yang cukup bagi penelaah?
+   Bagaimana histori alokasi/pemakaian sebelumnya direkonsiliasi dengan
+   bukti tercatat? “Belum diketahui pernah digunakan” bukan “belum pernah
+   digunakan”; dokumen yang belum diunggah bukan bukti tidak adanya pengalaman.
+4. Bagaimana ambang **per BUJK** P h.2.b dihubungkan dengan akumulasi
+   subklasifikasi pada D 5.1.2.11/13 untuk perpanjangan dan peningkatan
+   BG001? Apakah penggunaan pada perpanjangan subklasifikasi yang sama
+   diperbolehkan untuk uji minimal pengalaman, dan bagaimana membedakannya
+   dari menghitung kembali nominal penjualan? Jangan memperluas larangan
+   “subklasifikasi berbeda” menjadi larangan semua pemakaian ulang.
+
+**Hasil adendum:** locator lampiran dan perilaku diagram BG001 sudah
+diperiksa visual; ambiguitas penerapan periode dan unit larangan penggunaan
+ulang dipertahankan secara eksplisit. Jawaban telaah harus mencatat locator,
+jenis permohonan, alasan, identitas/kompetensi penelaah dan batas penerapan,
+serta mengikuti gerbang sumber/status operasional bagian 5 sebelum ada
+pekerjaan aturan terpisah. Tidak ada penolakan/perpanjangan otomatis,
+perubahan skor, migrasi kasus, data perusahaan atau koneksi live.
 
 Jika kelak ditetapkan spesifikasi, bahan telaah perlu memisahkan riwayat
 periode SBU BG001, tanggal/peristiwa pengalaman, nilai/porsi/progres,
 bagian major item/RAB, serta histori pemakaian dan locator bukti. Ini
 daftar kebutuhan konseptual, **bukan perubahan skema atau pengumpulan
-data perusahaan pada pekerjaan ini**. Tidak ada aturan aktif, penolakan
-perpanjangan otomatis, perubahan kasus lama, atau integrasi live.
+data perusahaan pada pekerjaan ini**.
 
 ## Mengulang pemeriksaan
 
 ```sh
 python .agents/scripts/review-sbu-source-pages.py attached_assets/permen-pu-6-2025_1791292204964.pdf 18 19 259 260 261 262 263 264 265 266 12 13
 python .agents/scripts/review-sbu-source-pages.py attached_assets/KEP_DIRJEN_BK_281_STANDAR_SKEMA_SERTIFIKASI_26_AGUSTUS_2026_SU_1791292262823.pdf 18 28 29 30 38 39 40 41 66 83 84 85 1 4 5
+# Tambahan adendum G1–G2:
+python .agents/scripts/review-sbu-source-pages.py attached_assets/KEP_DIRJEN_BK_281_STANDAR_SKEMA_SERTIFIKASI_26_AGUSTUS_2026_SU_1791292262823.pdf 38 39 83 84 85 95
+python .agents/scripts/review-sbu-source-pages.py attached_assets/permen-pu-6-2025_1791292204964.pdf 260
 ```
 
 Tidak ada perubahan aplikasi sehingga tidak diperlukan restart workflow,
