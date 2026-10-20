@@ -5,6 +5,7 @@ import { createServer, request } from "node:http";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
+import { createHook } from "node:async_hooks";
 import { build } from "esbuild";
 import { createProxyMiddleware } from "http-proxy-middleware";
 
@@ -267,6 +268,108 @@ test("upstream failure after streaming headers aborts the downstream connection"
   assert.equal(result.headers["content-length"], "100");
   assert.equal(result.headers["transfer-encoding"], undefined);
 });
+
+function within(promise, message) {
+  let deadline;
+  return Promise.race([
+    promise,
+    new Promise((_resolve, reject) => {
+      deadline = setTimeout(() => reject(new Error(message)), 1_000);
+    }),
+  ]).finally(() => clearTimeout(deadline));
+}
+
+for (const streaming of [false, true]) {
+  test(`client cancellation while ${streaming ? "streaming" : "buffering"} closes upstream and clears its timeout`, { timeout: 5_000 }, async t => {
+    let client;
+    let upstreamResponse;
+    let upstreamSocket;
+    let proxyResponse;
+    let proxySocket;
+    let downstreamResponse;
+    let upstreamClosed;
+    let proxyClosed;
+    let clientClosed;
+    let clientReceivedHeaders = false;
+    let clientReceivedBody = "";
+    let timeoutFired = false;
+    const errors = [];
+    const upstreamClose = new Promise(resolve => { upstreamClosed = resolve; });
+    const proxyClose = new Promise(resolve => { proxyClosed = resolve; });
+    const clientClose = new Promise(resolve => { clientClosed = resolve; });
+    // Observe Node's actual socket inactivity timers, not a replacement clock.
+    // Closing the servers in fixture teardown must not make these checks pass.
+    const timers = new Set();
+    const hook = createHook({
+      init(_id, type, _trigger, resource) {
+        if (type === "Timeout" && resource._idleTimeout === options.proxyTimeout) {
+          timers.add(resource);
+        }
+      },
+    });
+    t.after(() => {
+      hook.disable();
+      client?.destroy();
+    });
+    const url = await fixture(t, (_req, res) => {
+      upstreamResponse = res;
+      upstreamSocket = res.socket;
+      upstreamSocket.once("close", upstreamClosed);
+      if (streaming) res.setHeader("content-length", "100");
+      res.write("partial");
+      // Never finish: only downstream cancellation may release this socket.
+    }, (upstream, downstream) => {
+      proxyResponse = upstream;
+      proxySocket = upstream.socket;
+      downstreamResponse = downstream;
+      upstream.once("close", proxyClosed);
+      upstream.on("error", error => errors.push(error.code));
+      proxySocket.on("timeout", () => { timeoutFired = true; });
+      if (!streaming) {
+        upstream.once("data", chunk => {
+          assert.equal(chunk.toString(), "partial");
+          assert.equal(downstream.headersSent, false);
+          client.destroy();
+        });
+      }
+    });
+    hook.enable();
+    client = request(url, { agent: false }, res => {
+      clientReceivedHeaders = true;
+      res.on("error", error => errors.push(error.code));
+      res.once("data", chunk => {
+        clientReceivedBody += chunk.toString();
+        client.destroy();
+      });
+    });
+    client.on("error", error => errors.push(error.code));
+    client.once("close", clientClosed);
+    client.end();
+
+    await within(Promise.all([upstreamClose, proxyClose, clientClose]),
+      "Client cancellation left the upstream connection open");
+    // Let close/error callbacks and Node's timer disposal finish.
+    await new Promise(resolve => setImmediate(resolve));
+    hook.disable();
+    assert.equal(clientReceivedHeaders, streaming);
+    assert.equal(clientReceivedBody, streaming ? "partial" : "");
+    assert.equal(upstreamResponse.destroyed, true);
+    assert.equal(upstreamSocket.destroyed, true);
+    assert.equal(upstreamResponse.writableFinished, false);
+    assert.equal(proxyResponse.destroyed, true);
+    assert.equal(proxySocket.destroyed, true);
+    assert.equal(downstreamResponse.destroyed, true);
+    assert.equal(downstreamResponse.writableFinished, false);
+    assert.equal(timeoutFired, false, "cleanup must not wait for proxyTimeout");
+    assert.ok(timers.size > 0, "the real upstream inactivity timer was observed");
+    for (const timer of timers) {
+      assert.equal(timer._destroyed, true, "upstream timeout must be disposed");
+    }
+    assert.ok(errors.every(code => code === "ECONNRESET"),
+      `Unexpected handled transport errors: ${errors.join(", ")}`);
+    // Unhandled errors/rejections are also failures enforced by node:test.
+  });
+}
 
 test("production proxy has a finite upstream inactivity timeout", () => {
   assert.equal(options.proxyTimeout, 15_000);
