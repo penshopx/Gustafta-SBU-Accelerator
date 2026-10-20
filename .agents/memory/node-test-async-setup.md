@@ -16,3 +16,11 @@ Restore shared instrumentation and clean up temporary resources together before 
 **Why:** With Node 24, a deliberate swallowed-network probe caused the first root teardown assertion to fail and later root teardown hooks were skipped. Separate cleanup hooks therefore cannot guarantee restoration on a guard failure.
 
 **How to apply:** Put mandatory restoration and resource cleanup in one teardown, ahead of assertions (using `finally` where needed). Verify restoration after a failing run from a process-exit probe rather than another root teardown hook.
+
+## Awaited nested tests
+
+Register an awaited nested test on its immediate parent's test context, not an ancestor's context.
+
+**Why:** The ancestor queues that test as a sibling of the currently running child. If the child awaits the queued sibling, both wait indefinitely; open HTTP servers can also prevent timeout teardown from completing.
+
+**How to apply:** Accept the local test context in each callback that registers nested tests. When a route test stalls with idle database connections, check the test-context nesting before investigating database locks.

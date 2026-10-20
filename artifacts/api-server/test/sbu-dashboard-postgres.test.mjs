@@ -552,7 +552,7 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
       }
     });
 
-    await t.test("PATCH dan DELETE di dalam/luar lima teratas langsung tercermin tanpa mengubah pengguna lain", async () => {
+    await t.test("PATCH dan DELETE di dalam/luar lima teratas langsung tercermin tanpa mengubah pengguna lain", async (t) => {
       const otherDashboard = await request(server, otherOwnerId);
       assert.equal(otherDashboard.status, 200, otherDashboard.raw);
       assert.deepEqual(otherDashboard.body, {
@@ -661,6 +661,38 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
         await deleteCase(id);
         await assertDashboard(counts, recentIds);
       }
+
+      await t.test("POST setelah seluruh permohonan dihapus mengisi kembali dashboard pemilik saja", async () => {
+        const input = {
+          companyName: "Perusahaan Baru Setelah Ringkasan Kosong",
+          requestType: "baru",
+          qualification: "kecil",
+          classification: "gedung",
+        };
+        const { rows: [sequenceBefore] } = await isolated.query(
+          `SELECT last_value, is_called FROM "${schema}".sbu_cases_id_seq`,
+        );
+        const nextId = Number(sequenceBefore.last_value) + (sequenceBefore.is_called ? 1 : 0);
+
+        const created = await request(server, ownerId, "/cases", { method: "POST", body: input });
+        assert.equal(created.status, 201, created.raw);
+        assert.equal(created.body.id, nextId,
+          "Permohonan pengganti harus memperoleh ID baru dari sequence lokal yang sama");
+        assert.equal(created.body.status, "draf");
+        for (const [key, value] of Object.entries(input)) assert.equal(created.body[key], value);
+        assert.deepEqual((await isolated.query(
+          `SELECT last_value, is_called FROM "${schema}".sbu_cases_id_seq`,
+        )).rows, [{ last_value: String(nextId), is_called: true }],
+        "POST setelah ringkasan kosong harus memajukan hanya sequence lokal tepat sekali");
+
+        // The first dashboard GET after POST must recover from the empty state.
+        // This helper also checks stored rows, deleted IDs and the other owner.
+        const recent = await assertDashboard(
+          { total: 1, draft: 1, reviewing: 0, prepared: 0 }, [created.body.id],
+        );
+        assert.deepEqual(recent, [created.body],
+          "Ringkasan yang terisi kembali harus memuat tepat respons POST, tanpa permohonan lama");
+      });
     });
   } finally {
     try {
