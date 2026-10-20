@@ -62,10 +62,11 @@ async function listen(t, handler) {
   return `http://127.0.0.1:${server.address().port}`;
 }
 
-async function fixture(t, upstreamHandler, observe = () => {}) {
+async function fixture(t, upstreamHandler, observe = () => {}, overrides = {}) {
   const upstream = await listen(t, upstreamHandler);
   const proxy = createProxyMiddleware({
     ...options,
+    ...overrides,
     target: upstream,
     on: {
       ...options.on,
@@ -266,3 +267,59 @@ test("upstream failure after streaming headers aborts the downstream connection"
   assert.equal(result.headers["content-length"], "100");
   assert.equal(result.headers["transfer-encoding"], undefined);
 });
+
+test("production proxy has a finite upstream inactivity timeout", () => {
+  assert.equal(options.proxyTimeout, 15_000);
+});
+
+for (const stage of ["no headers", "buffered headers", "buffered body", "streamed headers", "streamed body"]) {
+  test(`upstream left open at ${stage} is timed out without client cancellation`, { timeout: 5_000 }, async t => {
+    let closed;
+    const upstreamClosed = new Promise(resolve => { closed = resolve; });
+    let upstreamResponse;
+    const streaming = stage.startsWith("streamed");
+    const hasBody = stage.endsWith("body");
+    let receivedHeaders = false;
+    const url = await fixture(t, (_req, res) => {
+      upstreamResponse = res;
+      res.once("close", closed);
+      // Deliberately never end or destroy this response: the proxy must do so.
+      if (stage === "no headers") return;
+      const headers = { "x-partial": "must-not-leak", "content-type": "text/plain" };
+      if (streaming) headers["content-length"] = "100";
+      res.writeHead(200, headers);
+      res.flushHeaders();
+      if (hasBody) res.write("partial");
+    }, (_upstream, downstream) => {
+      receivedHeaders = true;
+      assert.equal(downstream.headersSent, streaming);
+    }, { proxyTimeout: 100 });
+
+    // receive() has an independent absolute deadline which rejects, rather
+    // than returning a result, if client-side cancellation is ever required.
+    let result;
+    if (stage === "streamed headers") {
+      // writeHead marks headers sent, but Node may not flush them to the wire
+      // until the first body byte. The client must still see a reset, not 502.
+      await assert.rejects(receive(url), { code: "ECONNRESET" });
+    } else {
+      result = await receive(url);
+    }
+    assert.equal(receivedHeaders, stage !== "no headers");
+    if (streaming && result) {
+      assert.equal(result.status, 200);
+      assert.equal(result.complete, false);
+      assert.equal(result.aborted, true);
+      assert.equal(result.body.toString(), hasBody ? "partial" : "");
+      assert.equal(result.headers["content-length"], "100");
+      assert.equal(result.headers["transfer-encoding"], undefined);
+    } else if (!streaming) {
+      assertFinished(result, 502, "");
+      assert.equal(result.headers["content-length"], "0");
+      assert.equal(result.headers["x-partial"], undefined);
+      assert.equal(result.headers["content-type"], undefined);
+    }
+    await upstreamClosed;
+    assert.equal(upstreamResponse.destroyed, true);
+  });
+}

@@ -20,6 +20,7 @@
  */
 
 import type { RequestHandler } from 'express';
+import type { ServerResponse } from 'node:http';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import { getClerkProxyHost } from './clerkRequestOrigin';
 
@@ -27,6 +28,17 @@ export { getClerkProxyHost } from './clerkRequestOrigin';
 
 const CLERK_FAPI = 'https://frontend-api.clerk.dev';
 export const CLERK_PROXY_PATH = '/api/__clerk';
+
+function failUpstream(res: ServerResponse): void {
+  if (res.destroyed || res.writableEnded) return;
+  if (res.headersSent) {
+    res.destroy();
+    return;
+  }
+  // The deployment edge rejects chunked responses, including proxy failures.
+  res.writeHead(502, { 'content-length': '0' });
+  res.end();
+}
 
 export function clerkProxyMiddleware(): RequestHandler {
   // Only run proxy in production — Clerk proxying doesn't work for dev instances
@@ -42,12 +54,19 @@ export function clerkProxyMiddleware(): RequestHandler {
   return createProxyMiddleware({
     target: CLERK_FAPI,
     changeOrigin: true,
+    // Abort upstream sockets after 15 seconds without progress, both while
+    // waiting for headers and while reading a response (including buffered ones).
+    proxyTimeout: 15_000,
     // Take over the response so it can be re-sent with a Content-Length (see
     // proxyRes); the deployment edge rejects chunked proxied responses.
     selfHandleResponse: true,
     pathRewrite: (path: string) =>
       path.replace(new RegExp(`^${CLERK_PROXY_PATH}`), ''),
     on: {
+      error: (_error, _req, res) => {
+        if ('writeHead' in res) failUpstream(res);
+        else res.destroy();
+      },
       proxyReq: (proxyReq, req) => {
         const host = getClerkProxyHost(req) || '';
         const proxyUrl = `https://${host}${CLERK_PROXY_PATH}`;
@@ -104,7 +123,7 @@ export function clerkProxyMiddleware(): RequestHandler {
           // Headers are already sent, so abort the response if the upstream
           // stream errors mid-pipe (e.g. ECONNRESET) rather than leaving an
           // unhandled 'error' or a hung client.
-          proxyRes.on('error', () => res.destroy());
+          proxyRes.on('error', () => failUpstream(res));
           proxyRes.pipe(res);
           return;
         }
@@ -117,14 +136,7 @@ export function clerkProxyMiddleware(): RequestHandler {
           res.writeHead(status, headers);
           res.end(body);
         });
-        proxyRes.on('error', () => {
-          if (!res.headersSent) {
-            // Set a length so the empty 502 isn't sent chunked (which the
-            // deployment edge would reject just like the original response).
-            res.writeHead(502, { 'content-length': '0' });
-          }
-          res.end();
-        });
+        proxyRes.on('error', () => failUpstream(res));
       },
     },
   }) as RequestHandler;
