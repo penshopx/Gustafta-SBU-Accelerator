@@ -308,6 +308,226 @@ test("real storage adapter scopes listing, pins deletion generation, and rejects
   delete globalThis.__cleanupBucket;
 });
 
+test("paged job reaches both namespace tails after dry-run, restart, rejected tokens and failed snapshots", async () => {
+  const requireDb = createRequire(new URL("../../../lib/db/package.json", import.meta.url));
+  const { Pool } = requireDb("pg");
+  const admin = new Pool({ connectionString: process.env.DATABASE_URL });
+  const schema = `cleanup_pages_${randomUUID().replaceAll("-", "")}`;
+  let restricted;
+  const files = new Map(), deleted = [], listings = [], rows = [];
+  const expectedKept = new Map(), oldOrphans = [];
+  // Stable UUID order, with protected references AND old orphans on every page.
+  // Tokens are keyset-based, not offsets: deleting a page must not shift the
+  // remaining objects backwards and accidentally make this fixture skip them.
+  const uuid = (i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`;
+  for (const namespace of ["uploads", "documents"]) {
+    for (let i = 1; i <= 2403; i++) {
+      const id = uuid(i + (namespace === "documents" ? 10000 : 0));
+      const path = `/objects/${namespace}/${id}`;
+      const ready = i % 1000 === 2 || i === 2402;
+      const orphan = i % 1000 === 1 || i === 2403;
+      const entry = object(path, ready || orphan ? old : now);
+      files.set(path, entry);
+      if (orphan) oldOrphans.push(path);
+      else expectedKept.set(path, { ...entry });
+      if (ready) rows.push({ id, status: "ready", objectPath: path, createdAt: new Date(old) });
+    }
+  }
+  // Old pending data proves failed listings never reach reservation cleanup.
+  const abandoned = pending();
+  rows.push(abandoned);
+  files.set(abandoned.objectPath, object(abandoned.objectPath));
+  let epoch = 1, listError;
+  const bucket = {
+    getFiles: async (options) => {
+      listings.push({ ...options });
+      assert.equal(options.autoPaginate, false);
+      assert.equal(options.maxResults, 1000);
+      assert.match(options.prefix, /^private\/(uploads|documents)\/$/);
+      if (listError) throw listError;
+      let last = "";
+      if (options.pageToken) {
+        const [version, name] = JSON.parse(options.pageToken);
+        if (version !== epoch) throw Object.assign(new Error("expired synthetic token"), { code: 400 });
+        last = name;
+      }
+      const matching = [...files.values()]
+        .map((entry) => ({ entry, name: `private/${entry.path.slice("/objects/".length)}` }))
+        .filter(({ name }) => name.startsWith(options.prefix) && name > last)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      const page = matching.slice(0, options.maxResults);
+      const next = matching.length > page.length
+        ? { pageToken: JSON.stringify([epoch, page.at(-1).name]) } : null;
+      return [page.map(({ name, entry }) => ({ name, metadata: {
+        generation: entry.generation, updated: new Date(entry.updatedAt).toISOString(),
+        timeCreated: new Date(entry.updatedAt).toISOString(),
+      } })), next];
+    },
+    file: (name) => ({
+      getMetadata: async () => { throw new Error("Unexpected inspect in paged fixture"); },
+      delete: async ({ ifGenerationMatch }) => {
+        const path = `/objects/${name.slice("private/".length)}`;
+        const entry = files.get(path);
+        assert.ok(entry, "delete targets an existing synthetic object");
+        assert.equal(ifGenerationMatch, entry.generation);
+        assert.ok(entry.updatedAt === old);
+        assert.ok(!expectedKept.has(path), "no young or referenced ready object may be deleted");
+        files.delete(path);
+        deleted.push(path);
+      },
+    }),
+  };
+  try {
+    await admin.query(`CREATE SCHEMA "${schema}"`);
+    await admin.query(`CREATE TABLE "${schema}".sbu_documents (
+      id uuid PRIMARY KEY, status text NOT NULL, object_path text NOT NULL, created_at timestamptz NOT NULL)`);
+    restricted = await createRestrictedRoutePool(admin, schema);
+    for (const r of rows) await restricted.pool.query("INSERT INTO sbu_documents VALUES ($1,$2,$3,$4)",
+      [r.id, r.status, r.objectPath, r.createdAt]);
+    const productionLocks = await readFile(join(dir, "../src/lib/document-lifecycle-lock.ts"), "utf8");
+    const fixtureLocks = productionLocks.replaceAll("(137, 1)", `(${randomInt(1_000_000, 2_000_000_000)}, 1)`);
+    assert.notEqual(fixtureLocks, productionLocks);
+    globalThis.__pagedCleanupPool = restricted.pool;
+    globalThis.__pagedCleanupBucket = bucket;
+    const output = join(temp, "paged-job.mjs");
+    await build({
+      entryPoints: [join(dir, "../src/lib/document-cleanup-job.ts")], outfile: output,
+      bundle: true, platform: "node", format: "esm", external: ["drizzle-orm", "drizzle-orm/*", "pdf-lib", "pino"],
+      plugins: [{
+        name: "paged-cleanup-fixture",
+        setup(builder) {
+          for (const [filter, path] of [
+            [/^@workspace\/db$/, "db"], [/^\.\/objectStorage$/, "storage"],
+            [/^\.\/objectAcl$/, "acl"], [/^\.\/logger$/, "logger"],
+            [/^\.\/document-lifecycle-lock$/, "locks"],
+          ]) builder.onResolve({ filter }, () => ({ path, namespace: "paged-fixture" }));
+          builder.onLoad({ filter: /.*/, namespace: "paged-fixture" }, ({ path }) => ({
+            contents: path === "db" ? `
+              import {drizzle} from "drizzle-orm/node-postgres";
+              export {documentsTable} from ${JSON.stringify(join(dir, "../../../lib/db/src/schema/standalone.ts"))};
+              export const db = drizzle(globalThis.__pagedCleanupPool);
+            ` : path === "storage" ? `
+              export class ObjectNotFoundError extends Error {}
+              export class ObjectStorageService {
+                getPrivateObjectDir() { return "/synthetic-bucket/private"; }
+              }
+              export const objectStorageClient = {bucket:()=>globalThis.__pagedCleanupBucket};
+            ` : path === "acl" ? "export const setObjectAclPolicy = async () => {};"
+              : path === "locks" ? fixtureLocks : "export const logger = {info(){},warn(){}};",
+            loader: "ts", resolveDir: dir,
+          }));
+        },
+      }],
+    });
+    let { runDocumentCleanup: run } = await import(output);
+    // Listing failure must abort even when there is an expired reservation.
+    // Otherwise a failed listing could still perform metadata/storage writes.
+    listError = Object.assign(new Error("synthetic listing unavailable"), { code: 503 });
+    const initialFiles = [...files];
+    await assert.rejects(run(false));
+    assert.deepEqual([...files], initialFiles);
+    assert.deepEqual(deleted, []);
+    assert.equal((await restricted.pool.query("SELECT status FROM sbu_documents WHERE id=$1",
+      [abandoned.id])).rows[0].status, "pending");
+    // Keep this row ready for the full sweep, including its implied final path.
+    await restricted.pool.query("UPDATE sbu_documents SET status='ready' WHERE id=$1", [abandoned.id]);
+    expectedKept.set(abandoned.objectPath, { ...files.get(abandoned.objectPath) });
+    files.set(final(abandoned.id), object(final(abandoned.id)));
+    expectedKept.set(final(abandoned.id), { ...files.get(final(abandoned.id)) });
+    listError = undefined;
+    listings.length = 0;
+    let candidates = 0;
+    for (let i = 0; i < 6; i++) {
+      const counts = await run(true);
+      assert.equal(counts.stopped, 0);
+      assert.equal(counts.deletedObjects, 0);
+      assert.equal(counts.expiredReservations, 0);
+      candidates += counts.candidates;
+    }
+    assert.equal(candidates, oldOrphans.length);
+    assert.deepEqual(listings.map((o) => o.prefix), [
+      ...Array(3).fill("private/uploads/"), ...Array(3).fill("private/documents/"),
+    ]);
+    for (const i of [0, 3]) assert.equal(listings[i].pageToken, undefined);
+    for (const i of [1, 2, 4, 5]) assert.ok(listings[i].pageToken);
+    assert.deepEqual(deleted, []);
+    assert.equal(files.size, initialFiles.length + 1);
+
+    // A process restart discards its in-memory cursor midway through uploads.
+    await run(false);
+    assert.ok(deleted.length > 0);
+    ({ runDocumentCleanup: run } = await import(`${output}?restart=1`));
+    await run(false);
+    assert.equal(listings.at(-1).prefix, "private/uploads/");
+    assert.equal(listings.at(-1).pageToken, undefined);
+    const continuation = listings.length;
+    listError = Object.assign(new Error("temporary listing failure"), { code: 503 });
+    const beforeFailure = [...files], beforeDeleted = [...deleted];
+    await assert.rejects(run(false));
+    const failedCursor = { ...listings.at(-1) };
+    assert.ok(failedCursor.pageToken);
+    assert.deepEqual([...files], beforeFailure);
+    assert.deepEqual(deleted, beforeDeleted);
+    listError = undefined;
+
+    // A reference snapshot failure must happen BEFORE listing. Promote a
+    // late-page orphan after the failure to prove the retry reads fresh rows.
+    await admin.query(`ALTER TABLE "${schema}".sbu_documents RENAME TO hidden_documents`);
+    try {
+      await assert.rejects(run(false));
+      assert.equal(listings.length, continuation + 1);
+      assert.deepEqual([...files], beforeFailure);
+      assert.deepEqual(deleted, beforeDeleted);
+    } finally {
+      await admin.query(`ALTER TABLE "${schema}".hidden_documents RENAME TO sbu_documents`);
+    }
+    const promotedPath = oldOrphans.find((path) => path.includes("/documents/") && path.endsWith("000000012403"));
+    assert.ok(promotedPath && files.has(promotedPath));
+    const promotedId = promotedPath.split("/").at(-1);
+    await restricted.pool.query("INSERT INTO sbu_documents VALUES ($1,'ready',$2,$3)",
+      [promotedId, promotedPath, new Date(old)]);
+    expectedKept.set(promotedPath, { ...files.get(promotedPath) });
+    // The provider invalidates the outstanding token. This failed round cannot
+    // delete anything, and the next must reset only this namespace's cursor.
+    epoch++;
+    await assert.rejects(run(false), { name: "Error", message: "Cleanup page token rejected" });
+    assert.deepEqual(listings.at(-1), failedCursor);
+    assert.deepEqual([...files], beforeFailure);
+    assert.deepEqual(deleted, beforeDeleted);
+    await run(false);
+    assert.equal(listings.at(-1).prefix, "private/uploads/");
+    assert.equal(listings.at(-1).pageToken, undefined);
+    for (let i = 0; i < 3; i++) await run(false);
+    assert.equal(listings.at(-1).prefix, "private/documents/");
+    assert.equal(listings.at(-1).pageToken, undefined);
+    const beforeDocumentReset = [...files], beforeDocumentDeletes = [...deleted];
+    epoch++;
+    await assert.rejects(run(false), { message: "Cleanup page token rejected" });
+    assert.equal(listings.at(-1).prefix, "private/documents/");
+    assert.ok(listings.at(-1).pageToken);
+    assert.deepEqual([...files], beforeDocumentReset);
+    assert.deepEqual(deleted, beforeDocumentDeletes);
+    await run(false);
+    assert.equal(listings.at(-1).prefix, "private/documents/");
+    assert.equal(listings.at(-1).pageToken, undefined);
+    // Finish a complete cycle, then repeat it to prove idempotence and that
+    // no tail orphan was silently skipped by restart/reset or page deletion.
+    for (let i = 0; i < 11; i++) assert.equal((await run(false)).stopped, 0);
+    assert.deepEqual(files, expectedKept);
+    assert.deepEqual(new Set(deleted), new Set(oldOrphans.filter((path) => path !== promotedPath)));
+    assert.equal(deleted.length, new Set(deleted).size);
+    const remainingRows = (await restricted.pool.query("SELECT id,status,object_path FROM sbu_documents")).rows;
+    assert.equal(remainingRows.length, rows.length + 1);
+    assert.ok(remainingRows.every((r) => r.status === "ready" && files.has(r.object_path)));
+  } finally {
+    if (restricted) await restricted.close();
+    await admin.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+    await admin.end();
+    delete globalThis.__pagedCleanupPool;
+    delete globalThis.__pagedCleanupBucket;
+  }
+});
+
 test("scheduled job uses PostgreSQL transaction exclusion across uploads, crashes, and parallel cleaners", async () => {
   const requireDb = createRequire(new URL("../../../lib/db/package.json", import.meta.url));
   const { Pool } = requireDb("pg");
@@ -361,7 +581,8 @@ test("scheduled job uses PostgreSQL transaction exclusion across uploads, crashe
               import {drizzle} from "drizzle-orm/node-postgres";
               export {documentsTable} from ${JSON.stringify(join(dir, "../../../lib/db/src/schema/standalone.ts"))};
               export const db = drizzle(globalThis.__cleanupPool);
-            ` : path === "storage" ? `export const documentStorage = globalThis.__cleanupStorage;`
+            ` : path === "storage" ? `export const documentStorage = globalThis.__cleanupStorage;
+              export class InvalidCleanupCursor extends Error {}`
               : path === "locks" ? fixtureLocks :
               `export const logger = {info: (counts)=>globalThis.__cleanupLogs.push(counts),
                 warn: (counts)=>globalThis.__cleanupLogs.push(counts)};`,

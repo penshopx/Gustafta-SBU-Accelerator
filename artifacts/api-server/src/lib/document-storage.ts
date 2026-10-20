@@ -15,6 +15,7 @@ function cleanupSnapshot(path: string, metadata: { generation?: string | number;
     updatedAt: Math.max(Date.parse(metadata.updated ?? ""), Date.parse(metadata.timeCreated ?? "")) };
 }
 export interface CleanupCursor { namespace: "uploads" | "documents"; pageToken?: string }
+export class InvalidCleanupCursor extends Error {}
 export { DocumentValidationError, MAX_DOCUMENT_BYTES, validDocumentSignature } from "./document-validation";
 export const documentStorage = {
   // Restrict GC to the two application-owned UUID namespaces, never the bucket
@@ -23,6 +24,11 @@ export const documentStorage = {
     const { bucket, prefix } = cleanupBucket();
     const [files, next] = await bucket.getFiles({
       prefix: `${prefix}${cursor.namespace}/`, autoPaginate: false, maxResults: 1000, pageToken: cursor.pageToken,
+    }).catch((error: unknown) => {
+      if (cursor.pageToken && (error as { code?: number })?.code === 400) {
+        throw new InvalidCleanupCursor("Cleanup page token rejected");
+      }
+      throw error;
     });
     const objects = files.map((file) => cleanupSnapshot(`/objects/${file.name.slice(prefix.length)}`, file.metadata))
       .filter((object) => isManagedDocumentPath(object.path));

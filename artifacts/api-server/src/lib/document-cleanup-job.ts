@@ -1,6 +1,6 @@
 import { db, documentsTable } from "@workspace/db";
 import { and, eq } from "drizzle-orm";
-import { documentStorage, type CleanupCursor } from "./document-storage";
+import { documentStorage, InvalidCleanupCursor, type CleanupCursor } from "./document-storage";
 import { documentCleanupLock } from "./document-lifecycle-lock";
 import { reconcileDocuments } from "./document-cleanup";
 import { logger } from "./logger";
@@ -26,6 +26,9 @@ export async function runDocumentCleanup(dryRun: boolean, limits?: CleanupBudget
     try {
       page = await budget.run(() => documentStorage.listCleanupObjects(cursor));
     } catch (error) {
+      // Rejected provider tokens must not strand the namespace forever. Abort
+      // this round; the next round starts over with a fresh reference snapshot.
+      if (error instanceof InvalidCleanupCursor) cursor = { namespace: cursor.namespace };
       if (!(error instanceof CleanupStopped)) throw error;
       return { stopped: 1, timeouts: budget.timeouts, operations: budget.operations };
     }
