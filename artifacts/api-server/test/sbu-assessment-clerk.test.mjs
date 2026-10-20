@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { after, afterEach, test } from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { createSign, createVerify, generateKeyPairSync } from "node:crypto";
-import { request as httpRequest } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -11,6 +11,9 @@ import { guardOutboundFetch, guardOutboundNetwork } from "./helpers/offline-netw
 
 // Install once before async setup and app imports. SDKs can catch network errors,
 // so both per-test and suite assertions inspect the persistent attempt log.
+// Keep native fetch for transport regressions: a second global fetch wrapper
+// must not hide a broken redirect policy in the guard under test.
+const nativeFetch = globalThis.fetch;
 const outboundNetwork = guardOutboundNetwork();
 afterEach(() => outboundNetwork.assertNoOutbound());
 
@@ -256,6 +259,74 @@ test("penjaga outbound mengizinkan loopback dan mencatat kegagalan yang ditangka
     guard.restore();
   }
   assert.equal(target.fetch, originalFetch, "fetch tetap dipulihkan setelah penolakan");
+});
+
+test("penjaga fetch menolak redirect HTTP nyata sebelum tujuan lokal maupun eksternal dihubungi", async (t) => {
+  let destinationRequests = 0;
+  let redirectRequests = 0;
+  const destination = createServer((_req, res) => {
+    destinationRequests++;
+    res.end("redirect destination must not be reached");
+  });
+  const source = createServer((req, res) => {
+    redirectRequests++;
+    const params = new URL(req.url, "http://127.0.0.1").searchParams;
+    res.writeHead(Number(params.get("status")), { Location: params.get("to") });
+    res.end();
+  });
+  const target = { fetch: nativeFetch };
+  const guard = guardOutboundFetch(target);
+  t.after(async () => {
+    guard.restore();
+    await Promise.all([source, destination].map((server) => new Promise((resolve) => {
+      server.close(resolve);
+      server.closeAllConnections();
+    })));
+  });
+  for (const server of [destination, source]) {
+    await new Promise((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", () => {
+        server.removeListener("error", reject);
+        resolve();
+      });
+    });
+  }
+  const localDestination = `http://127.0.0.1:${destination.address().port}/destination`;
+  // Reserved invalid domain; the suite's socket guard also blocks attempts
+  // before DNS/connect if the fetch redirect policy ever regresses.
+  const externalDestination = "https://redirect-destination.invalid/destination";
+  for (const status of [302, 307]) {
+    for (const [kind, to] of [["local", localDestination], ["external", externalDestination]]) {
+      for (const inputKind of ["string", "URL", "Request-follow", "init-follow"]) {
+        await t.test(`${status} ${kind} ${inputKind}`, async () => {
+          const url = new URL(`http://127.0.0.1:${source.address().port}/redirect`);
+          url.searchParams.set("status", String(status));
+          url.searchParams.set("to", to);
+          const input = inputKind === "URL" ? url
+            : inputKind === "Request-follow" ? new Request(url, { redirect: "follow" })
+              : url.href;
+          const before = redirectRequests;
+          await assert.rejects(
+            target.fetch(input, {
+              ...(inputKind === "init-follow" ? { redirect: "follow" } : {}),
+              signal: AbortSignal.timeout(3000),
+            }),
+            (error) => {
+              assert.equal(error.name, "TypeError");
+              assert.match(error.cause?.message ?? "", /unexpected redirect/i,
+                "penolakan harus berasal dari kebijakan redirect, bukan DNS/socket/timeout");
+              return true;
+            },
+          );
+          assert.equal(redirectRequests, before + 1, "server sumber benar-benar menerima satu permintaan");
+          assert.equal(destinationRequests, 0, "tujuan redirect loopback tidak menerima permintaan");
+          guard.assertNoOutbound();
+          outboundNetwork.assertNoOutbound();
+        });
+      }
+    }
+  }
 });
 
 test("GET privat tab A ditolak dengan cookie B atau tanpa prakondisi sebelum query apa pun", async () => {
