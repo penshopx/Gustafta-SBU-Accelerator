@@ -82,6 +82,7 @@ Empat peran dapat membentuk profil. Kontraktor/konsultan dapat membuat dan menge
 
 ## Rujukan framework lanjutan
 
+- Arah operasional yang diminta pengguna: aplikasi mandiri untuk knowledge, studi kasus, dan pendampingan proses sertifikasi badan usaha jasa konstruksi. Prioritas penyelesaian diarahkan pada tiga fungsi tersebut, bukan penambahan fitur umum; rencana di `docs/operational-priorities.md` belum merupakan implementasi atau persetujuan publikasi.
 - Framework SBU Accelerator 2.0 melengkapi blueprint; penyesuaian dan batas penerapannya tercatat di `docs/blueprint-adoption.md`. Fitur agentic, OCR, simulator, dan pemantauan pasca-terbit belum diaktifkan.
 - Keputusan produk terbaru pengguna pada 9 Oktober 2026: SBU Accelerator adalah aplikasi mandiri yang terpisah dari Gustafta.my.id, termasuk penyimpanan dokumen asli di aplikasi SBU. Integrasi dengan Gustafta.my.id/Ruang Simpan dibatalkan untuk fase saat ini. Integrasi baru dipertimbangkan pada fase pengembangan berikutnya setelah SBU Accelerator dan Gustafta sama-sama teruji dalam praktik penggunaan nyata. Ini menggantikan rencana integrasi setelah sekadar dianggap matang dan keputusan lama bahwa dokumen asli hanya disimpan di Ruang Simpan.
 - Konsep fitur Gustafta yang relevan—Ruang Simpan, Bedah Dokumen, Klinik Konsultasi, Workroom, dan fitur pendukung lain—dikembangkan langsung di SBU Accelerator. Ini adalah arah produk, bukan klaim bahwa seluruh modul telah tersedia; rincian cakupannya tetap perlu ditentukan.
