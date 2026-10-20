@@ -7,11 +7,12 @@
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
-    "test": "node --import tsx --test src/components/*.test.tsx src/lib/*.test.ts test/bfcache/*.test.mjs test/print/*.test.mjs",
+    "test": "node --import tsx --test src/components/*.test.tsx src/lib/*.test.ts test/bfcache/*.test.mjs test/print/*.test.mjs test/chat/*.test.mjs",
     "test:typecheck": "node --test test/typecheck/*.test.mjs",
     "test:bfcache": "node test/bfcache/run.mjs",
     "test:bfcache:unit": "node --test test/bfcache/*.test.mjs",
     "test:print": "node --test test/print/*.test.mjs",
+    "test:chat": "node --test test/chat/*.test.mjs",
     "typecheck": "tsc --build ../../lib/api-client-react/tsconfig.json --force && tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
