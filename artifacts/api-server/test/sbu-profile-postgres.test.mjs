@@ -59,11 +59,13 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
   const admin = new Pool({ connectionString: process.env.DATABASE_URL, max: 1 });
   let isolated;
   let restricted;
-  const temporaryDir = await mkdtemp(join(testDir, ".sbu-profile-pg-"));
+  let temporaryDir;
   let created = false;
   let server;
+  let primaryError;
 
   try {
+    temporaryDir = await mkdtemp(join(testDir, ".sbu-profile-pg-"));
     // Clone only the profile table; route writes use a separate restricted login.
     await admin.query(`CREATE SCHEMA "${schema}"`);
     created = true;
@@ -212,6 +214,100 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
       }], "Dua GET paralel harus menghasilkan satu baris profil saja");
       assert.equal(await applicationCount(), 0, "Tabel aplikasi tidak boleh menerima profil pengguna uji");
     });
+
+    for (const failedMethod of ["GET", "PATCH"]) {
+      for (const retryMethod of ["GET", "PATCH"]) {
+        await t.test(`${failedMethod} pertama gagal di PostgreSQL tanpa profil parsial; percobaan ulang ${retryMethod} berhasil`, async () => {
+          const userId = `test-first-write-failure-${randomUUID()}`;
+          const changes = {
+            role: "konsultan",
+            displayName: "Nama Setelah Percobaan Ulang",
+            organizationName: "Organisasi Setelah Percobaan Ulang",
+          };
+          const options = (method) => method === "PATCH" ? {
+            method,
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(changes),
+          } : { method };
+          const ownProfiles = async () => (await isolated.query(
+            "SELECT * FROM sbu_profiles WHERE user_id = $1", [userId],
+          )).rows;
+          const applicationProfiles = async () => (await admin.query(
+            "SELECT * FROM public.sbu_profiles WHERE user_id = $1", [userId],
+          )).rows;
+          const before = await readProfiles();
+          assert.deepEqual(await ownProfiles(), [], "Profil pertama belum dibuat");
+          assert.deepEqual(await applicationProfiles(), [], "ID uji tidak boleh ada di public");
+
+          // The identifier contains only our generated UUID, never request input.
+          // A real CHECK violation is confined to this disposable table.
+          const constraint = "reject_first_profile_write";
+          let constraintCreated = false;
+          const failures = [];
+          try {
+            await admin.query(`ALTER TABLE "${schema}".sbu_profiles
+              ADD CONSTRAINT "${constraint}" CHECK (user_id <> '${userId}')`);
+            constraintCreated = true;
+            controlQuery = async (args, execute, context) => {
+              if (context?.userId !== userId) return execute();
+              const sql = typeof args[0] === "string" ? args[0] : args[0].text;
+              assert.match(sql, /^insert into "sbu_profiles"/i,
+                "Kegagalan harus berasal dari INSERT profil pertama yang sebenarnya");
+              try {
+                return await execute();
+              } catch (error) {
+                failures.push(error);
+                throw error;
+              }
+            };
+
+            const failed = await request(server, userId, options(failedMethod));
+            assert.equal(failed.status, 500, failed.raw);
+            assert.equal(failures.length, 1, "PostgreSQL harus menolak satu penulisan nyata");
+            assert.equal(failures[0].code, "23514", "Harus berupa pelanggaran CHECK PostgreSQL");
+            assert.equal(failures[0].schema, schema, "SQL gagal hanya pada skema salinan");
+            assert.equal(failures[0].table, "sbu_profiles");
+            assert.equal(failures[0].constraint, constraint);
+            assert.deepEqual(await ownProfiles(), [], "Penulisan gagal tidak boleh meninggalkan profil parsial");
+            assert.deepEqual(await readProfiles(), before, "Profil lain tidak boleh berubah saat penulisan gagal");
+            assert.deepEqual(await applicationProfiles(), [], "Kegagalan tidak boleh menulis ke public");
+
+            controlQuery = undefined;
+            await admin.query(`ALTER TABLE "${schema}".sbu_profiles DROP CONSTRAINT "${constraint}"`);
+            constraintCreated = false;
+
+            const retry = await request(server, userId, options(retryMethod));
+            const expected = {
+              userId,
+              ...(retryMethod === "PATCH" ? changes : {
+                role: "belum_dipilih", displayName: "", organizationName: "",
+              }),
+            };
+            assert.equal(retry.status, 200, retry.raw);
+            assert.deepEqual(retry.body, expected);
+            assert.deepEqual(await ownProfiles(), [{
+              user_id: userId,
+              role: expected.role,
+              display_name: expected.displayName,
+              organization_name: expected.organizationName,
+            }], "Percobaan ulang harus menyimpan tepat satu profil dengan semua nilai yang benar");
+
+            const persisted = await request(server, userId);
+            assert.equal(persisted.status, 200, persisted.raw);
+            assert.deepEqual(persisted.body, expected, "GET berikutnya harus membaca profil tersimpan");
+            assert.equal((await ownProfiles()).length, 1, "GET berikutnya tidak boleh menggandakan profil");
+            assert.deepEqual((await readProfiles()).filter((row) => row.user_id !== userId), before,
+              "Percobaan ulang tidak boleh mengubah profil lain");
+            assert.deepEqual(await applicationProfiles(), [], "ID uji harus tetap tidak ada di public.sbu_profiles");
+          } finally {
+            controlQuery = undefined;
+            if (constraintCreated) {
+              await admin.query(`ALTER TABLE "${schema}".sbu_profiles DROP CONSTRAINT "${constraint}"`);
+            }
+          }
+        });
+      }
+    }
 
     for (const first of ["GET", "PATCH"]) {
       await t.test(`GET dan PATCH pertama bersamaan: penulisan ${first} lebih dahulu tidak kehilangan perubahan`, async () => {
@@ -617,18 +713,26 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
       }
       assert.deepEqual(await readProfiles(), before, "GET tidak boleh mengubah profil pengguna lain");
     }
+  } catch (error) {
+    primaryError = error;
+    throw error;
   } finally {
-    if (server) await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    const cleanupErrors = [];
+    const cleanup = async (action) => {
+      try { await action(); } catch (error) { cleanupErrors.push(error); }
+    };
+    if (server) await cleanup(() => new Promise((resolve, reject) =>
+      server.close((error) => error ? reject(error) : resolve())));
     delete globalThis.__profileTestDb;
-    try {
-      try {
-        if (restricted) await restricted.close();
-      } finally {
-        if (created) await admin.query(`DROP SCHEMA "${schema}" CASCADE`);
-      }
-    } finally {
-      await admin.end();
-      await rm(temporaryDir, { recursive: true, force: true });
+    if (restricted) await cleanup(() => restricted.close());
+    if (created) await cleanup(() => admin.query(`DROP SCHEMA "${schema}" CASCADE`));
+    await cleanup(() => admin.end());
+    if (temporaryDir) await cleanup(() => rm(temporaryDir, { recursive: true, force: true }));
+    if (cleanupErrors.length) {
+      throw new AggregateError(
+        [...(primaryError ? [primaryError] : []), ...cleanupErrors],
+        "Pembersihan pengujian profil gagal; kesalahan pengujian asli tetap disertakan",
+      );
     }
   }
 });
