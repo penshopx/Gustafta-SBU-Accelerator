@@ -23,6 +23,13 @@ Ruang kerja persiapan permohonan SBU baru dan perpanjangan untuk ekosistem jasa 
 - `api-typecheck`: `pnpm --filter @workspace/api-server typecheck` — pemeriksaan tipe API beserta project references.
 - Perintah regresi frontend dan kedua perintah API terdaftar sebagai validasi proyek agar kegagalan menghentikan penyelesaian tugas sebelum penggabungan. Jangan menggantinya dengan `test` API biasa: suite tersebut mencakup tes database; gate tipe ini hanya mengompilasi dan memakai fixture sementara tanpa menulis data aplikasi.
 
+### Pembaruan dependensi Clerk dan backend
+
+- `clerk-session-compatibility`: `pnpm --filter @workspace/api-server exec node --test test/sbu-assessment-clerk.test.mjs` — validasi proyek wajib sebelum penggabungan, didaftarkan melalui mekanisme validasi resmi.
+- Setiap pembaruan `@clerk/express` atau `@clerk/shared` di `artifacts/api-server/package.json`, serta perubahan resolusi dependensi backend langsung maupun transitif di `pnpm-lock.yaml` (termasuk `@clerk/backend`), wajib melewati validasi ini setelah instalasi dependensi yang baru. Perubahan lockfile saja juga tercakup; typecheck tidak menggantikan pemeriksaan kompatibilitas sesi.
+- Alur pembaruan: perbarui manifest/lockfile sesuai kebutuhan, sinkronkan instalasi dengan `pnpm install --frozen-lockfile`, lalu jalankan validasi bernama `clerk-session-compatibility` bersama validasi proyek lainnya sebelum penggabungan. Jika gagal, perbaiki ketidakcocokan SDK/fixture; jangan melewati gate atau memakai akun nyata untuk meluluskannya.
+- Pemeriksaan memakai pasangan kunci lokal, token sesi sintetis, data fixture, dan server HTTP loopback. Tidak perlu akun Clerk nyata atau akses database aplikasi; percobaan fetch keluar dan peringatan ketidakcocokan sesi menyebabkan kegagalan. Jangan menggantinya dengan uji login langsung atau menonaktifkan penjaga fixture.
+
 ### Batas kepercayaan domain autentikasi
 
 - Domain Clerk hanya dipilih dari Host yang dinormalisasi dan diizinkan. Sumber daftar: domain publik terverifikasi `gustafta-sbu-accelerator.replit.app`, `REPLIT_DOMAINS` dari platform, dan `CLERK_ALLOWED_HOSTS` (hostname tambahan yang disetujui operator, dipisahkan koma; tanpa skema/path/wildcard). Domain alternatif sah harus didaftarkan di salah satu sumber tersebut. Localhost hanya diizinkan di luar produksi.
