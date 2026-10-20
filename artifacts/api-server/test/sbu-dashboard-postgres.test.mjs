@@ -231,6 +231,86 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
     assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
       "Permintaan daftar dan dashboard tidak boleh memasukkan data uji ke tabel aplikasi");
 
+    await t.test("POST yang ditolak karena isi atau peran menjaga ringkasan dan seluruh data tersimpan", async (t) => {
+      const validInput = {
+        companyName: "Perusahaan yang Tidak Boleh Tersimpan",
+        requestType: "baru",
+        qualification: "kecil",
+        classification: "gedung",
+      };
+      const snapshot = async () => ({
+        // JSONB preserves timestamp precision that node-postgres Date would lose.
+        profiles: (await isolated.query(
+          "SELECT to_jsonb(p) AS row FROM sbu_profiles p ORDER BY user_id",
+        )).rows,
+        cases: (await isolated.query(
+          "SELECT to_jsonb(c) AS row FROM sbu_cases c ORDER BY id",
+        )).rows,
+        sequence: (await isolated.query(
+          `SELECT last_value, is_called FROM "${schema}".sbu_cases_id_seq`,
+        )).rows,
+      });
+      const assertRejected = async (body, expectedStatus, expectedError) => {
+        const baseline = await request(server, ownerId);
+        assert.equal(baseline.status, 200, baseline.raw);
+        const { recent, ...counts } = baseline.body;
+        assert.deepEqual(counts, { total: 8, draft: 3, reviewing: 3, prepared: 2 });
+        assert.deepEqual(recent.map((item) => item.id), [100, 206, 205, 204, 203]);
+        const otherBaseline = await request(server, otherOwnerId);
+        assert.equal(otherBaseline.status, 200, otherBaseline.raw);
+        assert.deepEqual(otherBaseline.body, {
+          total: 2, draft: 1, reviewing: 1, prepared: 0, recent: otherBaseline.body.recent,
+        });
+        assert.deepEqual(otherBaseline.body.recent.map((item) => item.id), [999, 998]);
+        const storedBefore = await snapshot();
+
+        const rejected = await request(server, ownerId, "/cases", { method: "POST", body });
+        assert.equal(rejected.status, expectedStatus, rejected.raw);
+        assert.equal(rejected.body.error, expectedError);
+        if (expectedStatus === 400) assert.equal(typeof rejected.body.detail, "string");
+        assert.deepEqual(await snapshot(), storedBefore,
+          "POST ditolak tidak boleh menyisipkan, mengubah, menghapus data kedua pengguna atau memajukan sequence lokal");
+
+        const after = await request(server, ownerId);
+        assert.equal(after.status, 200, after.raw);
+        assert.deepEqual(after.body, baseline.body,
+          "Total, semua hitungan status, isi dan urutan lima terbaru harus tetap sama setelah penolakan");
+        const otherAfter = await request(server, otherOwnerId);
+        assert.equal(otherAfter.status, 200, otherAfter.raw);
+        assert.deepEqual(otherAfter.body, otherBaseline.body,
+          "Penolakan POST pemilik tidak boleh mengubah ringkasan pengguna lain");
+        assert.deepEqual(await snapshot(), storedBefore,
+          "Pembacaan dashboard setelah penolakan juga tidak boleh mengubah baris tersimpan");
+        assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
+          "Seluruh skenario penolakan harus tetap terbatas pada tabel salinan");
+      };
+
+      for (const [name, body] of [
+        ["field wajib tidak dikirim", {}],
+        ["nama perusahaan kosong", { ...validInput, companyName: "" }],
+        ["jenis permohonan tidak dikenal", { ...validInput, requestType: "tidak_valid" }],
+        ["kualifikasi tidak dikenal", { ...validInput, qualification: "tidak_valid" }],
+        ["klasifikasi kosong", { ...validInput, classification: "" }],
+        ["tanggal tidak valid", { ...validInput, existingSbuExpiresOn: "bukan-tanggal" }],
+      ]) {
+        await t.test(name, () => assertRejected(body, 400, "Data permohonan tidak valid."));
+      }
+
+      for (const role of ["belum_dipilih", "profesional", "asosiasi"]) {
+        await t.test(`peran ${role} ditolak meskipun isi valid`, async () => {
+          // Keep the owner's eight existing cases so a forbidden role cannot
+          // pass merely because its dashboard happened to be empty.
+          await isolated.query("UPDATE sbu_profiles SET role = $1 WHERE user_id = $2", [role, ownerId]);
+          try {
+            await assertRejected(validInput, 403,
+              "Ruang kerja SBU saat ini tersedia untuk peran kontraktor dan konsultan.");
+          } finally {
+            await isolated.query("UPDATE sbu_profiles SET role = 'kontraktor' WHERE user_id = $1", [ownerId]);
+          }
+        });
+      }
+    });
+
     await t.test("POST langsung menambah total/draf dan menggeser lima terbaru tanpa mengubah pengguna lain", async () => {
       const baseline = await request(server, ownerId);
       assert.equal(baseline.status, 200, baseline.raw);
