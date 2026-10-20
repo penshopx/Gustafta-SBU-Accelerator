@@ -13,15 +13,13 @@ import { createRestrictedRoutePool } from "./helpers/restricted-postgres.mjs";
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const { Pool } = createRequire(new URL("../../../lib/db/package.json", import.meta.url))("pg");
 
-async function request(server, userId, path = "/dashboard", { method = "GET", body } = {}) {
+async function request(server, userId, path = "/dashboard", { method = "GET", body, formOwner = userId } = {}) {
   const { port } = server.address();
   const response = await fetch(`http://127.0.0.1:${port}/api${path}`, {
     method,
     headers: {
-      ...(userId == null ? {} : {
-        "x-test-user-id": userId,
-        "X-SBU-Form-Owner": userId,
-      }),
+      ...(userId == null ? {} : { "x-test-user-id": userId }),
+      ...(formOwner == null ? {} : { "X-SBU-Form-Owner": formOwner }),
       ...(body === undefined ? {} : { "Content-Type": "application/json" }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -187,6 +185,34 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
             `${path}: akses anonim tidak boleh menambah, menghapus, atau mengubah profil/permohonan maupun memajukan sequence lokal`);
           assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
             `${path}: data uji tidak boleh masuk ke tabel aplikasi`);
+        }
+      }
+    });
+
+    await t.test("GET daftar dan dashboard dengan header pemilik fixture tanpa sesi tetap 401 tanpa data privat atau perubahan PostgreSQL", async () => {
+      const { rows: [identity] } = await isolated.query(
+        "SELECT pg_get_serial_sequence($1, 'id') AS sequence", [`${schema}.sbu_cases`],
+      );
+      assert.equal(identity.sequence, `${schema}.sbu_cases_id_seq`,
+        "Sequence yang diperiksa harus milik tabel salinan, bukan tabel aplikasi");
+      const beforeAnonymous = await anonymousSnapshot();
+      assert.equal(beforeAnonymous.profiles.length, 2);
+      assert.equal(beforeAnonymous.cases.length, 10);
+
+      for (const formOwner of owners) {
+        for (const path of ["/cases", "/dashboard"]) {
+          for (let attempt = 0; attempt < 2; attempt += 1) {
+            // Send an existing fixture owner's precondition, but no Clerk
+            // identity or cookie: the owner header is not proof of login.
+            const response = await request(server, undefined, path, { formOwner });
+            assert.equal(response.status, 401, `${path}: ${response.raw}`);
+            assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." },
+              `${path}: header pemilik tanpa sesi tidak boleh membuka profil, permohonan, atau ringkasan privat`);
+            assert.deepEqual(await anonymousSnapshot(), beforeAnonymous,
+              `${path}: header pemilik tanpa sesi tidak boleh mengubah profil/permohonan siapa pun maupun memajukan sequence lokal`);
+            assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
+              `${path}: data uji tidak boleh masuk ke tabel aplikasi`);
+          }
         }
       }
     });
