@@ -154,6 +154,7 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
     app.use((req, _res, next) => routeRequest.run({
       method: req.method,
       userId: req.get("x-test-user-id"),
+      displayName: req.body?.displayName,
     }, next));
     app.use("/api", router);
     server = app.listen(0);
@@ -316,6 +317,112 @@ test("GET dan PATCH /api/me menolak pengunjung tanpa sesi dan mengisolasi profil
           await withinDeadline(Promise.allSettled(pending), "pembersihan permintaan bersamaan");
         }
       });
+    }
+
+    for (const ownExists of [false, true]) {
+      for (const first of ["A", "B"]) {
+        await t.test(`dua PATCH bersamaan pada profil ${ownExists ? "lama" : "baru"} menyimpan nilai utuh saat ${first} lebih dahulu`, async () => {
+          const userId = `test-two-patches-${randomUUID()}`;
+          const changes = {
+            A: { role: "kontraktor", displayName: "Nama PATCH A", organizationName: "Organisasi PATCH A" },
+            B: { role: "konsultan", displayName: "Nama PATCH B", organizationName: "Organisasi PATCH B" },
+          };
+          const second = first === "A" ? "B" : "A";
+          const ownProfiles = async () => (await isolated.query(
+            "SELECT * FROM sbu_profiles WHERE user_id = $1", [userId],
+          )).rows;
+          const applicationProfiles = async () => (await admin.query(
+            "SELECT * FROM public.sbu_profiles WHERE user_id = $1", [userId],
+          )).rows;
+          const expectedRow = (label) => ({
+            user_id: userId,
+            role: changes[label].role,
+            display_name: changes[label].displayName,
+            organization_name: changes[label].organizationName,
+          });
+          assert.deepEqual(await applicationProfiles(), [], "ID uji tidak boleh ada di public");
+          if (ownExists) {
+            await isolated.query(
+              "INSERT INTO sbu_profiles (user_id, role, display_name, organization_name) VALUES ($1, $2, $3, $4)",
+              [userId, "profesional", "Nama Sebelum PATCH", "Organisasi Sebelum PATCH"],
+            );
+          }
+          const before = await readProfiles();
+          const initialOwnProfiles = await ownProfiles();
+          assert.equal(initialOwnProfiles.length, ownExists ? 1 : 0);
+          const gates = Object.fromEntries(["A", "B"].map((label) => [label, {
+            arrived: checkpoint(), release: checkpoint(), completed: checkpoint(),
+          }]));
+          const order = [];
+          const queries = { A: 0, B: 0 };
+          controlQuery = async (args, execute, context) => {
+            if (context?.userId !== userId) return execute();
+            assert.equal(context.method, "PATCH");
+            const label = Object.keys(changes).find((key) => changes[key].displayName === context.displayName);
+            assert.ok(label, "Urutan query harus terikat pada body PATCH, bukan urutan kedatangan HTTP");
+            queries[label] += 1;
+            assert.equal(queries[label], 1, "Setiap PATCH harus menyimpan semua kolom dalam satu upsert atomik");
+            const sql = typeof args[0] === "string" ? args[0] : args[0].text;
+            assert.match(sql, /^insert into "sbu_profiles"/i);
+            assert.match(sql, /on conflict .* do update set /i);
+            const gate = gates[label];
+            gate.arrived.resolve();
+            await gate.release.promise;
+            try {
+              const result = await execute();
+              order.push(label);
+              return result;
+            } finally {
+              gate.completed.resolve();
+            }
+          };
+
+          const pending = ["A", "B"].map((label) => request(server, userId, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(changes[label]),
+          }));
+          try {
+            await withinDeadline(Promise.all(Object.values(gates).map((gate) => gate.arrived.promise)),
+              "kedua PATCH mencapai upsert sebelum penulisan pertama");
+            assert.deepEqual(await ownProfiles(), initialOwnProfiles,
+              "Kedua PATCH harus masih berlangsung tanpa mengubah profil");
+            gates[first].release.resolve();
+            await withinDeadline(gates[first].completed.promise, `upsert PATCH ${first}`);
+            assert.deepEqual(order, [first], "PATCH kedua harus masih tertahan");
+            assert.deepEqual(await ownProfiles(), [expectedRow(first)],
+              "Semua kolom hasil penulisan pertama harus berasal dari PATCH pertama");
+            assert.deepEqual(await applicationProfiles(), [], "PATCH pertama tidak boleh menulis ke public");
+
+            gates[second].release.resolve();
+            await withinDeadline(gates[second].completed.promise, `upsert PATCH ${second}`);
+            const responses = await withinDeadline(Promise.all(pending), "respons kedua PATCH");
+            for (const [index, label] of ["A", "B"].entries()) {
+              assert.equal(responses[index].status, 200, responses[index].raw);
+              assert.deepEqual(responses[index].body, { userId, ...changes[label] },
+                "Setiap respons PATCH harus mengembalikan nilai lengkap permintaannya sendiri");
+            }
+            assert.deepEqual(order, [first, second], "Urutan penyimpanan harus sesuai pengendalian query");
+            assert.deepEqual(queries, { A: 1, B: 1 }, "Kedua PATCH harus menjalankan Drizzle nyata");
+            assert.deepEqual(await ownProfiles(), [expectedRow(second)],
+              "Hanya satu baris tersimpan dan seluruh kolom berasal dari PATCH terakhir, bukan campuran");
+            const after = await readProfiles();
+            assert.equal(after.length, before.length + (ownExists ? 0 : 1));
+            assert.deepEqual(after.filter((row) => row.user_id !== userId),
+              before.filter((row) => row.user_id !== userId), "Profil pengguna lain tidak boleh berubah");
+            controlQuery = undefined;
+            const persisted = await request(server, userId);
+            assert.equal(persisted.status, 200, persisted.raw);
+            assert.deepEqual(persisted.body, { userId, ...changes[second] },
+              "GET berikutnya harus membaca profil utuh yang terakhir tersimpan");
+            assert.deepEqual(await applicationProfiles(), [], "public.sbu_profiles tidak boleh menerima ID uji");
+          } finally {
+            controlQuery = undefined;
+            for (const gate of Object.values(gates)) gate.release.resolve();
+            await withinDeadline(Promise.allSettled(pending), "pembersihan dua PATCH bersamaan");
+          }
+        });
+      }
     }
 
     for (const ownExists of [false, true]) {
