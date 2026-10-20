@@ -48,4 +48,5 @@ Thumbs.db
 .cache/
 .local/
 /lib/api-spec/.codegen-*/
+/lib/api-spec/.codegen.lock
 /generated-artifacts/
