@@ -25,3 +25,4 @@
 - [PDF page isolation](pdf-page-isolation.md) — render selected pixels into a fresh PDF; copying source page objects cannot establish isolation from unselected content.
 - [Route fixture SQL boundaries](route-fixture-sql-boundaries.md) — declaring a SQL expression at import time is not a database query; keep execution blocked in isolated route tests.
 - [Cleanup timeout safety](cleanup-timeout-safety.md) — stopping a storage wait does not cancel DELETE; cleanup targets must never become eligible for ready/adoption afterward.
+- [Async fixture imports](async-fixture-imports.md) — keep asynchronous fixture initialization separate from the entry point that dynamically loads its consumers.
