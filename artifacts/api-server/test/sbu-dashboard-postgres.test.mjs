@@ -498,6 +498,74 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
       }
     });
 
+    await t.test("PATCH tidak valid atau kosong menjaga seluruh kolom dan urutan daftar lengkap kedua pengguna", async (t) => {
+      const snapshot = async () => ({
+        // JSONB retains PostgreSQL timestamp precision, including updated_at.
+        profiles: (await isolated.query(
+          "SELECT to_jsonb(p) AS row FROM sbu_profiles p ORDER BY user_id",
+        )).rows,
+        cases: (await isolated.query(
+          "SELECT to_jsonb(c) AS row FROM sbu_cases c ORDER BY id",
+        )).rows,
+        sequence: (await isolated.query(
+          `SELECT last_value, is_called FROM "${schema}".sbu_cases_id_seq`,
+        )).rows,
+      });
+      const scenarios = [
+        ["nama perusahaan kosong", { companyName: "" }],
+        ["jenis permohonan tidak dikenal", { requestType: "tidak_valid" }],
+        ["kualifikasi tidak dikenal", { qualification: "tidak_valid" }],
+        ["klasifikasi kosong", { classification: "" }],
+        ["status tidak dikenal", { status: "tidak_valid" }],
+        ["tanggal tidak valid", { existingSbuExpiresOn: "bukan-tanggal" }],
+        ["perubahan valid bercampur perubahan tidak valid", {
+          companyName: "Nama yang Tidak Boleh Tersimpan", status: "tidak_valid",
+        }],
+        ["objek kosong", {}],
+        ["tanpa body", undefined],
+      ];
+
+      // Test both an older row outside the dashboard and a row in the tied
+      // timestamp group: a rejected edit must not promote either in the list.
+      for (const id of [900, 203]) {
+        for (const [name, body] of scenarios) {
+          await t.test(`permohonan ${id}: ${name}`, async () => {
+            const baseline = await request(server, ownerId, "/cases");
+            const otherBaseline = await request(server, otherOwnerId, "/cases");
+            assert.equal(baseline.status, 200, baseline.raw);
+            assert.equal(otherBaseline.status, 200, otherBaseline.raw);
+            assert.deepEqual(baseline.body.map((item) => item.id),
+              [100, 206, 205, 204, 203, 202, 201, 900]);
+            assert.deepEqual(otherBaseline.body.map((item) => item.id), [999, 998]);
+            const storedBefore = await snapshot();
+            assert.equal(storedBefore.cases.length, 10);
+            assert.equal(storedBefore.profiles.length, 2);
+
+            const rejected = await request(server, ownerId, `/cases/${id}`, {
+              method: "PATCH", body,
+            });
+            assert.equal(rejected.status, 400, rejected.raw);
+            assert.deepEqual(rejected.body, { error: "Perubahan tidak valid." });
+            assert.deepEqual(await snapshot(), storedBefore,
+              "PATCH ditolak tidak boleh mengubah updated_at atau kolom mana pun, menambah/menghapus baris, atau memajukan sequence lokal");
+
+            const after = await request(server, ownerId, "/cases");
+            const otherAfter = await request(server, otherOwnerId, "/cases");
+            assert.equal(after.status, 200, after.raw);
+            assert.equal(otherAfter.status, 200, otherAfter.raw);
+            assert.deepEqual(after.body, baseline.body,
+              "Seluruh isi dan urutan daftar lengkap pemilik harus identik setelah PATCH ditolak");
+            assert.deepEqual(otherAfter.body, otherBaseline.body,
+              "Seluruh isi dan urutan daftar lengkap pengguna lain harus tetap identik");
+            assert.deepEqual(await snapshot(), storedBefore,
+              "GET kedua daftar setelah penolakan juga tidak boleh mengubah seluruh data tersimpan");
+            assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
+              "Penolakan PATCH dan pembacaan daftar harus tetap terbatas pada tabel salinan");
+          });
+        }
+      }
+    });
+
     await t.test("PATCH permohonan tertua langsung menaikkannya ke awal daftar lengkap tanpa mengubah kolom lain atau pengguna lain", async () => {
       const baseline = await request(server, ownerId, "/cases");
       assert.equal(baseline.status, 200, baseline.raw);
