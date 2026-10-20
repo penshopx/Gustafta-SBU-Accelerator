@@ -131,6 +131,31 @@ test("frontend typecheck handles stale declarations and regenerated contract cha
     assert.match(wrongContractType.output, /contract-probe\.ts.*TS2322/);
     writeFileSync(contractProbe, consumer);
 
+    // Remove only the fixture's OpenAPI field, keeping the generated files and
+    // build metadata from the successful addition. Stale output still accepts
+    // the old consumer until codegen removes the field from every layer.
+    writeFileSync(spec, originalSpec);
+    for (const file of [clientSource, declaration, zodSource]) {
+      assert.match(readFileSync(file, "utf8"), /typecheckContractProbe/);
+    }
+    assertPassed(check(root));
+    assertPassed(run(root, "pnpm", ["--filter", "@workspace/api-spec", "run", "codegen"]));
+    for (const file of [clientSource, declaration, zodSource]) {
+      assert.doesNotMatch(readFileSync(file, "utf8"), /typecheckContractProbe/);
+    }
+    assertPassed(run(root, "node", ["--import", "tsx", "--input-type=module", "-e", `
+      import assert from "node:assert/strict";
+      import { ListRegulationsResponseItem } from "../../lib/api-zod/src/generated/api.ts";
+      assert.equal(Object.hasOwn(ListRegulationsResponseItem.shape, "typecheckContractProbe"), false);
+      assert.equal(ListRegulationsResponseItem.shape.id.parse("fixture-only"), "fixture-only");
+    `], { cwd: path.join(root, "artifacts/gustafta-sbu") }));
+    const removedContractField = check(root);
+    assert.notEqual(removedContractField.status, 0, removedContractField.output);
+    assert.match(removedContractField.output, /contract-probe\.ts\(2,\d+\).*TS2339.*typecheckContractProbe/);
+    assert.match(removedContractField.output, /contract-probe\.ts\(3,\d+\).*TS2339.*typecheckContractProbe/);
+    rmSync(contractProbe);
+    assertPassed(check(root));
+
     const frontendProbe = path.join(root, "artifacts/gustafta-sbu/src/typecheck-probe.ts");
     writeFileSync(frontendProbe, "export const invalid: string = 123;\n");
     const frontendError = check(root);
