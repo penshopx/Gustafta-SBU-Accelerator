@@ -156,21 +156,22 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
     app.use("/api", router);
     server = app.listen(0);
 
+    // Compare every column (including full timestamp precision), not only
+    // counts: an upsert or a delete/insert pair must also fail this check.
+    const anonymousSnapshot = async () => ({
+      profiles: (await isolated.query(
+        "SELECT to_jsonb(p) AS row FROM sbu_profiles p ORDER BY user_id",
+      )).rows,
+      cases: (await isolated.query(
+        "SELECT to_jsonb(c) AS row FROM sbu_cases c ORDER BY id",
+      )).rows,
+      sequence: (await isolated.query(
+        `SELECT last_value, is_called FROM "${schema}".sbu_cases_id_seq`,
+      )).rows,
+    });
+
     await t.test("GET daftar dan dashboard tanpa sesi menolak akses tanpa membuat profil atau mengubah data PostgreSQL", async () => {
-      // Compare every column (including full timestamp precision), not only
-      // counts: an upsert or a delete/insert pair must also fail this check.
-      const snapshot = async () => ({
-        profiles: (await isolated.query(
-          "SELECT to_jsonb(p) AS row FROM sbu_profiles p ORDER BY user_id",
-        )).rows,
-        cases: (await isolated.query(
-          "SELECT to_jsonb(c) AS row FROM sbu_cases c ORDER BY id",
-        )).rows,
-        sequence: (await isolated.query(
-          `SELECT last_value, is_called FROM "${schema}".sbu_cases_id_seq`,
-        )).rows,
-      });
-      const beforeAnonymous = await snapshot();
+      const beforeAnonymous = await anonymousSnapshot();
       assert.equal(beforeAnonymous.profiles.length, 2);
       assert.equal(beforeAnonymous.cases.length, 10);
 
@@ -182,11 +183,40 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
           assert.equal(response.status, 401, `${path}: ${response.raw}`);
           assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." },
             `${path}: respons anonim tidak boleh membocorkan profil atau permohonan`);
-          assert.deepEqual(await snapshot(), beforeAnonymous,
+          assert.deepEqual(await anonymousSnapshot(), beforeAnonymous,
             `${path}: akses anonim tidak boleh menambah, menghapus, atau mengubah profil/permohonan maupun memajukan sequence lokal`);
           assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
             `${path}: data uji tidak boleh masuk ke tabel aplikasi`);
         }
+      }
+    });
+
+    await t.test("POST tanpa sesi dengan payload valid mengembalikan 401 tanpa mengubah profil, permohonan, atau sequence", async () => {
+      const input = {
+        companyName: "Perusahaan Anonim yang Tidak Boleh Tersimpan",
+        requestType: "baru",
+        qualification: "kecil",
+        classification: "gedung",
+      };
+      const { rows: [identity] } = await isolated.query(
+        "SELECT pg_get_serial_sequence($1, 'id') AS sequence", [`${schema}.sbu_cases`],
+      );
+      assert.equal(identity.sequence, `${schema}.sbu_cases_id_seq`,
+        "Sequence yang diperiksa harus milik tabel salinan, bukan tabel aplikasi");
+      const beforeAnonymous = await anonymousSnapshot();
+      assert.equal(beforeAnonymous.profiles.length, 2);
+      assert.equal(beforeAnonymous.cases.length, 10);
+
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        // Send a valid body but no session, cookie, or form-owner header.
+        const response = await request(server, undefined, "/cases", { method: "POST", body: input });
+        assert.equal(response.status, 401, response.raw);
+        assert.deepEqual(response.body, { error: "Silakan masuk untuk melanjutkan." },
+          "POST anonim harus ditolak karena tidak ada sesi, bukan karena payload tidak valid");
+        assert.deepEqual(await anonymousSnapshot(), beforeAnonymous,
+          "POST anonim tidak boleh menambah, menghapus, atau mengubah kolom profil/permohonan siapa pun maupun memajukan sequence lokal");
+        assert.deepEqual(await publicCounts(), { profiles: 0, cases: 0 },
+          "POST anonim tidak boleh menyimpan data uji di tabel aplikasi");
       }
     });
 
