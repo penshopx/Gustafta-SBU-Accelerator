@@ -1539,6 +1539,116 @@ test('membuka konfirmasi bukti lain setelah DELETE gagal tidak membawa pesan lam
   assert.deepEqual(client.getQueryData(evidenceKey), rows);
 });
 
+for (const status of [204, 500]) {
+  for (const submitNextEarly of [false, true]) {
+    test(`DELETE tertunda (${status}) tidak mengganggu konfirmasi bukti lain (${submitNextEarly ? 'sudah dikirim' : 'belum dikirim'})`, async (t) => {
+      const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
+      const originalFetch = globalThis.fetch;
+      const originalWindow = testGlobals.window;
+      const originalAct = testGlobals.IS_REACT_ACT_ENVIRONMENT;
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false, staleTime: Infinity }, mutations: { retry: false } },
+      });
+      let renderer: TestRenderer.ReactTestRenderer | undefined;
+      t.after(async () => {
+        try {
+          await act(async () => { renderer?.unmount(); });
+        } finally {
+          client.clear();
+          globalThis.fetch = originalFetch;
+          testGlobals.window = originalWindow;
+          testGlobals.IS_REACT_ACT_ENVIRONMENT = originalAct;
+        }
+      });
+      testGlobals.IS_REACT_ACT_ENVIRONMENT = true;
+      testGlobals.window = { addEventListener() {}, removeEventListener() {} } as unknown as Window & typeof globalThis;
+      let rows: Evidence[] = [
+        { id: 11, caseId: 7, code: 'legalitas', title: 'Legalitas tersimpan', note: 'Catatan legalitas', updatedAt: '2026-09-25T12:00:00Z' },
+        { id: 12, caseId: 7, code: 'tenaga', title: 'Tenaga tersimpan', note: 'Catatan tenaga', updatedAt: '2026-09-24T12:00:00Z' },
+      ];
+      const evidenceKey = getListEvidenceQueryKey(7);
+      const assessmentKey = getGetAssessmentQueryKey(7);
+      client.setQueryData(evidenceKey, rows);
+      const invalidate = t.mock.method(client, 'invalidateQueries');
+      const requests: string[] = [];
+      const oldMessage = 'Kegagalan hapus bukti lama';
+      let finishFirst!: () => void;
+      const firstResponse = new Promise<Response>(resolve => {
+        finishFirst = () => {
+          if (status === 204) rows = rows.filter(row => row.id !== 12);
+          resolve(status === 204 ? new Response(null, { status }) : Response.json({ error: oldMessage }, { status }));
+        };
+      });
+      let finishNext!: () => void;
+      const nextResponse = new Promise<Response>(resolve => {
+        finishNext = () => {
+          rows = rows.filter(row => row.id !== 11);
+          resolve(new Response(null, { status: 204 }));
+        };
+      });
+      globalThis.fetch = async (input, init) => {
+        const path = String(input);
+        const method = init?.method ?? 'GET';
+        requests.push(`${method} ${path}`);
+        if (method === 'DELETE') {
+          assert.ok(path === '/api/cases/7/evidence/12' || path === '/api/cases/7/evidence/11');
+          return path.endsWith('/12') ? firstResponse : nextResponse;
+        }
+        assert.equal(method, 'GET');
+        assert.equal(path, '/api/cases/7/evidence');
+        return Response.json(rows);
+      };
+      const waitForRender = async (ready: () => boolean) => {
+        for (let attempt = 0; attempt < 100; attempt++) {
+          if (ready()) return;
+          await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+        }
+        assert.fail('Komponen tidak mencapai keadaan yang diharapkan');
+      };
+      const click = async (testId: string) => {
+        await act(async () => { renderer!.root.findByProps({ 'data-testid': testId }).props.onClick(); });
+      };
+      const cards = () => renderer!.root.findAll(node =>
+        typeof node.props['data-testid'] === 'string' && node.props['data-testid'].startsWith('card-evidence-'))
+        .map(node => node.props['data-testid']);
+      await act(async () => {
+        renderer = TestRenderer.create(createElement(QueryClientProvider, { client },
+          createElement(CaseEvidence, { id: 7, requestType: 'baru', qualification: 'kecil' })));
+      });
+      await click('button-delete-evidence-12');
+      await click('button-confirm-delete');
+      await waitForRender(() => requests.length === 1
+        && renderer!.root.findByProps({ 'data-testid': 'button-confirm-delete' }).props.disabled);
+      await click('button-cancel-delete');
+      assert.equal(renderer!.root.findAllByProps({ role: 'dialog' }).length, 0);
+      await click('button-delete-evidence-11');
+      assert.equal(renderer!.root.findByProps({ 'data-testid': 'button-confirm-delete' }).props.disabled, false);
+      if (submitNextEarly) await click('button-confirm-delete');
+      await act(async () => { finishFirst(); });
+      await waitForRender(() => client.getMutationCache().getAll()[0].state.status === (status === 204 ? 'success' : 'error'));
+      if (status === 204) await waitForRender(() => cards().length === 1);
+      assert.deepEqual(cards(), status === 204 ? ['card-evidence-11'] : ['card-evidence-11', 'card-evidence-12'],
+        'daftar mengikuti hasil server dari permintaan pertama');
+      assert.deepEqual(client.getQueryData(evidenceKey), rows);
+      assert.equal(renderer!.root.findAllByProps({ role: 'dialog' }).length, 1, 'konfirmasi baru tidak ditutup hasil lama');
+      assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0, 'kegagalan lama tidak masuk ke konfirmasi baru');
+      assert.equal(renderer!.root.findByProps({ 'data-testid': 'button-confirm-delete' }).props.disabled, submitNextEarly,
+        'status tombol hanya mengikuti permintaan konfirmasi baru');
+      assert.deepEqual(invalidate.mock.calls.map(call => call.arguments[0]),
+        status === 204 ? [{ queryKey: evidenceKey }, { queryKey: assessmentKey }] : []);
+      if (!submitNextEarly) await click('button-confirm-delete');
+      assert.deepEqual(requests.filter(request => request.startsWith('DELETE')), [
+        'DELETE /api/cases/7/evidence/12', 'DELETE /api/cases/7/evidence/11',
+      ], 'konfirmasi baru mengirim ID sendiri tepat sekali');
+      await act(async () => { finishNext(); });
+      await waitForRender(() => renderer!.root.findAllByProps({ role: 'dialog' }).length === 0
+        && cards().length === (status === 204 ? 0 : 1));
+      assert.deepEqual(cards(), status === 204 ? [] : ['card-evidence-12']);
+      assert.deepEqual(client.getQueryData(evidenceKey), rows);
+    });
+  }
+}
+
 test('aksi dari rencana membuka formulir dengan kategori yang disarankan dan menyimpannya', async () => {
   const testGlobals = globalThis as typeof globalThis & { window: Window & typeof globalThis; IS_REACT_ACT_ENVIRONMENT?: boolean };
   const originalFetch = globalThis.fetch;

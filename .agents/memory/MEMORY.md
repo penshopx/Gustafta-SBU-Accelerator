@@ -28,3 +28,4 @@
 - [Cleanup timeout safety](cleanup-timeout-safety.md) — stopping a storage wait does not cancel DELETE; cleanup targets must never become eligible for ready/adoption afterward.
 - [Async fixture imports](async-fixture-imports.md) — keep asynchronous fixture initialization separate from the entry point that dynamically loads its consumers.
 - [Browser virtual clocks](browser-clock-notifications.md) — paused timers also stop query notifications; headless visibility simulation must reach the real window listener.
+- [Mutation observer resets](mutation-observer-resets.md) — resetting a mutation observer drops per-call callbacks; server-result cache refresh must survive dialog replacement.
