@@ -662,6 +662,16 @@ test("daftar dan dashboard PostgreSQL menjaga urutan waktu/ID serta hitungan set
         await assertDashboard(counts, recentIds);
       }
 
+      await t.test("DELETE ulang permohonan terakhir mengembalikan 404 tanpa merusak ringkasan kosong atau pengguna lain", async () => {
+        const deleted = await request(server, ownerId, "/cases/201", { method: "DELETE" });
+        assert.equal(deleted.status, 404, deleted.raw);
+        assert.deepEqual(deleted.body, { error: "Permohonan tidak ditemukan." });
+
+        // The next dashboard GET must remain exactly empty. The helper also
+        // checks persisted rows and the other owner's full data and dashboard.
+        await assertDashboard({ total: 0, draft: 0, reviewing: 0, prepared: 0 }, []);
+      });
+
       await t.test("POST setelah seluruh permohonan dihapus mengisi kembali dashboard pemilik saja", async () => {
         const input = {
           companyName: "Perusahaan Baru Setelah Ringkasan Kosong",
