@@ -9,17 +9,10 @@ import { spawn } from 'node:child_process';
 import { startFixtureServer } from './fixture-server.mjs';
 import { installProbe, assertEvidence } from './probe.mjs';
 import { publishReport } from './report.mjs';
+import { sanitizeFailure } from './failure.mjs';
 
 const app = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const reportDirectory = resolve(app, '../../generated-artifacts/bfcache');
-const knownFailures = new Set([
-  'TEST_CLERK_KEYS_REQUIRED', 'BUILD_FAILED', 'BFCACHE_DISABLED_BY_LAUNCH',
-  'BFCACHE_INACTIVE', 'FIRST_RESTORED_FRAME_MISSING', 'PRIVATE_SURFACE_LEAK',
-  'IDENTITY_RESPONSE_ORDER_NOT_PROVEN', 'SHELL_OPENED_ON_VERIFICATION_FAILURE',
-  'PENDING_VERIFICATION_NOT_CONCEALED', 'UNEXPECTED_API_ROUTE', 'FIXTURE_OWNER_MISMATCH',
-  'ME_RESPONSE_MISSING', 'A_CASE_NOT_DENIED', 'PRODUCTION_BUNDLE_REQUIRED',
-  'ME_FAILURE_NOT_PROVEN',
-]);
 const requireThat = (ok, code) => { if (!ok) throw new Error(code); };
 const waitUntil = async (predicate, code, timeout = 20_000) => {
   const end = Date.now() + timeout;
@@ -230,15 +223,7 @@ export async function run() {
     report.status = 'passed';
   } catch (error) {
     // Never serialize raw third-party exceptions, URLs, headers, tickets or IDs.
-    report.failure = { stage, code: knownFailures.has(error.message) ? error.message :
-      error.name === 'TimeoutError' ? 'BROWSER_TIMEOUT' : 'RUNNER_STAGE_FAILED' };
-    if (Number.isInteger(error.status)) report.failure.httpStatus = error.status;
-    const safeProviderCodes = new Set([
-      'form_param_format_invalid', 'form_identifier_exists', 'resource_not_found',
-      'authentication_invalid', 'rate_limit_exceeded', 'session_exists',
-    ]);
-    const codes = error.errors?.map((item) => item.code).filter((code) => safeProviderCodes.has(code));
-    if (codes?.length) report.failure.providerCodes = codes;
+    report.failure = sanitizeFailure(stage, error);
   } finally {
     const cleanup = async (name, action) => {
       try { await action(); report.cleanup[name] = true; }
