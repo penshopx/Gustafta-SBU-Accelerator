@@ -1,0 +1,74 @@
+Koleksi sumber untuk Tutor Regulasi, pemetaan KBLI–subklasifikasi, checklist bukti, persiapan matriks persyaratan, dan pemantauan kepatuhan SBU Accelerator.
+
+**Status:** draf kurasi. Identitas kritis dicocokkan dari berkas terlampir; status hukum terkini, ketentuan per kasus, tabel persyaratan dan pemberlakuan operasional belum seluruhnya ditelaah. Tidak ada aturan yang diaktifkan atau impor ke aplikasi Replit dari pekerjaan ini.
+
+**Tanggal penyusunan:** October 6, 2026.
+
+## Ringkasan koleksi
+
+| Komponen | Cakupan |
+| --- | --- |
+| Register sumber | 20 berkas: 19 PDF dan 1 gambar, termasuk KBLI 2025 dari lampiran sebelumnya |
+| Kandidat pengetahuan regulasi dan pendukung | 18 dokumen |
+| Dikecualikan dari korpus regulasi | Materi tahapan penjualan dan aset logo PU |
+| Ekstraksi | 2.371 halaman PDF diarsipkan sebagai teks per halaman; 1.326 potongan kandidat pencarian |
+| Mutu ekstraksi | 117 halaman minim teks native pada seluruh PDF; perlu pemeriksaan gambar/OCR sesuai kebutuhan |
+| Aktivasi | Seluruh potongan berstatus draf/belum terbit; belum ada embedding atau requirements final yang diaktifkan |
+
+## Peran dan prioritas sumber
+
+1. **Regulasi primer:** PP 28/2025 dan Permen PU 6/2025 untuk norma dan ketentuan sektoral; Kepdirjen Bina Konstruksi 281/KPTS/DK/2026 untuk standar skema dan lampirannya. Keputusan atau paparan tidak boleh mengesampingkan ketentuan yang lebih tinggi.
+2. **Referensi klasifikasi:** KBLI BPS untuk taksonomi kegiatan ekonomi dan konversi. KBLI bukan subklasifikasi SBU dan bukan sumber tunggal persyaratan sertifikasi.
+3. **Panduan resmi dan operasional:** materi sosialisasi, workshop, pendaftaran, SDPK dan akreditasi untuk menjelaskan pelaksanaan; selalu dicocokkan dengan naskah primer.
+4. **Praktik baik lembaga:** GAPENSI/LSBU dan INKINDO untuk ilustrasi penerapan, bukan syarat wajib universal.
+5. **Nonregulasi:** materi penjualan dan logo tetap dicatat, tetapi tidak boleh menjadi dasar jawaban normatif atau kalkulator kesiapan.
+
+## Temuan penting untuk pemodelan
+
+### Tahun dan nomor rujukan
+
+- Berkas “FORMAT STANDAR SKEMA BERDASAR PERMEN 6 TH 2026” pada sampul sebenarnya merujuk **Permen PU Nomor 6 Tahun 2025**. Nama berkas asli dipertahankan sebagai provenance.
+- Sampul salah satu paparan menyebut **281/KPTS/M/2026**. Keputusan primer yang terlampir menyebut **281/KPTS/DK/2026**; gunakan identitas keputusan primer sebagai rujukan canonical.
+- Pisahkan tahun materi paparan, tahun peraturan, dan edisi KBLI. Jangan menyimpulkan edisi KBLI hanya dari tahun terbit aturan PU.
+
+### Tanggal normatif berbeda dari operasional
+
+- Kepdirjen 281/KPTS/DK/2026 ditetapkan August 26, 2026; Diktum Keenam menyatakan mulai berlaku pada tanggal ditetapkan. Rujukan: halaman PDF 3 dan 5.
+- Surat pengantar butir 2 mengaitkan pemberlakuan operasional dengan penyesuaian SIJK dan surat pimpinan unit organisasi. Permen PU 6/2025 Pasal 20 ayat (1)–(2) mengatur pemicu tersebut.
+- Pasal 21 ayat (2) mengaitkan batas konversi SBU **6 bulan sejak surat Pasal 20 ayat (2)**. Jangan menghitung tanggal kalender konversi dari tanggal keputusan atau tanggal sosialisasi.
+- Surat pemicu operasional belum diidentifikasi dalam koleksi ini. Tanggal operasional dan tenggat kalender harus tetap belum dikonfirmasi sampai sumbernya tersedia.
+
+### Kualifikasi bergantung pada jenis usaha
+
+- Lampiran Kepdirjen bagian **2.1.3 butir 2** menyebut subkualifikasi kecil K1/K2/K3 untuk **jenis usaha Pekerjaan Konstruksi**.
+- Tabel konsultansi pada bagian **2.1.5** menggunakan K/M/B untuk BUJKN. Jangan menyamaratakan K1/K2/K3 ke konsultansi.
+- Model katalog perlu mempertahankan jenis usaha, sifat usaha, bentuk BUJK, kualifikasi/subkualifikasi dan cakupan tiap subklasifikasi. Ini catatan penyesuaian desain; bukan perubahan langsung pada rules engine.
+
+## Aturan penggunaan oleh AI dan aplikasi
+
+- **Sumber memutuskan dasar; AI menjelaskan.** Angka ambang, jenjang SKK, jumlah personel, peralatan, kewajiban sistem manajemen dan tenggat harus ditelaah dari baris/kolom sumber yang benar.
+- Setiap pemetaan atau calon syarat harus menyimpan document_id, nomor aturan, pasal/lampiran, halaman PDF, edisi KBLI, versi, cakupan jenis usaha, dan status verifikasi.
+- Locator halaman dalam paket memakai **nomor halaman PDF**, bukan nomor halaman cetak. Kandidat nama pasal hasil parser belum merupakan sitasi pasal yang tervalidasi.
+- Teks halaman gambar/minim teks tidak dianggap kosong secara substantif. Jangan mengisi nilai yang tidak terbaca dengan tebakan.
+- Materi workshop sebelum keputusan final tidak boleh menimpa standar final. Konflik sumber masuk telaah ahli.
+- Alur data: **draf → ditelaah → final**. Tidak ada perubahan persyaratan aktif, pemberitahuan kepada klien, atau penerbitan korpus tanpa persetujuan pihak berwenang di aplikasi.
+- SBU Accelerator tetap alat bantu persiapan mandiri, bukan penerbit atau penjamin SBU, dan tidak mewakili PU, LPJK atau LSBU.
+
+## Paket teks dan metadata untuk aplikasi
+
+Arsip berisi register JSONL, teks per halaman, potongan kandidat pencarian, anotasi visual terbatas, hash SHA-256, catatan mutu dan spesifikasi impor. **PDF asli tidak disertakan dalam arsip teks**; berkas asli tersedia pada koleksi sumber di bawah.
+
+Referensi lampiran sesi tidak boleh digunakan sebagai URL storage produksi. Saat integrasi, unggah/tautkan dokumen ke storage aplikasi, cocokkan hash, validasi pasal/lampiran serta tabel, dan petakan file_ref sebelum penerbitan.
+
+SBU_Accelerator_Knowledge_Pack_Draf.zip
+
+## Kelengkapan yang masih perlu ditambahkan
+
+- Surat resmi pemicu dimulainya penyelenggaraan sertifikasi melalui SIJK menurut Pasal 20 ayat (2).
+- Teks mandiri UU Jasa Konstruksi beserta perubahannya, PP 22/2020 jo. PP 14/2021, dan Permen PUPR 8/2022 untuk pertanyaan yang merujuk langsung ke ketentuan tersebut.
+- Matriks lampiran PP 28/2025: belum teridentifikasi dalam salinan 383 halaman yang diunggah, yang berakhir pada bagian penjelasan.
+- Transkripsi/OCR dan telaah visual halaman gambar serta tabel yang akan diubah menjadi persyaratan.
+
+## Hubungan dengan spesifikasi produk
+
+Gunakan bersama Blueprint SBU Accelerator Layak Jual v1 dan Paket Prompt Replit — SBU Accelerator v1, terutama katalog/matriks syarat, Tutor Regulasi, Radar Regulasi dan gerbang telaah manusia.
