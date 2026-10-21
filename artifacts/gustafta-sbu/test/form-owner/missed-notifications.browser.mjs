@@ -4,22 +4,28 @@
  */
 export async function runMissedNotificationsRegression({
   browser, baseURL, signInClerkUser, snapshotOwners, cleanupOwners,
+  scenarios = ["profile", "case-create", "evidence-create", "evidence-edit"],
 }) {
   const check = (condition, message) => {
     if (!condition) throw new Error(message);
   };
   check(typeof snapshotOwners === "function", "A database snapshot callback is required");
   check(typeof cleanupOwners === "function", "A scoped cleanup callback is required");
+  const supported = ["profile", "case-create", "evidence-create", "evidence-edit"];
+  check(Array.isArray(scenarios) && scenarios.length > 0
+    && new Set(scenarios).size === scenarios.length
+    && scenarios.every(scenario => supported.includes(scenario)), "Invalid scenario selection");
   const report = [];
   const fixtures = [];
   let primaryError;
-  const api = async (page, path, method = "GET", data, owner) => {
+  const api = async (page, owner, path, method = "GET", data) => {
+    check(typeof owner === "string" && owner.length > 0, "An expected API owner is required");
     const result = await page.evaluate(async ({ path, method, data, owner }) => {
       const response = await fetch(path, {
         method, credentials: "same-origin", cache: "no-store",
         headers: {
           ...(data ? { "Content-Type": "application/json" } : {}),
-          ...(owner ? { "X-SBU-Form-Owner": owner } : {}),
+          "X-SBU-Form-Owner": owner,
         },
         ...(data ? { body: JSON.stringify(data) } : {}),
       });
@@ -28,12 +34,40 @@ export async function runMissedNotificationsRegression({
     check(result.status >= 200 && result.status < 300, `${method} ${path} failed (${result.status})`);
     return result.data;
   };
+  const authenticatedOwner = async (page, previousOwner) => {
+    // Bootstrap from Clerk's signed-in session, not an unbound private /me
+    // request. Wait for the ticket exchange to reach the real shared cookie jar.
+    await page.waitForFunction(previous => {
+      const session = window.Clerk?.session;
+      return window.Clerk?.loaded && session?.user?.id
+        && session.user.id !== previous;
+    }, previousOwner);
+    const candidate = await page.evaluate(() => window.Clerk.session.user.id);
+    const deadline = Date.now() + 30_000;
+    let cookieMatches = false;
+    do {
+      const cookie = (await page.context().cookies(baseURL))
+        .find(cookie => cookie.name === "__session" && cookie.value);
+      if (cookie) {
+        const claims = JSON.parse(atob(cookie.value.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+        cookieMatches = claims.sub === candidate;
+        if (cookieMatches) break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } while (Date.now() < deadline);
+    check(cookieMatches, "Timed out waiting for the authenticated shared cookie");
+    // Decoded claims are only a readiness signal. The server verifies the real
+    // cookie's signature/issuer and binds this private read to the candidate.
+    check((await api(page, candidate, "/api/me")).userId === candidate,
+      "Server-verified identity differs from the signed-in session");
+    return candidate;
+  };
   const caseInput = name => ({
     companyName: name, classification: "BG001", requestType: "baru", qualification: "kecil",
   });
-  const completeProfile = (page, owner, name) => api(page, "/api/me", "PATCH", {
+  const completeProfile = (page, owner, name) => api(page, owner, "/api/me", "PATCH", {
     displayName: name, organizationName: "Synthetic regression fixture", role: "kontraktor",
-  }, owner);
+  });
   const prepareCase = async (page, name) => {
     await page.getByTestId("button-create-case").click();
     await page.getByTestId("input-company-name").fill(name);
@@ -49,7 +83,7 @@ export async function runMissedNotificationsRegression({
     new URL(response.url()).pathname === path && response.request().method() === method,
   );
   try {
-    for (const scenario of ["profile", "case-create", "evidence-create", "evidence-edit"]) {
+    for (const scenario of scenarios) {
       const context = await browser.newContext({ baseURL });
       try {
         const tabA = await context.newPage();
@@ -105,8 +139,8 @@ export async function runMissedNotificationsRegression({
         });
         const suffix = `${Date.now()}-${scenario}-${Math.random().toString(36).slice(2, 8)}`;
         const people = {
-          a: { firstName: "Draft", lastName: "Alpha", email: `draft-a-${suffix}@example.com`, basePath: "/api/me" },
-          b: { firstName: "Draft", lastName: "Beta", email: `draft-b-${suffix}@example.com`, basePath: "/api/me" },
+          a: { firstName: "Draft", lastName: "Alpha", email: `draft-a-${suffix}@example.com`, basePath: "/" },
+          b: { firstName: "Draft", lastName: "Beta", email: `draft-b-${suffix}@example.com`, basePath: "/" },
         };
         const names = { a: `Fixture Alpha ${suffix}`, b: `Fixture Beta ${suffix}` };
         const staleValue = `Rejected draft ${suffix}`;
@@ -114,22 +148,22 @@ export async function runMissedNotificationsRegression({
         const fixture = { owners: [], names: [], emails: [people.a.email, people.b.email] };
         fixtures.push(fixture);
         await tabB.goto(await signInClerkUser(people.b));
-        const ownerB = (await api(tabB, "/api/me")).userId;
+        const ownerB = await authenticatedOwner(tabB);
         fixture.owners.push(ownerB); fixture.names.push(names.b);
         await completeProfile(tabB, ownerB, names.b);
-        const caseB = await api(tabB, "/api/cases", "POST", caseInput(`Beta case ${suffix}`), ownerB);
-        const evidenceB = await api(tabB, `/api/cases/${caseB.id}/evidence`, "POST", {
+        const caseB = await api(tabB, ownerB, "/api/cases", "POST", caseInput(`Beta case ${suffix}`));
+        const evidenceB = await api(tabB, ownerB, `/api/cases/${caseB.id}/evidence`, "POST", {
           code: "legalitas", title: `Beta original ${suffix}`, note: "Original B note",
-        }, ownerB);
+        });
         await tabB.goto(await signInClerkUser(people.a));
-        const ownerA = (await api(tabB, "/api/me")).userId;
+        const ownerA = await authenticatedOwner(tabB, ownerB);
         fixture.owners.push(ownerA); fixture.names.push(names.a);
         check(ownerA !== ownerB, "Two different authenticated accounts are required");
         await completeProfile(tabB, ownerA, names.a);
-        const caseA = await api(tabB, "/api/cases", "POST", caseInput(`Alpha case ${suffix}`), ownerA);
-        const evidenceA = await api(tabB, `/api/cases/${caseA.id}/evidence`, "POST", {
+        const caseA = await api(tabB, ownerA, "/api/cases", "POST", caseInput(`Alpha case ${suffix}`));
+        const evidenceA = await api(tabB, ownerA, `/api/cases/${caseA.id}/evidence`, "POST", {
           code: "legalitas", title: `Alpha original ${suffix}`, note: "Original A note",
-        }, ownerA);
+        });
         await tabA.goto(scenario === "profile" ? "/settings"
           : scenario === "case-create" ? "/cases" : `/cases/${caseA.id}`);
         await tabA.getByTestId("text-sidebar-name").waitFor();
@@ -152,7 +186,7 @@ export async function runMissedNotificationsRegression({
         // This navigation really changes the shared cookie via the second tab.
         // It does not touch tab A's React tree or its immutable draft owner.
         await tabB.goto(await signInClerkUser(people.b));
-        check((await api(tabB, "/api/me")).userId === ownerB, "Tab B did not authenticate as B");
+        check(await authenticatedOwner(tabB, ownerA) === ownerB, "Tab B did not authenticate as B");
         await tabB.evaluate(owner => {
           localStorage.setItem("gustafta:active-account", owner);
           const channel = new BroadcastChannel("gustafta:active-account");
@@ -164,7 +198,7 @@ export async function runMissedNotificationsRegression({
           return state.storage > 0 && state.channel > 0;
         });
         // Same tab, real fetch: proves browser cookies are B even while JS is A.
-        check((await api(tabA, "/api/me")).userId === ownerB, "Tab A's actual network cookie is not B");
+        check((await api(tabA, ownerB, "/api/me")).userId === ownerB, "Tab A's actual network cookie is not B");
         check(await tabA.getByTestId("text-sidebar-name").innerText() === names.a, "A's identity changed before submission");
         const oldField = scenario === "profile" ? "input-display-name"
           : scenario === "case-create" ? "input-company-name" : "input-evidence-title";
@@ -216,11 +250,11 @@ export async function runMissedNotificationsRegression({
             document.querySelector('[data-testid="text-sidebar-name"]')?.textContent === name, freshValue);
           check(await tabB.getByTestId("input-display-name").inputValue() === freshValue,
             "Saved B profile was not visible in the new form");
-          check((await api(tabB, "/api/me")).displayName === freshValue, "B profile was not persisted");
+          check((await api(tabB, ownerB, "/api/me")).displayName === freshValue, "B profile was not persisted");
         } else {
           await tabB.getByRole("dialog").waitFor({ state: "hidden" });
           await tabB.getByText(freshValue, { exact: true }).waitFor();
-          const rows = await api(tabB, scenario === "case-create" ? "/api/cases" : `/api/cases/${caseB.id}/evidence`);
+          const rows = await api(tabB, ownerB, scenario === "case-create" ? "/api/cases" : `/api/cases/${caseB.id}/evidence`);
           check(rows.some(row => (row.companyName ?? row.title) === freshValue), "B write was not persisted");
           check(!rows.some(row => (row.companyName ?? row.title) === staleValue), "Old draft appeared in B data");
         }

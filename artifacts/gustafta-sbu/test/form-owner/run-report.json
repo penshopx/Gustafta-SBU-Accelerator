@@ -1,6 +1,6 @@
 {
   "status": "passed",
-  "date": "2026-10-09",
+  "date": "2026-10-21",
   "browserVersion": "Chromium 140.0.7339.16",
   "scenarios": [
     {
@@ -11,12 +11,11 @@
       "visibleReloadInstruction": true,
       "databaseUnchanged": true,
       "blockedNotifications": {
-        "storage": 2,
-        "channel": 3
+        "storage": 3,
+        "channel": 5
       },
       "freshBStatus": 200,
-      "freshBVisibleAndPersisted": true,
-      "rejectionScreenshot": "rejection-1.png"
+      "freshBVisibleAndPersisted": true
     },
     {
       "scenario": "case-create",
@@ -26,12 +25,11 @@
       "visibleReloadInstruction": true,
       "databaseUnchanged": true,
       "blockedNotifications": {
-        "storage": 2,
-        "channel": 3
+        "storage": 3,
+        "channel": 5
       },
       "freshBStatus": 201,
-      "freshBVisibleAndPersisted": true,
-      "rejectionScreenshot": "rejection-2.png"
+      "freshBVisibleAndPersisted": true
     },
     {
       "scenario": "evidence-create",
@@ -41,12 +39,11 @@
       "visibleReloadInstruction": true,
       "databaseUnchanged": true,
       "blockedNotifications": {
-        "storage": 2,
-        "channel": 3
+        "storage": 3,
+        "channel": 5
       },
       "freshBStatus": 201,
-      "freshBVisibleAndPersisted": true,
-      "rejectionScreenshot": "rejection-3.png"
+      "freshBVisibleAndPersisted": true
     },
     {
       "scenario": "evidence-edit",
@@ -56,27 +53,20 @@
       "visibleReloadInstruction": true,
       "databaseUnchanged": true,
       "blockedNotifications": {
-        "storage": 2,
-        "channel": 3
+        "storage": 3,
+        "channel": 5
       },
       "freshBStatus": 200,
-      "freshBVisibleAndPersisted": true,
-      "rejectionScreenshot": "rejection-4.png"
+      "freshBVisibleAndPersisted": true
     }
   ],
-  "profileSuccessStatusNote": "The transient 'Profil berhasil disimpan.' confirmation is not asserted. Updating profile values changes the SettingsPage ProfileForm key, remounting the form and clearing isSuccess. The fresh B sidebar/input and GET /api/me persistence checks passed.",
+  "profileSuccessStatusNote": "The transient profile success status is not asserted because saving changes the SettingsPage form key and remounts the form. The updated B sidebar/input and GET /api/me persistence checks passed.",
   "cleanup": {
     "status": "success",
+    "scenariosCleaned": 4,
     "accountsDeleted": 8,
     "remainingProfiles": 0,
-    "privateFixturePayloadRemoved": true
+    "privateFixturePayloadsRemoved": true
   },
-  "artifacts": [
-    "missed-notifications.notebook.md",
-    "rejection-1.png",
-    "rejection-2.png",
-    "rejection-3.png",
-    "rejection-4.png",
-    "run-report.json"
-  ]
+  "screenshots": []
 }

@@ -1,6 +1,7 @@
 # Missed-notifications real-browser notebook recipe
 
-This recipe uses the original `missed-notifications.browser.mjs` unchanged.
+This recipe evaluates `missed-notifications.browser.mjs` without rewriting its
+behavior (apart from the export wrapper below).
 Both API and SBU web workflows must be running. Use only synthetic accounts
 created by `signInClerkUser`, and do not save credentials, Clerk IDs, emails,
 cookies, or database snapshots in reports.
@@ -117,7 +118,7 @@ pnpm --filter @workspace/gustafta-sbu exec node --import tsx \
   ../api-server/test/helpers/cleanup-form-owner-browser-fixtures.mjs \
   --stdin < "$FIXTURE_FILE"
 status=$?
-rm -f "$FIXTURE_FILE"
+if [ "$status" -eq 0 ]; then rm -f "$FIXTURE_FILE"; fi
 exit "$status"
 ```
 

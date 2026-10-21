@@ -78,7 +78,12 @@ the SBU `fetch`, the request owner header, or the server.
 
 Tab B's real Clerk sign-in redirect changes the shared cookie. B publishes both
 notification types; A must count actual blocked deliveries of both. A's real
-`GET /api/me` must now identify B while A's sidebar and draft still identify A.
+`GET /api/me` with an explicitly B-bound read header must now identify B while
+A's sidebar and draft still identify A. Bootstrap takes the expected owner from
+Clerk's signed-in session, waits for the shared cookie exchange, then verifies
+that identity through the server's owner-bound `/api/me`. Decoded cookie claims
+are a readiness signal only, not trusted authentication. Every helper API call
+requires an explicit expected owner; the old form's own header remains A.
 Only then is the old form submitted. The same document must remain loaded,
 the header must still bind A, the response must be 409 with a visible reload
 instruction, and a complete database snapshot for A and B must be unchanged.
@@ -87,6 +92,10 @@ Finally, a new B document must save through the same form type with a B-bound
 header, show success in the UI, and expose the saved value through the real API.
 An A-owned evidence ID returning 404 is **not** sufficient: the old draft must
 be rejected by the owner precondition with 409 before resource access.
+
+The optional `scenarios` array can select independently cleanable notebook runs;
+omitting it still runs all four scenarios. Do not change or replace the runner
+source in the notebook to select a scenario.
 
 Save only the returned sanitized observations plus browser/version and runner
 date in `run-report.json`. Do not save URLs containing sign-in tokens, cookie
