@@ -5,7 +5,8 @@ import path from 'node:path';
 import React, { act, createElement } from 'react';
 import { Window as HappyWindow } from 'happy-dom';
 import { createServer } from 'vite';
-import { Router } from 'wouter';
+import { Route, Router, Switch } from 'wouter';
+import { memoryLocation } from 'wouter/memory-location';
 import { useQueryClient } from '@tanstack/react-query';
 import { getGetMeQueryKey, useGetMe, type Profile } from '@workspace/api-client-react';
 
@@ -296,6 +297,135 @@ test('formulir profil lengkap menjaga nama Unicode pada onboarding dan pengatura
           }
         });
       }
+    }
+    for (const cycle of ['navigasi', 'muat ulang'] as const) {
+      await t.test(`pengaturan: ${cycle} setelah simpan mempertahankan nilai tanpa mengulang konfirmasi`, async () => {
+        let stored: Profile = {
+          userId: 'settings-navigation-owner', displayName: 'Nama awal',
+          role: 'kontraktor', organizationName: 'Organisasi awal',
+        };
+        let reads = 0;
+        let patches = 0;
+        globals.fetch = async (url, init) => {
+          assert.equal(url, '/api/me');
+          assert.equal(new Headers(init?.headers).get('X-SBU-Form-Owner'), stored.userId);
+          if (init?.method === 'PATCH') {
+            patches++;
+            stored = { ...stored, ...JSON.parse(String(init.body)) };
+          } else {
+            reads++;
+          }
+          return Response.json(stored);
+        };
+        let client!: ReturnType<typeof useQueryClient>;
+        function Settings() {
+          client = useQueryClient();
+          const me = useGetMe({ request: { headers: { 'X-SBU-Form-Owner': stored.userId } } });
+          return me.data ? createElement(SettingsProfileForm, { profile: me.data }) : null;
+        }
+        const container = window.document.createElement('div');
+        window.document.body.appendChild(container);
+        let root = createRoot(container as unknown as HTMLElement);
+        const location = memoryLocation({ path: '/settings' });
+        const mount = async () => {
+          await act(async () => {
+            root.render(createElement(AccountQueries, {
+              userId: stored.userId,
+              children: createElement(Router, {
+                hook: location.hook,
+                children: createElement(Switch, null,
+                  createElement(Route, { path: '/settings', component: Settings }),
+                  createElement(Route, { path: '/dashboard' }, 'Ringkasan uji'),
+                ),
+              }),
+            }));
+          });
+        };
+        const waitFor = async (predicate: () => boolean) => {
+          const deadline = Date.now() + 2000;
+          while (!predicate()) {
+            assert.ok(Date.now() < deadline, 'siklus halaman pengaturan harus selesai');
+            await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+          }
+        };
+        const input = (id: string) => {
+          const element = container.querySelector(`[data-testid="${id}"]`);
+          assert.ok(element instanceof window.HTMLInputElement);
+          return element;
+        };
+        const status = () => container.querySelector('[role="status"]');
+        const reopenedMessages: string[] = [];
+        // Watch from before reopening, including transient/deferred announcements.
+        const observer = new window.MutationObserver(() => {
+          if (status()?.textContent) reopenedMessages.push(status()!.textContent!);
+        });
+        try {
+          await mount();
+          await waitFor(() => !!container.querySelector('form'));
+          await act(async () => {
+            for (const [id, value] of [
+              ['input-display-name', 'Nama tersimpan'],
+              ['input-organization', 'Organisasi tersimpan'],
+            ]) {
+              const element = input(id);
+              Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!.call(element, value);
+              element.dispatchEvent(new window.Event('input', { bubbles: true }));
+            }
+            const role = container.querySelector('[data-testid="button-role-konsultan"]');
+            assert.ok(role instanceof window.HTMLButtonElement);
+            role.click();
+          });
+          await act(async () => {
+            const save = container.querySelector('[data-testid="button-save-profile"]');
+            assert.ok(save instanceof window.HTMLButtonElement);
+            save.click();
+          });
+          await waitFor(() => !client.isMutating() && status()?.textContent === 'Profil berhasil disimpan.');
+          assert.equal(patches, 1, 'siklus dimulai dari penyimpanan yang benar-benar berhasil');
+          assert.equal(stored.displayName, 'Nama tersimpan');
+          assert.equal(stored.organizationName, 'Organisasi tersimpan');
+          assert.equal(stored.role, 'konsultan');
+          const previousClient = client;
+          const previousReads = reads;
+          if (cycle === 'navigasi') {
+            await act(async () => { location.navigate('/dashboard'); });
+            assert.equal(container.textContent, 'Ringkasan uji');
+            assert.equal(container.querySelector('form'), null);
+            assert.equal(status(), null, 'halaman pengaturan benar-benar dilepas');
+            observer.observe(container, { subtree: true, childList: true, characterData: true });
+            await act(async () => { location.navigate('/settings'); });
+          } else {
+            // Model a reload by discarding the entire React tree and query cache.
+            // Only the intercepted server profile survives, not client state.
+            await act(async () => { root.unmount(); });
+            root = createRoot(container as unknown as HTMLElement);
+            observer.observe(container, { subtree: true, childList: true, characterData: true });
+            await mount();
+          }
+          await waitFor(() => !!container.querySelector('form'));
+          assert.equal(input('input-display-name').value, 'Nama tersimpan');
+          assert.equal(input('input-organization').value, 'Organisasi tersimpan');
+          assert.ok(container.querySelector('[data-testid="button-role-konsultan"] svg'),
+            'peran tersimpan tetap dipilih');
+          assert.deepEqual(client.getQueryData(getGetMeQueryKey()), stored);
+          assert.ok(status(), 'area pengumuman tetap tersedia');
+          assert.equal(status()?.textContent, '', 'konfirmasi lama tidak dianggap hasil simpan baru');
+          if (cycle === 'navigasi') {
+            assert.ok(client === previousClient, 'navigasi mempertahankan cache akun');
+          } else {
+            assert.ok(client !== previousClient, 'muat ulang membuat cache baru');
+            assert.ok(reads > previousReads, 'muat ulang mengambil nilai dari server');
+          }
+          await act(async () => { await new Promise(resolve => setTimeout(resolve, 150)); });
+          assert.equal(status()?.textContent, '', 'konfirmasi juga tidak muncul setelah timer pengumuman');
+          assert.deepEqual(reopenedMessages, [], 'tidak ada pengumuman sukses saat halaman dibuka ulang');
+          assert.equal(patches, 1, 'membuka ulang tidak mengirim penyimpanan baru');
+        } finally {
+          observer.disconnect();
+          await act(async () => { root.unmount(); });
+          container.remove();
+        }
+      });
     }
     await t.test('konfirmasi bertahan setelah cache meremount draf, bukan setelah penolakan atau pergantian akun', async () => {
       let stored: Profile = {
