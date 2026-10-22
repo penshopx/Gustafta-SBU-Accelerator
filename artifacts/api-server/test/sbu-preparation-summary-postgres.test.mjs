@@ -126,7 +126,13 @@ test("GET preparation-summary preserves PostgreSQL snapshots and recovers from r
             contents: args.path === "auth"
               ? `export const getAuth = req => ({ userId: req.get("x-test-user-id") });`
               : `export * from ${JSON.stringify(join(testDir, "../../../lib/db/src/schema/index.ts"))};
-                 export const db = globalThis.__summaryPostgresDb;`,
+                  export const db = new Proxy({}, {
+                    get(_target, key) {
+                      const current = globalThis.__summaryPostgresDb;
+                      const value = current[key];
+                      return typeof value === "function" ? value.bind(current) : value;
+                    }
+                  });`,
             loader: "js", resolveDir: testDir,
           }));
         },
@@ -148,9 +154,9 @@ test("GET preparation-summary preserves PostgreSQL snapshots and recovers from r
       next(error);
     });
     server = app.listen(0);
-    const request = async (userId = owner) => {
+    const request = async (userId = owner, caseId = item.id) => {
       const response = await fetch(
-        `http://127.0.0.1:${server.address().port}/api/cases/${item.id}/preparation-summary`,
+        `http://127.0.0.1:${server.address().port}/api/cases/${caseId}/preparation-summary`,
         { headers: { "x-test-user-id": userId, "X-SBU-Form-Owner": userId },
           signal: AbortSignal.timeout(10_000) },
       );
@@ -232,6 +238,173 @@ test("GET preparation-summary preserves PostgreSQL snapshots and recovers from r
       assert.equal(denied.response.status, 404, denied.html);
       assert.deepEqual(reads, ["sbu_cases"], "Kasus asing harus ditolak sebelum membaca bukti dan verifikasi");
       assert.doesNotMatch(denied.html, /Perusahaan|Judul privat|Surat/);
+    });
+    await t.test("overlapping accounts use separate pooled transactions without leaking into later requests", async () => {
+      const accounts = [
+        { owner, name: "PERUSAHAAN_PARALEL_A", codes: ["legalitas", "alat"] },
+        { owner: otherOwner, name: "PERUSAHAAN_PARALEL_B", codes: ["tenaga", "pengalaman", "keuangan"] },
+      ];
+      for (const account of accounts) {
+        const { rows: [row] } = await writer.query(`
+          INSERT INTO sbu_cases (owner_id, company_name, request_type, qualification, classification)
+          VALUES ($1, $2, 'baru', 'kecil', 'gedung') RETURNING id
+        `, [account.owner, account.name]);
+        account.id = row.id;
+        for (const code of account.codes) {
+          await writer.query(`
+            INSERT INTO sbu_evidence (case_id, code, title) VALUES ($1, $2, $3)
+          `, [account.id, code, `PRIVATE_${account.name}_${code}`]);
+        }
+      }
+
+      // A separate restricted pool leaves the single-reader snapshot fixtures
+      // untouched. Drizzle checks out/releases actual pg clients as in runtime.
+      const pooled = await createRestrictedRoutePool(admin, schema);
+      const originalDb = globalThis.__summaryPostgresDb;
+      const connect = pooled.pool.connect.bind(pooled.pool);
+      const events = [];
+      const pending = [];
+      const gate = () => {
+        let resolve;
+        const promise = new Promise(done => { resolve = done; });
+        return { promise, resolve };
+      };
+      const aCase = gate(), bEvidence = gate(), resumeA = gate(), resumeB = gate();
+      const bounded = async promise => {
+        let timer;
+        try {
+          return await Promise.race([
+            promise,
+            new Promise((_, reject) => {
+              timer = setTimeout(() => reject(new Error("Urutan baca paralel tidak tercapai")), 5_000);
+            }),
+          ]);
+        } finally {
+          clearTimeout(timer);
+        }
+      };
+      let checkout = 0;
+      pooled.pool.connect = async () => {
+        const client = await connect();
+        const id = ++checkout;
+        const pid = client.processID;
+        const query = client.query;
+        const release = client.release;
+        events.push({ id, pid, step: "checkout" });
+        client.query = async (...args) => {
+          const result = await query.apply(client, args);
+          const sql = typeof args[0] === "string" ? args[0] : args[0].text;
+          const table = /^\s*select\b/i.test(sql)
+            ? /from "(sbu_cases|sbu_evidence|sbu_transition_verifications|sbu_personnel)"/i.exec(sql)?.[1]
+            : undefined;
+          const step = table ?? result.command;
+          events.push({ id, pid, step });
+          if (id === 1 && table === "sbu_cases") {
+            aCase.resolve();
+            await bounded(resumeA.promise);
+          }
+          if (id === 2 && table === "sbu_evidence") {
+            bEvidence.resolve();
+            await bounded(resumeB.promise);
+          }
+          return result;
+        };
+        client.release = (...args) => {
+          client.query = query;
+          client.release = release;
+          events.push({ id, pid, step: "release" });
+          return release.apply(client, args);
+        };
+        return client;
+      };
+      const start = account => {
+        const promise = request(account.owner, account.id);
+        pending.push(promise);
+        return promise;
+      };
+      const assertSummary = (result, account, foreign) => {
+        assert.equal(result.response.status, 200, result.html);
+        assert.equal(result.response.headers.get("cache-control"), "private, no-store");
+        assert.match(result.response.headers.get("content-type"), /^text\/html\b/);
+        assert.equal(result.response.headers.get("content-disposition"),
+          'attachment; filename="ringkasan-persiapan-sbu.html"');
+        assert.match(result.html, new RegExp(account.name));
+        for (const code of account.codes) {
+          assert.match(result.html, new RegExp(`${code} — 1 catatan deklarasi`));
+        }
+        assert.equal((result.html.match(/ — \d+ catatan deklarasi/g) ?? []).length, account.codes.length);
+        assert.doesNotMatch(result.html,
+          new RegExp(`${foreign.name}|(?:${foreign.codes.join("|")}) — \\d+ catatan deklarasi|PRIVATE_`));
+      };
+      try {
+        globalThis.__summaryPostgresDb = drizzle(pooled.pool);
+        routeErrors = [];
+        const first = start(accounts[0]);
+        await bounded(aCase.promise);
+        const second = start(accounts[1]);
+        await bounded(bEvidence.promise);
+        const checkouts = events.filter(event => event.step === "checkout");
+        assert.equal(checkouts.length, 2);
+        assert.notEqual(checkouts[0].pid, checkouts[1].pid,
+          "Dua permintaan harus memiliki koneksi pembaca fisik berbeda");
+        const { rows: activity } = await admin.query(`
+          SELECT pid, state, xact_start IS NOT NULL AS in_transaction
+          FROM pg_stat_activity WHERE pid = ANY($1::int[]) ORDER BY pid
+        `, [checkouts.map(event => event.pid)]);
+        assert.equal(activity.length, 2);
+        for (const connection of activity) {
+          assert.equal(connection.state, "idle in transaction");
+          assert.equal(connection.in_transaction, true);
+        }
+        assert.deepEqual(events.map(({ id, step }) => [id, step]), [
+          [1, "checkout"], [1, "BEGIN"], [1, "sbu_cases"],
+          [2, "checkout"], [2, "BEGIN"], [2, "sbu_cases"], [2, "sbu_evidence"],
+        ], "B membaca buktinya saat transaksi A masih ditahan setelah membaca kasus");
+
+        resumeA.resolve();
+        const resultA = await first;
+        assertSummary(resultA, accounts[0], accounts[1]);
+        assert.equal(events.some(event => event.id === 2 && event.step === "COMMIT"), false);
+        resumeB.resolve();
+        const resultB = await second;
+        assertSummary(resultB, accounts[1], accounts[0]);
+        assert.deepEqual(events.map(({ id, step }) => [id, step]), [
+          [1, "checkout"], [1, "BEGIN"], [1, "sbu_cases"],
+          [2, "checkout"], [2, "BEGIN"], [2, "sbu_cases"], [2, "sbu_evidence"],
+          ...["sbu_evidence", "sbu_transition_verifications", "sbu_personnel", "COMMIT", "release"]
+            .map(step => [1, step]),
+          ...["sbu_transition_verifications", "sbu_personnel", "COMMIT", "release"]
+            .map(step => [2, step]),
+        ]);
+
+        // The next A request reuses B's now-idle physical connection, then B
+        // reuses it again: no lingering transaction or request-local owner state.
+        for (const [index, account] of accounts.entries()) {
+          const result = await start(account);
+          assertSummary(result, account, accounts[1 - index]);
+          assert.equal(content(result.html), content(index === 0 ? resultA.html : resultB.html));
+          const id = 3 + index;
+          const reused = events.filter(event => event.id === id);
+          assert.ok(reused.every(event => event.pid === checkouts[1].pid),
+            "Permintaan berikutnya harus memakai ulang koneksi B, bukan koneksi baru");
+          assert.deepEqual(reused.map(event => event.step),
+            ["checkout", "BEGIN", ...emptyPersonnelReads, "COMMIT", "release"]);
+        }
+        const { rows: idle } = await admin.query(`
+          SELECT state, xact_start FROM pg_stat_activity WHERE pid = ANY($1::int[])
+        `, [checkouts.map(event => event.pid)]);
+        assert.equal(idle.length, 2);
+        for (const connection of idle) {
+          assert.deepEqual(connection, { state: "idle", xact_start: null });
+        }
+        assert.deepEqual(routeErrors, []);
+      } finally {
+        resumeA.resolve();
+        resumeB.resolve();
+        await Promise.allSettled(pending);
+        globalThis.__summaryPostgresDb = originalDb;
+        await pooled.close();
+      }
     });
     for (const failedTable of ["sbu_evidence", "sbu_transition_verifications"]) {
       await t.test(`permission failure reading ${failedTable} rolls back before sending and permits same-connection retry`, async () => {
