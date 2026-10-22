@@ -441,6 +441,74 @@ test("GET preparation-summary preserves PostgreSQL snapshots and recovers from r
       }
       await writer.query("DELETE FROM sbu_personnel");
     });
+    await t.test("deletion held open after the case read preserves the summary and rollback keeps all evidence", async () => {
+      await writer.query("UPDATE sbu_cases SET company_name = 'Perusahaan Sebelum' WHERE id = $1", [item.id]);
+      await writer.query("UPDATE sbu_evidence SET code = 'legalitas' WHERE case_id = $1", [item.id]);
+      await writer.query(`
+        UPDATE sbu_transition_verifications SET document_number = 'Surat Sebelum',
+          issued_on = '2026-04-10', document_status = 'berlaku' WHERE track = $1
+      `, [track]);
+      const baseline = await request();
+      assert.equal(baseline.response.status, 200, baseline.html);
+      assertBefore(baseline.html);
+      const counts = async () => (await writer.query(`
+        SELECT (SELECT count(*)::int FROM sbu_cases WHERE id = $1) AS cases,
+               (SELECT count(*)::int FROM sbu_evidence WHERE case_id = $1) AS evidence
+      `, [item.id])).rows[0];
+      assert.deepEqual(await counts(), { cases: 1, evidence: 1 });
+
+      reads = [];
+      routeErrors = [];
+      let deletionStarted = false;
+      let transactionOpen = false;
+      afterRead = async table => {
+        if (table !== "sbu_cases" || deletionStarted) return;
+        await writer.query("BEGIN");
+        transactionOpen = true;
+        const evidence = await writer.query("DELETE FROM sbu_evidence WHERE case_id = $1", [item.id]);
+        const cases = await writer.query("DELETE FROM sbu_cases WHERE id = $1 AND owner_id = $2", [item.id, owner]);
+        assert.equal(evidence.rowCount, 1, "Bukti harus benar-benar dihapus dalam transaksi koneksi kedua");
+        assert.equal(cases.rowCount, 1, "Kasus harus benar-benar dihapus dalam transaksi koneksi kedua");
+        deletionStarted = true;
+        // Keep the writer transaction open until the HTTP response is complete.
+        // Rolling back here would never test a summary with pending deletes.
+      };
+      try {
+        const snapshot = await request();
+        assert.equal(deletionStarted, true, "Penghapusan harus terjadi di antara pembacaan kasus dan bukti");
+        assert.equal(transactionOpen, true, "Transaksi penghapusan belum boleh diakhiri");
+        assert.deepEqual(await counts(), { cases: 0, evidence: 0 },
+          "Koneksi penulis harus melihat penghapusan yang belum disahkan");
+        assert.deepEqual(reads, emptyPersonnelReads);
+        assert.equal(snapshot.response.status, 200, snapshot.html);
+        assert.equal(snapshot.response.headers.get("cache-control"), "private, no-store");
+        assertBefore(snapshot.html);
+        assert.equal(content(snapshot.html), content(baseline.html),
+          "Selama penghapusan belum disahkan, ringkasan harus tetap memuat kasus dan seluruh bukti");
+        assert.deepEqual(routeErrors, []);
+      } finally {
+        afterRead = undefined;
+        if (transactionOpen) await writer.query("ROLLBACK");
+      }
+
+      assert.deepEqual(await counts(), { cases: 1, evidence: 1 },
+        "ROLLBACK harus mengembalikan kasus dan seluruh bukti di koneksi penulis");
+      reads = [];
+      statements = [];
+      routeErrors = [];
+      const restored = await request();
+      assert.equal(restored.response.status, 200, restored.html);
+      assert.equal(restored.response.headers.get("cache-control"), "private, no-store");
+      assert.match(restored.response.headers.get("content-type"), /^text\/html\b/);
+      assert.equal(restored.response.headers.get("content-disposition"),
+        'attachment; filename="ringkasan-persiapan-sbu.html"');
+      assertBefore(restored.html);
+      assert.equal(content(restored.html), content(baseline.html),
+        "Permintaan baru sesudah ROLLBACK harus tetap menghasilkan ringkasan lengkap, bukan 404 atau bukti kosong");
+      assert.deepEqual(reads, emptyPersonnelReads);
+      assert.equal(statements.at(-1).command, "COMMIT");
+      assert.deepEqual(routeErrors, []);
+    });
     await t.test("deletion committed after the case read preserves the in-flight snapshot, then returns 404", async () => {
       // Keep evidence present so READ COMMITTED would produce a mixed summary
       // (the old case with no evidence) rather than accidentally passing.
