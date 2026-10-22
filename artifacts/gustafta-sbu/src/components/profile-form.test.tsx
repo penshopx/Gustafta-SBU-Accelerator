@@ -43,6 +43,117 @@ test('formulir profil lengkap menjaga nama Unicode pada onboarding dan pengatura
     const { ProfileForm, SettingsProfileForm } = await server.ssrLoadModule('/src/App.tsx') as typeof import('../App');
     // Both modules must share Vite's instance of the form-owner context.
     const { AccountQueries } = await server.ssrLoadModule('/src/components/account-queries.tsx') as typeof import('./account-queries');
+    await t.test('onboarding: respons PATCH terlambat tidak meninggalkan halaman tujuan setelah formulir dilepas', async () => {
+      const profile: Profile = {
+        userId: 'same-account-route-owner', displayName: 'Nama sebelum pergi',
+        role: 'belum_dipilih', organizationName: 'Organisasi uji',
+      };
+      const requests: RequestInit[] = [];
+      let release!: () => void;
+      const responseGate = new Promise<void>(resolve => { release = resolve; });
+      const saved: Profile = { ...profile, role: 'kontraktor' };
+      globals.fetch = async (url, init) => {
+        assert.equal(url, '/api/me', 'tidak boleh mengakses layanan luar');
+        assert.equal(init?.method, 'PATCH');
+        assert.equal(new Headers(init.headers).get('X-SBU-Form-Owner'), profile.userId);
+        requests.push(init);
+        await responseGate;
+        return Response.json(saved);
+      };
+      let client!: ReturnType<typeof useQueryClient>;
+      let saves = 0;
+      let formMounts = 0;
+      let formUnmounts = 0;
+      function OnboardingForm() {
+        React.useEffect(() => {
+          formMounts++;
+          return () => { formUnmounts++; };
+        }, []);
+        return createElement(ProfileForm, {
+          profile, onboarding: true, onSaved: () => { saves++; },
+        });
+      }
+      function Pages() {
+        client = useQueryClient();
+        return createElement(Switch, null,
+          createElement(Route, { path: '/onboarding', component: OnboardingForm }),
+          createElement(Route, { path: '/regulations' },
+            createElement('main', { 'data-testid': 'destination-page' }, 'Halaman tujuan')),
+          createElement(Route, { path: '/dashboard' },
+            createElement('main', { 'data-testid': 'unexpected-dashboard' }, 'Dashboard')),
+        );
+      }
+      const location = memoryLocation({ path: '/onboarding', record: true });
+      const container = window.document.createElement('div');
+      window.document.body.appendChild(container);
+      const root = createRoot(container as unknown as HTMLElement);
+      const waitFor = async (predicate: () => boolean) => {
+        const deadline = Date.now() + 2000;
+        while (!predicate()) {
+          assert.ok(Date.now() < deadline, 'mutasi profil harus selesai setelah respons dilepas');
+          await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+        }
+      };
+      try {
+        await act(async () => {
+          root.render(createElement(AccountQueries, {
+            userId: profile.userId,
+            children: createElement(Router, { hook: location.hook, children: createElement(Pages) }),
+          }));
+        });
+        const originalClient = client;
+        await act(async () => { client.setQueryData(getGetMeQueryKey(), profile); });
+        const oldForm = container.querySelector('form');
+        const oldButton = container.querySelector('[data-testid="button-save-profile"]');
+        assert.ok(oldForm instanceof window.HTMLFormElement);
+        assert.ok(oldButton instanceof window.HTMLButtonElement);
+        await act(async () => { oldForm.requestSubmit(); });
+        await waitFor(() => requests.length === 1);
+        assert.equal(oldButton.disabled, true);
+        assert.equal(client.isMutating(), 1, 'PATCH masih tertahan saat pengguna pergi');
+        assert.equal(formMounts, 1);
+        assert.equal(formUnmounts, 0);
+
+        // Keep AccountQueries and its identity mounted; only the Router removes
+        // the real ProfileForm imported from App.tsx.
+        await act(async () => { location.navigate('/regulations'); });
+        const destination = container.querySelector('[data-testid="destination-page"]');
+        assert.ok(destination, 'halaman tujuan sudah terpasang sebelum respons dilepas');
+        assert.equal(oldForm.isConnected, false);
+        assert.equal(formUnmounts, 1, 'navigasi benar-benar melepas formulir, bukan menyembunyikannya');
+        assert.equal(container.querySelector('form'), null);
+        assert.equal(client, originalClient, 'akun dan cache tetap sama saat berpindah halaman');
+        assert.equal(client.isMutating(), 1);
+        assert.equal(saves, 0);
+
+        await act(async () => { release(); });
+        await waitFor(() => client.getMutationCache().getAll()[0]?.state.status === 'success');
+        assert.deepEqual(client.getMutationCache().getAll()[0].state.data, saved,
+          'respons sukses benar-benar diproses, bukan dibatalkan saat formulir dilepas');
+        assert.equal(client.isMutating(), 0);
+        assert.deepEqual(location.history, ['/onboarding', '/regulations'],
+          'respons terlambat tidak boleh menavigasi ke dashboard');
+        assert.equal(container.querySelector('[data-testid="destination-page"]'), destination,
+          'halaman tujuan yang sama tetap terpasang');
+        assert.equal(container.querySelector('[data-testid="unexpected-dashboard"]'), null);
+        assert.equal(container.querySelector('form'), null);
+        assert.equal(container.querySelector('[data-testid="input-display-name"]'), null);
+        assert.equal(container.querySelector('[data-testid="button-save-profile"]'), null);
+        assert.equal(oldForm.isConnected, false);
+        assert.equal(formMounts, 1, 'formulir lama tidak muncul kembali');
+        assert.equal(formUnmounts, 1);
+        assert.equal(saves, 0, 'callback formulir yang sudah dilepas tidak dijalankan');
+        assert.equal(client, originalClient);
+        assert.equal(requests.length, 1, 'berpindah halaman dan respons terlambat tidak mengirim PATCH tambahan');
+        assert.deepEqual(JSON.parse(String(requests[0].body)), {
+          role: 'kontraktor', displayName: profile.displayName, organizationName: profile.organizationName,
+        });
+      } finally {
+        await act(async () => { release(); });
+        await act(async () => { root.unmount(); });
+        container.remove();
+      }
+    });
     for (const onboarding of [true, false]) {
       for (const trigger of ['click', 'Enter'] as const) {
         await t.test(`${onboarding ? 'onboarding' : 'pengaturan'}: ${trigger} berulang selama PATCH tertahan hanya menyimpan sekali`, async () => {
