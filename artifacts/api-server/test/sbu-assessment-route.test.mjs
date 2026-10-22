@@ -25,6 +25,19 @@ function createResponseValidator(schema, schemas = openapi.components.schemas) {
 const createProfileValidator = (schemas) => createResponseValidator(profileRef, schemas);
 const { ajv: profileAjv, validate: validateProfile } = createProfileValidator();
 const { ajv: dashboardAjv, validate: validateDashboard } = createResponseValidator(dashboardRef);
+const caseRef = "#/components/schemas/SbuCase";
+const { ajv: caseAjv, validate: validateCase } = createResponseValidator(caseRef);
+const caseReadOperations = [
+  { path: "/cases", matches: /^\/api\/cases$/, isList: true },
+  { path: "/cases/{id}", matches: /^\/api\/cases\/\d+$/, isList: false },
+].map((operation) => {
+  const schema = openapi.paths[operation.path].get.responses["200"].content["application/json"].schema;
+  // Keep the operation envelope and its entity reference under test too.
+  assert.deepEqual(schema, operation.isList
+    ? { type: "array", items: { $ref: caseRef } }
+    : { $ref: caseRef });
+  return { ...operation, schema, ...createResponseValidator(schema) };
+});
 const { ajv: evidenceAjv, validate: validateEvidence } = createResponseValidator("#/components/schemas/Evidence");
 const evidenceOperations = [
   { path: "/cases/{id}/evidence", method: "get", status: 200,
@@ -270,6 +283,18 @@ async function request(server, path, options) {
   });
   const raw = await response.text();
   const body = raw && response.headers.get("content-type")?.includes("application/json") ? JSON.parse(raw) : null;
+  const caseReadOperation = (options?.method ?? "GET").toUpperCase() === "GET"
+    ? caseReadOperations.find(({ matches }) => matches.test(path)) : undefined;
+  if (caseReadOperation && response.ok) {
+    const { isList, ajv, validate } = caseReadOperation;
+    assert.equal(response.status, 200, `GET ${path}: status sukses harus sesuai OpenAPI`);
+    assert.ok(validate(body),
+      `GET ${path} tidak sesuai respons operasi OpenAPI: ${ajv.errorsText(validate.errors)}`);
+    for (const item of isList ? body : [body]) {
+      assert.ok(validateCase(item),
+        `GET ${path} tidak sesuai OpenAPI SbuCase: ${caseAjv.errorsText(validateCase.errors)}`);
+    }
+  }
   const evidenceOperation = evidenceOperations.find(({ method, matches }) =>
     method === (options?.method ?? "GET").toLowerCase() && matches.test(path));
   if (evidenceOperation && response.ok) {
@@ -956,7 +981,7 @@ test("tanggal kalender SBU tersimpan utuh setelah buat, ubah, dan muat ulang kas
       const id = created.body.id;
       const checkDate = (response, expected) => {
         assert.equal(response.status, 200, `${tz}: ${response.raw}`);
-        assert.equal(response.body.existingSbuExpiresOn, `${expected}T00:00:00.000Z`,
+        assert.equal(response.body.existingSbuExpiresOn, expected,
           `${tz}: tanggal API harus tetap hari kalender yang dipilih`);
       };
       assert.equal(globalThis.__routeCaseRows[0].existingSbuExpiresOn, input.existingSbuExpiresOn,
@@ -971,7 +996,8 @@ test("tanggal kalender SBU tersimpan utuh setelah buat, ubah, dan muat ulang kas
         method: "PATCH", headers: { "content-type": "application/json" },
         body: JSON.stringify({ ...input, existingSbuExpiresOn: changedDate }),
       });
-      checkDate(updated, changedDate);
+      // Mutation response serialization is covered separately from these GET contracts.
+      checkDate(updated, `${changedDate}T00:00:00.000Z`);
       assert.equal(globalThis.__routeCaseRows[0].existingSbuExpiresOn, changedDate,
         `${tz}: perubahan disimpan sebagai tanggal saja`);
       globalThis.__routeCaseRows = structuredClone(globalThis.__routeCaseRows);
@@ -979,7 +1005,7 @@ test("tanggal kalender SBU tersimpan utuh setelah buat, ubah, dan muat ulang kas
       const list = await request(server, "/api/cases");
       assert.equal(list.status, 200, `${tz}: ${list.raw}`);
       assert.equal(list.body.find((item) => item.id === id)?.existingSbuExpiresOn,
-        `${changedDate}T00:00:00.000Z`, `${tz}: daftar kasus juga harus memuat tanggal yang sama`);
+        changedDate, `${tz}: daftar kasus juga harus memuat tanggal yang sama`);
     }
   } finally {
     if (previousTZ === undefined) delete process.env.TZ;
@@ -988,6 +1014,108 @@ test("tanggal kalender SBU tersimpan utuh setelah buat, ubah, dan muat ulang kas
     delete globalThis.__routeCaseRows;
     delete globalThis.__routeProfileRows;
     delete globalThis.__routeUserId;
+  }
+});
+
+test("daftar dan detail memvalidasi JSON HTTP terhadap kontrak sumber SbuCase tanpa coercion", async () => {
+  globalThis.__routeCaseRows = [null, "2028-02-29"].map((expiresOn, index) => ({
+    id: 391 + index, ownerId: "test-user", clientId: index === 0 ? null : 17,
+    companyName: `Kontrak Permohonan ${index}`, requestType: "perpanjangan",
+    qualification: "kecil", classification: "gedung", status: "draf",
+    existingSbuExpiresOn: expiresOn,
+    createdAt: new Date("2026-02-01T23:30:00Z"),
+    updatedAt: new Date("2026-02-02T00:30:00Z"),
+  }));
+  const server = app.listen(0);
+  try {
+    const listed = await request(server, "/api/cases");
+    assert.equal(listed.status, 200, listed.raw);
+    assert.deepEqual(listed.body.map((item) => item.id), [392, 391]);
+    for (const row of globalThis.__routeCaseRows) {
+      const detail = await request(server, `/api/cases/${row.id}`);
+      assert.equal(detail.status, 200, detail.raw);
+      assert.deepEqual(detail.body, listed.body.find((item) => item.id === row.id));
+      assert.equal(detail.body.existingSbuExpiresOn, row.existingSbuExpiresOn,
+        "tanggal kalender tidak boleh berubah menjadi timestamp atau null menjadi nilai lain");
+      assert.equal(detail.body.createdAt, "2026-02-01T23:30:00.000Z");
+      assert.equal(detail.body.updatedAt, "2026-02-02T00:30:00.000Z");
+      assert.equal(detail.body.clientId, row.clientId);
+
+      // Mutate actual serialized HTTP output, never a hand-written valid entity.
+      for (const { path, isList, schema, ajv, validate } of caseReadOperations) {
+        const wrap = (item) => isList ? [item] : item;
+        const valid = wrap(detail.body);
+        const prefix = isList ? "/0" : "";
+        const rejects = (value, keyword, instancePath, missingProperty) => {
+          assert.equal(validate(value), false, `${path}: harus menolak ${JSON.stringify(value)}`);
+          assert.ok(validate.errors.some((error) =>
+            error.keyword === keyword && error.instancePath === instancePath &&
+            (missingProperty === undefined || error.params.missingProperty === missingProperty)),
+          ajv.errorsText(validate.errors));
+        };
+        assert.ok(validate(valid), ajv.errorsText(validate.errors));
+        for (const value of isList ? [null, {}, detail.body, "cases", 1] : [null, [], "case", 1]) {
+          rejects(value, "type", "");
+        }
+        if (isList) {
+          assert.ok(validate([]), "daftar kosong harus valid");
+          for (const value of [null, [], "case", 1]) rejects([value], "type", "/0");
+          const missing = structuredClone(detail.body);
+          delete missing.companyName;
+          rejects([detail.body, missing], "required", "/1", "companyName");
+        }
+        for (const field of openapi.components.schemas.SbuCase.required) {
+          const missing = structuredClone(detail.body);
+          delete missing[field];
+          rejects(wrap(missing), "required", prefix, field);
+        }
+        for (const [field, property] of Object.entries(openapi.components.schemas.SbuCase.properties)) {
+          const types = [].concat(property.type);
+          const wrongTypes = types.includes("integer")
+            ? ["1", 1.5, true, [], {}] : [123, true, [], {}];
+          if (!types.includes("null")) wrongTypes.push(null);
+          for (const value of wrongTypes) {
+            rejects(wrap({ ...detail.body, [field]: value }), "type", `${prefix}/${field}`);
+          }
+          if (property.enum) {
+            rejects(wrap({ ...detail.body, [field]: "tidak-dikenal" }), "enum", `${prefix}/${field}`);
+          }
+          if (property.format) {
+            rejects(wrap({ ...detail.body, [field]: "bukan-tanggal" }), "format", `${prefix}/${field}`);
+          }
+        }
+        rejects(wrap({ ...detail.body, existingSbuExpiresOn: "2028-02-29T00:00:00.000Z" }),
+          "format", `${prefix}/existingSbuExpiresOn`);
+
+        // The source, not generated parsers or manual expectations, controls validity.
+        const addedField = structuredClone(openapi.components.schemas);
+        addedField.SbuCase.required.push("contractRevision");
+        addedField.SbuCase.properties.contractRevision = { type: "integer" };
+        const changedType = structuredClone(openapi.components.schemas);
+        changedType.SbuCase.properties.companyName = { type: "integer" };
+        const changedFormat = structuredClone(openapi.components.schemas);
+        changedFormat.SbuCase.properties.updatedAt.format = "date";
+        for (const [schemas, corrected] of [
+          [addedField, { ...detail.body, contractRevision: 1 }],
+          [changedType, { ...detail.body, companyName: 1 }],
+          [changedFormat, { ...detail.body, updatedAt: "2026-02-02" }],
+        ]) {
+          const changed = createResponseValidator(schema, schemas);
+          assert.equal(changed.validate(valid), false, `${path}: perubahan kontrak sumber harus terdeteksi`);
+          assert.ok(changed.validate(wrap(corrected)), changed.ajv.errorsText(changed.validate.errors));
+        }
+        const changedOperation = { allOf: [schema], not: { const: valid } };
+        const changed = createResponseValidator(changedOperation);
+        assert.equal(changed.validate(valid), false, `${path}: batasan operasi harus diperiksa`);
+      }
+    }
+    globalThis.__routeCaseRows = [];
+    const empty = await request(server, "/api/cases");
+    assert.equal(empty.status, 200, empty.raw);
+    assert.deepEqual(empty.body, []);
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
   }
 });
 
@@ -2279,7 +2407,10 @@ test("PATCH satu kolom oleh pemilik mempertahankan semua isian permohonan yang t
       companyName: "Perusahaan Baru",
       updatedAt: saved.updatedAt.toISOString(),
     }, "GET berikutnya harus menampilkan kolom yang diubah tanpa kehilangan isian lain");
-    assert.deepEqual(updated.body, reopened.body, "respons PATCH harus sesuai dengan data tersimpan");
+    assert.equal(updated.body.existingSbuExpiresOn, `${original.existingSbuExpiresOn}T00:00:00.000Z`);
+    assert.deepEqual({
+      ...updated.body, existingSbuExpiresOn: original.existingSbuExpiresOn,
+    }, reopened.body, "respons PATCH dan GET harus memuat data tersimpan yang sama setelah normalisasi tanggal");
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__routeCaseRows;
@@ -2308,7 +2439,7 @@ test("PATCH tanggal SBU dengan null mengosongkan tanggal tanpa mengubah kolom pe
   try {
     const before = await request(server, casePath);
     assert.equal(before.status, 200, before.raw);
-    assert.equal(before.body.existingSbuExpiresOn, "2027-04-15T00:00:00.000Z");
+    assert.equal(before.body.existingSbuExpiresOn, "2027-04-15");
 
     const updated = await request(server, casePath, {
       method: "PATCH",

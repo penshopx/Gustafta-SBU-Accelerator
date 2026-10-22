@@ -183,7 +183,11 @@ router.get("/cases", async (req, res): Promise<void> => {
   const items = await db.select().from(casesTable)
     .where(eq(casesTable.ownerId, owner(req)))
     .orderBy(desc(casesTable.updatedAt), desc(casesTable.id));
-  res.json(ListCasesResponse.parse(items));
+  res.json(ListCasesResponse.parse(items).map((item) => ({
+    ...item,
+    // Preserve the date-only wire contract after generated Date coercion.
+    existingSbuExpiresOn: dateOnly(item.existingSbuExpiresOn),
+  })));
 });
 
 router.post("/cases", async (req, res): Promise<void> => {
@@ -220,7 +224,8 @@ router.get("/cases/:id", async (req, res): Promise<void> => {
   if (!params.success) { res.status(400).json({ error: "ID tidak valid." }); return; }
   const item = await ownedCase(params.data.id, owner(req));
   if (!item) { res.status(404).json({ error: "Permohonan tidak ditemukan." }); return; }
-  res.json(GetCaseResponse.parse(item));
+  const result = GetCaseResponse.parse(item);
+  res.json({ ...result, existingSbuExpiresOn: dateOnly(result.existingSbuExpiresOn) });
 });
 
 router.patch("/cases/:id", async (req, res): Promise<void> => {
