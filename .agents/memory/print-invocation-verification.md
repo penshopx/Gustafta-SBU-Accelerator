@@ -20,3 +20,9 @@ Compare PDF text semantically across engines, preserving all geometry and comple
 **Why:** Firefox PDF fonts can encode `fi` as a single ligature while Chromium emits separate letters. Raw extracted-string matching then falsely reports a missing disclaimer on an otherwise correct PDF.
 
 **How to apply:** Normalize compatibility glyphs in extracted words, not coordinates or source HTML. Keep real-PDF negative controls so normalization cannot conceal missing warnings or overlapping text. Playwright's lack of Firefox PDF output does not mean Firefox cannot print: its native WebDriver print command can produce actual PDFs. Never substitute Chromium or print-media screenshots for unverified Safari/WebKit pagination.
+
+Require both complete source-text checks and coordinate checks for extreme print values.
+
+**Why:** Chromium may omit unwrapped overflow from its PDF text stream entirely, leaving only valid in-page boxes. A coordinate-only guard can therefore pass a PDF that lost part of a company name or category.
+
+**How to apply:** Compare complete synthetic values (including interior chunks and Unicode) after normalizing layout whitespace, in addition to checking every page's warning, bounds and overlap. Use real PDFs with wrapping disabled as negative controls; do not require every engine to expose missing overflow as out-of-bounds boxes.

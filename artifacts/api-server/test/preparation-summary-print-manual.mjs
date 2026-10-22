@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertSafePages, readPdfPages } from "./helpers/printed-summary.mjs";
-import { summaryPrintFixture, assertSummaryContent } from "./helpers/summary-print-fixture.mjs";
+import { summaryPrintFixture, assertSummaryContent, assertExtremeSummaryContent } from "./helpers/summary-print-fixture.mjs";
 
 const [command, argument, ...extra] = process.argv.slice(2);
 assert.ok(["export", "check"].includes(command) && extra.length === 0,
@@ -19,11 +19,11 @@ try {
   if (command === "export") {
     await mkdir(directory, { recursive: true });
     // Refuse accidental replacement of someone's existing exported files.
-    for (const variant of ["long", "short"]) {
+    for (const variant of ["long", "short", "extreme"]) {
       await writeFile(join(directory, `${variant}.html`), fixture[`${variant}Html`], { flag: "wx" });
     }
     console.log(`Synthetic original-generator HTML written to ${directory}`);
-    console.log("In Safari on macOS, print both HTML files to long.pdf and short.pdf in that directory.");
+    console.log("In Safari on macOS, print all three HTML files to long.pdf, short.pdf and extreme.pdf in that directory.");
     console.log("This export is NOT a Safari/WebKit pagination pass. See test/PRINT-REGRESSION.md.");
   } else {
     // Never leave an earlier success report beside newly failing inputs.
@@ -33,14 +33,15 @@ try {
       provenance: "User-supplied native-print PDFs; browser/OS identity is not established by this checker.",
       pages: {},
     };
-    for (const variant of ["long", "short"]) {
+    for (const variant of ["long", "short", "extreme"]) {
       const html = await readFile(join(directory, `${variant}.html`), "utf8");
       assert.equal(html, fixture[`${variant}Html`], `${variant}: exported HTML differs from current synthetic fixture`);
       const pdf = await readFile(join(directory, `${variant}.pdf`));
       assert.equal(pdf.subarray(0, 5).toString(), "%PDF-", `${variant}: not a PDF`);
       const pages = await readPdfPages(join(directory, `${variant}.pdf`));
       assertSafePages(pages, fixture.disclaimer);
-      assertSummaryContent(pages, fixture, variant);
+      if (variant === "extreme") assertExtremeSummaryContent(pages, fixture);
+      else assertSummaryContent(pages, fixture, variant);
       report.pages[variant] = {
         count: pages.length, htmlSha256: sha256(html), pdfSha256: sha256(pdf),
         checks: ["complete per-page warning", "no blank pages", "no text overlap/clipping", "summary content"],

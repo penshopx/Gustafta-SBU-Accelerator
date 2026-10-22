@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertSafePages, renderPdf } from "./helpers/printed-summary.mjs";
-import { summaryPrintFixture, assertSummaryContent } from "./helpers/summary-print-fixture.mjs";
+import { summaryPrintFixture, assertSummaryContent, assertExtremeSummaryContent } from "./helpers/summary-print-fixture.mjs";
 
 for (const engine of ["chromium", "firefox"]) {
   test(`${engine}: native PDF repeats the complete declaration without blank pages or overlap`, {
@@ -28,6 +28,44 @@ for (const engine of ["chromium", "firefox"]) {
         assertSafePages(short, disclaimer);
         assertSummaryContent(short, fixture, "short");
         t.diagnostic(`${engine}: ${short.length} real short-summary PDF pages checked.`);
+      });
+      await t.test("extreme spaced, unbroken and Unicode values remain complete and clear of warnings", async (extremeTest) => {
+        const extreme = await render(fixture.extremeHtml, "extreme");
+        assertSafePages(extreme, disclaimer);
+        assertExtremeSummaryContent(extreme, fixture);
+        t.diagnostic(`${engine}: ${extreme.length} extreme-value A4 PDF pages; all source blocks and coordinates checked.`);
+
+        await extremeTest.test("real PDF with a missing interior name chunk fails completeness", async () => {
+          const broken = await render(fixture.extremeHtml.replace("TanpaSpasi032ÉlanΩЖ", ""), "extreme-missing-name");
+          assertSafePages(broken, disclaimer);
+          assert.throws(() => assertExtremeSummaryContent(broken, fixture), /extreme company name missing/);
+        });
+        await extremeTest.test("real PDF with a missing interior Unicode category chunk fails completeness", async () => {
+          const broken = await render(fixture.extremeHtml.replace("ÅngströmΔМосква030ÉlanΩЖ", ""), "extreme-missing-category");
+          assertSafePages(broken, disclaimer);
+          assert.throws(() => assertExtremeSummaryContent(broken, fixture), /extreme category missing/);
+        });
+        await extremeTest.test("disabling wrapping fails PDF safety or completeness", async () => {
+          const broken = await render(fixture.extremeHtml.replace("</style>",
+            "strong,li{white-space:nowrap!important}</style>"), "extreme-nowrap");
+          // Chromium may omit overflow from its PDF text stream instead of
+          // emitting out-of-page boxes; geometry alone cannot catch that.
+          assert.throws(() => {
+            assertSafePages(broken, disclaimer);
+            assertExtremeSummaryContent(broken, fixture);
+          }, /clipped text|content overlaps|missing complete declaration|extreme company name missing|missing or duplicated declaration/);
+        });
+        await extremeTest.test("losing the final warning fails even when all page headers survive", async () => {
+          const broken = await render(fixture.extremeHtml.replace(`<footer>${disclaimer}<br>`, "<footer><br>"),
+            "extreme-missing-footer-warning");
+          assertSafePages(broken, disclaimer);
+          assert.throws(() => assertExtremeSummaryContent(broken, fixture), /missing or duplicated declaration/);
+        });
+        await extremeTest.test("extreme text cannot be painted underneath a complete warning", async () => {
+          const broken = await render(fixture.extremeHtml.replace("</style>",
+            ".page-notice{position:relative;top:75mm;z-index:10}</style>"), "extreme-overlap");
+          assert.throws(() => assertSafePages(broken, disclaimer), /content overlaps declaration/);
+        });
       });
       await t.test("guard rejects a real PDF after repeating header is removed", async () => {
         const broken = await render(html.replace(/<thead>[\s\S]*?<\/thead>/, ""), "missing-warning");
@@ -61,14 +99,19 @@ for (const engine of ["chromium", "firefox"]) {
           await run("export");
           await assert.rejects(run("export"), /EEXIST/);
           await assert.rejects(run("check"), /ENOENT/);
-          for (const name of ["long", "short"]) {
+          for (const name of ["long", "short", "extreme"]) {
             await copyFile(join(directory, `${name}.pdf`), join(destination, `${name}.pdf`));
           }
           await run("check");
           const report = JSON.parse(await readFile(join(destination, "pdf-check-report.json"), "utf8"));
           assert.equal(report.pages.long.count, pages.length);
+          assert.ok(report.pages.extreme.count > report.pages.long.count);
           assert.match(report.pages.long.pdfSha256, /^[a-f0-9]{64}$/);
           assert.match(report.provenance, /not established/);
+          await copyFile(join(directory, "extreme-missing-name.pdf"), join(destination, "extreme.pdf"));
+          await assert.rejects(run("check"), /extreme company name missing/);
+          await assert.rejects(readFile(join(destination, "pdf-check-report.json")), /ENOENT/);
+          await copyFile(join(directory, "extreme.pdf"), join(destination, "extreme.pdf"));
           await writeFile(join(destination, "long.html"), html.replace("Usaha Fixture Cetak", "Different fixture"));
           await assert.rejects(run("check"), /exported HTML differs/);
           await assert.rejects(readFile(join(destination, "pdf-check-report.json")), /ENOENT/);

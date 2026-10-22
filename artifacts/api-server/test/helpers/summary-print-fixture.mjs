@@ -42,11 +42,54 @@ export async function summaryPrintFixture(directory) {
   }];
   const longHtml = preparationSummary(item, evidence, [], generatedAt, personnel);
   const shortHtml = preparationSummary({ ...item, requestType: "baru" }, [], [], generatedAt);
+  // Invented stress values, not input-limit examples or real applicant data.
+  // Distinct prefixes/tails detect truncation, while indexed chunks detect loss
+  // in the middle. Accents, Greek and Cyrillic exercise actual Unicode glyphs.
+  const chunks = (prefix, count, separator) => Array.from({ length: count },
+    (_, i) => `${prefix}${String(i).padStart(3, "0")}ÉlanΩЖ`).join(separator);
+  const companyName = `AWALBADANUSAHA ${chunks("Usaha", 48, " ")} ${chunks("TanpaSpasi", 64, "")} AKHIRBADANUSAHA`;
+  const extremeCodes = [
+    ...codes,
+    `AWALKATEGORIRAPAT${chunks("Kode", 100, "")}AKHIRKATEGORIRAPAT`,
+    `AWALKATEGORISPASI ${chunks("Kategori", 80, " ")} AKHIRKATEGORISPASI`,
+    `AWALKATEGORIUNICODE${chunks("ÅngströmΔМосква", 60, "")}AKHIRKATEGORIUNICODE`,
+  ];
+  const extremeHtml = preparationSummary({ ...item, companyName },
+    extremeCodes.map((code, i) => ({ ...evidence[0], id: i + 1, code })), [], generatedAt, personnel);
   assert.equal((longHtml.match(/<article>/g) || []).length, 12, "personnel, all nine findings and two regulations");
-  for (const html of [longHtml, shortHtml]) {
+  for (const html of [longHtml, shortHtml, extremeHtml]) {
     assert.doesNotMatch(html, /PRIVATE_FIXTURE|synthetic-not-a-real-account/);
   }
-  return { longHtml, shortHtml, codes, disclaimer: SUMMARY_DISCLAIMER };
+  return { longHtml, shortHtml, extremeHtml, companyName, extremeCodes, codes, disclaimer: SUMMARY_DISCLAIMER };
+}
+
+const compact = (text) => text.normalize("NFKC").replace(/\s+/gu, "");
+const occurrences = (text, value) => text.split(value).length - 1;
+
+export function assertExtremeSummaryContent(pages, fixture) {
+  assertSummaryContent(pages, { ...fixture, codes: fixture.extremeCodes.slice(0, -3) }, "long");
+  const printed = compact(pages.flatMap(page => page.words.map(word => word.text)).join(" "));
+  assert.equal(occurrences(printed, compact(fixture.disclaimer)), pages.length + 2,
+    "missing or duplicated declaration: one header per page plus opening notice and final footer");
+  // A PDF line/page break can split a word. Remove only layout whitespace,
+  // retaining every letter, digit and punctuation mark (including Unicode).
+  // Repeated declarations may interrupt a paragraph across a page boundary.
+  const text = printed.split(compact(fixture.disclaimer)).join("");
+  assert.equal(occurrences(text, compact(fixture.companyName)), 1,
+    "extreme company name missing or duplicated");
+  for (const code of fixture.extremeCodes) {
+    assert.equal(occurrences(text, compact(`${code} — 1 catatan deklarasi`)), 1,
+      `extreme category missing or duplicated: ${code.slice(0, 40)}`);
+  }
+  // Check every source heading, paragraph, list entry and footer, not just
+  // category sentinels: all warnings, findings, regulations and final notes.
+  for (const match of fixture.extremeHtml.matchAll(/<(p|h[1-4]|li|footer)\b[^>]*>([\s\S]*?)<\/\1>/g)) {
+    const expected = compact(match[2].replace(/<[^>]*>/g, "")
+      .replace(/&(amp|lt|gt|quot|#39);/g,
+        (_, entity) => ({ amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'" })[entity]))
+      .split(compact(fixture.disclaimer)).join("");
+    if (expected) assert.ok(text.includes(expected), `missing complete printed block: ${expected.slice(0, 90)}`);
+  }
 }
 
 export function assertSummaryContent(pages, fixture, variant) {

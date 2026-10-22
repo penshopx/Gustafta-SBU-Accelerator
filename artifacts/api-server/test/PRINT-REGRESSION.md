@@ -21,9 +21,32 @@ on each page, nonempty body content, unclipped text, and no body text overlappin
 the repeated notice or final footer declaration. Category and finding checks
 also catch lost or duplicated content.
 
+The `extreme` variant retains all 186 original categories, nine findings,
+personnel/SKK and references, and adds three synthetic category codes of
+1,335, 1,476 and 1,479 characters plus a 1,967-character company name.
+Indexed chunks exercise both spaces and long unbroken runs, with accented Latin,
+Greek and Cyrillic text (`É`, `Å`, `ö`, `Ω`, `Δ`, `Ж`, `Москва`).
+These are stress fixtures, not a claim about application input limits.
+Every complete company/category value must occur exactly once. Every source
+heading, paragraph, list item and footer must survive PDF extraction, including
+all findings, source details, warnings and end notes. Layout whitespace is
+removed for these comparisons so line/page wrapping within words is allowed;
+no letters, digits or punctuation are discarded. Repeated declarations are
+removed only for block comparisons, after checking their exact count:
+one per page plus the opening notice and final footer.
+The same per-page coordinate, no-overlap/clipping and nonblank-body assertions
+apply to the extreme PDFs in both engines.
+
 Negative controls print modified HTML with the repeating warning removed,
 positioned over the body, or followed by a genuinely blank PDF page.
 A warning-only-page control verifies the body-content guard too.
+Additional extreme-value controls print actual PDFs with an interior company
+chunk removed, an interior Unicode category chunk removed, wrapping disabled,
+the final footer warning removed while page headers survive, or the complete
+warning positioned over the extreme body. Each must fail the relevant content
+or coordinate assertion. Geometry alone is insufficient: Chromium can omit
+overflow text from the PDF stream rather than expose out-of-page word boxes,
+so the no-wrap control checks both geometry and full-value completeness.
 The existing template deliberately repeats its warning through a table header,
 not a fixed footer overlay; the test checks the outcome without changing export
 features. This is pagination coverage, not a native print-dialog/button test.
@@ -68,6 +91,23 @@ visually inspected: the warning and body text were visible and separated,
 including the findings/regulations transitions and the final page. These
 images came from the actual PDF, not print-media screenshots.
 
+### Extreme-value result (2026-10-22)
+
+Chromium 152.0.7977.64 produced **16 A4 pages** and Firefox 140.0.4 /
+geckodriver 0.36.0 produced **18 A4 pages** for `extreme`. Both passed complete
+company/category/source-block comparisons, exact declaration counts, per-page
+warning and coordinate checks, and nonblank-page checks. The original long and
+short fixtures remained covered (Chromium: 14 / 5 pages; Firefox: 15 / 4 pages).
+All extreme negative controls were rejected in both engines. Chromium's manual
+checker also covers the extreme PDF, including rejection of an interior-name
+deletion and removal of stale success reports.
+Pages 1–3 and the final page of the actual Chromium extreme PDF were rasterized
+for a supplementary visual spot check of the Unicode values, a split category
+and the final warning. This is not a full visual inspection of every page,
+not Safari evidence, and not a claim of font coverage for every Unicode script.
+Safari remains explicitly unverified.
+Final `test:print` result: **25 passed, 0 failed, 1 explicit Safari/WebKit skip**.
+
 ## Safari / WebKit: explicit automation limit, NOT a passing result
 
 This Linux suite cannot produce a Safari PDF. Safari and its native
@@ -99,7 +139,7 @@ References (checked 2026-10-20):
    ```
    pnpm --filter @workspace/api-server exec node test/preparation-summary-print-manual.mjs export
    ```
-   This writes `long.html` and `short.html` to the workspace's ignored
+   This writes `long.html`, `short.html` and `extreme.html` to the workspace's ignored
    `generated-artifacts/summary-print/`. An optional final directory argument
    changes the destination. Existing HTML files are not overwritten: choose a
    new directory for another export.
@@ -109,10 +149,10 @@ References (checked 2026-10-20):
 3. Choose File > Print, show details, A4, portrait, 100% scale; disable Safari
    browser headers and footers. Keep the generator's page margins (18 mm top,
    16 mm sides, 28 mm bottom); record the effective print settings. Use the
-   native PDF > Save as PDF action to create `long.pdf` and `short.pdf`.
+   native PDF > Save as PDF action to create `long.pdf`, `short.pdf` and `extreme.pdf`.
    Do not use screenshots, single-page capture, reader mode, or a conversion
    service. Preserve every page, not just the first.
-4. Place both PDFs alongside the exported HTML files. Back in this workspace
+4. Place all three PDFs alongside the exported HTML files. Back in this workspace
    (or on a host with Node, workspace dependencies, and Poppler), run:
    ```
    pnpm --filter @workspace/api-server exec node test/preparation-summary-print-manual.mjs check
@@ -130,7 +170,7 @@ References (checked 2026-10-20):
    there is no blank page. Bounding-box assertions cannot prove font rendering,
    non-text graphics, contrast or arbitrary painted occlusion.
 6. Record measured page counts, report, visual inspection result and any
-   failures. Never record Safari as passed unless both genuine Safari PDFs
+   failures. Never record Safari as passed unless all three genuine Safari PDFs
    pass the checker **and** the visual inspection. If table-header repetition
    differs, preserve the failing synthetic PDF and fix the generator separately;
    do not relax the warning checks or substitute a Chromium PDF.
