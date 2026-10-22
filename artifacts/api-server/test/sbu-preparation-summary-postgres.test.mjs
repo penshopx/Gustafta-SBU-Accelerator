@@ -11,7 +11,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { createRestrictedRoutePool } from "./helpers/restricted-postgres.mjs";
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
-const { Pool } = createRequire(new URL("../../../lib/db/package.json", import.meta.url))("pg");
+const { Pool, DatabaseError } = createRequire(new URL("../../../lib/db/package.json", import.meta.url))("pg");
 const tables = ["sbu_profiles", "sbu_cases", "sbu_evidence", "sbu_transition_verifications",
   "sbu_documents", "sbu_personnel", "sbu_skk_certificates"];
 const emptyPersonnelReads = ["sbu_cases", "sbu_evidence", "sbu_transition_verifications", "sbu_personnel"];
@@ -481,6 +481,113 @@ test("GET preparation-summary preserves PostgreSQL snapshots and recovers from r
         assert.deepEqual(routeErrors, []);
         const { rows: [connection] } = await reader.query("SELECT pg_backend_pid() AS pid");
         assert.equal(connection.pid, readerPid, "Percobaan ulang harus memakai koneksi fisik semula");
+      });
+    }
+    for (const lockedTable of ["sbu_evidence", "sbu_transition_verifications"]) {
+      await t.test(`statement timeout reading ${lockedTable} rolls back without a partial download and permits same-connection retry`, async () => {
+        await writer.query("UPDATE sbu_cases SET company_name = 'Perusahaan Sebelum' WHERE id = $1", [item.id]);
+        await writer.query("UPDATE sbu_evidence SET code = 'legalitas' WHERE case_id = $1", [item.id]);
+        await writer.query(`
+          UPDATE sbu_transition_verifications SET document_number = 'Surat Sebelum',
+            issued_on = '2026-04-10', document_status = 'berlaku' WHERE track = $1
+        `, [track]);
+        const baseline = await request();
+        assert.equal(baseline.response.status, 200, baseline.html);
+        assertBefore(baseline.html);
+        const originalTimeout = (await query("SHOW statement_timeout")).rows[0].statement_timeout;
+        const writerTimeout = (await writer.query("SHOW statement_timeout")).rows[0].statement_timeout;
+        let writerTransactionOpen = false;
+        try {
+          // Session-local to this restricted reader, never ALTER DATABASE/ROLE
+          // or a setting on the application's pool. Use the unwrapped driver
+          // query so the recorded statements describe only the HTTP request.
+          await query("SELECT set_config('statement_timeout', '750ms', false)");
+          assert.equal((await query("SHOW statement_timeout")).rows[0].statement_timeout, "750ms");
+          assert.equal((await writer.query("SHOW statement_timeout")).rows[0].statement_timeout, writerTimeout);
+          await writer.query("BEGIN");
+          writerTransactionOpen = true;
+          await writer.query(`LOCK TABLE "${schema}"."${lockedTable}" IN ACCESS EXCLUSIVE MODE`);
+          const { rows: locks } = await writer.query(`
+            SELECT n.nspname AS schema, c.relname AS table_name, l.mode, l.granted
+            FROM pg_locks l JOIN pg_class c ON c.oid = l.relation
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE l.pid = $1 AND l.locktype = 'relation' AND l.mode = 'AccessExclusiveLock'
+          `, [writerPid]);
+          assert.deepEqual(locks, [{
+            schema, table_name: lockedTable, mode: "AccessExclusiveLock", granted: true,
+          }], "Penulis hanya boleh mengunci tabel salinan fixture");
+
+          reads = [];
+          statements = [];
+          routeErrors = [];
+          const failed = await request();
+          assert.equal(failed.response.status, 500, failed.html);
+          assert.equal(failed.response.headers.get("cache-control"), "private, no-store");
+          assert.equal(failed.response.headers.get("content-disposition"), null,
+            "Timeout tidak boleh menghasilkan header unduhan");
+          assert.equal(failed.response.headers.get("content-security-policy"), "default-src 'none'");
+          assert.match(failed.response.headers.get("content-type"), /^text\/html\b/);
+          assert.match(failed.html, /Internal Server Error/);
+          assert.doesNotMatch(failed.html,
+            /Perusahaan|Judul privat|Surat Sebelum|ringkasan-persiapan-sbu|Snapshot|catatan deklarasi/);
+          assert.equal(routeErrors.length, 1);
+          assert.equal(routeErrors[0].headersSent, false,
+            "HTML ringkasan tidak boleh dikirim sebelum transaksi berhasil");
+          assert.equal(routeErrors[0].disposition, undefined);
+          assert.equal(routeErrors[0].contentType, undefined);
+          let cause = routeErrors[0].error;
+          while (cause.cause) cause = cause.cause;
+          assert.ok(cause instanceof DatabaseError, "Timeout harus berasal dari driver PostgreSQL, bukan galat JS buatan");
+          assert.equal(cause.code, "57014");
+          assert.match(cause.message, /canceling statement due to statement timeout/);
+
+          assert.match(statements[0].sql, /^begin isolation level repeatable read read only$/i);
+          const timeoutIndex = statements.findIndex(statement => statement.code === "57014");
+          assert.equal(timeoutIndex, lockedTable === "sbu_evidence" ? 2 : 3);
+          assert.match(statements[timeoutIndex].sql, new RegExp(`from "${lockedTable}"`, "i"));
+          assert.deepEqual(statements.slice(timeoutIndex + 1), [{ sql: "rollback", command: "ROLLBACK" }],
+            "Timeout harus diikuti ROLLBACK, tanpa SELECT lanjutan atau COMMIT");
+          assert.deepEqual(reads, lockedTable === "sbu_evidence"
+            ? ["sbu_cases"] : ["sbu_cases", "sbu_evidence"]);
+          const { rows: [activity] } = await writer.query(`
+            SELECT state, xact_start FROM pg_stat_activity WHERE pid = $1
+          `, [readerPid]);
+          assert.deepEqual(activity, { state: "idle", xact_start: null },
+            "Pembaca harus sudah keluar dari transaksi gagal walaupun kunci penulis masih ditahan");
+          assert.equal((await query("SELECT pg_backend_pid() AS pid")).rows[0].pid, readerPid);
+
+          await writer.query("ROLLBACK");
+          writerTransactionOpen = false;
+          reads = [];
+          statements = [];
+          routeErrors = [];
+          // Retry with the timeout still enabled: releasing the cloned-table
+          // lock, not disabling cancellation or replacing the client, recovers.
+          const recovered = await request();
+          assert.equal(recovered.response.status, 200, recovered.html);
+          assert.equal(recovered.response.headers.get("cache-control"), "private, no-store");
+          assert.match(recovered.response.headers.get("content-type"), /^text\/html\b/);
+          assert.equal(recovered.response.headers.get("content-disposition"),
+            'attachment; filename="ringkasan-persiapan-sbu.html"');
+          assertBefore(recovered.html);
+          assert.equal(content(recovered.html), content(baseline.html),
+            "Percobaan ulang harus mengembalikan ringkasan lengkap yang sama");
+          assert.deepEqual(reads, emptyPersonnelReads);
+          assert.equal(statements.at(-1).command, "COMMIT");
+          assert.deepEqual(routeErrors, []);
+          assert.equal((await query("SELECT pg_backend_pid() AS pid")).rows[0].pid, readerPid,
+            "Percobaan ulang harus memakai koneksi fisik semula");
+          assert.equal((await query("SHOW statement_timeout")).rows[0].statement_timeout, "750ms");
+        } finally {
+          try {
+            if (writerTransactionOpen) await writer.query("ROLLBACK");
+          } finally {
+            await query("SELECT set_config('statement_timeout', $1, false)", [originalTimeout]);
+          }
+        }
+        assert.equal((await query("SHOW statement_timeout")).rows[0].statement_timeout, originalTimeout,
+          "Pengaturan pembaca harus dipulihkan untuk skenario berikutnya");
+        assert.equal((await writer.query("SHOW statement_timeout")).rows[0].statement_timeout, writerTimeout);
       });
     }
     await t.test("personnel/SKK and documents remain case/owner scoped with deterministic concurrent commits", async () => {
