@@ -34,3 +34,9 @@ Advisory locks are database-wide even when tables and connections are isolated b
 **Why:** A running API or parallel route test can hold the same shared lifecycle lock as a cleanup fixture, making an expected database failure silently skip instead.
 
 **How to apply:** For a standalone lock integration fixture, preserve production SQL lock modes but use a disposable key namespace consistently across all fixture participants. Do not take the application's exclusive lifecycle lock merely to test cloned tables.
+
+For real PostgreSQL connection-loss tests, distinguish the driver's session-termination event from the error ultimately forwarded by the transaction wrapper.
+
+**Why:** A transaction wrapper can attempt rollback on an already broken connection and replace the original transport/session error with the rollback failure. Requiring the HTTP error's deepest cause to retain the termination SQLSTATE would then reject otherwise correct pool eviction and retry behavior.
+
+**How to apply:** Observe the real driver termination separately, then verify failed HTTP output, broken-client eviction, and recovery through a different physical backend. Keep permission-denial recovery checks separate because those should reuse the original healthy connection.

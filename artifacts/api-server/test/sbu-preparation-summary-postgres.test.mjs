@@ -9,6 +9,7 @@ import express from "express";
 import { build } from "esbuild";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { createRestrictedRoutePool } from "./helpers/restricted-postgres.mjs";
+import { exerciseSummaryConnectionLoss } from "./helpers/summary-connection-loss.mjs";
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const { Pool, DatabaseError } = createRequire(new URL("../../../lib/db/package.json", import.meta.url))("pg");
@@ -406,6 +407,30 @@ test("GET preparation-summary preserves PostgreSQL snapshots and recovers from r
         await pooled.close();
       }
     });
+    for (const boundary of ["sbu_cases", "sbu_evidence"]) {
+      await t.test(`connection terminated after ${boundary} sends no summary and retries on a replacement backend`, async () => {
+        await writer.query("UPDATE sbu_cases SET company_name = 'Perusahaan Sebelum' WHERE id = $1", [item.id]);
+        await writer.query("UPDATE sbu_evidence SET code = 'legalitas' WHERE case_id = $1", [item.id]);
+        await writer.query(`
+          UPDATE sbu_transition_verifications SET document_number = 'Surat Sebelum',
+            issued_on = '2026-04-10', document_status = 'berlaku' WHERE track = $1
+        `, [track]);
+        routeErrors = [];
+        await exerciseSummaryConnectionLoss({
+          admin, schema, request, content, assertBefore, boundary,
+          installPool(pool) {
+            const originalDb = globalThis.__summaryPostgresDb;
+            globalThis.__summaryPostgresDb = drizzle(pool);
+            return () => { globalThis.__summaryPostgresDb = originalDb; };
+          },
+        });
+        assert.equal(routeErrors.length, 1);
+        assert.equal(routeErrors[0].headersSent, false,
+          "Koneksi putus tidak boleh mengirim bagian ringkasan sebelum transaksi selesai");
+        assert.equal(routeErrors[0].disposition, undefined);
+        assert.equal(routeErrors[0].contentType, undefined);
+      });
+    }
     for (const failedTable of ["sbu_evidence", "sbu_transition_verifications"]) {
       await t.test(`permission failure reading ${failedTable} rolls back before sending and permits same-connection retry`, async () => {
         await writer.query("UPDATE sbu_cases SET company_name = 'Perusahaan Sebelum' WHERE id = $1", [item.id]);
@@ -870,7 +895,10 @@ test("GET preparation-summary preserves PostgreSQL snapshots and recovers from r
         if (restricted) await restricted.close();
       } finally {
         try {
-          if (created) await admin.query(`DROP SCHEMA "${schema}" CASCADE`);
+          if (created) {
+            await admin.query(`DROP SCHEMA "${schema}" CASCADE`);
+            assert.equal((await admin.query("SELECT 1 FROM pg_namespace WHERE nspname = $1", [schema])).rowCount, 0);
+          }
         } finally {
           await admin.end();
           await rm(temporaryDir, { recursive: true, force: true });
