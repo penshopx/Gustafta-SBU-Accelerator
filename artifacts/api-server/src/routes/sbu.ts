@@ -216,7 +216,8 @@ router.post("/cases", async (req, res): Promise<void> => {
     await recordCaseAudit(context, "case.created", created.id, Object.keys(input.data), tx);
     return created;
   });
-  res.status(201).json(CreateCaseResponse.parse(item));
+  const result = CreateCaseResponse.parse(item);
+  res.status(201).json({ ...result, existingSbuExpiresOn: dateOnly(result.existingSbuExpiresOn) });
 });
 
 router.get("/cases/:id", async (req, res): Promise<void> => {
@@ -256,7 +257,8 @@ router.patch("/cases/:id", async (req, res): Promise<void> => {
     return updated;
   });
   if (!item) { res.status(404).json({ error: "Permohonan tidak ditemukan." }); return; }
-  res.json(UpdateCaseResponse.parse(item));
+  const result = UpdateCaseResponse.parse(item);
+  res.json({ ...result, existingSbuExpiresOn: dateOnly(result.existingSbuExpiresOn) });
 });
 
 router.delete("/cases/:id", async (req, res): Promise<void> => {

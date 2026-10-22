@@ -27,11 +27,14 @@ const { ajv: profileAjv, validate: validateProfile } = createProfileValidator();
 const { ajv: dashboardAjv, validate: validateDashboard } = createResponseValidator(dashboardRef);
 const caseRef = "#/components/schemas/SbuCase";
 const { ajv: caseAjv, validate: validateCase } = createResponseValidator(caseRef);
-const caseReadOperations = [
-  { path: "/cases", matches: /^\/api\/cases$/, isList: true },
-  { path: "/cases/{id}", matches: /^\/api\/cases\/\d+$/, isList: false },
+const caseOperations = [
+  { path: "/cases", method: "get", status: 200, matches: /^\/api\/cases$/, isList: true },
+  { path: "/cases/{id}", method: "get", status: 200, matches: /^\/api\/cases\/\d+$/, isList: false },
+  { path: "/cases", method: "post", status: 201, matches: /^\/api\/cases$/, isList: false },
+  { path: "/cases/{id}", method: "patch", status: 200, matches: /^\/api\/cases\/\d+$/, isList: false },
 ].map((operation) => {
-  const schema = openapi.paths[operation.path].get.responses["200"].content["application/json"].schema;
+  const schema = openapi.paths[operation.path][operation.method]
+    .responses[operation.status].content["application/json"].schema;
   // Keep the operation envelope and its entity reference under test too.
   assert.deepEqual(schema, operation.isList
     ? { type: "array", items: { $ref: caseRef } }
@@ -283,16 +286,17 @@ async function request(server, path, options) {
   });
   const raw = await response.text();
   const body = raw && response.headers.get("content-type")?.includes("application/json") ? JSON.parse(raw) : null;
-  const caseReadOperation = (options?.method ?? "GET").toUpperCase() === "GET"
-    ? caseReadOperations.find(({ matches }) => matches.test(path)) : undefined;
-  if (caseReadOperation && response.ok) {
-    const { isList, ajv, validate } = caseReadOperation;
-    assert.equal(response.status, 200, `GET ${path}: status sukses harus sesuai OpenAPI`);
+  const caseOperation = caseOperations.find(({ method, matches }) =>
+    method === (options?.method ?? "GET").toLowerCase() && matches.test(path));
+  if (caseOperation && response.ok) {
+    const { method, status, isList, ajv, validate } = caseOperation;
+    const label = `${method.toUpperCase()} ${path}`;
+    assert.equal(response.status, status, `${label}: status sukses harus sesuai OpenAPI`);
     assert.ok(validate(body),
-      `GET ${path} tidak sesuai respons operasi OpenAPI: ${ajv.errorsText(validate.errors)}`);
+      `${label} tidak sesuai respons operasi OpenAPI: ${ajv.errorsText(validate.errors)}`);
     for (const item of isList ? body : [body]) {
       assert.ok(validateCase(item),
-        `GET ${path} tidak sesuai OpenAPI SbuCase: ${caseAjv.errorsText(validateCase.errors)}`);
+        `${label} tidak sesuai OpenAPI SbuCase: ${caseAjv.errorsText(validateCase.errors)}`);
     }
   }
   const evidenceOperation = evidenceOperations.find(({ method, matches }) =>
@@ -978,6 +982,8 @@ test("tanggal kalender SBU tersimpan utuh setelah buat, ubah, dan muat ulang kas
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input),
       });
       assert.equal(created.status, 201, `${tz}: ${created.raw}`);
+      assert.equal(created.body.existingSbuExpiresOn, input.existingSbuExpiresOn,
+        `${tz}: respons POST harus mempertahankan tanggal kalender`);
       const id = created.body.id;
       const checkDate = (response, expected) => {
         assert.equal(response.status, 200, `${tz}: ${response.raw}`);
@@ -996,8 +1002,7 @@ test("tanggal kalender SBU tersimpan utuh setelah buat, ubah, dan muat ulang kas
         method: "PATCH", headers: { "content-type": "application/json" },
         body: JSON.stringify({ ...input, existingSbuExpiresOn: changedDate }),
       });
-      // Mutation response serialization is covered separately from these GET contracts.
-      checkDate(updated, `${changedDate}T00:00:00.000Z`);
+      checkDate(updated, changedDate);
       assert.equal(globalThis.__routeCaseRows[0].existingSbuExpiresOn, changedDate,
         `${tz}: perubahan disimpan sebagai tanggal saja`);
       globalThis.__routeCaseRows = structuredClone(globalThis.__routeCaseRows);
@@ -1017,7 +1022,7 @@ test("tanggal kalender SBU tersimpan utuh setelah buat, ubah, dan muat ulang kas
   }
 });
 
-test("daftar dan detail memvalidasi JSON HTTP terhadap kontrak sumber SbuCase tanpa coercion", async () => {
+test("operasi daftar, detail, buat dan ubah memvalidasi kontrak sumber SbuCase tanpa coercion", async () => {
   globalThis.__routeCaseRows = [null, "2028-02-29"].map((expiresOn, index) => ({
     id: 391 + index, ownerId: "test-user", clientId: index === 0 ? null : 17,
     companyName: `Kontrak Permohonan ${index}`, requestType: "perpanjangan",
@@ -1042,7 +1047,9 @@ test("daftar dan detail memvalidasi JSON HTTP terhadap kontrak sumber SbuCase ta
       assert.equal(detail.body.clientId, row.clientId);
 
       // Mutate actual serialized HTTP output, never a hand-written valid entity.
-      for (const { path, isList, schema, ajv, validate } of caseReadOperations) {
+      for (const operation of caseOperations) {
+        const { method, isList, schema, ajv, validate } = operation;
+        const path = `${method.toUpperCase()} ${operation.path}`;
         const wrap = (item) => isList ? [item] : item;
         const valid = wrap(detail.body);
         const prefix = isList ? "/0" : "";
@@ -1086,6 +1093,10 @@ test("daftar dan detail memvalidasi JSON HTTP terhadap kontrak sumber SbuCase ta
         }
         rejects(wrap({ ...detail.body, existingSbuExpiresOn: "2028-02-29T00:00:00.000Z" }),
           "format", `${prefix}/existingSbuExpiresOn`);
+        for (const invalidDate of ["2027-02-29", "2028-02-30", "2028-13-01", "2028-00-01"]) {
+          rejects(wrap({ ...detail.body, existingSbuExpiresOn: invalidDate }),
+            "format", `${prefix}/existingSbuExpiresOn`);
+        }
 
         // The source, not generated parsers or manual expectations, controls validity.
         const addedField = structuredClone(openapi.components.schemas);
@@ -1107,6 +1118,8 @@ test("daftar dan detail memvalidasi JSON HTTP terhadap kontrak sumber SbuCase ta
         const changedOperation = { allOf: [schema], not: { const: valid } };
         const changed = createResponseValidator(changedOperation);
         assert.equal(changed.validate(valid), false, `${path}: batasan operasi harus diperiksa`);
+        const different = wrap({ ...detail.body, companyName: "Perusahaan berbeda" });
+        assert.ok(changed.validate(different), changed.ajv.errorsText(changed.validate.errors));
       }
     }
     globalThis.__routeCaseRows = [];
@@ -2407,10 +2420,9 @@ test("PATCH satu kolom oleh pemilik mempertahankan semua isian permohonan yang t
       companyName: "Perusahaan Baru",
       updatedAt: saved.updatedAt.toISOString(),
     }, "GET berikutnya harus menampilkan kolom yang diubah tanpa kehilangan isian lain");
-    assert.equal(updated.body.existingSbuExpiresOn, `${original.existingSbuExpiresOn}T00:00:00.000Z`);
-    assert.deepEqual({
-      ...updated.body, existingSbuExpiresOn: original.existingSbuExpiresOn,
-    }, reopened.body, "respons PATCH dan GET harus memuat data tersimpan yang sama setelah normalisasi tanggal");
+    assert.equal(updated.body.existingSbuExpiresOn, original.existingSbuExpiresOn);
+    assert.deepEqual(updated.body, reopened.body,
+      "respons PATCH dan GET harus memuat data tersimpan yang sama tanpa normalisasi tanggal di pengujian");
   } finally {
     await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
     delete globalThis.__routeCaseRows;
