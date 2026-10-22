@@ -12,5 +12,9 @@ export function formatCalendarDate(value?: string | null): string {
 export function formatTimestampDate(value?: string | null): string {
   // Updates are instants displayed in the viewer's local zone, unlike SBU calendar days.
   // Keep the zone's seasonal rules: a fixed UTC offset would misdate updates near midnight.
-  return value ? formatter.format(new Date(value)) : '—';
+  if (!value) return '—';
+  const date = new Date(value);
+  // Do not invent a replacement date or hide corrupt data as an absent value.
+  if (!Number.isFinite(date.getTime())) return 'Tanggal tidak valid';
+  return formatter.format(date);
 }

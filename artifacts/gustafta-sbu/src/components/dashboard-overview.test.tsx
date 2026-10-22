@@ -28,6 +28,32 @@ function renderDashboard(client: QueryClient) {
   );
 }
 
+test('dashboard tetap menampilkan kasus saat timestamp pembaruan kosong atau rusak', () => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  const recent: Dashboard['recent'] = ['', 'bukan-tanggal', '2026-13-01T00:00:00Z'].map((updatedAt, index) => ({
+    id: index + 1, companyName: `Perusahaan ${index + 1}`,
+    requestType: 'perpanjangan', qualification: 'kecil', classification: 'Gedung',
+    status: 'draf', existingSbuExpiresOn: '2027-04-15',
+    createdAt: '2026-08-01T12:00:00.000Z', updatedAt,
+  }));
+  const response: Dashboard = { total: 3, draft: 3, reviewing: 0, prepared: 0, recent };
+  client.setQueryData(getGetDashboardQueryKey(), response);
+  try {
+    const html = renderDashboard(client);
+    for (const [index, item] of recent.entries()) {
+      const row = html.match(new RegExp(`<a\\b[^>]*data-testid="link-case-${item.id}"[^>]*>([\\s\\S]*?)</a>`));
+      assert.ok(row, `kasus ${item.id} tetap dapat dibuka`);
+      assert.ok(row[1].includes(item.companyName));
+      assert.ok(row[1].includes(`>${index === 0 ? '—' : 'Tanggal tidak valid'}</span>`));
+      assert.doesNotMatch(row[1], /Invalid Date|1 Jan 1970|1 Agu 2026|15 Apr 2027/);
+    }
+  } finally {
+    client.clear();
+  }
+});
+
 function assertNoEmptySummary(html: string) {
   assert.doesNotMatch(html, /data-testid="text-dashboard-\d"|Belum ada kasus|data-testid="link-first-case"/);
 }

@@ -9,6 +9,34 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { getListEvidenceQueryKey, getGetAssessmentQueryKey, useGetAssessment, type Assessment, type Evidence } from '@workspace/api-client-react';
 import { CaseEvidence } from './case-evidence';
 
+test('kartu bukti tetap terbaca saat timestamp pembaruan kosong atau rusak', () => {
+  const rows = ['', 'bukan-tanggal', '2026-13-01T00:00:00Z'].map((updatedAt, index) => ({
+    id: index + 1, caseId: 7, code: 'legalitas',
+    title: `Bukti ${index + 1}`, note: 'Catatan tetap terbaca',
+    createdAt: '2026-08-01T12:00:00.000Z', updatedAt,
+  }));
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  });
+  client.setQueryData(getListEvidenceQueryKey(7), rows);
+  try {
+    const html = renderToStaticMarkup(createElement(QueryClientProvider, { client },
+      createElement(CaseEvidence, { id: 7, requestType: 'perpanjangan', qualification: 'kecil' })));
+    for (const [index, row] of rows.entries()) {
+      const card = html.match(new RegExp(
+        `data-testid="card-evidence-${row.id}"[\\s\\S]*?<p[^>]*>Diperbarui ([^<]*)</p>`,
+      ));
+      assert.ok(card, `kartu ${row.id} tetap tampil`);
+      assert.equal(card[1], `${index === 0 ? '—' : 'Tanggal tidak valid'} · Dideklarasikan pengguna`);
+      assert.ok(html.includes(row.title));
+    }
+    assert.match(html, /Catatan tetap terbaca/);
+    assert.doesNotMatch(html, /Invalid Date|1 Jan 1970|Diperbarui 1 Agu 2026/);
+  } finally {
+    client.clear();
+  }
+});
+
 test('tanggal pembaruan kartu bukti mengikuti zona waktu penonton', () => {
   // Literal LA dates, with each instant represented in Z, -08:00, and -07:00.
   // Fixed offsets remain valid even when that offset is not active in LA.

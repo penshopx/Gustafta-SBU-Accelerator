@@ -22,6 +22,21 @@ const sbuCase: SbuCase = {
   updatedAt: '2026-09-26T00:00:00.000Z',
 };
 
+test('ringkasan kasus tetap terbaca saat timestamp kosong atau rusak', () => {
+  for (const [timestamp, expected] of [
+    ['', '—'], ['bukan-tanggal', 'Tanggal tidak valid'],
+    ['2026-13-01T00:00:00Z', 'Tanggal tidak valid'],
+  ]) {
+    const html = renderToStaticMarkup(createElement(CaseSummary, {
+      sbuCase: { ...sbuCase, createdAt: timestamp, updatedAt: timestamp },
+    }));
+    assert.ok(html.includes(`Dibuat ${expected} · Diperbarui ${expected}</div>`));
+    assert.match(html, /RINGKASAN KASUS/);
+    assert.match(html, /15 Apr 2027/);
+    assert.doesNotMatch(html, /Invalid Date|1 Jan 1970/);
+  }
+});
+
 // Bentuk respons penilaian perpanjangan sesuai aturan server: tanggal SBU
 // adalah data kasus, bukan input untuk menghitung temuan transisi.
 const assessment: Assessment = {
