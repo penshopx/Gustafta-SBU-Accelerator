@@ -44,6 +44,7 @@ try {
       else assertSummaryContent(pages, fixture, variant);
       report.pages[variant] = {
         count: pages.length, htmlSha256: sha256(html), pdfSha256: sha256(pdf),
+        dimensionsPoints: pages.map(({ width, height }) => ({ width, height })),
         checks: ["complete per-page warning", "no blank pages", "no text overlap/clipping", "summary content"],
       };
       console.log(`${variant}: ${pages.length} real PDF pages passed content and coordinate checks.`);

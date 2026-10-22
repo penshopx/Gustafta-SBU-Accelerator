@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 
 // Use Firefox's native WebDriver Print Page command, not Playwright page.pdf()
 // (which only supports Chromium). Nothing except WebDriver loopback is served.
-export async function firefoxPdf(input, output) {
+export async function firefoxPdf(input, output, settings) {
   const driver = spawn(process.env.GECKODRIVER_BIN || "geckodriver",
     ["--host", "127.0.0.1", "--port", "0", "--log", "info", "--profile-root", dirname(output)], {
       stdio: ["ignore", "pipe", "pipe"], detached: true,
@@ -72,6 +72,10 @@ export async function firefoxPdf(input, output) {
       orientation: "portrait", background: true, shrinkToFit: false,
       page: { width: 21, height: 29.7 },
       margin: { top: 1.8, bottom: 2.8, left: 1.6, right: 1.6 },
+      ...(settings ? {
+        page: { width: settings.widthCm, height: settings.heightCm },
+        scale: settings.scale,
+      } : {}),
     });
     assert.equal(typeof pdf, "string", "Firefox Print Page must return a base64 PDF");
     const bytes = Buffer.from(pdf, "base64");

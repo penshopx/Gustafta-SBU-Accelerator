@@ -26,3 +26,16 @@ Require both complete source-text checks and coordinate checks for extreme print
 **Why:** Chromium may omit unwrapped overflow from its PDF text stream entirely, leaving only valid in-page boxes. A coordinate-only guard can therefore pass a PDF that lost part of a company name or category.
 
 **How to apply:** Compare complete synthetic values (including interior chunks and Unicode) after normalizing layout whitespace, in addition to checking every page's warning, bounds and overlap. Use real PDFs with wrapping disabled as negative controls; do not require every engine to expose missing overflow as out-of-bounds boxes.
+
+Distinguish requested print paper from measured PDF paper, and verify a scale
+change in the PDF itself.
+
+**Why:** CSS `@page size:A4` can override a Letter request. Chromium's
+`preferCSSPageSize` changes precedence, but Firefox WebDriver has no equivalent
+switch and can still output A4. A requested Letter render is not necessarily
+Letter pagination coverage.
+
+**How to apply:** Assert every PDF page's dimensions and compare scaled glyph
+coordinates against a same-engine, same-effective-paper baseline. Label any
+test-only neutralization of CSS page size separately from unmodified-generator
+evidence; never silently change the baseline to make a browser honor paper.

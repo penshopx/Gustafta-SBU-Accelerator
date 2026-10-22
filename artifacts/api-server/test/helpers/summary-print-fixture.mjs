@@ -81,13 +81,21 @@ export function assertExtremeSummaryContent(pages, fixture) {
     assert.equal(occurrences(text, compact(`${code} — 1 catatan deklarasi`)), 1,
       `extreme category missing or duplicated: ${code.slice(0, 40)}`);
   }
+  assertCompleteSummaryBlocks(pages, fixture.extremeHtml, fixture.disclaimer);
+}
+
+export function assertCompleteSummaryBlocks(pages, html, disclaimer) {
+  const printed = compact(pages.flatMap(page => page.words.map(word => word.text)).join(" "));
+  assert.equal(occurrences(printed, compact(disclaimer)), pages.length + 2,
+    "missing or duplicated declaration: one header per page plus opening notice and final footer");
+  const text = printed.split(compact(disclaimer)).join("");
   // Check every source heading, paragraph, list entry and footer, not just
   // category sentinels: all warnings, findings, regulations and final notes.
-  for (const match of fixture.extremeHtml.matchAll(/<(p|h[1-4]|li|footer)\b[^>]*>([\s\S]*?)<\/\1>/g)) {
+  for (const match of html.matchAll(/<(p|h[1-4]|li|footer)\b[^>]*>([\s\S]*?)<\/\1>/g)) {
     const expected = compact(match[2].replace(/<[^>]*>/g, "")
       .replace(/&(amp|lt|gt|quot|#39);/g,
         (_, entity) => ({ amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'" })[entity]))
-      .split(compact(fixture.disclaimer)).join("");
+      .split(compact(disclaimer)).join("");
     if (expected) assert.ok(text.includes(expected), `missing complete printed block: ${expected.slice(0, 90)}`);
   }
 }

@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertSafePages, renderPdf } from "./helpers/printed-summary.mjs";
-import { summaryPrintFixture, assertSummaryContent, assertExtremeSummaryContent } from "./helpers/summary-print-fixture.mjs";
+import { summaryPrintFixture, assertSummaryContent, assertExtremeSummaryContent, assertCompleteSummaryBlocks } from "./helpers/summary-print-fixture.mjs";
 
 for (const engine of ["chromium", "firefox"]) {
   test(`${engine}: native PDF repeats the complete declaration without blank pages or overlap`, {
@@ -28,6 +28,77 @@ for (const engine of ["chromium", "firefox"]) {
         assertSafePages(short, disclaimer);
         assertSummaryContent(short, fixture, "short");
         t.diagnostic(`${engine}: ${short.length} real short-summary PDF pages checked.`);
+      });
+      await t.test("alternate paper and enlarged scale preserve complete warnings and content", async (matrix) => {
+        const settings = [
+          { name: "letter-css-priority", widthCm: 21.59, heightCm: 27.94, scale: 1, preferCSSPageSize: true },
+          ...(engine === "chromium" ? [
+            { name: "letter-paper-priority", widthCm: 21.59, heightCm: 27.94, scale: 1, preferCSSPageSize: false },
+          ] : [
+            // WebDriver has no preferCSSPageSize switch. Only these explicitly
+            // labelled diagnostic fixtures neutralize size:A4, never baseline.
+            { name: "letter-css-auto", widthCm: 21.59, heightCm: 27.94, scale: 1, cssAuto: true },
+            { name: "letter-css-auto-scale-125", widthCm: 21.59, heightCm: 27.94, scale: 1.25, cssAuto: true },
+          ]),
+          { name: "a4-scale-125", widthCm: 21, heightCm: 29.7, scale: 1.25, preferCSSPageSize: true },
+          { name: "letter-scale-125", widthCm: 21.59, heightCm: 27.94, scale: 1.25, preferCSSPageSize: false },
+        ];
+        const unscaledNoticeHeights = new Map();
+        for (const setting of settings) {
+          for (const variant of ["long", "short", "extreme"]) {
+            await matrix.test(`${setting.name}/${variant}`, async (entry) => {
+              const source = setting.cssAuto ? fixture[`${variant}Html`].replace(
+                "@page{size:A4;", "@page{size:auto;") : fixture[`${variant}Html`];
+              if (setting.cssAuto) assert.notEqual(source, fixture[`${variant}Html`]);
+              const result = await renderPdf(source, directory,
+                `${setting.name}-${variant}`, engine, setting);
+              const effectiveLetter = engine === "chromium" ? !setting.preferCSSPageSize : !!setting.cssAuto;
+              const expectedCm = effectiveLetter ? [21.59, 27.94] : [21, 29.7];
+              entry.diagnostic(JSON.stringify({
+                engine, requested: setting, variant, pages: result.length,
+                measuredPoints: [...new Set(result.map(page => `${page.width}x${page.height}`))],
+                effectivePaper: effectiveLetter ? "Letter" : "A4 (CSS @page size wins)",
+              }));
+              const failures = [];
+              // Run all checks even on failure, so diagnostics do not hide
+              // missing text behind an earlier geometry or paper-size error.
+              for (const [label, check] of [
+                ["paper dimensions on every page", () => {
+                  for (const page of result) {
+                    assert.ok(Math.abs(page.width - expectedCm[0] * 72 / 2.54) < 2 &&
+                      Math.abs(page.height - expectedCm[1] * 72 / 2.54) < 2,
+                    `unexpected PDF size ${page.width}x${page.height}pt`);
+                  }
+                }],
+                ["complete per-page warnings, no clipping/overlap/blank pages", () => assertSafePages(result, disclaimer)],
+                ["no missing/duplicated source content", () => {
+                  if (variant === "extreme") assertExtremeSummaryContent(result, fixture);
+                  else {
+                    assertSummaryContent(result, fixture, variant);
+                    assertCompleteSummaryBlocks(result, source, disclaimer);
+                  }
+                }],
+                ["requested scale applied to PDF warning text", () => {
+                  const word = result[0].words.find(word => word.text === "Data");
+                  assert.ok(word, "warning text measurement missing");
+                  const height = word.y2 - word.y1;
+                  const key = `${variant}-${effectiveLetter}`;
+                  if (setting.scale === 1) unscaledNoticeHeights.set(key, height);
+                  else {
+                    const baseline = unscaledNoticeHeights.get(key);
+                    assert.ok(baseline, "missing 100% scale comparison");
+                    assert.ok(Math.abs(height / baseline - setting.scale) < 0.03,
+                      `warning glyph height ratio ${height / baseline}, expected ${setting.scale}`);
+                  }
+                }],
+              ]) {
+                try { check(); entry.diagnostic(`${label}: PASS`); }
+                catch (error) { entry.diagnostic(`${label}: FAIL: ${error.message}`); failures.push(error); }
+              }
+              if (failures.length) throw new AggregateError(failures, `${engine}/${setting.name}/${variant} failed`);
+            });
+          }
+        }
       });
       await t.test("extreme spaced, unbroken and Unicode values remain complete and clear of warnings", async (extremeTest) => {
         const extreme = await render(fixture.extremeHtml, "extreme");

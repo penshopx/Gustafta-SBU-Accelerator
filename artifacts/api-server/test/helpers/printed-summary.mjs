@@ -5,6 +5,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { firefoxPdf } from "./firefox-summary-pdf.mjs";
+import { chromiumPdf } from "./chromium-summary-pdf.mjs";
 
 const exec = promisify(execFile);
 const decode = (text) => text.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi, (_, entity) =>
@@ -73,13 +74,17 @@ export async function readPdfPages(output) {
   return pages;
 }
 
-export async function renderPdf(html, directory, name, engine = "chromium") {
+export async function renderPdf(html, directory, name, engine = "chromium", settings) {
   assert.ok(["chromium", "firefox"].includes(engine), `Unsupported PDF engine: ${engine}`);
   const input = join(directory, `${name}.html`);
   const output = join(directory, `${name}.pdf`);
   await writeFile(input, html);
   if (engine === "firefox") {
-    await firefoxPdf(input, output);
+    await firefoxPdf(input, output, settings);
+    return readPdfPages(output);
+  }
+  if (settings) {
+    await chromiumPdf(input, output, settings);
     return readPdfPages(output);
   }
   // Fresh browser profile, local file, no live server, no auth or user data.
