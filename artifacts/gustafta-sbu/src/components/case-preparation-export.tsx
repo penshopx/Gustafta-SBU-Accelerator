@@ -9,7 +9,17 @@ export function CasePreparationExport({ caseId }: { caseId: number }) {
   const [error, setError] = useState('');
   const abort = useRef<AbortController | null>(null);
   const cleanup = useRef<(() => void) | null>(null);
-  useEffect(() => () => { abort.current?.abort(); cleanup.current?.(); }, [caseId]);
+  useEffect(() => {
+    // A reused component starts a new case without waiting for the old transport.
+    setPending(false);
+    setError('');
+    return () => {
+      abort.current?.abort();
+      abort.current = null;
+      cleanup.current?.();
+      cleanup.current = null;
+    };
+  }, [caseId]);
 
   async function exportSummary(mode: 'download' | 'print') {
     if (abort.current && !abort.current.signal.aborted) return;
@@ -23,7 +33,7 @@ export function CasePreparationExport({ caseId }: { caseId: number }) {
         ...options.request, signal: controller.signal, cache: 'no-store', responseType: 'text',
       });
       // A previous account's pending response must not create a file or print surface.
-      if (controller.signal.aborted) return;
+      if (controller.signal.aborted || abort.current !== controller) return;
       if (mode === 'download') {
         const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
         const anchor = document.createElement('a');
@@ -68,9 +78,9 @@ export function CasePreparationExport({ caseId }: { caseId: number }) {
         document.body.appendChild(frame);
       }
     } catch {
-      if (!controller.signal.aborted) setError('Ringkasan terbaru tidak dapat dibuat. Periksa sesi Anda dan coba lagi. Tidak ada data lama yang diekspor.');
+      if (!controller.signal.aborted && abort.current === controller) setError('Ringkasan terbaru tidak dapat dibuat. Periksa sesi Anda dan coba lagi. Tidak ada data lama yang diekspor.');
     } finally {
-      if (!controller.signal.aborted) {
+      if (!controller.signal.aborted && abort.current === controller) {
         setPending(false);
         abort.current = null;
       }

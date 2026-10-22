@@ -5,6 +5,119 @@ import TestRenderer, { act } from 'react-test-renderer';
 import { AccountQueries } from './account-queries';
 import { CasePreparationExport } from './case-preparation-export';
 
+for (const mode of ['download', 'print'] as const) {
+  for (const oldOutcome of ['success', 'failure'] as const) {
+    for (const oldFinishesFirst of [true, false]) {
+      test(`${mode}: berganti kasus saat respons tertahan (${oldOutcome}, lama selesai ${oldFinishesFirst ? 'dulu' : 'terakhir'})`, async () => {
+        const globals = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+        const originalAct = globals.IS_REACT_ACT_ENVIRONMENT;
+        const originalFetch = globalThis.fetch;
+        const originalDocument = globalThis.document;
+        const originalWindow = globalThis.window;
+        const originalCreate = URL.createObjectURL;
+        const originalRevoke = URL.revokeObjectURL;
+        globals.IS_REACT_ACT_ENVIRONMENT = true;
+        let renderer: TestRenderer.ReactTestRenderer | undefined;
+        const requests: { url: string; signal: AbortSignal; resolve: (response: Response) => void }[] = [];
+        const blobs: Blob[] = [];
+        const frames: HTMLIFrameElement[] = [];
+        let downloads = 0;
+        let prints = 0;
+        Object.defineProperty(globalThis, 'window', { configurable: true, value: {
+          setTimeout: () => 1, clearTimeout() {},
+        } });
+        Object.defineProperty(globalThis, 'document', { configurable: true, value: {
+          createElement: (tag: string) => {
+            if (tag === 'a') return { click: () => { downloads++; } };
+            assert.equal(tag, 'iframe');
+            const frame = {
+              style: {}, remove() {},
+              contentWindow: {
+                addEventListener() {}, removeEventListener() {}, focus() {},
+                print() { prints++; },
+              },
+            } as unknown as HTMLIFrameElement;
+            frames.push(frame);
+            return frame;
+          },
+          body: { appendChild: (frame: HTMLIFrameElement) => frame.onload?.(new Event('load')) },
+        } });
+        URL.createObjectURL = blob => { blobs.push(blob as Blob); return 'blob:synthetic'; };
+        URL.revokeObjectURL = () => {};
+        // Deliberately ignore abort: even a late transport completion must be inert.
+        globalThis.fetch = (url, init) => new Promise(resolve => {
+          requests.push({ url: String(url), signal: init!.signal!, resolve });
+        });
+        const tree = (caseId: number) => createElement(AccountQueries, {
+          userId: 'owner-a', children: createElement(CasePreparationExport, { caseId }),
+        });
+        const button = () => renderer!.root.findByProps({ 'data-testid': `button-${mode}-summary` });
+        const assertPending = (expected: boolean) => {
+          for (const kind of ['download', 'print']) {
+            assert.equal(renderer!.root.findByProps({ 'data-testid': `button-${kind}-summary` }).props.disabled, expected);
+          }
+        };
+        const response = (html: string, status = 200) => new Response(html, {
+          status, headers: { 'content-type': 'text/html' },
+        });
+        try {
+          await act(async () => { renderer = TestRenderer.create(tree(12)); });
+          let oldRequest!: Promise<void>;
+          await act(async () => { oldRequest = button().props.onClick(); });
+          assertPending(true);
+          await act(async () => { renderer!.update(tree(13)); });
+          assert.equal(requests[0].signal.aborted, true);
+          assertPending(false);
+          assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0);
+
+          let newRequest!: Promise<void>;
+          await act(async () => { newRequest = button().props.onClick(); });
+          assertPending(true);
+          assert.deepEqual(requests.map(item => item.url), [
+            '/api/cases/12/preparation-summary', '/api/cases/13/preparation-summary',
+          ]);
+          const finishOld = async () => {
+            await act(async () => {
+              requests[0].resolve(response('<p>Kasus lama</p>', oldOutcome === 'failure' ? 500 : 200));
+              await oldRequest;
+            });
+          };
+          if (oldFinishesFirst) {
+            await finishOld();
+            assertPending(true);
+            assert.equal(blobs.length + frames.length, 0, 'kasus lama tidak boleh membuat permukaan ekspor');
+            assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0);
+            await act(async () => { await button().props.onClick(); });
+            assert.equal(requests.length, 2, 'finally lama tidak boleh membuka permintaan ganda');
+          }
+          await act(async () => {
+            requests[1].resolve(response('<p>Kasus baru</p>'));
+            await newRequest;
+          });
+          assertPending(false);
+          if (!oldFinishesFirst) await finishOld();
+          assertPending(false);
+          assert.equal(renderer!.root.findAllByProps({ role: 'alert' }).length, 0);
+          assert.equal(requests[1].signal.aborted, false);
+          assert.equal(downloads, mode === 'download' ? 1 : 0);
+          assert.equal(prints, mode === 'print' ? 1 : 0);
+          assert.equal(blobs.length, mode === 'download' ? 1 : 0);
+          assert.equal(frames.length, mode === 'print' ? 1 : 0);
+          assert.equal(mode === 'download' ? await blobs[0].text() : frames[0].srcdoc, '<p>Kasus baru</p>');
+        } finally {
+          if (renderer) await act(async () => { renderer!.unmount(); });
+          globalThis.fetch = originalFetch;
+          URL.createObjectURL = originalCreate;
+          URL.revokeObjectURL = originalRevoke;
+          Object.defineProperty(globalThis, 'document', { configurable: true, value: originalDocument });
+          Object.defineProperty(globalThis, 'window', { configurable: true, value: originalWindow });
+          globals.IS_REACT_ACT_ENVIRONMENT = originalAct;
+        }
+      });
+    }
+  }
+}
+
 test('ekspor mengambil HTML terbaru, bisa dicoba ulang, mencetak tanpa URL kasus dan membatalkan respons setelah unmount', async () => {
   const globals = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
   const originalAct = globals.IS_REACT_ACT_ENVIRONMENT;
@@ -37,7 +150,7 @@ test('ekspor mengambil HTML terbaru, bisa dicoba ulang, mencetak tanpa URL kasus
       if (tag === 'a') return { click: () => { downloads++; } };
       frame = {
         style: {}, setAttribute() {}, remove() {},
-        contentWindow: { addEventListener() {}, focus() {}, print() { prints++; } },
+        contentWindow: { addEventListener() {}, removeEventListener() {}, focus() {}, print() { prints++; } },
       } as unknown as HTMLIFrameElement;
       return frame;
     },
