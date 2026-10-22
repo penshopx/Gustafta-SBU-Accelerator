@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { chromium } from 'playwright';
 import { installPrintProbe } from './probe.mjs';
+import { installDownloadProbe } from './download-probe.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const printError = 'Cetak belum dapat dibuka. Unduh HTML, buka berkasnya, lalu pilih Cetak di browser.';
@@ -20,7 +21,7 @@ const clean = async (page) => {
   }))), [{ connected: false, onload: null, listeners: 0 }]);
 };
 
-test('CasePreparationExport invokes native printing and disposes isolated print surfaces', { timeout: 120_000 }, async (t) => {
+test('CasePreparationExport disposes isolated native print surfaces and HTML download URLs', { timeout: 120_000 }, async (t) => {
   const directory = await mkdtemp(join(tmpdir(), 'sbu-native-print-'));
   let browser, server;
   try {
@@ -46,7 +47,11 @@ test('CasePreparationExport invokes native printing and disposes isolated print 
       headless: true, args: ['--no-sandbox'],
     });
 
-    async function scenario(name, mode, run, { holdLoad = false, responseStatus = 200 } = {}) {
+    async function scenario(name, mode, run, {
+      holdLoad = false, responseStatus = 200, exportMode = 'print',
+      expectedRequests = ['/api/cases/1/preparation-summary'],
+      expectedConsoleErrors = [],
+    } = {}) {
       await t.test(name, async () => {
         const context = await browser.newContext();
         const page = await context.newPage();
@@ -70,12 +75,15 @@ test('CasePreparationExport invokes native printing and disposes isolated print 
           // body exists when the fixture script starts, unlike addInitScript.
           await page.goto(origin);
           await page.getByTestId('button-print-summary').waitFor();
-          await page.evaluate(installPrintProbe);
-          await page.evaluate(({ mode, holdLoad }) => Object.assign(window.printProbe, { mode, holdLoad }), { mode, holdLoad });
-          await page.getByTestId('button-print-summary').click();
+          if (exportMode === 'download') await page.evaluate(installDownloadProbe);
+          else {
+            await page.evaluate(installPrintProbe);
+            await page.evaluate(({ mode, holdLoad }) => Object.assign(window.printProbe, { mode, holdLoad }), { mode, holdLoad });
+          }
+          await page.getByTestId(`button-${exportMode}-summary`).click();
           await run(page);
-          assert.deepEqual(requests, ['/api/cases/1/preparation-summary']);
-          assert.deepEqual(errors, responseStatus === 200 ? [] : [
+          assert.deepEqual(requests, expectedRequests);
+          assert.deepEqual(errors, responseStatus === 200 ? expectedConsoleErrors : [
             `Failed to load resource: the server responded with a status of ${responseStatus} (Internal Server Error)`,
           ]);
         } finally { await context.close(); }
@@ -154,6 +162,94 @@ test('CasePreparationExport invokes native printing and disposes isolated print 
         frames: window.printProbe.frames.length, calls: window.printProbe.calls.length, timers: window.printProbe.timers.size,
       })), { frames: 0, calls: 0, timers: 0 });
     }, { responseStatus: 500 });
+
+    async function assertDownload(page, index = 0) {
+      await until(page, () => window.downloadProbe.timers.size === 1);
+      await page.getByTestId('button-download-summary').waitFor({ state: 'visible' });
+      assert.equal(await page.getByTestId('button-download-summary').isEnabled(), true);
+      const record = await page.evaluate(async (index) => {
+        const probe = window.downloadProbe;
+        const { blob, url } = probe.blobs[index];
+        return {
+          isBlob: blob instanceof Blob, type: blob.type, text: await blob.text(),
+          expected: window.summaryFixture.html, url, click: probe.clicks[index],
+          created: probe.blobs.length, clicks: probe.clicks.length,
+          active: [...probe.active], timers: probe.timers.size,
+        };
+      }, index);
+      assert.equal(record.isBlob, true);
+      assert.equal(record.type, 'text/html;charset=utf-8');
+      assert.equal(record.text, record.expected);
+      assert.ok(record.url.startsWith('blob:'));
+      assert.deepEqual(record.click, { href: record.url, download: 'ringkasan-persiapan-sbu.html' });
+      assert.equal(record.created, index + 1);
+      assert.equal(record.clicks, index + 1);
+      assert.deepEqual(record.active, [record.url]);
+      assert.equal(record.timers, 1);
+      assert.equal(await page.locator('iframe').count(), 0);
+      assert.equal(await page.getByRole('alert').count(), 0);
+      // This resolves the real browser-created URL, not a probe-only value.
+      assert.equal(await page.evaluate(async (url) => (await fetch(url)).text(), record.url), record.expected);
+      return record.url;
+    }
+
+    async function assertDownloadClean(page, urls) {
+      await until(page, () => window.downloadProbe.active.size === 0 && window.downloadProbe.timers.size === 0);
+      const revoked = await page.evaluate(() => window.downloadProbe.revoked);
+      for (const url of urls) {
+        assert.ok(revoked.includes(url), `must revoke ${url}`);
+        assert.equal(await page.evaluate(async (url) => {
+          try { await fetch(url); return false; } catch { return true; }
+        }, url), true, 'revoked native URL must no longer resolve');
+      }
+    }
+
+    for (const action of ['timeout', 'caseId', 'unmount', 'next-export']) {
+      await scenario(`download: ${action} releases the HTML Blob URL and cleanup timer`, 'native', async (page) => {
+        // All native clicks are recorded; also inspect the actual file emitted
+        // by the browser on the subsequent download.
+        const first = await assertDownload(page);
+        const urls = [first];
+        if (action === 'timeout') {
+          await page.evaluate(() => [...window.downloadProbe.timers.values()][0]());
+        } else if (action === 'next-export') {
+          const downloadEvent = page.waitForEvent('download');
+          await page.getByTestId('button-download-summary').click();
+          const download = await downloadEvent;
+          assert.equal(download.suggestedFilename(), 'ringkasan-persiapan-sbu.html');
+          const second = await assertDownload(page, 1);
+          assert.notEqual(second, first, 'each export gets a fresh native URL');
+          assert.deepEqual(await page.evaluate(() => window.downloadProbe.revoked), [first]);
+          assert.equal(await readFile(await download.path(), 'utf8'),
+            await page.evaluate(() => window.summaryFixture.html), 'native anchor downloads the complete HTML');
+          urls.push(second);
+          await page.getByText('Lepas komponen', { exact: true }).click();
+        } else {
+          await page.getByText(action === 'caseId' ? 'Ganti kasus' : 'Lepas komponen', { exact: true }).click();
+        }
+        await assertDownloadClean(page, urls);
+      }, {
+        exportMode: 'download',
+        // Reading each revoked native URL deliberately fails. Require exactly
+        // these diagnostics, rather than ignoring arbitrary console errors.
+        expectedConsoleErrors: Array(action === 'next-export' ? 2 : 1)
+          .fill('Failed to load resource: net::ERR_FILE_NOT_FOUND'),
+        expectedRequests: action === 'next-export'
+          ? ['/api/cases/1/preparation-summary', '/api/cases/1/preparation-summary']
+          : ['/api/cases/1/preparation-summary'],
+      });
+    }
+
+    await scenario('download: failed summary creates no Blob URL, anchor click or cleanup timer', 'native', async (page) => {
+      await page.getByRole('alert').waitFor();
+      assert.equal(await page.getByRole('alert').textContent(), readError);
+      assert.deepEqual(await page.evaluate(() => ({
+        blobs: window.downloadProbe.blobs.length, clicks: window.downloadProbe.clicks.length,
+        timers: window.downloadProbe.timers.size, active: window.downloadProbe.active.size,
+        revoked: window.downloadProbe.revoked,
+      })), { blobs: 0, clicks: 0, timers: 0, active: 0, revoked: [] });
+      assert.equal(await page.getByTestId('button-download-summary').isEnabled(), true);
+    }, { exportMode: 'download', responseStatus: 500 });
     t.diagnostic(`Native Chromium ${browser.version()}; synthetic HTML/API only; no login or application data.`);
   } finally {
     await browser?.close();

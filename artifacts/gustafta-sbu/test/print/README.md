@@ -1,4 +1,4 @@
-# Regresi siklus cetak
+# Regresi siklus cetak dan unduhan HTML
 
 Jalankan `pnpm --filter @workspace/gustafta-sbu test:print`.
 Memerlukan Chromium di `/repl/tools/bin/chromium`, atau tentukan
@@ -25,6 +25,19 @@ tanpa menunggu lima menit. Uji memeriksa penghapusan iframe, listener dan timer,
 event `load` berulang, callback terlambat, serta pesan kegagalan yang berbeda
 untuk permintaan ringkasan dan pencetakan. CSP dan escaping diperiksa pada
 dokumen iframe yang benar-benar dimuat.
+
+Mode unduhan memakai fixture dan pembatasan jaringan yang sama. Probe
+membungkus `URL.createObjectURL`, `URL.revokeObjectURL`, dan klik anchor tanpa
+mengganti implementasi native. Uji memeriksa nama berkas
+`ringkasan-persiapan-sbu.html`, Blob bermime `text/html;charset=utf-8`, isi HTML
+utuh, URL anchor, serta berkas yang benar-benar diunduh Chromium pada ekspor
+berikutnya. Tidak ada iframe cetak yang dibuat dalam mode ini.
+
+Timer pembersihan satu detik ditahan dan dipicu secara deterministik, sementara
+timer browser lainnya tetap berjalan. URL dan timer harus dibersihkan setelah
+timeout, pergantian `caseId`, unmount, dan ekspor berikutnya; URL yang direvoke
+harus tidak dapat dibaca lagi. Respons ringkasan gagal tidak boleh membuat Blob
+URL, klik unduhan, atau timer pembersihan.
 
 Uji ini tidak membuktikan interaksi dialog sistem operasi, pagination PDF,
 atau perilaku Firefox/Safari. Pagination tetap diuji terpisah dengan
