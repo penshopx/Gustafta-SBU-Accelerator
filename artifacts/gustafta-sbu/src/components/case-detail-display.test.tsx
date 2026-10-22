@@ -118,8 +118,37 @@ test('tanggal pembaruan detail kasus mengikuti zona waktu penonton tanpa menguba
     assert.equal(Date.parse(standard), Date.parse(utc), `${standard} harus setara dengan ${utc}`);
     assert.equal(Date.parse(daylight), Date.parse(utc), `${daylight} harus setara dengan ${utc}`);
   }
+  // Literal St_Johns dates and getTimezoneOffset minutes, independent of the formatter.
+  const stJohnsCases = [
+    // Summer midnight (UTC-02:30) and winter year boundary (UTC-03:30).
+    ['26 Sep 2026', '2026-09-27T02:29:59.999Z', 150],
+    ['27 Sep 2026', '2026-09-27T02:30:00.000Z', 150],
+    ['31 Des 2026', '2027-01-01T03:29:59.999Z', 210],
+    ['1 Jan 2027', '2027-01-01T03:30:00.000Z', 210],
+    ['1 Jan 2027', '2027-01-01T00:00:00.000-03:30', 210],
+    // March 8: midnight, jump from 01:59:59.999 NST to 03:00 NDT, next midnight.
+    ['7 Mar 2026', '2026-03-08T03:29:59.999Z', 210],
+    ['8 Mar 2026', '2026-03-08T03:30:00.000Z', 210],
+    ['8 Mar 2026', '2026-03-08T05:29:59.999Z', 210],
+    ['8 Mar 2026', '2026-03-08T05:30:00.000Z', 150],
+    ['8 Mar 2026', '2026-03-08T03:00:00.000-02:30', 150],
+    ['8 Mar 2026', '2026-03-09T02:29:59.999Z', 150],
+    ['9 Mar 2026', '2026-03-09T02:30:00.000Z', 150],
+    // November 1: midnight, rollback from 01:59:59.999 NDT to 01:00 NST, next midnight.
+    ['31 Okt 2026', '2026-11-01T02:29:59.999Z', 150],
+    ['1 Nov 2026', '2026-11-01T02:30:00.000Z', 150],
+    ['1 Nov 2026', '2026-11-01T04:29:59.999Z', 150],
+    ['1 Nov 2026', '2026-11-01T04:30:00.000Z', 210],
+    ['1 Nov 2026', '2026-11-01T01:00:00.000-03:30', 210],
+    ['1 Nov 2026', '2026-11-02T03:29:59.999Z', 210],
+    ['2 Nov 2026', '2026-11-02T03:30:00.000Z', 210],
+  ] as const;
   const expectedByZone: Record<string, string[]> = {
     UTC: ['1 Jan 2027', '31 Des 2026', '31 Des 2026', '31 Des 2026', '1 Jan 2027'],
+    'America/St_Johns': [
+      '31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026',
+      ...stJohnsCases.map(([date]) => date),
+    ],
     'America/Los_Angeles': [
       '31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026', '31 Des 2026',
       ...dstOffsetCases.flatMap(([date]) => [date, date, date]),
@@ -163,12 +192,18 @@ test('tanggal pembaruan detail kasus mengikuti zona waktu penonton tanpa menguba
     new Intl.DateTimeFormat('id-ID', { timeZone: zone }).resolvedOptions().timeZone);
   const expected = expectedByZone[zone];
   assert.ok(expected, `zona pengujian dikenal: ${zone}`);
+  if (zone === 'America/St_Johns') {
+    for (const [, timestamp, offset] of stJohnsCases) {
+      assert.equal(new Date(timestamp).getTimezoneOffset(), offset, `${timestamp}: offset St_Johns`);
+    }
+  }
   const updates = [
     '2027-01-01T00:30:00.000Z',
     '2026-12-31T23:30:00.000Z',
     '2026-12-31T16:30:00.000Z', // Jakarta is still December; Tokyo is January.
     '2026-12-31T17:30:00.000Z', // Jakarta has now crossed midnight.
     '2027-01-01T07:30:00.000+07:00', // Same instant as the first value.
+    ...(zone === 'America/St_Johns' ? stJohnsCases.map(([, timestamp]) => timestamp) : []),
     ...(zone === 'Asia/Kathmandu' ? [
       // UTC+05:45: midnight is 18:15Z, not an hour-aligned boundary.
       '2026-09-26T18:14:59.999Z', '2026-09-26T18:15:00.000Z',
@@ -223,7 +258,7 @@ test('tanggal pembaruan detail kasus mengikuti zona waktu penonton tanpa menguba
 
 test('tanggal berlaku tetap tanggal kalender yang sama saat ditampilkan di berbagai zona waktu', () => {
   if (!process.env.CALENDAR_TZ_CHILD) {
-    for (const tz of ['UTC', 'America/Los_Angeles', 'Australia/Sydney', 'Asia/Jakarta', 'Asia/Tokyo', 'Asia/Kathmandu', 'Pacific/Kiritimati']) {
+    for (const tz of ['UTC', 'America/Los_Angeles', 'America/St_Johns', 'Australia/Sydney', 'Asia/Jakarta', 'Asia/Tokyo', 'Asia/Kathmandu', 'Pacific/Kiritimati']) {
       const result = spawnSync(process.execPath, [
         '--import', 'tsx', '--test', '--test-reporter=tap',
         '--test-name-pattern', 'tanggal berlaku tetap tanggal kalender',
@@ -238,11 +273,15 @@ test('tanggal berlaku tetap tanggal kalender yang sama saat ditampilkan di berba
     return;
   }
 
+  assert.equal(new Intl.DateTimeFormat().resolvedOptions().timeZone,
+    new Intl.DateTimeFormat('id-ID', { timeZone: process.env.TZ! }).resolvedOptions().timeZone);
   assert.equal(formatCalendarDate(sbuCase.existingSbuExpiresOn), '15 Apr 2027');
   assert.equal(formatCalendarDate('2027-04-15T00:00:00.000Z'), '15 Apr 2027');
   assert.equal(formatCalendarDate(null), '—');
   for (const [calendarDay, formattedDay] of [
     ['2027-01-01', '1 Jan 2027'], ['2027-04-15', '15 Apr 2027'],
+    ['2026-03-08', '8 Mar 2026'], ['2026-03-09', '9 Mar 2026'],
+    ['2026-11-01', '1 Nov 2026'], ['2026-11-02', '2 Nov 2026'],
     ['2026-04-05', '5 Apr 2026'], ['2026-04-06', '6 Apr 2026'],
     ['2026-10-04', '4 Okt 2026'], ['2026-10-05', '5 Okt 2026'],
   ]) {

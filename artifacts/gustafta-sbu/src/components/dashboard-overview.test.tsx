@@ -326,8 +326,37 @@ test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tangg
     assert.equal(Date.parse(standard), Date.parse(utc), `${standard} harus setara dengan ${utc}`);
     assert.equal(Date.parse(daylight), Date.parse(utc), `${daylight} harus setara dengan ${utc}`);
   }
+  // Literal St_Johns dates and getTimezoneOffset minutes, independent of the formatter.
+  const stJohnsCases = [
+    // Summer midnight (UTC-02:30) and winter year boundary (UTC-03:30).
+    ['26 Sep 2026', '2026-09-27T02:29:59.999Z', 150],
+    ['27 Sep 2026', '2026-09-27T02:30:00.000Z', 150],
+    ['31 Des 2026', '2027-01-01T03:29:59.999Z', 210],
+    ['1 Jan 2027', '2027-01-01T03:30:00.000Z', 210],
+    ['1 Jan 2027', '2027-01-01T00:00:00.000-03:30', 210],
+    // March 8: midnight, jump from 01:59:59.999 NST to 03:00 NDT, next midnight.
+    ['7 Mar 2026', '2026-03-08T03:29:59.999Z', 210],
+    ['8 Mar 2026', '2026-03-08T03:30:00.000Z', 210],
+    ['8 Mar 2026', '2026-03-08T05:29:59.999Z', 210],
+    ['8 Mar 2026', '2026-03-08T05:30:00.000Z', 150],
+    ['8 Mar 2026', '2026-03-08T03:00:00.000-02:30', 150],
+    ['8 Mar 2026', '2026-03-09T02:29:59.999Z', 150],
+    ['9 Mar 2026', '2026-03-09T02:30:00.000Z', 150],
+    // November 1: midnight, rollback from 01:59:59.999 NDT to 01:00 NST, next midnight.
+    ['31 Okt 2026', '2026-11-01T02:29:59.999Z', 150],
+    ['1 Nov 2026', '2026-11-01T02:30:00.000Z', 150],
+    ['1 Nov 2026', '2026-11-01T04:29:59.999Z', 150],
+    ['1 Nov 2026', '2026-11-01T04:30:00.000Z', 210],
+    ['1 Nov 2026', '2026-11-01T01:00:00.000-03:30', 210],
+    ['1 Nov 2026', '2026-11-02T03:29:59.999Z', 210],
+    ['2 Nov 2026', '2026-11-02T03:30:00.000Z', 210],
+  ] as const;
   const expectedByZone: Record<string, string[]> = {
     UTC: ['1 Jan 2027', '31 Des 2026', '1 Jan 2027'],
+    'America/St_Johns': [
+      '31 Des 2026', '31 Des 2026', '31 Des 2026',
+      ...stJohnsCases.map(([date]) => date),
+    ],
     'America/Los_Angeles': [
       '31 Des 2026', '31 Des 2026', '31 Des 2026',
       ...dstOffsetCases.flatMap(([date]) => [date, date, date]),
@@ -372,6 +401,11 @@ test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tangg
     new Intl.DateTimeFormat('id-ID', { timeZone: zone }).resolvedOptions().timeZone);
   const expected = expectedByZone[zone];
   assert.ok(expected, `zona pengujian dikenal: ${zone}`);
+  if (zone === 'America/St_Johns') {
+    for (const [, timestamp, offset] of stJohnsCases) {
+      assert.equal(new Date(timestamp).getTimezoneOffset(), offset, `${timestamp}: offset St_Johns`);
+    }
+  }
   const response: Dashboard = {
     total: expected.length, draft: expected.length, reviewing: 0, prepared: 0,
     recent: [
@@ -379,6 +413,7 @@ test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tangg
       '2026-12-31T23:30:00.000Z',
       // Same instant as the first case, expressed with an explicit UTC offset.
       '2027-01-01T07:30:00.000+07:00',
+      ...(zone === 'America/St_Johns' ? stJohnsCases.map(([, timestamp]) => timestamp) : []),
       ...(zone === 'Asia/Kathmandu' ? [
         // UTC+05:45: midnight is 18:15Z.
         '2026-09-26T18:14:59.999Z', '2026-09-26T18:15:00.000Z',
