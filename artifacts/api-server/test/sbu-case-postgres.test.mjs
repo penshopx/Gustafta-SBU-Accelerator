@@ -6,13 +6,16 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import express from "express";
-import { build } from "esbuild";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { createRestrictedRoutePool } from "./helpers/restricted-postgres.mjs";
+import { buildCaseRouteFixture, caseRoutePreflight } from "./helpers/sbu-case-route-fixture.mjs";
 
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const requireDb = createRequire(new URL("../../../lib/db/package.json", import.meta.url));
 const { Pool } = requireDb("pg");
+const preflight = caseRoutePreflight("__caseTestDb");
+
+test("fixture permohonan memuat seluruh rute tanpa PostgreSQL", preflight);
 
 async function request(server, userId, path, options = {}) {
   const { port } = server.address();
@@ -25,6 +28,7 @@ async function request(server, userId, path, options = {}) {
 }
 
 test("PATCH permohonan di PostgreSQL mempertahankan kolom lain dan tidak memindahkan pemilik", async (t) => {
+  await preflight();
   assert.ok(process.env.DATABASE_URL, "DATABASE_URL diperlukan untuk pengujian integrasi PostgreSQL");
   assert.notEqual(process.env.NODE_ENV, "production", "Pengujian tidak boleh dijalankan dalam mode produksi");
 
@@ -78,38 +82,7 @@ test("PATCH permohonan di PostgreSQL mempertahankan kolom lain dan tidak meminda
     // Keep the real route, Drizzle update, and table definitions; replace only auth
     // and the database connection so all writes remain in the disposable schema.
     globalThis.__caseTestDb = drizzle(isolated);
-    await build({
-      entryPoints: [join(testDir, "../src/routes/sbu.ts")],
-      outfile: join(temporaryDir, "route.mjs"),
-      bundle: true,
-      platform: "node",
-      format: "esm",
-      external: ["express", "@google-cloud/*"],
-      plugins: [{
-        name: "isolated-case-db",
-        setup(builder) {
-          builder.onResolve({ filter: /\/workspace-context$/ }, () => ({
-            path: join(testDir, "helpers/workspace-context-fixture.mjs"),
-          }));
-          builder.onResolve({ filter: /^@workspace\/db$/ }, () => ({ path: "db", namespace: "case-test" }));
-          builder.onResolve({ filter: /^@clerk\/express$/ }, () => ({ path: "auth", namespace: "case-test" }));
-          builder.onResolve({ filter: /^@workspace\/api-zod$/ }, () => ({
-            path: join(testDir, "../../../lib/api-zod/src/index.ts"),
-          }));
-          builder.onLoad({ filter: /.*/, namespace: "case-test" }, (args) => ({
-            contents: args.path === "auth"
-              ? `export const getAuth = (req) => ({ userId: req.get("x-test-user-id") });`
-              : `export * from ${
-                JSON.stringify(join(testDir, "../../../lib/db/src/schema/index.ts"))
-              }; export const db = globalThis.__caseTestDb;`,
-            loader: "js",
-            resolveDir: testDir,
-          }));
-        },
-      }],
-    });
-
-    const { default: router } = await import(join(temporaryDir, "route.mjs"));
+    const { default: router } = await buildCaseRouteFixture(temporaryDir, "__caseTestDb");
     const app = express();
     app.use(express.json());
     app.use("/api", router);
