@@ -187,7 +187,7 @@ Pembacaan tabel ini tidak memenuhi gerbang tersebut.
 | ID | Gap atau ambiguitas | Locator pemicu | Yang perlu diperiksa sebelum dipakai |
 | --- | --- | --- | --- |
 | G1 | Jendela pengalaman perpanjangan: dua periode/6 tahun versus “masa berlakunya SBU”; lampiran sudah ditelaah visual, penerapan belum disahkan. | P PDF/cetak 260 h.1.c/e/f; D PDF 38–39/cetak 29–30 5.1.2.3–6/21; D PDF 83–85/cetak 74–76 bagian I | Adendum 7.1–7.2 mencatat diagram BG001 dan pertanyaan per jenis permohonan. Jangan menolak perpanjangan otomatis atau menganggap dua periode sebagai masa berlaku satu SBU. |
-| G2 | Unit penjualan per BUJK versus pembuktian/akumulasi per subklasifikasi; major item dan larangan penggunaan ulang pengalaman. | P PDF/cetak 260 h.1–2; D PDF 38/cetak 29 5.1.2.7–14; D PDF 95/cetak 86 butir 1–4 | Adendum 7.3–7.4 membedakan alokasi, porsi KSO, tahun jamak dan penggunaan ulang yang belum diputuskan. Tabel angka bukan formula alokasi atau pengecualian otomatis untuk BUJKN baru. |
+| G2 | Unit penjualan per BUJK versus pembuktian/akumulasi per subklasifikasi; major item dan larangan penggunaan ulang pengalaman. | P PDF/cetak 260 h.1–2; D PDF 38/cetak 29 5.1.2.7–14; D PDF 95/cetak 86 butir 1–4 | Adendum 7.3–7.4 dan [catatan telaah G2](bg001-contract-allocation-review-draft.md) memuat pembanding LSBU beridentitas, rekonsiliasi bersyarat dan keputusan U/R/A yang masih terbuka. Belum ada jawaban ahli memadai; tabel angka bukan formula alokasi atau pengecualian otomatis BUJKN baru. |
 | G3 | Daftar kesesuaian TKK belum memetakan setiap jenjang K1–B ke jabatan kerja/SKK yang diakui dan validitasnya. | P PDF/cetak 18 angka 3.c–d; 263–264 j.2.b; D PDF 29–30/cetak 20–21 | Periksa acuan jabatan kerja, penerbit/masa berlaku SKK, tenaga tetap serta hak rangkap. Jangan membuat jenjang baru atau menyatakan semua pilihan memiliki semua jenjang. |
 | G4 | Pemilihan jenis/spesifikasi alat dan cara menghitung unit, khususnya B dua unit, scaffolding, serta bentuk nama dengan garis miring. | P PDF/cetak 18–19 angka 3.e; 265 k.2; D PDF 30/cetak 21 3.2.4 | Lihat adendum 8.1–8.2: daftar jenis bukan daftar belanja; sumber pelengkap SIMPK memberi satuan *kapasitas*, belum definisi satu unit SBU. Dua unit B tidak otomatis dua jenis, tetapi pengulangan jenis belum disahkan. |
 | G5 | Jalur komitmen vs jumlah alat, beda pengelompokan bukti sewa beli, pencatatan Kecil/komitmen SIJK, serta batas “subklasifikasi lain paling banyak 5”. | P PDF/cetak 265–266 k.4–14; D PDF 40–41/cetak 31–32 5.1.5; PDF 66/cetak 57 | Lihat adendum 8.3–8.4: minta keputusan telaah tertulis tentang jalur bukti/pencatatan dan saat pemenuhan. SIMPK alat dan SIJK komitmen bukan kewajiban yang identik; jangan memaksa beli atau menghapus jumlah unit. |
@@ -364,6 +364,14 @@ yang ditunjuk atas nama lembaga oleh dokumen ini.
 
 ### 7.3. G2 — alokasi kontrak bukan penggandaan nilai atau izin penggunaan ulang
 
+**Pembaruan 22 Oktober 2026:** [catatan telaah alokasi G2](bg001-contract-allocation-review-draft.md)
+memeriksa ulang P/D dan membandingkan L dengan penanggung jawab skema
+teridentifikasi (L PDF 2, 37–38, 98–100). Catatan itu memisahkan unit
+kontrak/bagian/major item/rekaman, alokasi simultan versus penggunaan
+berikutnya, porsi KSO/subpenyedia, addendum/RAB, progres tahun jamak, dan
+agregasi per BUJK. **Bukan jawaban ahli; G2 tetap belum terselesaikan.**
+L mengulang ketentuan D, tidak mengesahkan bagian yang boleh digunakan.
+
 | Pokok dan locator | Pembacaan draf | Hal yang belum boleh disimpulkan |
 | --- | --- | --- |
 | Satuan penjualan — P PDF/cetak 260 A.3.h.2.b.1–5; D PDF 38/cetak 29 5.1.2.2/11/13 | Ambang K1–B tertulis **per BUJK**, sedangkan bukti dinilai sesuai lingkup setiap subklasifikasi dan akumulasi pada subklasifikasi yang dimiliki untuk perpanjangan/peningkatan. | Jangan menyalin seluruh omzet perusahaan ke BG001, menjumlahkan nilai sama berulang, atau menganggap “per BUJK” menghapus kebutuhan pembuktian BG001. Hubungan agregasi masih perlu telaah. |
@@ -380,6 +388,13 @@ disahkan; porsi pemohon, addendum, progres, periode dan riwayat penggunaan
 masih harus diperiksa. Tidak ada perusahaan atau kontrak nyata yang dipakai.
 
 ### 7.4. Pertanyaan telaah G2 dan status hasil
+
+Pertanyaan berikut tetap terbuka. Paket telaah tertulis **U/R/A**, hasil
+penelusuran publik terbatas, batas atribusi kepada penanggung jawab L,
+dan ilustrasi sintetis terinci ada pada
+[catatan G2 bagian 2–7](bg001-contract-allocation-review-draft.md#7-paket-keputusan-yang-masih-dibutuhkan-dari-ahli-skemalsbu).
+Urutan rekonsiliasi di sana merupakan usulan pemeriksaan bahan, **bukan
+formula LSBU atau aturan aktif**. Tidak ada konsultasi yang diklaim terjadi.
 
 1. Apa unit “pengalaman” pada D 5.1.2.12: seluruh kontrak, major item,
    bagian RAB, atau rekaman pengalaman? Bagaimana angka 10–11 dan
