@@ -304,12 +304,33 @@ test('ringkasan terisi menampilkan angka dan kasus terbaru dari respons tanpa ke
 });
 
 test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tanggal kalender SBU', () => {
+  // Literal LA dates, with each instant represented in Z, -08:00, and -07:00.
+  // Fixed offsets remain valid even when that offset is not active in LA.
+  const dstOffsetCases = [
+    ['7 Mar 2026', '2026-03-08T07:30:00.000Z', '2026-03-07T23:30:00.000-08:00', '2026-03-08T00:30:00.000-07:00'],
+    ['8 Mar 2026', '2026-03-08T08:30:00.000Z', '2026-03-08T00:30:00.000-08:00', '2026-03-08T01:30:00.000-07:00'],
+    // The spring jump from 01:59:59.999 PST to 03:00 PDT.
+    ['8 Mar 2026', '2026-03-08T09:59:59.999Z', '2026-03-08T01:59:59.999-08:00', '2026-03-08T02:59:59.999-07:00'],
+    ['8 Mar 2026', '2026-03-08T10:00:00.000Z', '2026-03-08T02:00:00.000-08:00', '2026-03-08T03:00:00.000-07:00'],
+    ['8 Mar 2026', '2026-03-09T06:30:00.000Z', '2026-03-08T22:30:00.000-08:00', '2026-03-08T23:30:00.000-07:00'],
+    ['9 Mar 2026', '2026-03-09T07:30:00.000Z', '2026-03-08T23:30:00.000-08:00', '2026-03-09T00:30:00.000-07:00'],
+    ['31 Okt 2026', '2026-11-01T06:30:00.000Z', '2026-10-31T22:30:00.000-08:00', '2026-10-31T23:30:00.000-07:00'],
+    ['1 Nov 2026', '2026-11-01T07:30:00.000Z', '2026-10-31T23:30:00.000-08:00', '2026-11-01T00:30:00.000-07:00'],
+    // Two different instants share the local 01:30 wall clock: PDT, then PST.
+    ['1 Nov 2026', '2026-11-01T08:30:00.000Z', '2026-11-01T00:30:00.000-08:00', '2026-11-01T01:30:00.000-07:00'],
+    ['1 Nov 2026', '2026-11-01T09:30:00.000Z', '2026-11-01T01:30:00.000-08:00', '2026-11-01T02:30:00.000-07:00'],
+    ['1 Nov 2026', '2026-11-02T07:30:00.000Z', '2026-11-01T23:30:00.000-08:00', '2026-11-02T00:30:00.000-07:00'],
+    ['2 Nov 2026', '2026-11-02T08:30:00.000Z', '2026-11-02T00:30:00.000-08:00', '2026-11-02T01:30:00.000-07:00'],
+  ] as const;
+  for (const [, utc, standard, daylight] of dstOffsetCases) {
+    assert.equal(Date.parse(standard), Date.parse(utc), `${standard} harus setara dengan ${utc}`);
+    assert.equal(Date.parse(daylight), Date.parse(utc), `${daylight} harus setara dengan ${utc}`);
+  }
   const expectedByZone: Record<string, string[]> = {
     UTC: ['1 Jan 2027', '31 Des 2026', '1 Jan 2027'],
     'America/Los_Angeles': [
       '31 Des 2026', '31 Des 2026', '31 Des 2026',
-      '7 Mar 2026', '8 Mar 2026', '8 Mar 2026', '9 Mar 2026',
-      '31 Okt 2026', '1 Nov 2026', '1 Nov 2026', '2 Nov 2026',
+      ...dstOffsetCases.flatMap(([date]) => [date, date, date]),
     ],
     'Australia/Sydney': [
       '1 Jan 2027', '1 Jan 2027', '1 Jan 2027',
@@ -370,14 +391,8 @@ test('tanggal pembaruan kasus terbaru mengikuti zona waktu penonton, bukan tangg
         '2026-12-31T09:59:59.999Z', '2026-12-31T10:00:00.000Z',
         '2027-01-01T00:00:00.000+14:00',
       ] : []),
-      ...(zone === 'America/Los_Angeles' ? [
-        // Midnights before/after DST starts (UTC-8 -> UTC-7).
-        '2026-03-08T07:30:00.000Z', '2026-03-08T08:30:00.000Z',
-        '2026-03-09T06:30:00.000Z', '2026-03-09T07:30:00.000Z',
-        // Midnights before/after DST ends (UTC-7 -> UTC-8).
-        '2026-11-01T06:30:00.000Z', '2026-11-01T07:30:00.000Z',
-        '2026-11-02T07:30:00.000Z', '2026-11-02T08:30:00.000Z',
-      ] : []),
+      ...(zone === 'America/Los_Angeles'
+        ? dstOffsetCases.flatMap(([, utc, standard, daylight]) => [utc, standard, daylight]) : []),
       ...(zone === 'Australia/Sydney' ? [
         // DST ends April 5 (UTC+11 -> UTC+10): midnight moves from 13:00Z to 14:00Z.
         '2026-04-04T12:59:59.999Z', '2026-04-04T13:00:00.000Z',
