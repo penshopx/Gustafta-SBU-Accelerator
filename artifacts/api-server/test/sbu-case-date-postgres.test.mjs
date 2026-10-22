@@ -72,9 +72,9 @@ test("PATCH tanggal SBU menolak kalender tidak sah tanpa perubahan, lalu menduku
     app.use("/api", router);
     server = app.listen(0);
 
-    const request = async (options = {}, expectedStatus = 200) => {
+    const request = async (options = {}, expectedStatus = 200, caseId = original.id) => {
       const { port } = server.address();
-      const response = await fetch(`http://127.0.0.1:${port}/api/cases/${original.id}`, {
+      const response = await fetch(`http://127.0.0.1:${port}/api/cases/${caseId}`, {
         ...options,
         headers: {
           "x-test-user-id": ownerId,
@@ -86,8 +86,54 @@ test("PATCH tanggal SBU menolak kalender tidak sah tanpa perubahan, lalu menduku
       assert.equal(response.status, expectedStatus, raw);
       return JSON.parse(raw);
     };
+
+    await t.test("Tanggal awal null tetap null setelah PATCH kalender tidak sah ditolak", async (t) => {
+      const { rows: [emptyDateOriginal] } = await isolated.query(`
+        INSERT INTO sbu_cases
+          (owner_id, company_name, request_type, qualification, classification, status,
+           existing_sbu_expires_on, created_at, updated_at)
+        VALUES ($1, 'Perusahaan Uji Tanggal Kosong', 'perpanjangan', 'menengah',
+                'instalasi mekanikal', 'ditinjau', NULL,
+                '2026-02-01T00:00:00Z', '2026-02-02T00:00:00Z')
+        RETURNING *
+      `, [ownerId]);
+      assert.equal(emptyDateOriginal.existing_sbu_expires_on, null,
+        "Tanggal awal harus benar-benar NULL sebelum PATCH apa pun");
+      const emptyDateBefore = await request({}, 200, emptyDateOriginal.id);
+      assert.equal(emptyDateBefore.existingSbuExpiresOn, null);
+
+      for (const invalidDate of ["2027-02-29", "2028-02-30"]) {
+        await t.test(`PATCH ${invalidDate} tidak mengubah baris bertanggal null`, async () => {
+          const rejected = await request({
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              existingSbuExpiresOn: invalidDate,
+              companyName: "Perubahan yang tidak boleh tersimpan",
+            }),
+          }, 400, emptyDateOriginal.id);
+          assert.equal(rejected.error, "Perubahan tidak valid.");
+
+          const reopened = await request({}, 200, emptyDateOriginal.id);
+          assert.equal(reopened.existingSbuExpiresOn, null,
+            "GET setelah penolakan harus tetap mengembalikan null");
+          assert.deepEqual(reopened, emptyDateBefore,
+            "PATCH tidak sah tidak boleh mengubah isian API apa pun, termasuk updatedAt");
+
+          const { rows: [unchanged] } = await isolated.query(
+            "SELECT * FROM sbu_cases WHERE id = $1", [emptyDateOriginal.id],
+          );
+          assert.equal(unchanged.existing_sbu_expires_on, null);
+          assert.deepEqual(unchanged.updated_at, emptyDateOriginal.updated_at,
+            "PATCH yang ditolak tidak boleh mengubah updated_at dari keadaan awal null");
+          assert.deepEqual(unchanged, emptyDateOriginal,
+            "Seluruh baris harus tetap identik, termasuk kolom lain dalam PATCH yang sama");
+        });
+      }
+    });
+
     const before = await request();
-    assert.equal(before.existingSbuExpiresOn, "2027-04-15T00:00:00.000Z");
+    assert.equal(before.existingSbuExpiresOn, "2027-04-15");
 
     for (const invalidDate of ["2027-02-29", "2028-02-30"]) {
       await t.test(`PATCH ${invalidDate} mengembalikan 400 tanpa mengubah data tersimpan`, async () => {
@@ -143,14 +189,14 @@ test("PATCH tanggal SBU menolak kalender tidak sah tanpa perubahan, lalu menduku
     }, "Isian API lainnya tidak boleh berubah");
 
     const newDate = "2028-02-29";
-    const expectedWireDate = `${newDate}T00:00:00.000Z`;
+    const expectedWireDate = newDate;
     const restored = await request({
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ existingSbuExpiresOn: newDate }),
     });
     assert.equal(restored.existingSbuExpiresOn, expectedWireDate,
-      "PATCH harus mengembalikan tanggal baru pada tengah malam UTC sesuai kontrak kalender API");
+      "PATCH harus mengembalikan tanggal baru dalam format YYYY-MM-DD sesuai kontrak kalender API");
     const { rows: [restoredRow] } = await isolated.query(
       "SELECT * FROM sbu_cases WHERE id = $1", [original.id],
     );
