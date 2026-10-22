@@ -203,6 +203,10 @@ lengkap oleh dokumen ini. Hasil BG001 tidak disebarkan ke seluruh katalog.
 
 Adendum telaah visual tanggal **19 Oktober 2026**, hanya untuk BG001 BUJKN.
 Pemeriksaan visual lanjutan atas salinan lokal dicatat pada **20 Oktober 2026**.
+Pendalaman G1 pada **22 Oktober 2026** mencocokkan ulang P PDF/cetak 260,
+D PDF 38–39/cetak 29–30 dan simulasi D PDF 83–85/cetak 74–76 dengan
+bahan skema lembaga beridentitas pada 7.1.1; **telaah ahli khusus G1
+yang tervalidasi belum tersedia**.
 Kunci P/D dan batas kepercayaan sumber di atas tetap berlaku. Ini **draf
 berlocator untuk penelaah**, bukan penetapan hukum terkini, aturan aktif,
 keputusan persetujuan/penolakan, atau pengganti asesmen LSBU. G1–G2
@@ -242,6 +246,47 @@ bahwa BG001 tanpa pengalaman pasti boleh diperpanjang. Contoh BG001 tanpa
 pengalaman tetapi subklasifikasi lain berpengalaman belum diputuskan
 oleh telaah ini.
 
+#### 7.1.1. Bahan ahli/lembaga yang teridentifikasi dan batas atribusi
+
+**L** adalah salinan
+`attached_assets/1._Format_Standar_Skema_Sertifikasi_BG_1792455848045.pdf`,
+skema Bangunan Gedung LSBU Konstruksi Indonesia, `SSBG.1.LSBU-KI`,
+edisi/revisi **01/11**, tanggal review tertulis **21.09.2026**. L sudah
+dibandingkan pada [catatan skema lembaga](bg001-institutional-scheme-comparison-draft.md);
+untuk G1, L PDF 2, 37–38 dan 87 diperiksa ulang secara visual.
+Ini bahan yang tersedia tanpa menghubungi penelaah atau instansi.
+
+| Locator L (PDF / cetak) | Identitas atau pendapat yang benar-benar tercantum | Bobot untuk G1 |
+| --- | --- | --- |
+| 2 / header 1 dari 192, tabel pengesahan | Disiapkan oleh **Agus Surya Wijaya, S.Kom**, Kepala Urusan Standarisasi; diperiksa oleh **Agustinus Dikariawan P, SH**, Koordinator Sertifikasi; disetujui oleh **Erwanto Tandrigau, SE**, Ketua Pelaksana. Kolom tanda tangan terlihat. | Nama/peran adalah atribusi pada salinan, bukan hasil verifikasi kompetensi, keaslian tanda tangan, kewenangan terkini, atau bukti ketiganya telah menelaah pertanyaan G1 ini. Tanggal review header bukan tanggal konsultasi dengan mereka. |
+| 37–38 / 23–24, 5.1.2.1–6/9/13/21 | Mengulang dua periode berturut-turut **atau** enam tahun terakhir, rumusan “masa berlakunya SBU”, tiga tahun sejak habis berlaku dan jalur baru; memisahkan ketentuan nilai/progres; merujuk lampiran. | Pembanding kelembagaan dengan penanggung jawab tertulis, tetapi pengulangan rumusan D **tidak menyelesaikan** tanggal acuan, jeda, atau rekonsiliasi nilai. Tidak diatribusikan sebagai jawaban pribadi salah satu nama di atas. |
+| 87 / 73, Simulasi 1, diagram; penjelasan Perpanjangan Pertama Kali butir 1–6 dan Perpanjangan Kedua butir 1–2 | Contoh BG001 sama dengan D PDF 83/cetak 74: pengalaman periode 1, kosong periode 2, perpanjangan kedua dapat disetujui; periode 3 kosong, diagram perpanjangan ketiga silang. | Keselarasan salinan skema lembaga dan D, **bukan dua pendapat ahli independen** atau persetujuan penerapan pada seluruh kasus BG001. |
+
+**Penelusuran publik terbatas, 22 Oktober 2026:** pencarian memakai frasa
+`LSBU pengalaman dua periode perpanjangan pertama kedua`,
+`SSBG.1.LSBU-KI 11`, nama pemeriksa, serta
+`site:lsbukonstruksi.co.id "dua" "periode"`.
+[Beranda LSBU Konstruksi Indonesia](https://www.lsbukonstruksi.co.id/)
+dibuka; bagian pengumuman masih menyebut SK 37/KPTS/DK/2025 dan
+FAQ “Apakah yang dimaksud dengan Re-Sertifikasi?” hanya memberi definisi
+umum. Bagian tersebut tidak memberikan jawaban khusus G1 ataupun
+konfirmasi revisi L. Hasil pencarian juga menampilkan
+[salinan SSBG.2.LSBU-KI](https://lsbukonstruksi.co.id/assets/skemasertifikasi/2SKEMASSBG.pdf)
+dengan cuplikan revisi **01/07**, review **21.11.2024**, serta
+[materi penyesuaian skema 2022](https://lsbukonstruksi.co.id/assets/pengumuman/Lk_PenyesuaianSkemaSertifikasiBUJK.pdf).
+Keduanya **hanya temuan indeks, tidak ditelaah sebagai naskah lengkap**
+di sini; tidak dijadikan dasar G1. Rumusan sembilan tahun yang muncul pada
+hasil sumber lama tidak boleh dipindahkan ke jendela minimal dua periode
+P/D. Hasil pencarian, metadata tanggal indeks, dan beranda bukan bukti
+versi terbaru, status hukum, atau penerapan skema 2026.
+
+**Status ahli: belum terselesaikan.** Bahan lembaga beridentitas tersedia,
+tetapi belum ditemukan dalam pemeriksaan terbatas ini pendapat tertulis
+tervalidasi ahli skema/LSBU yang menjawab G1 beserta dasar dan batasnya.
+Ini bukan bukti bahwa pendapat atau klarifikasi tersebut tidak ada.
+Tidak ada komunikasi, konsultasi yang diklaim telah terjadi, pengiriman
+pertanyaan, akun lembaga, atau integrasi instansi yang dibangun.
+
 ### 7.2. G1 — pisahkan jendela pengalaman dari masa berlaku dan nilai penjualan
 
 **Pembacaan sementara, belum disahkan:** pengalaman minimal untuk
@@ -259,6 +304,40 @@ P h.1.a dan D 5.1.2.1 tentang nilai selama masa berlaku tidak otomatis
 memperluas semua nominal menjadi akumulasi enam tahun. Satu pengalaman
 yang relevan pada periode sebelumnya tidak otomatis berarti seluruh
 nilai kontraknya boleh dihitung lagi pada periode berjalan.
+
+#### 7.2.1. Urutan perpanjangan — contoh sumber, bukan keputusan kasus
+
+`P1`, `P2`, dan seterusnya di bawah berarti periode **dalam diagram yang
+dirujuk**, bukan penetapan tanggal aktual atau nomor periode perusahaan.
+Semua hasil centang/silang adalah isi contoh sumber, bukan hasil asesmen
+draf ini.
+
+| Tahap | Pencocokan dengan sumber | Batas kesimpulan |
+| --- | --- | --- |
+| Pertama, sesudah P1 | D PDF 83/cetak 74 Simulasi 1: BG001 `ada` pada P1; diagram centang pada perpanjangan pertama. Penjelasan pertama butir 2–3 menyebut BG001 berpengalaman sementara BG002/BG003 tidak, tetapi keduanya tetap dapat diperpanjang dengan memperhatikan ketentuan pengalaman. Butir 5 menolak contoh ketika semuanya tidak berpengalaman. L PDF 87/cetak 73 mengulangnya. | P PDF/cetak 260 h.1.c/e dan D PDF 38/cetak 29 5.1.2.3–4 tidak boleh dibaca sebagai hak menunggu enam tahun sejak SBU baru. Contoh tidak memutuskan BG001 tunggal tanpa pengalaman, atau BG001 kosong sementara hanya subklasifikasi lain berpengalaman. **Belum terselesaikan untuk penerapan.** |
+| Kedua, sesudah P2 | D PDF 83/cetak 74 Simulasi 1, Perpanjangan Kedua butir 2: BG001 berpengalaman di P1, tidak di P2, tetap dapat disetujui; diagram centang. Ini pembacaan langsung, bukan dugaan dari label `n/a` saja. L PDF 87/cetak 73 sama. | Contoh menentang penolakan hanya karena P2 kosong. Belum menentukan hari awal/akhir jendela, tanggal pengalaman, atau nilai P1 yang boleh dihitung untuk kualifikasi pada perpanjangan kedua. |
+| Ketiga dan berikutnya | D PDF 83/cetak 74 Simulasi 1: BG001 P2 dan P3 `n/a`, perpanjangan ketiga silang. D PDF 84/cetak 75 Simulasi 4: BG001 P2 `ada`, P3 `n/a`, perpanjangan 2032 centang. D PDF 85/cetak 76 Simulasi 5: BG001 P3 `ada`, P4 `n/a`, perpanjangan 2032 centang; BG002/BG003 yang dua periode terakhir kosong silang. | Contoh konsisten dengan pemeriksaan dua periode berurutan yang relevan, bukan pengalaman sejak pendirian selamanya. **Belum mengesahkan algoritme jendela bergeser** untuk seluruh perpanjangan, terlebih bila periodenya tidak penuh, terputus, atau berubah. |
+
+#### 7.2.2. Tanggal, jeda, konversi dan nilai — register keputusan tertahan
+
+| Isu | Bukti berlocator yang tersedia | Yang belum terselesaikan / tindakan yang ditahan |
+| --- | --- | --- |
+| Tanggal acuan dan batas hari | D PDF 38/cetak 29 5.1.2.3 menulis “dua periode ... secara berturut-turut atau dalam 6 ... tahun terakhir”; P PDF/cetak 260 h.1.c hanya dua periode. Simulasi D PDF 83–85/cetak 74–76 memakai tahun dan blok tiga tahun. | Tidak menetapkan apakah acuan ialah tanggal permohonan, habis berlaku, atau keputusan; inklusi hari batas dan pengalaman tepat di batas belum jelas. Tidak memilih tanggal hari ini atau mengurangi enam tahun secara otomatis. “Atau” tetap dicatat, bukan diubah menjadi “dan” atau diputuskan setara pada semua riwayat. |
+| Peristiwa pengalaman dan lintas periode | P PDF/cetak 260 h.1.a–b: pengalaman sah tercatat SIJK. D PDF 38/cetak 29 5.1.2.7/9: kontrak sah; tahun jamak memakai BA progres dan nilai sesuai pentahapan. | Belum ada penetapan tunggal bahwa tanggal kontrak, BA, serah terima, atau pencatatan SIJK menentukan masuknya pengalaman ke jendela minimal. Keberadaan BA untuk penilaian nilai tidak otomatis memilih tanggal BA sebagai tanggal pengalaman. |
+| Jeda riwayat, keterlambatan dan perubahan | D 5.1.2.3 menyebut berturut-turut; Simulasi 1/4/5 hanya menunjukkan periode tiga tahun berurutan. | Tidak ada jawaban terverifikasi tentang periode terputus, permohonan terlambat, perubahan kualifikasi atau masa pendek. Jangan menyambung dua SBU tak berurutan, memulai hitungan baru, atau menganggap enam tahun selalu menggantikan riwayat dua periode. |
+| Konversi saja vs konversi bersamaan perpanjangan | P PDF/cetak 13 Pasal 21(3)–(4): konversi melalui perubahan tanpa asesmen, masa berlaku mengikuti SBU sebelum konversi. D PDF 84/cetak 75 Simulasi 4 dan PDF 85/cetak 76 Simulasi 5 menulis **Konversi+Perpanjangan (2026)**; BG001 dengan pengalaman periode sebelum/sekitar konversi tetap muncul dalam urutan contoh. Simulasi 3 pada PDF 84/cetak 75 membahas gabungan usaha terintegrasi/GT001, bukan kalender universal BG001. | Konversi saja tidak membenarkan asumsi otomatis mendapat tiga tahun baru atau riwayat menjadi nol. Cara menomori periode dan mengakui bukti sebelum konversi pada semua kasus **belum disahkan**; contoh gabungan tidak menjawab konversi di tengah masa berlaku. Gerbang operasional bagian 5 tetap terpisah. |
+| Jeda tiga tahun sesudah tidak dapat diperpanjang | P PDF/cetak 260 h.1.f; D PDF 38/cetak 29 5.1.2.5–6: sejak **masa berlaku habis**, kemudian ketentuan permohonan baru. D PDF 85/cetak 76 Simulasi 6 memakai BS001–BS003: tidak diperpanjang 2029, diajukan baru 2032. | Titik rujukan tekstual bukan tanggal keputusan penolakan, konversi atau pemeriksaan internal. Simulasi BS hanya konteks mekanisme, bukan asesmen BG001. Belum menghitung tanggal paling awal, memberi larangan otomatis, atau menganggap semua BUJK terlarang mengajukan subklasifikasi lain. |
+| Uji minimal pengalaman vs periode nilai penjualan | P PDF/cetak 260 h.1.a/c/e; D PDF 38/cetak 29 5.1.2.1–4/9/13 dan PDF 39/cetak 30 5.1.2.19–21. D PDF 83/cetak 74 membolehkan contoh perpanjangan kedua BG001 dengan pengalaman hanya P1; diagram tidak memberikan nominal atau kalkulasi kualifikasi. | **Uji keberadaan** sedikitnya satu pengalaman tidak sama dengan **uji nilai** penjualan sah. Syarat minimal terpenuhi menurut contoh tidak membuktikan ambang kualifikasi terpenuhi, seluruh nominal P1 boleh dibawa ke P2, atau periode nilai menjadi enam tahun. Periode nilai yang boleh diajukan pada situasi tersebut **belum diputuskan**; jangan nolkan atau gandakan nilai tanpa dasar. Alokasi dan penggunaan ulang lintas subklasifikasi tetap G2, bukan diselesaikan oleh contoh G1. |
+
+**Hasil G1 per 22 Oktober 2026:** pembacaan contoh dan perbedaan dua uji
+telah dipertajam; kepastian penerapan **belum terselesaikan**. Untuk menutup
+masing-masing baris diperlukan bahan tertulis yang tersedia independen:
+identitas/peran dan kompetensi ahli yang dapat diverifikasi, versi/cakupan
+skema BG001 BUJKN, tanggal telaah, jawaban eksplisit beserta locator P/D
+dan simulasi, alasan rekonsiliasi, batas/pengecualian, serta pengesahan yang
+dapat diverifikasi. Bukti untuk satu baris tidak otomatis menutup baris
+lain atau gerbang status sumber/operasional bagian 5. Tidak ada penelaah
+yang ditunjuk atas nama lembaga oleh dokumen ini.
 
 **Pertanyaan telaah G1 (jawaban tertulis ahli skema/LSBU diperlukan):**
 
@@ -459,6 +538,9 @@ python .agents/scripts/review-sbu-source-pages.py attached_assets/KEP_DIRJEN_BK_
 # Tambahan adendum G1–G2:
 python .agents/scripts/review-sbu-source-pages.py attached_assets/KEP_DIRJEN_BK_281_STANDAR_SKEMA_SERTIFIKASI_26_AGUSTUS_2026_SU_1791292262823.pdf 38 39 83 84 85 95
 python .agents/scripts/review-sbu-source-pages.py attached_assets/permen-pu-6-2025_1791292204964.pdf 260
+# Pendalaman G1: identitas bahan lembaga dan konteks konversi, bukan konsultasi:
+python .agents/scripts/review-sbu-source-pages.py attached_assets/1._Format_Standar_Skema_Sertifikasi_BG_1792455848045.pdf 2 37 38 87
+python .agents/scripts/review-sbu-source-pages.py attached_assets/permen-pu-6-2025_1791292204964.pdf 13
 # Tambahan adendum G4–G5:
 python .agents/scripts/review-sbu-source-pages.py attached_assets/permen-pu-6-2025_1791292204964.pdf 18 19 265 266
 python .agents/scripts/review-sbu-source-pages.py attached_assets/KEP_DIRJEN_BK_281_STANDAR_SKEMA_SERTIFIKASI_26_AGUSTUS_2026_SU_1791292262823.pdf 30 40 41 66
