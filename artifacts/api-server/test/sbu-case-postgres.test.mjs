@@ -109,7 +109,65 @@ test("PATCH permohonan di PostgreSQL mempertahankan kolom lain dan tidak meminda
     assert.equal(reopened.status, 200, reopened.raw);
     assert.deepEqual(updated.body, reopened.body, "Respons PATCH harus sesuai dengan pembacaan ulang");
     assert.equal(reopened.body.companyName, saved.company_name);
-    assert.equal(reopened.body.existingSbuExpiresOn, "2027-04-15T00:00:00.000Z");
+    assert.equal(reopened.body.existingSbuExpiresOn, "2027-04-15");
+
+    await t.test("id dan waktu palsu diabaikan tanpa mengubah record lain atau menambah record", async () => {
+      const { rows: [other] } = await isolated.query(
+        `INSERT INTO sbu_cases (owner_id, company_name, request_type, qualification, classification)
+         VALUES ($1, 'Perusahaan Pembanding', 'perpanjangan', 'menengah', 'instalasi mekanikal')
+         RETURNING *`,
+        [ownerId],
+      );
+      const otherPath = `/api/cases/${other.id}`;
+      const otherBefore = await request(server, ownerId, otherPath);
+      assert.equal(otherBefore.status, 200, otherBefore.raw);
+      const { rows: before } = await isolated.query("SELECT * FROM sbu_cases ORDER BY id");
+      const forgedCreatedAt = "2001-01-01T00:00:00.000Z";
+      const forgedUpdatedAt = "2099-12-31T23:59:59.000Z";
+
+      const startedAt = Date.now();
+      const forgedPatch = await request(server, ownerId, path, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: other.id,
+          createdAt: forgedCreatedAt,
+          updatedAt: forgedUpdatedAt,
+          companyName: "Perusahaan Dengan Identitas Tetap",
+        }),
+      });
+      const finishedAt = Date.now();
+      assert.equal(forgedPatch.status, 200, forgedPatch.raw);
+
+      const { rows: after } = await isolated.query("SELECT * FROM sbu_cases ORDER BY id");
+      assert.equal(after.length, before.length, "PATCH tidak boleh membuat record tambahan");
+      const patched = after.find((row) => row.id === original.id);
+      assert.ok(patched, "Record harus tetap tersedia pada ID asli");
+      assert.equal(patched.id, original.id);
+      assert.deepEqual(patched.created_at, original.created_at, "Waktu pembuatan tidak boleh dipalsukan");
+      assert.ok(patched.updated_at.getTime() >= startedAt &&
+        patched.updated_at.getTime() <= finishedAt,
+      "Waktu pembaruan harus berasal dari server selama permintaan diproses");
+      assert.ok(patched.updated_at > original.updated_at, "Waktu pembaruan harus maju dari data awal");
+      assert.notEqual(patched.updated_at.toISOString(), forgedUpdatedAt);
+      assert.deepEqual(after, before.map((row) => row.id === original.id ? {
+        ...row,
+        company_name: "Perusahaan Dengan Identitas Tetap",
+        updated_at: patched.updated_at,
+      } : row), "Hanya perubahan sah dan waktu server pada record tujuan yang boleh tersimpan");
+
+      assert.equal(forgedPatch.body.id, original.id);
+      assert.equal(forgedPatch.body.companyName, patched.company_name);
+      assert.equal(forgedPatch.body.createdAt, original.created_at.toISOString());
+      assert.equal(forgedPatch.body.updatedAt, patched.updated_at.toISOString());
+      const reopenedOriginal = await request(server, ownerId, path);
+      assert.equal(reopenedOriginal.status, 200, reopenedOriginal.raw);
+      assert.deepEqual(reopenedOriginal.body, forgedPatch.body, "GET ID asli harus membaca record yang diperbarui");
+      const reopenedOther = await request(server, ownerId, otherPath);
+      assert.equal(reopenedOther.status, 200, reopenedOther.raw);
+      assert.deepEqual(reopenedOther.body, otherBefore.body, "GET ID palsu harus tetap membaca record pembanding");
+      assert.equal(await publicCount(), 0, "Pemalsuan tidak boleh menulis ke tabel aplikasi");
+    });
 
     await t.test("ownerId palsu tidak mengubah pemilik atau membuka akses pengguna kedua", async () => {
       const secondOwnerId = `test-other-owner-${randomUUID()}`;
