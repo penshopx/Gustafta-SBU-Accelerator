@@ -17,6 +17,11 @@ test('tanggal pembaruan kartu bukti mengikuti zona waktu penonton', () => {
       '7 Mar 2026', '8 Mar 2026', '8 Mar 2026', '9 Mar 2026',
       '31 Okt 2026', '1 Nov 2026', '1 Nov 2026', '2 Nov 2026',
     ],
+    'Australia/Sydney': [
+      '1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027',
+      '4 Apr 2026', '5 Apr 2026', '5 Apr 2026', '6 Apr 2026',
+      '3 Okt 2026', '4 Okt 2026', '4 Okt 2026', '5 Okt 2026',
+    ],
     'Asia/Jakarta': ['1 Jan 2027', '1 Jan 2027', '31 Des 2026', '1 Jan 2027', '1 Jan 2027'],
     'Asia/Tokyo': ['1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027', '1 Jan 2027'],
     'Asia/Kathmandu': [
@@ -78,6 +83,14 @@ test('tanggal pembaruan kartu bukti mengikuti zona waktu penonton', () => {
       // Midnights before/after DST ends (UTC-7 -> UTC-8).
       '2026-11-01T06:30:00.000Z', '2026-11-01T07:30:00.000Z',
       '2026-11-02T07:30:00.000Z', '2026-11-02T08:30:00.000Z',
+    ] : []),
+    ...(zone === 'Australia/Sydney' ? [
+      // DST ends April 5 (UTC+11 -> UTC+10): midnight moves from 13:00Z to 14:00Z.
+      '2026-04-04T12:59:59.999Z', '2026-04-04T13:00:00.000Z',
+      '2026-04-05T13:59:59.999Z', '2026-04-05T14:00:00.000Z',
+      // DST starts October 4 (UTC+10 -> UTC+11): midnight moves back to 13:00Z.
+      '2026-10-03T13:59:59.999Z', '2026-10-03T14:00:00.000Z',
+      '2026-10-04T12:59:59.999Z', '2026-10-04T13:00:00.000Z',
     ] : []),
   ].map((updatedAt, index) => ({
     id: index + 1, caseId: 7, code: 'legalitas',
