@@ -131,6 +131,15 @@ function dateOnly(value: Date | null | undefined) {
   return value == null ? null : value.toISOString().slice(0, 10);
 }
 
+function findingForWire<T extends { transitionDate?: Date }>(finding: T) {
+  // Generated parsing coerces date-only fields to Date. Preserve the OpenAPI
+  // calendar format without adding a date to an unverified finding.
+  const { transitionDate, ...fields } = finding;
+  return transitionDate === undefined ? fields : {
+    ...fields, transitionDate: transitionDate.toISOString().slice(0, 10),
+  };
+}
+
 router.get("/me", async (req, res): Promise<void> => {
   const profile = await profileFor(owner(req));
   res.json(GetMeResponse.parse(profile));
@@ -363,7 +372,8 @@ router.get("/cases/:id/assessment", async (req, res): Promise<void> => {
   const evidence = await db.select().from(evidenceTable).where(eq(evidenceTable.caseId, item.id));
   const verifications = item.requestType === "perpanjangan"
     ? await db.select().from(transitionVerificationsTable) : [];
-  res.json(GetAssessmentResponse.parse(assessCase(item, evidence, verifications)));
+  const assessment = GetAssessmentResponse.parse(assessCase(item, evidence, verifications));
+  res.json({ ...assessment, findings: assessment.findings.map(findingForWire) });
 });
 
 router.get("/cases/:id/preparation-summary", async (req, res): Promise<void> => {
@@ -436,7 +446,10 @@ router.put("/transition-verifications/:track", requireVerifier, async (req, res)
 
 router.get("/regulations", async (_req, res): Promise<void> => {
   const verifications = await db.select().from(transitionVerificationsTable);
-  res.json(ListRegulationsResponse.parse(regulationsFor(verifications)));
+  const regulations = ListRegulationsResponse.parse(regulationsFor(verifications));
+  res.json(regulations.map((regulation) => ({
+    ...regulation, transitionFindings: regulation.transitionFindings.map(findingForWire),
+  })));
 });
 
 export default router;

@@ -9,6 +9,12 @@ Calendar-date UI tests must use the actual server response parser followed by a 
 
 **How to apply:** Whenever date-only API fields reach a renderer, check both the generated parser and serialized response. Cover real wire values and multiple time zones; avoid accepting arbitrary timestamps as calendar dates.
 
+Validate calendar-date responses against the source OpenAPI contract without normalizing the test payload or relaxing format checks. Restore date-only encoding after generated parsing at the response boundary.
+
+**Why:** Generated parsers can accept the domain value while silently producing timestamps that violate the source contract; a consumer that tolerates timestamps can hide that mismatch.
+
+**How to apply:** Keep shared findings identical between assessment and regulation responses, and leave absent, unverified dates absent during serialization.
+
 ## Testing the viewer's time zone
 
 Run local-timestamp component assertions in fresh processes with `TZ` set before imports when a formatter is initialized at module scope.

@@ -25,6 +25,16 @@ function createResponseValidator(schema, schemas = openapi.components.schemas) {
 const createProfileValidator = (schemas) => createResponseValidator(profileRef, schemas);
 const { ajv: profileAjv, validate: validateProfile } = createProfileValidator();
 const { ajv: dashboardAjv, validate: validateDashboard } = createResponseValidator(dashboardRef);
+const assessmentRef = "#/components/schemas/Assessment";
+function createAssessmentValidators(contract = openapi) {
+  const schema = contract.paths["/cases/{id}/assessment"].get
+    .responses["200"].content["application/json"].schema;
+  return [
+    { label: "Assessment", ...createResponseValidator(assessmentRef, contract.components.schemas) },
+    { label: "GET /cases/{id}/assessment", ...createResponseValidator(schema, contract.components.schemas) },
+  ];
+}
+const assessmentValidators = createAssessmentValidators();
 const caseRef = "#/components/schemas/SbuCase";
 const { ajv: caseAjv, validate: validateCase } = createResponseValidator(caseRef);
 const caseOperations = [
@@ -286,6 +296,13 @@ async function request(server, path, options) {
   });
   const raw = await response.text();
   const body = raw && response.headers.get("content-type")?.includes("application/json") ? JSON.parse(raw) : null;
+  if (/^\/api\/cases\/\d+\/assessment$/.test(path) &&
+      (options?.method ?? "GET").toUpperCase() === "GET" && response.ok) {
+    assert.equal(response.status, 200, `${path}: status sukses harus sesuai OpenAPI`);
+    for (const { label, ajv, validate } of assessmentValidators) {
+      assert.ok(validate(body), `${path} tidak sesuai OpenAPI ${label}: ${ajv.errorsText(validate.errors)}`);
+    }
+  }
   const caseOperation = caseOperations.find(({ method, matches }) =>
     method === (options?.method ?? "GET").toLowerCase() && matches.test(path));
   if (caseOperation && response.ok) {
@@ -2200,6 +2217,112 @@ test("penilaian tanpa identitas mengembalikan 401 sebelum membaca kasus atau buk
     delete globalThis.__routeEvidence;
     delete globalThis.__routeCaseReads;
     delete globalThis.__routeEvidenceReads;
+  }
+});
+
+test("kontrak Assessment menolak struktur keliru dan mendeteksi perubahan tanpa regenerasi", async () => {
+  globalThis.__routeCase = {
+    id: 80, ownerId: "test-user", companyName: "Kontrol kontrak penilaian",
+    requestType: "baru", qualification: "kecil", classification: "gedung",
+    status: "draf", existingSbuExpiresOn: null,
+    createdAt: new Date("2026-02-01T00:00:00Z"),
+    updatedAt: new Date("2026-02-02T00:00:00Z"),
+  };
+  const server = app.listen(0);
+  try {
+    const { status, body, raw } = await request(server, "/api/cases/80/assessment");
+    assert.equal(status, 200, raw);
+    assert.ok(body.findings.length > 0, "kontrol negatif harus menguji temuan nyata");
+    for (const { label, ajv, validate } of assessmentValidators) {
+      const accepts = (value) => assert.ok(validate(value), `${label}: ${ajv.errorsText(validate.errors)}`);
+      const rejects = (value, keyword, path) => {
+        assert.equal(validate(value), false, `${label} harus menolak ${keyword} pada ${path}`);
+        assert.ok(validate.errors.some((error) => error.keyword === keyword && error.instancePath === path),
+          `${label}: ${ajv.errorsText(validate.errors)}`);
+      };
+      accepts(body);
+      for (const field of openapi.components.schemas.Assessment.required) {
+        const invalid = structuredClone(body);
+        delete invalid[field];
+        rejects(invalid, "required", "");
+      }
+      for (const findings of [null, {}, "temuan", [null], ["temuan"]]) {
+        rejects({ ...body, findings }, "type", Array.isArray(findings) ? "/findings/0" : "/findings");
+      }
+      for (const field of openapi.components.schemas.Finding.required) {
+        const invalid = structuredClone(body);
+        delete invalid.findings[0][field];
+        rejects(invalid, "required", "/findings/0");
+      }
+      for (const [field, property] of Object.entries(openapi.components.schemas.Assessment.properties)) {
+        rejects({ ...body, [field]: property.type === "integer" ? "bukan angka" : 42 },
+          "type", `/${field}`);
+      }
+      for (const field of Object.keys(openapi.components.schemas.Finding.properties)) {
+        const invalid = structuredClone(body);
+        invalid.findings[0][field] = 42;
+        rejects(invalid, "type", `/findings/0/${field}`);
+      }
+      for (const allowed of openapi.components.schemas.Assessment.properties.status.enum) {
+        accepts({ ...body, status: allowed });
+      }
+      rejects({ ...body, status: "status_tidak_dikenal" }, "enum", "/status");
+      for (const allowed of openapi.components.schemas.Finding.properties.status.enum) {
+        const valid = structuredClone(body);
+        valid.findings[0].status = allowed;
+        accepts(valid);
+      }
+      const invalidStatus = structuredClone(body);
+      invalidStatus.findings[0].status = "status_tidak_dikenal";
+      rejects(invalidStatus, "enum", "/findings/0/status");
+
+      // These are validator controls, not permission to expose unverified dates.
+      const dated = structuredClone(body);
+      dated.findings[0].transitionDate = "2028-02-29";
+      accepts(dated);
+      delete dated.findings[0].transitionDate;
+      accepts(dated);
+      for (const date of ["2026-02-29", "2026-13-01", "2026-04-31", "30/10/2026", "2026-10-30T00:00:00.000Z", ""]) {
+        dated.findings[0].transitionDate = date;
+        rejects(dated, "format", "/findings/0/transitionDate");
+      }
+    }
+
+    // Keep the real HTTP payload and generated code unchanged; alter only an
+    // in-memory copy of the source contract and compile fresh validators.
+    const addedField = structuredClone(openapi);
+    addedField.components.schemas.Assessment.required.push("contractRevision");
+    addedField.components.schemas.Assessment.properties.contractRevision = { type: "integer" };
+    const changedFinding = structuredClone(openapi);
+    changedFinding.components.schemas.Finding.properties.detail = { type: "integer" };
+    const changedDate = structuredClone(openapi);
+    changedDate.components.schemas.Finding.properties.transitionDate.format = "date-time";
+    const dated = structuredClone(body);
+    dated.findings[0].transitionDate = "2026-10-30";
+    for (const [contract, stale, corrected] of [
+      [addedField, body, { ...body, contractRevision: 1 }],
+      [changedFinding, body, { ...body, findings: body.findings.map((finding) => ({ ...finding, detail: 1 })) }],
+      [changedDate, dated, { ...body, findings: [{ ...body.findings[0], transitionDate: "2026-10-30T00:00:00Z" }] }],
+    ]) {
+      for (const { label, ajv, validate } of createAssessmentValidators(contract)) {
+        assert.equal(validate(stale), false, `${label} harus menangkap perubahan kontrak tanpa codegen`);
+        assert.ok(validate(corrected), `${label}: ${ajv.errorsText(validate.errors)}`);
+      }
+    }
+    const changedOperation = structuredClone(openapi);
+    changedOperation.paths["/cases/{id}/assessment"].get.responses["200"].content["application/json"].schema = {
+      type: "object", required: ["assessment"], properties: { assessment: { $ref: assessmentRef } },
+    };
+    const [entity, operation] = createAssessmentValidators(changedOperation);
+    assert.ok(entity.validate(body), "perubahan envelope operasi tidak mengubah skema entitas");
+    assert.equal(operation.validate(body), false, "validator operasi harus mendeteksi perubahan envelope");
+    assert.ok(operation.validate({ assessment: body }), operation.ajv.errorsText(operation.validate.errors));
+    for (const { ajv, validate } of assessmentValidators) {
+      assert.ok(validate(body), `kontrak asli tidak boleh berubah: ${ajv.errorsText(validate.errors)}`);
+    }
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCase;
   }
 });
 
