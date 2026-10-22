@@ -205,6 +205,12 @@ router.post("/cases", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Data permohonan tidak valid.", detail: input.error.message });
     return;
   }
+  // Generated Date coercion can roll invalid calendar days into the next month.
+  if (input.data.existingSbuExpiresOn != null &&
+      dateOnly(input.data.existingSbuExpiresOn) !== req.body.existingSbuExpiresOn) {
+    res.status(400).json({ error: "Data permohonan tidak valid." });
+    return;
+  }
   const userId = owner(req);
   const profile = await profileFor(userId);
   if (!["kontraktor", "konsultan"].includes(profile.role)) {
