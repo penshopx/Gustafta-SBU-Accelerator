@@ -56,6 +56,7 @@ async function bundleChild(temp) {
               export {runDocumentCleanup} from "../src/lib/document-cleanup-job";`,
             db: `import {drizzle} from "drizzle-orm/node-postgres";
               import {pool} from ${JSON.stringify(child)};
+              export {pool};
               export * from "../../../lib/db/src/schema/index";
               export const db = drizzle(pool);`,
             auth: `export const getAuth = req => ({userId: req.get("x-test-user") ?? null});`,
@@ -124,6 +125,7 @@ for (const [crashAt, initialScan] of [["scan-held", "pending"], ["scan-update-he
         ADD COLUMN version integer NOT NULL DEFAULT 1`);
       await bootstrap.query("CREATE TABLE sbu_document_analyses (LIKE public.sbu_document_analyses INCLUDING ALL)");
       await bootstrap.query(await migration("document-analysis-pages"));
+      await bootstrap.query(await migration("document-analysis-operations"));
       await bootstrap.query("RESET search_path");
       restricted = await createRestrictedRoutePool(admin, schema);
       await restricted.pool.query("INSERT INTO sbu_profiles(user_id) VALUES ('crash-owner-a'), ('crash-owner-b')");

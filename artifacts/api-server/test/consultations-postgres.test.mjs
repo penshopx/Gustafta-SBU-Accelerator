@@ -28,6 +28,7 @@ test("private consultations persist, isolate owners, use opted-in case context a
     await bootstrap.query("CREATE TABLE sbu_documents (LIKE public.sbu_documents INCLUDING ALL)");
     await bootstrap.query("CREATE TABLE sbu_document_analyses (LIKE public.sbu_document_analyses INCLUDING ALL)");
     await bootstrap.query(await readFile(new URL("../../../lib/db/migrations/consultations.sql", import.meta.url), "utf8"));
+    await bootstrap.query(await readFile(new URL("../../../lib/db/migrations/document-analysis-operations.sql", import.meta.url), "utf8"));
     await bootstrap.query("RESET search_path");
     restricted = await createRestrictedRoutePool(admin, schema);
     globalThis.__consultationPool = restricted.pool;
@@ -51,7 +52,8 @@ test("private consultations persist, isolate owners, use opted-in case context a
             contents: path === "db" ? `
               import { drizzle } from "drizzle-orm/node-postgres";
               export * from ${JSON.stringify(fileURLToPath(new URL("../../../lib/db/src/schema/index.ts", import.meta.url)))};
-              export const db = drizzle(globalThis.__consultationPool);
+              export const pool = globalThis.__consultationPool;
+              export const db = drizzle(pool);
             ` : path === "storage" ? `export const documentStorage = { file() { throw Error("must not read original bytes"); } };`
               : `export const getAuth = req => ({userId: req.get("x-test-user") ?? null});`,
           }));

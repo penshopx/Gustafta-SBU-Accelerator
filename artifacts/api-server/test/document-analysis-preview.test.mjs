@@ -20,7 +20,7 @@ await build({
       build.onResolve({ filter: /^@workspace\/api-zod$/ }, () => ({
         path: join(dir, "../../../lib/api-zod/src/index.ts"),
       }));
-      build.onResolve({ filter: /^(@workspace\/db|@clerk\/express|drizzle-orm)$|\/(document-storage|document-analysis|consultation-analysis|ai-budget)$/ }, args =>
+      build.onResolve({ filter: /^(@workspace\/db|@clerk\/express|drizzle-orm)$|\/(document-storage|document-analysis|consultation-analysis|ai-budget|document-analysis-operations)$/ }, args =>
         ({ path: args.path, namespace: "fixture" }));
       build.onLoad({ filter: /.*/, namespace: "fixture" }, args => {
         const common = `const f=()=>globalThis.${stateKey};`;
@@ -32,7 +32,8 @@ await build({
             export const desc=x=>x; export const sql=()=>{};`,
           "@workspace/db": `${common}
             const table=name=>new Proxy({}, {get:(_,key)=>name+"."+key});
-            export const documentsTable=table("document"), casesTable=table("case"), documentAnalysesTable=table("analysis");
+            export const documentsTable=table("document"), casesTable=table("case"), documentAnalysesTable=table("analysis"),
+              documentAnalysisOperationsTable=table("operation");
             export const db={
               select(){ f().reads++; return {from(){return {innerJoin(){return {
                 async where(predicate){
@@ -63,6 +64,17 @@ await build({
             export const sourceErrorMessage=()=>"fixture";`,
           "../lib/ai-budget": `export class AiBudgetError extends Error {}
             export const reserveAiBudget=()=>{throw Error("no budget reservation in preview")};`,
+          "../lib/document-analysis-operations": `
+            export class DocumentOperationError extends Error { constructor(status){super();this.status=status;} }
+            export const DOCUMENT_OPERATION_TIMEOUT_MS=70000;
+            const counts=new Map();
+            export const documentOperationStore={
+              async reserve(owner,kind){
+                const key=owner+kind, count=counts.get(key)||0;
+                if(count>=12) throw new DocumentOperationError(429);
+                counts.set(key,count+1);return "fixture-token";
+              }, async release(){}, async assertCurrent(){}
+            };`,
         }[args.path];
         assert.ok(contents, args.path);
         return { contents, loader: "js", resolveDir: dir };

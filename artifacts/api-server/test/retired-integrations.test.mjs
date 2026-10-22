@@ -120,7 +120,7 @@ await build({
         `,
         "@workspace/db": `
           export const casesTable = {}, evidenceTable = {}, profilesTable = {};
-          export const companyProfilesTable = {}, documentsTable = {}, documentAnalysesTable = {};
+          export const companyProfilesTable = {}, documentsTable = {}, documentAnalysesTable = {}, documentAnalysisOperationsTable = {};
           export const transitionVerificationsTable = {}, appSettingsTable = {};
           export const auditLogsTable = {}, clientsTable = {}, workspacesTable = {};
           export const consultationsTable = {}, personnelTable = {}, skkCertificatesTable = {};

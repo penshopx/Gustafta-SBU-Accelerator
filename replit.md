@@ -121,4 +121,11 @@ Empat peran dapat membentuk profil. Kontraktor/konsultan dapat membuat dan menge
 
 ## Pointers
 
+### Kendali operasi Bedah Dokumen lintas proses
+
+- Reservasi analisis (3 percobaan per jendela 60 detik), inspeksi/pratinjau (12 per jendela 60 detik), dan satu operasi aktif per akun memakai PostgreSQL bersama. Waktu memakai jam database, bukan jam proses; kuota chat tidak berubah.
+- Deadline operasi 70 detik, masa kunci 90 detik. Pembatalan/kegagalan tetap memakai percobaan; penghapusan kunci harus cocok dengan token reservasi agar pekerja lama tidak menghapus kunci pengganti. Commit yang hasilnya tidak diketahui ditolak tanpa refund; kedaluwarsa memulihkan kunci setelah proses mati.
+- Migrasi idempoten `document-analysis-operations.sql` dijalankan saat startup dan post-merge. Hentikan semua proses versi lama sebelum mengandalkan pembatas bersama: versi lama masih memakai pembatas lokal dan tidak mematuhi reservasi baru.
+- Regresi terfokus: `pnpm --filter @workspace/api-server exec node --test test/document-analysis-operations-postgres.test.mjs test/document-analysis-preview.test.mjs test/ai-budget-postgres.test.mjs`. Fixture PostgreSQL memakai skema dan login terbatas terpisah, storage/AI sintetis, tanpa membaca berkas atau memanggil penyedia AI nyata.
+
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details

@@ -32,6 +32,7 @@ try {
   const migration = await readFile(new URL("../../../lib/db/migrations/ai-budget.sql", import.meta.url), "utf8");
   await bootstrap.query(migration);
   await bootstrap.query(migration);
+  await bootstrap.query(await readFile(new URL("../../../lib/db/migrations/document-analysis-operations.sql", import.meta.url), "utf8"));
   for (const table of ["sbu_profiles", "sbu_cases", "sbu_documents", "sbu_document_analyses"]) {
     await bootstrap.query(`CREATE TABLE ${table} (LIKE public.${table} INCLUDING ALL)`);
   }

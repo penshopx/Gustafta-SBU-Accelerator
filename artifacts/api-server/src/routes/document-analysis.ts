@@ -1,8 +1,8 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { getAuth } from "@clerk/express";
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { db, casesTable, documentsTable, documentAnalysesTable } from "@workspace/db";
+import { db, casesTable, documentsTable, documentAnalysesTable, documentAnalysisOperationsTable } from "@workspace/db";
 import {
   ListDocumentAnalysesParams, ListDocumentAnalysesResponse, AnalyzeCaseDocumentParams,
   AnalyzeCaseDocumentBody, AnalyzeCaseDocumentResponse, DeleteDocumentAnalysisParams,
@@ -17,14 +17,48 @@ import { ANALYSIS_DISCLAIMER, ANALYSIS_MODEL, AnalysisFormatError, MAX_ANALYSIS_
 import { prepareAnalysisPayload, sourcePageCount, sourceRevision } from "../lib/document-analysis-pages";
 import { MAX_DOCUMENT_BYTES } from "../lib/document-validation";
 import { AiBudgetError, reserveAiBudget, type ReserveAiBudget } from "../lib/ai-budget";
+import { documentOperationStore, DocumentOperationError, DOCUMENT_OPERATION_TIMEOUT_MS,
+  type DocumentOperationStore } from "../lib/document-analysis-operations";
 
 type Generate = (bytes: Buffer, contentType: string, input: DocumentAnalysisInput, signal: AbortSignal) => Promise<DocumentAnalysisResult>;
 // Real SBU auth + immutable form owner middleware must precede this router.
-export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumentBytes, reserveBudget: ReserveAiBudget = reserveAiBudget): IRouter {
+export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumentBytes, reserveBudget: ReserveAiBudget = reserveAiBudget,
+  operations: DocumentOperationStore = documentOperationStore, timeoutMs = DOCUMENT_OPERATION_TIMEOUT_MS): IRouter {
   const router: IRouter = Router();
-  const active = new Set<string>();
-  const limits = new Map<string, { since: number; count: number }>();
-  const inspections = new Map<string, { since: number; count: number }>();
+  const startOperation = async (req: Request, res: Response, userId: string, kind: "analysis" | "inspection") => {
+    let token: string;
+    try { token = await operations.reserve(userId, kind); }
+    catch (error) {
+      if (res.destroyed) return;
+      const status = error instanceof DocumentOperationError ? error.status : 503;
+      if (status === 429) res.set("Retry-After", "60");
+      res.status(status).json({ error: status === 429
+        ? "Tunggu operasi dokumen sebelumnya atau coba lagi dalam satu menit."
+        : "Batas operasi dokumen belum dapat diverifikasi. Coba lagi nanti." });
+      return;
+    }
+    if (req.aborted || res.destroyed) { await operations.release(userId, token); return; }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Math.min(timeoutMs, DOCUMENT_OPERATION_TIMEOUT_MS));
+    const disconnect = () => { if (!res.writableEnded) controller.abort(); };
+    res.on("close", disconnect);
+    // Attach the rejection handler immediately, before any storage await.
+    let rejectAbort: (reason: Error) => void;
+    const aborted = new Promise<never>((_resolve, reject) => { rejectAbort = reject; });
+    void aborted.catch(() => {});
+    const onAbort = () => rejectAbort(new Error("document_operation_cancelled"));
+    controller.signal.addEventListener("abort", onAbort, { once: true });
+    return {
+      token, controller,
+      race: <T>(work: Promise<T>) => Promise.race([work, aborted]),
+      finish: async () => {
+        clearTimeout(timer);
+        res.off("close", disconnect);
+        controller.signal.removeEventListener("abort", onAbort);
+        await operations.release(userId, token);
+      },
+    };
+  };
   router.use((_req, res, next) => { res.set("Cache-Control", "private, no-store"); next(); });
   router.use((req, res, next) => {
     if (!/^\/cases\/[^/]+\/documents\/[^/]+\/(?:analyses(?:\/|$)|analysis-source(?:\/|$)|analysis-preview(?:\/|$))/.test(req.path)) {
@@ -61,20 +95,23 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
     const userId = getAuth(req).userId!;
     const document = await owned(params.data.id, params.data.documentId, userId);
     if (!document?.scanGeneration) { res.status(404).json({ error: "Dokumen belum tersedia." }); return; }
-    const now = Date.now();
-    for (const [id, item] of inspections) if (now - item.since >= 60000) inspections.delete(id);
-    const limit = inspections.get(userId) ?? { since: now, count: 0 };
-    if (active.has(userId) || limit.count >= 12 || inspections.size >= 1000) {
-      res.status(429).json({ error: "Tunggu sebelum membaca jumlah halaman lagi." }); return;
-    }
-    limit.count++; inspections.set(userId, limit); active.add(userId);
+    const operation = await startOperation(req, res, userId, "inspection");
+    if (!operation) return;
     try {
-      const count = await sourcePageCount(await readSource(document), document.contentType);
+      const count = await operation.race((async () => {
+        const bytes = await readSource(document);
+        operation.controller.signal.throwIfAborted();
+        const count = await sourcePageCount(bytes, document.contentType);
+        operation.controller.signal.throwIfAborted();
+        await operations.assertCurrent(userId, operation.token);
+        return count;
+      })());
+      if (res.destroyed) return;
       res.json(GetDocumentAnalysisSourceResponse.parse({ documentId: document.id, version: document.version,
         sourceRevision: sourceRevision(document), pageCount: count, model: ANALYSIS_MODEL }));
     } catch {
-      res.status(422).json({ error: "Jumlah halaman tidak dapat dibaca. Dokumen asli tidak diubah dan tidak dikirim ke AI." });
-    } finally { active.delete(userId); }
+      if (!res.destroyed) res.status(422).json({ error: "Jumlah halaman tidak dapat dibaca. Dokumen asli tidak diubah dan tidak dikirim ke AI." });
+    } finally { await operation.finish(); }
   });
   router.post("/cases/:id/documents/:documentId/analysis-preview", async (req, res): Promise<void> => {
     const params = PreviewDocumentAnalysisParams.safeParse(req.params);
@@ -90,21 +127,21 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
     if (sourceRevision(document) !== input.data.sourceRevision) {
       res.status(409).json({ error: "Versi dokumen berubah. Muat ulang sebelum membuat pratinjau." }); return;
     }
-    const now = Date.now();
-    for (const [id, item] of inspections) if (now - item.since >= 60000) inspections.delete(id);
-    const limit = inspections.get(userId) ?? { since: now, count: 0 };
-    if (active.has(userId) || limit.count >= 12 || inspections.size >= 1000) {
-      res.status(429).json({ error: "Tunggu sebelum membuat pratinjau lagi." }); return;
-    }
-    limit.count++; inspections.set(userId, limit); active.add(userId);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 70000);
-    const disconnect = () => { if (!res.writableEnded) controller.abort(); };
-    res.on("close", disconnect);
+    const operation = await startOperation(req, res, userId, "inspection");
+    if (!operation) return;
+    const { controller } = operation;
     try {
-      const payload = await prepareAnalysisPayload(await readSource(document), document.contentType, input.data.pages, controller.signal);
+      const { payload, current } = await operation.race((async () => {
+        const bytes = await readSource(document);
+        controller.signal.throwIfAborted();
+        const payload = await prepareAnalysisPayload(bytes, document.contentType, input.data.pages, controller.signal);
+        controller.signal.throwIfAborted();
+        await operations.assertCurrent(userId, operation.token);
+        const current = await owned(params.data.id, params.data.documentId, userId);
+        controller.signal.throwIfAborted();
+        return { payload, current };
+      })());
       controller.signal.throwIfAborted();
-      const current = await owned(params.data.id, params.data.documentId, userId);
       if (!current || sourceRevision(current) !== input.data.sourceRevision) {
         res.status(409).json({ error: "Dokumen berubah. Buat pratinjau baru." }); return;
       }
@@ -114,7 +151,7 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
       }));
     } catch {
       if (!res.destroyed) res.status(422).json({ error: "Pratinjau tidak dapat dibuat. Pilih 1–10 halaman, maksimal 4 MiB. Tidak ada pengiriman ke AI." });
-    } finally { clearTimeout(timer); res.off("close", disconnect); active.delete(userId); }
+    } finally { await operation.finish(); }
   });
   router.get("/cases/:id/documents/:documentId/analyses", async (req, res): Promise<void> => {
     const params = ListDocumentAnalysesParams.safeParse(req.params);
@@ -149,27 +186,20 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
     const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(documentAnalysesTable)
       .where(and(eq(documentAnalysesTable.documentId, document.id), eq(documentAnalysesTable.ownerId, userId)));
     if (count >= 10) { res.status(429).json({ error: "Maksimal 10 hasil bedah per versi dokumen. Hapus hasil yang tidak diperlukan." }); return; }
-    const now = Date.now();
-    for (const [id, limit] of limits) if (!active.has(id) && now - limit.since >= 60000) limits.delete(id);
-    let limit = limits.get(userId);
-    if (!limit) {
-      if (limits.size >= 1000) { res.status(503).json({ error: "Layanan sedang sibuk." }); return; }
-      limit = { since: now, count: 0 }; limits.set(userId, limit);
-    }
-    if (active.has(userId) || limit.count >= 3) {
-      res.set("Retry-After", "60"); res.status(429).json({ error: "Tunggu bedah sebelumnya atau coba lagi dalam satu menit." }); return;
-    }
-    limit.count++; active.add(userId);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 70000);
-    const disconnect = () => { if (!res.writableEnded) controller.abort(); };
-    res.on("close", disconnect);
+    const operation = await startOperation(req, res, userId, "analysis");
+    if (!operation) return;
+    const { controller } = operation;
     try {
       const run = async () => {
         const bytes = await readSource(document);
+        controller.signal.throwIfAborted();
         const payload = await prepareAnalysisPayload(bytes, document.contentType, input.data.pages, controller.signal);
         controller.signal.throwIfAborted();
+        await operations.assertCurrent(userId, operation.token);
+        controller.signal.throwIfAborted();
         await reserveBudget("document_analysis");
+        controller.signal.throwIfAborted();
+        await operations.assertCurrent(userId, operation.token);
         controller.signal.throwIfAborted();
         const result = AnalyzeCaseDocumentResponse.shape.result.parse(
           await generate(payload.bytes, document.contentType, input.data, controller.signal));
@@ -177,6 +207,13 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
         // Recheck source existence and quota under a lock after the model call.
         // No transaction or row lock is held during a paid provider request.
         return db.transaction(async (tx) => {
+          // Fence a stale worker after expiry/takeover, including a provider
+          // that ignored cancellation. Release uses the same token condition.
+          const [lease] = await tx.select().from(documentAnalysisOperationsTable).where(and(
+            eq(documentAnalysisOperationsTable.ownerId, userId),
+            eq(documentAnalysisOperationsTable.token, operation.token),
+            sql`${documentAnalysisOperationsTable.expiresAt} > clock_timestamp()`)).for("update");
+          if (!lease || controller.signal.aborted) return null;
           const [current] = await tx.select().from(documentsTable).where(and(eq(documentsTable.id, document.id),
             eq(documentsTable.ownerId, userId), eq(documentsTable.caseId, document.caseId),
             eq(documentsTable.status, "ready"), eq(documentsTable.scanStatus, "clean"),
@@ -191,12 +228,11 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
             focus: input.data.focus, result, model: ANALYSIS_MODEL,
             sourcePages: input.data.pages, sourcePageCount: payload.pageCount, sourceVersion: document.version,
           }).returning();
+          controller.signal.throwIfAborted();
           return saved;
         });
       };
-      const aborted = new Promise<never>((_resolve, reject) =>
-        controller.signal.addEventListener("abort", () => reject(new Error("analysis_cancelled")), { once: true }));
-      const row = await Promise.race([run(), aborted]);
+      const row = await operation.race(run());
       if (res.destroyed) return;
       if (!row) { res.status(409).json({ error: "Dokumen atau batas riwayat berubah. Muat ulang sebelum mencoba kembali." }); return; }
       res.status(201).json(AnalyzeCaseDocumentResponse.parse({ ...row, disclaimer: ANALYSIS_DISCLAIMER }));
@@ -211,7 +247,7 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
           ? "Pilihan halaman tidak dapat dibedah. Pilih 1–10 halaman yang ada; payload hasil maksimal 4 MiB. PDF harus dapat dibuka dan tidak terproteksi."
           : "Bedah belum berhasil dikonfirmasi. Periksa riwayat sebelum mencoba lagi; dokumen asli tidak diubah.",
       });
-    } finally { clearTimeout(timer); res.off("close", disconnect); active.delete(userId); }
+    } finally { await operation.finish(); }
   });
   router.delete("/cases/:id/documents/:documentId/analyses/:analysisId", async (req, res): Promise<void> => {
     const params = DeleteDocumentAnalysisParams.safeParse(req.params);

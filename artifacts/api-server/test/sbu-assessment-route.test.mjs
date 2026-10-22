@@ -220,7 +220,7 @@ await build({
              export const profilesTable = { userId: "userId" };
              export const companyProfilesTable = {};
              export const documentsTable = {};
-             export const documentAnalysesTable = {};
+             export const documentAnalysesTable = {}, documentAnalysisOperationsTable = {};
              export const consultationsTable = {};
              export const personnelTable = { id: "id", caseId: "caseId", ownerId: "ownerId", updatedAt: "updatedAt" };
              export const skkCertificatesTable = {};

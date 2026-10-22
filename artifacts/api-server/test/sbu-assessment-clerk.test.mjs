@@ -184,7 +184,7 @@ await build({
           export const profilesTable = { userId: "userId" };
           export const companyProfilesTable = {};
           export const documentsTable = {};
-          export const documentAnalysesTable = {};
+          export const documentAnalysesTable = {}, documentAnalysisOperationsTable = {};
           // Required by unrelated routers bundled with the real app. Their
           // queries remain unsupported; these tests must not access them.
           export const consultationsTable = {};

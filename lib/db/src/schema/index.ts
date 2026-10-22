@@ -27,3 +27,4 @@ export * from "./workroom-reviews";
 export * from "./chat-quota";
 export * from "./chat-source-reviews";
 export * from "./ai-budget";
+export * from "./document-analysis-operations";

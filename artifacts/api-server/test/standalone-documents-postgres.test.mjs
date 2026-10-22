@@ -35,6 +35,7 @@ test("standalone profiles/documents isolate owners and preserve records after st
       ADD COLUMN version integer NOT NULL DEFAULT 1`);
     await bootstrap.query("CREATE TABLE sbu_document_analyses (LIKE public.sbu_document_analyses INCLUDING ALL)");
     await bootstrap.query(await readFile(new URL("../../../lib/db/migrations/document-analysis-pages.sql", import.meta.url), "utf8"));
+    await bootstrap.query(await readFile(new URL("../../../lib/db/migrations/document-analysis-operations.sql", import.meta.url), "utf8"));
     await bootstrap.query("RESET search_path");
     restricted = await createRestrictedRoutePool(admin, schema);
     globalThis.__standalonePool = restricted.pool;
@@ -74,7 +75,8 @@ test("standalone profiles/documents isolate owners and preserve records after st
             contents: path === "db" ? `
               import { drizzle } from "drizzle-orm/node-postgres";
               export * from ${JSON.stringify(fileURLToPath(new URL("../../../lib/db/src/schema/index.ts", import.meta.url)))};
-              export const db = drizzle(globalThis.__standalonePool);
+              export const pool = globalThis.__standalonePool;
+              export const db = drizzle(pool);
             ` : path === "auth" ? `export const getAuth = req => ({ userId: req.get("x-test-user") ?? null });`
               : path === "analysis-router" ? `
               import {createDocumentAnalysisRouter} from ${JSON.stringify(join(dir, "../src/routes/document-analysis.ts"))};
