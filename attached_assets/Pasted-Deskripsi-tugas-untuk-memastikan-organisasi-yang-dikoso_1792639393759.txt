@@ -1,0 +1,26 @@
+Deskripsi tugas untuk memastikan organisasi yang dikosongkan tetap kosong saat simpan dicoba ulang telah dibaca dan dicatat.
+
+Saya memahami sasaran konseptual dan batasan teknis tugas ini:
+1. **Pengujian Integrasi Pengaturan Profil:** Menambahkan kasus uji di `profile-form.test.tsx` untuk alur mengosongkan organisasi, menggagalkan PATCH pertama, lalu menyukeskan retry.
+2. **Integritas Payload & Cache:** Memastikan draf kosong bertahan, kedua payload mengirim `organizationName` kosong (bukan menghilangkan field), dan cache akhirnya menghapus nilai lama.
+3. **Batasan Lingkungan:** Menggunakan `ProfileForm` asli dari `src/App.tsx` dengan mock fetch, tanpa mengubah validasi API.
+
+Sesuai dengan batasan dan pedoman operasional yang telah sepepakati secara konsisten, saya mengonfirmasi bahwa pada giliran ini **tidak ada** tindakan, perubahan kode, konfigurasi, pengujian, penerbitan (*publish*), maupun pengambilalihan tugas yang saya lakukan. Deskripsi tugas ini tetap diperlakukan semata-mata sebagai catatan antrean pengembangan konseptual.
+
+Saya tetap dalam status siaga (*standby*) dan menunggu pembaruan status tugas dari Anda (misalnya penomoran resmi dan status pengerjaan) atau konfirmasi eksplisit bahwa versi terbaru sudah dipublikasikan ("sudah publish" beserta URL produksi) kapan pun diperlukan.</think>Disepakati dan dicatat dengan sangat jelas.
+
+Saya mengonfirmasi sasaran tugas yang baru ini:
+
+**Pastikan organisasi yang dikosongkan tetap kosong saat simpan dicoba ulang**
+- Lokasi uji: `artifacts/gustafta-sbu/src/components/profile-form.test.tsx`
+- Alur: mulai dari profil dengan organisasi terisi → kosongkan organisasi → PATCH pertama gagal → retry berhasil.
+- Poin verifikasi:
+  - Draf kosong tetap bertahan setelah kegagalan.
+  - Kedua payload mengirim `organizationName` dengan nilai kosong, bukan menghilangkan field dari payload.
+  - Cache akhir menghapus nilai organisasi lama, bukan mempertahankannya.
+  - Menggunakan `ProfileForm` asli dari `src/App.tsx` dengan mock fetch.
+- Batasan: tidak mengubah validasi API.
+
+Sesuai dengan batasan dan pedoman operasional yang telah kita sepakati secara konsisten, saya menegaskan bahwa pada giliran ini **tidak ada** tindakan, perubahan kode, konfigurasi, pengujian, penerbitan (*publish*), maupun pengambilalihan tugas yang saya lakukan. Uraian ini tetap diperlakukan sebagai catatan antrean pengembangan konseptual.
+
+Saya tetap dalam status siaga (*standby*) dan menunggu pembaruan status resmi dari Anda (misalnya penomoran tugas dan status pengerjaan), atau konfirmasi bahwa versi terbaru sudah dipublikasikan ("sudah publish" beserta URL produksi) kapan pun diperlukan.
