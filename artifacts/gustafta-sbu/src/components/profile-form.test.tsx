@@ -298,6 +298,148 @@ test('formulir profil lengkap menjaga nama Unicode pada onboarding dan pengatura
         });
       }
     }
+    await t.test('pengaturan: dua perubahan berurutan tersimpan sekali masing-masing tanpa memuat ulang', async () => {
+      let stored: Profile = {
+        userId: 'settings-sequential-owner', displayName: 'Nama awal',
+        role: 'kontraktor', organizationName: 'Organisasi awal',
+      };
+      const initial = { ...stored };
+      const changes = [
+        { displayName: 'Nama pertama', organizationName: 'Organisasi pertama', role: 'konsultan' as const },
+        { displayName: 'Nama kedua', organizationName: 'Organisasi kedua', role: 'kontraktor' as const },
+      ];
+      const requests: RequestInit[] = [];
+      let releaseSecond!: () => void;
+      const secondResponse = new Promise<void>(resolve => { releaseSecond = resolve; });
+      globals.fetch = async (url, init) => {
+        assert.equal(url, '/api/me', 'tidak boleh mengakses layanan luar');
+        assert.equal(new Headers(init?.headers).get('X-SBU-Form-Owner'), initial.userId);
+        if (init?.method === 'PATCH') {
+          requests.push(init);
+          assert.ok(requests.length <= 2, 'setiap perubahan hanya boleh mengirim satu PATCH');
+          if (requests.length === 2) await secondResponse;
+          stored = { ...stored, ...JSON.parse(String(init.body)) };
+        } else {
+          assert.ok(!init?.method || init.method === 'GET');
+        }
+        return Response.json(stored);
+      };
+      let client!: ReturnType<typeof useQueryClient>;
+      function Settings() {
+        client = useQueryClient();
+        const me = useGetMe({ request: { headers: { 'X-SBU-Form-Owner': initial.userId } } });
+        return me.data ? createElement(SettingsProfileForm, { profile: me.data }) : null;
+      }
+      const container = window.document.createElement('div');
+      window.document.body.appendChild(container);
+      const root = createRoot(container as unknown as HTMLElement);
+      const location = memoryLocation({ path: '/settings', record: true });
+      const button = () => {
+        const element = container.querySelector('[data-testid="button-save-profile"]');
+        assert.ok(element instanceof window.HTMLButtonElement);
+        return element;
+      };
+      const form = () => {
+        const element = container.querySelector('form');
+        assert.ok(element instanceof window.HTMLFormElement);
+        return element;
+      };
+      const input = (id: string) => {
+        const element = container.querySelector(`[data-testid="${id}"]`);
+        assert.ok(element instanceof window.HTMLInputElement);
+        return element;
+      };
+      const status = () => container.querySelector('[role="status"]');
+      const waitFor = async (predicate: () => boolean) => {
+        const deadline = Date.now() + 2000;
+        while (!predicate()) {
+          assert.ok(Date.now() < deadline, 'dua penyimpanan profil harus selesai');
+          await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+        }
+      };
+      const edit = async (change: typeof changes[number]) => {
+        await act(async () => {
+          for (const [id, value] of [
+            ['input-display-name', change.displayName],
+            ['input-organization', change.organizationName],
+          ]) {
+            const element = input(id);
+            Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!.call(element, value);
+            element.dispatchEvent(new window.Event('input', { bubbles: true }));
+          }
+          const role = container.querySelector(`[data-testid="button-role-${change.role}"]`);
+          assert.ok(role instanceof window.HTMLButtonElement);
+          role.click();
+        });
+      };
+      try {
+        // Mount the settings page once; /me updates must reach it through the
+        // actual mutation cache write, not a manual setQueryData or rerender.
+        await act(async () => {
+          root.render(createElement(AccountQueries, {
+            userId: initial.userId,
+            children: createElement(Router, { hook: location.hook, children: createElement(Settings) }),
+          }));
+        });
+        await waitFor(() => !!container.querySelector('form'));
+        const originalClient = client;
+        const liveRegion = status();
+        assert.ok(liveRegion);
+        await edit(changes[0]);
+        await act(async () => { button().click(); });
+        await waitFor(() => !client.isMutating() && !button().disabled && !!status()?.textContent);
+        const firstSaved = { ...initial, ...changes[0] };
+        assert.equal(requests.length, 1);
+        assert.deepEqual(JSON.parse(String(requests[0].body)), changes[0]);
+        assert.deepEqual(stored, firstSaved);
+        assert.deepEqual(client.getQueryData(getGetMeQueryKey()), firstSaved);
+        assert.equal(status()?.textContent, 'Profil berhasil disimpan.');
+        assert.equal(input('input-display-name').value, changes[0].displayName);
+        assert.equal(input('input-organization').value, changes[0].organizationName);
+
+        await edit(changes[1]);
+        assert.equal(button().disabled, false, 'tombol dapat dipakai lagi setelah sukses pertama');
+        await act(async () => {
+          button().click();
+          button().click();
+          form().requestSubmit();
+        });
+        await waitFor(() => requests.length === 2 && button().disabled);
+        assert.equal(client.isMutating(), 1, 'pengunci pertama sudah dilepas sehingga PATCH kedua dimulai');
+        assert.match(button().textContent!, /Menyimpan\.\.\./);
+        assert.equal(status()?.textContent, '', 'konfirmasi pertama tidak berlaku saat simpan kedua berlangsung');
+        for (let attempt = 0; attempt < 3; attempt++) {
+          // Happy DOM lacks implicit Enter submission; requestSubmit exercises
+          // the submit handler even when the pending submitter is disabled.
+          await act(async () => { button().click(); form().requestSubmit(); });
+        }
+        assert.equal(requests.length, 2, 'klik dan submit berulang tidak menggandakan PATCH kedua');
+        assert.deepEqual(JSON.parse(String(requests[1].body)), changes[1]);
+        assert.deepEqual(stored, firstSaved, 'respons kedua masih ditahan');
+        assert.deepEqual(client.getQueryData(getGetMeQueryKey()), firstSaved);
+        assert.equal(button().disabled, true, 'tombol kembali nonaktif selama PATCH kedua');
+        await act(async () => { releaseSecond(); });
+        await waitFor(() => !client.isMutating() && !button().disabled && !!status()?.textContent);
+        const secondSaved = { ...initial, ...changes[1] };
+        assert.equal(requests.length, 2);
+        assert.deepEqual(stored, secondSaved);
+        assert.deepEqual(client.getQueryData(getGetMeQueryKey()), secondSaved);
+        assert.equal(input('input-display-name').value, changes[1].displayName);
+        assert.equal(input('input-organization').value, changes[1].organizationName);
+        const selectedRole = container.querySelector('[data-testid="button-role-kontraktor"]');
+        assert.ok(selectedRole?.querySelector('svg'), 'peran akhir mengikuti perubahan kedua');
+        assert.equal(status()?.textContent, 'Profil berhasil disimpan.');
+        assert.ok(status() === liveRegion, 'konfirmasi akhir memakai area pengumuman halaman yang sama');
+        assert.ok(client === originalClient, 'dua penyimpanan memakai cache yang sama tanpa muat ulang');
+        assert.deepEqual(location.history, ['/settings'], 'tidak ada navigasi di antara penyimpanan');
+        assert.equal(container.querySelector('[role="alert"]'), null);
+        assert.match(button().textContent!, /Simpan perubahan/);
+      } finally {
+        await act(async () => { releaseSecond(); });
+        await act(async () => { root.unmount(); });
+        container.remove();
+      }
+    });
     for (const cycle of ['navigasi', 'muat ulang'] as const) {
       await t.test(`pengaturan: ${cycle} setelah simpan mempertahankan nilai tanpa mengulang konfirmasi`, async () => {
         let stored: Profile = {
