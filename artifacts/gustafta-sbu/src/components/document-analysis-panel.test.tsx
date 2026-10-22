@@ -19,7 +19,7 @@ test('pilihan halaman mengikat persetujuan, request owner, dan pemetaan riwayat 
   const server = await createServer({
     configFile: false, root: fileURLToPath(new URL('../../', import.meta.url)), appType: 'custom',
     server: { middlewareMode: true, hmr: false }, optimizeDeps: { noDiscovery: true, include: [] },
-    resolve: { dedupe: ['react', 'react-dom'] }, esbuild: { jsx: 'automatic' },
+    resolve: { dedupe: ['react', 'react-dom'], alias: { '@': fileURLToPath(new URL('../', import.meta.url)) } }, esbuild: { jsx: 'automatic' },
     define: { 'import.meta.env.BASE_URL': JSON.stringify('/') },
   });
   const container = window.document.createElement('div');
@@ -40,12 +40,25 @@ test('pilihan halaman mengikat persetujuan, request owner, dan pemetaan riwayat 
       return createElement(DocumentAnalysisPanel, { doc, expectedUserId: 'owner-a', close() {} });
     }
     let rows: DocumentAnalysis[] = [];
+    const previews: Record<string, unknown>[] = [];
+    let delayPreview = false;
+    let failPreview = false;
+    let releasePreview: (() => void) | undefined;
     const requests: Record<string, unknown>[] = [];
     globals.fetch = async (url, init) => {
       assert.equal(new Headers(init?.headers).get('X-SBU-Form-Owner'), 'owner-a');
       if (String(url).endsWith('/analysis-source')) return Response.json({
-        documentId: doc.id, version: 3, pageCount: 40, sourceRevision: 'a'.repeat(64), model: 'synthetic-model',
+        documentId: doc.id, version: doc.version, pageCount: 40, sourceRevision: (doc.version === 3 ? 'a' : 'b').repeat(64), model: 'synthetic-model',
       });
+      if (String(url).endsWith('/analysis-preview')) {
+        const input = JSON.parse(String(init?.body));
+        previews.push(input);
+        if (delayPreview) await new Promise<void>(resolve => { releasePreview = resolve; });
+        if (failPreview) return Response.json({ error: 'bad selection' }, { status: 422 });
+        return Response.json({ documentId: doc.id, caseId: doc.caseId, version: doc.version,
+          sourceRevision: input.sourceRevision, payloadBytes: 2048,
+          images: input.pages.map((sourcePage: number) => ({ sourcePage, dataUrl: 'data:image/png;base64,aGVsbG8=' })) });
+      }
       assert.ok(String(url).endsWith('/analyses'));
       if (init?.method !== 'POST') return Response.json(rows);
       const input = JSON.parse(String(init.body));
@@ -80,12 +93,28 @@ test('pilihan halaman mengikat persetujuan, request owner, dan pemetaan riwayat 
       Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!.call(el, value);
       el.dispatchEvent(new window.Event('input', { bubbles: true }) as unknown as Event);
     });
+    const loadImages = async () => act(async () => {
+      for (const image of container.querySelectorAll('[data-testid="analysis-preview-image"]'))
+        image.dispatchEvent(new window.Event('load'));
+    });
+    const preview = async () => {
+      await act(async () => element('button-preview-analysis').click());
+      await wait(() => !!container.querySelector('[data-testid="analysis-preview"]'));
+      // Happy DOM emits load synchronously for data URLs; a real browser
+      // verifies decoding in the browser regression.
+      await loadImages();
+      assert.equal(element('checkbox-analysis-consent').disabled, false);
+    };
     await render('first');
     await wait(() => container.textContent!.includes('40 halaman'));
     assert.equal(requests.length, 0);
     assert.equal(element('checkbox-analysis-consent').disabled, true);
     await input('2-3, 18');
-    assert.equal(element('checkbox-analysis-consent').disabled, false);
+    assert.equal(element('checkbox-analysis-consent').disabled, true, 'preview required before paid consent');
+    await preview();
+    assert.deepEqual(previews[0], { pages: [2, 3, 18], sourceRevision: 'a'.repeat(64) });
+    assert.equal(requests.length, 0, 'preview never runs AI analysis');
+    assert.match(container.textContent!, /Halaman kirim 3 → halaman asli 18/);
     assert.match(container.textContent!, /synthetic-model/);
     assert.match(container.textContent!, /Kredit Replit/);
     assert.match(container.textContent!, /tidak ada integrasi Gustafta/);
@@ -93,10 +122,30 @@ test('pilihan halaman mengikat persetujuan, request owner, dan pemetaan riwayat 
     assert.equal(element('button-run-analysis').disabled, false, '8 MiB PDF original does not block bounded selection');
     await input('2-3, 19');
     assert.equal(element('checkbox-analysis-consent').checked, false, 'changing selection revokes consent');
+    assert.equal(container.querySelector('[data-testid="analysis-preview"]'), null);
     assert.equal(element('button-run-analysis').disabled, true);
+    await input('2-3, 18');
+    assert.equal(element('checkbox-analysis-consent').disabled, true, 'returning to old selection does not restore preview');
+    delayPreview = true;
+    await act(async () => element('button-preview-analysis').click());
+    await wait(() => !!releasePreview);
+    await input('2-3, 19');
+    await act(async () => { releasePreview!(); });
+    assert.equal(container.querySelector('[data-testid="analysis-preview"]'), null, 'late preview is discarded');
+    assert.equal(element('checkbox-analysis-consent').disabled, true);
+    delayPreview = false;
     await input('1-11');
     assert.equal(element('checkbox-analysis-consent').disabled, true);
     await input('19, 2-3');
+    failPreview = true;
+    await act(async () => element('button-preview-analysis').click());
+    await wait(() => container.textContent!.includes('Pratinjau belum dapat dibuat.'));
+    assert.equal(element('checkbox-analysis-consent').disabled, true);
+    failPreview = false;
+    await preview();
+    await act(async () => container.querySelector('[data-testid="analysis-preview-image"]')!.dispatchEvent(new window.Event('error')));
+    assert.equal(element('checkbox-analysis-consent').disabled, true, 'unreadable images block consent');
+    await preview();
     await act(async () => element('checkbox-analysis-consent').click());
     await act(async () => element('button-run-analysis').click());
     await wait(() => !!container.querySelector('[data-testid="analysis-result"]'));
@@ -107,6 +156,23 @@ test('pilihan halaman mengikat persetujuan, request owner, dan pemetaan riwayat 
     assert.match(container.textContent!, /Snapshot versi 3, 40 halaman asli/);
     assert.match(container.textContent!, /1 → 19; 2 → 2; 3 → 3/);
     assert.equal(element('checkbox-analysis-consent').checked, false);
+    await input('1');
+    await preview();
+    await act(async () => element('checkbox-analysis-consent').click());
+    assert.equal(element('button-run-analysis').disabled, false);
+    doc.version = 4;
+    await render('reopened');
+    assert.equal(container.querySelector('[data-testid="analysis-preview"]'), null, 'document version invalidates visible preview immediately');
+    assert.equal(element('checkbox-analysis-consent').checked, false);
+    assert.equal(element('button-run-analysis').disabled, true);
+    // Refresh source data without remounting the form.
+    await act(async () => {
+      for (const client of clients) await client.invalidateQueries({ queryKey: ['/api/cases/1/documents/' + doc.id + '/analysis-source'] });
+    });
+    await wait(() => !element('button-preview-analysis').disabled);
+    await preview();
+    assert.equal(element('checkbox-analysis-consent').checked, false, 'new version requires fresh consent');
+    assert.equal(requests.length, 1);
   } finally {
     await act(async () => root.unmount());
     for (const client of clients) client.clear();

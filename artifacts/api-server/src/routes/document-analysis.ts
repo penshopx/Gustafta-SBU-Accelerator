@@ -8,6 +8,7 @@ import {
   AnalyzeCaseDocumentBody, AnalyzeCaseDocumentResponse, DeleteDocumentAnalysisParams,
   type DocumentAnalysisInput, type DocumentAnalysisResult,
   GetDocumentAnalysisSourceParams, GetDocumentAnalysisSourceResponse,
+  PreviewDocumentAnalysisParams, PreviewDocumentAnalysisBody, PreviewDocumentAnalysisResponse,
   GetConsultationAnalysisPreviewParams,
 } from "@workspace/api-zod";
 import { consultationAnalysis, ConsultationSourceError, sourceErrorMessage } from "../lib/consultation-analysis";
@@ -26,7 +27,7 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
   const inspections = new Map<string, { since: number; count: number }>();
   router.use((_req, res, next) => { res.set("Cache-Control", "private, no-store"); next(); });
   router.use((req, res, next) => {
-    if (!/^\/cases\/[^/]+\/documents\/[^/]+\/(?:analyses(?:\/|$)|analysis-source(?:\/|$))/.test(req.path)) {
+    if (!/^\/cases\/[^/]+\/documents\/[^/]+\/(?:analyses(?:\/|$)|analysis-source(?:\/|$)|analysis-preview(?:\/|$))/.test(req.path)) {
       next(); return;
     }
     const userId = getAuth(req).userId;
@@ -74,6 +75,46 @@ export function createDocumentAnalysisRouter(generate: Generate = analyzeDocumen
     } catch {
       res.status(422).json({ error: "Jumlah halaman tidak dapat dibaca. Dokumen asli tidak diubah dan tidak dikirim ke AI." });
     } finally { active.delete(userId); }
+  });
+  router.post("/cases/:id/documents/:documentId/analysis-preview", async (req, res): Promise<void> => {
+    const params = PreviewDocumentAnalysisParams.safeParse(req.params);
+    const input = PreviewDocumentAnalysisBody.safeParse(req.body);
+    if (!params.success || !input.success ||
+        Object.keys(req.body ?? {}).some(key => !["pages", "sourceRevision"].includes(key)) ||
+        new Set(input.data.pages).size !== input.data.pages.length) {
+      res.status(400).json({ error: "Pilih 1–10 halaman tanpa duplikat." }); return;
+    }
+    const userId = getAuth(req).userId!;
+    const document = await owned(params.data.id, params.data.documentId, userId);
+    if (!document?.scanGeneration) { res.status(404).json({ error: "Dokumen belum tersedia." }); return; }
+    if (sourceRevision(document) !== input.data.sourceRevision) {
+      res.status(409).json({ error: "Versi dokumen berubah. Muat ulang sebelum membuat pratinjau." }); return;
+    }
+    const now = Date.now();
+    for (const [id, item] of inspections) if (now - item.since >= 60000) inspections.delete(id);
+    const limit = inspections.get(userId) ?? { since: now, count: 0 };
+    if (active.has(userId) || limit.count >= 12 || inspections.size >= 1000) {
+      res.status(429).json({ error: "Tunggu sebelum membuat pratinjau lagi." }); return;
+    }
+    limit.count++; inspections.set(userId, limit); active.add(userId);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 70000);
+    const disconnect = () => { if (!res.writableEnded) controller.abort(); };
+    res.on("close", disconnect);
+    try {
+      const payload = await prepareAnalysisPayload(await readSource(document), document.contentType, input.data.pages, controller.signal);
+      controller.signal.throwIfAborted();
+      const current = await owned(params.data.id, params.data.documentId, userId);
+      if (!current || sourceRevision(current) !== input.data.sourceRevision) {
+        res.status(409).json({ error: "Dokumen berubah. Buat pratinjau baru." }); return;
+      }
+      if (!res.destroyed) res.json(PreviewDocumentAnalysisResponse.parse({
+        documentId: document.id, caseId: document.caseId, version: document.version,
+        sourceRevision: sourceRevision(document), payloadBytes: payload.bytes.length, images: payload.images,
+      }));
+    } catch {
+      if (!res.destroyed) res.status(422).json({ error: "Pratinjau tidak dapat dibuat. Pilih 1–10 halaman, maksimal 4 MiB. Tidak ada pengiriman ke AI." });
+    } finally { clearTimeout(timer); res.off("close", disconnect); active.delete(userId); }
   });
   router.get("/cases/:id/documents/:documentId/analyses", async (req, res): Promise<void> => {
     const params = ListDocumentAnalysesParams.safeParse(req.params);

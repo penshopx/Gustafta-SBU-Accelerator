@@ -34,6 +34,8 @@ import type {
   Dashboard,
   DocumentAnalysis,
   DocumentAnalysisInput,
+  DocumentAnalysisPreview,
+  DocumentAnalysisPreviewInput,
   DocumentAnalysisSource,
   DocumentMetadataInput,
   DocumentUploadInput,
@@ -1974,6 +1976,91 @@ export function useGetDocumentAnalysisSource<TData = Awaited<ReturnType<typeof g
 
 
 
+
+export const getPreviewDocumentAnalysisUrl = (id: number,
+    documentId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/documents/${documentId}/analysis-preview`
+}
+
+export const previewDocumentAnalysis = async (id: number,
+    documentId: string,
+    documentAnalysisPreviewInput: DocumentAnalysisPreviewInput, options?: Parameters<typeof customFetch>[1]): Promise<DocumentAnalysisPreview> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<DocumentAnalysisPreview>(getPreviewDocumentAnalysisUrl(id,documentId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(documentAnalysisPreviewInput)
+  }
+);}
+
+
+
+
+
+export const getPreviewDocumentAnalysisMutationKey = () => ['previewDocumentAnalysis'] as const;
+
+export const getPreviewDocumentAnalysisMutationOptions = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewDocumentAnalysis>>, TError,PreviewDocumentAnalysisMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewDocumentAnalysis>>, TError,PreviewDocumentAnalysisMutationVariables, TContext> => {
+
+const mutationKey = getPreviewDocumentAnalysisMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewDocumentAnalysis>>, PreviewDocumentAnalysisMutationVariables> = (props) => {
+          const {id,documentId,data} = props ?? {};
+
+          return  previewDocumentAnalysis(id,documentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewDocumentAnalysisMutationResult = NonNullable<Awaited<ReturnType<typeof previewDocumentAnalysis>>>
+    export type PreviewDocumentAnalysisMutationBody = BodyType<DocumentAnalysisPreviewInput>
+    export type PreviewDocumentAnalysisMutationError = ErrorType<void | FormOwnerMismatchResponse>
+    export type PreviewDocumentAnalysisMutationVariables = {id: number;documentId: string;data: BodyType<DocumentAnalysisPreviewInput>}
+
+    export const usePreviewDocumentAnalysis = <TError = ErrorType<void | FormOwnerMismatchResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewDocumentAnalysis>>, TError,PreviewDocumentAnalysisMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewDocumentAnalysis>>,
+        TError,
+        PreviewDocumentAnalysisMutationVariables,
+        TContext
+      > => {
+      return useMutation(getPreviewDocumentAnalysisMutationOptions(options));
+    }
 
 export const getListDocumentAnalysesUrl = (id: number,
     documentId: string,) => {

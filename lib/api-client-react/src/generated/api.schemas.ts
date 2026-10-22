@@ -1010,6 +1010,44 @@ export interface DocumentMetadataInput {
   description: string;
 }
 
+export interface DocumentAnalysisPreviewInput {
+  /** @pattern ^[a-f0-9]{64}$ */
+  sourceRevision: string;
+  /**
+     * @minItems 1
+     * @maxItems 10
+     * @items.minimum 1
+     */
+  pages: number[];
+}
+
+export type DocumentAnalysisPreviewImagesItem = {
+  /** @minimum 1 */
+  sourcePage: number;
+  /** @pattern ^data:image/(png|jpeg);base64,[A-Za-z0-9+/]+=*$ */
+  dataUrl: string;
+};
+
+export interface DocumentAnalysisPreview {
+  documentId: string;
+  /** @minimum 1 */
+  caseId: number;
+  /** @minimum 1 */
+  version: number;
+  /** @pattern ^[a-f0-9]{64}$ */
+  sourceRevision: string;
+  /**
+     * @minimum 1
+     * @maximum 4194304
+     */
+  payloadBytes: number;
+  /**
+     * @minItems 1
+     * @maxItems 10
+     */
+  images: DocumentAnalysisPreviewImagesItem[];
+}
+
 export type DocumentAnalysisInputFocus = typeof DocumentAnalysisInputFocus[keyof typeof DocumentAnalysisInputFocus];
 
 

@@ -1082,6 +1082,49 @@ export const GetDocumentAnalysisSourceResponse = zod.object({
 
 
 
+export const PreviewDocumentAnalysisParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "documentId": zod.coerce.string().uuid()
+})
+
+export const previewDocumentAnalysisBodySourceRevisionRegExp = new RegExp('^[a-f0-9]{64}$');
+
+export const previewDocumentAnalysisBodyPagesMax = 10;
+
+
+
+export const PreviewDocumentAnalysisBody = zod.object({
+  "sourceRevision": zod.string().regex(previewDocumentAnalysisBodySourceRevisionRegExp),
+  "pages": zod.array(zod.number().int().min(1)).min(1).max(previewDocumentAnalysisBodyPagesMax)
+})
+
+
+
+export const previewDocumentAnalysisResponseSourceRevisionRegExp = new RegExp('^[a-f0-9]{64}$');
+export const previewDocumentAnalysisResponsePayloadBytesMax = 4194304;
+
+
+export const previewDocumentAnalysisResponseImagesItemDataUrlRegExp = new RegExp('^data:image/(png|jpeg);base64,[A-Za-z0-9+/]+=*$');
+export const previewDocumentAnalysisResponseImagesMax = 10;
+
+
+
+export const PreviewDocumentAnalysisResponse = zod.object({
+  "documentId": zod.string().uuid(),
+  "caseId": zod.number().int().min(1),
+  "version": zod.number().int().min(1),
+  "sourceRevision": zod.string().regex(previewDocumentAnalysisResponseSourceRevisionRegExp),
+  "payloadBytes": zod.number().int().min(1).max(previewDocumentAnalysisResponsePayloadBytesMax),
+  "images": zod.array(zod.object({
+  "sourcePage": zod.number().int().min(1),
+  "dataUrl": zod.string().regex(previewDocumentAnalysisResponseImagesItemDataUrlRegExp)
+})).min(1).max(previewDocumentAnalysisResponseImagesMax)
+})
+
+
+
+
+
 export const ListDocumentAnalysesParams = zod.object({
   "id": zod.coerce.number().int().min(1),
   "documentId": zod.coerce.string().uuid()

@@ -7,6 +7,7 @@ import {
   type CaseDocument, type DocumentAnalysis, type DocumentAnalysisInput,
   useGetDocumentAnalysisSource,
   getGetDocumentAnalysisSourceQueryKey,
+  previewDocumentAnalysis, type DocumentAnalysisPreview,
 } from '@workspace/api-client-react';
 import { useFormMutationOptions, useAccountReadOptions } from './account-queries';
 import { SimpleModal, categoryLabels } from './document-metadata-dialog';
@@ -60,21 +61,67 @@ export function DocumentAnalysisPanel({ doc, expectedUserId, close }: { doc: Cas
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [confirm, setConfirm] = useState<DocumentAnalysis | null>(null);
   const [delError, setDelError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ scope: string; data: DocumentAnalysisPreview } | null>(null);
+  const [previewPending, setPreviewPending] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState<number[]>([]);
+  const [expandedPage, setExpandedPage] = useState<number | null>(null);
+  const previewCtl = useRef<AbortController | null>(null);
+  const previewToken = useRef(0);
   const ctl = useRef<AbortController | null>(null);
   const token = useRef(0);
-  useEffect(() => () => { token.current++; ctl.current?.abort(); }, []);
+  useEffect(() => () => { token.current++; ctl.current?.abort(); previewToken.current++; previewCtl.current?.abort(); }, []);
 
   const tooBig = doc.contentType !== 'application/pdf' && doc.size > AI_LIMIT;
   const sourceInfo = source.data?.documentId === documentId && source.data.version === doc.version ? source.data : undefined;
   const pages = sourceInfo ? parseAnalysisPages(selection, sourceInfo.pageCount) : null;
   const revision = sourceInfo?.sourceRevision;
-  const scope = `${revision}:${JSON.stringify(pages)}`;
-  const approved = consent && consentScope === scope;
-  useEffect(() => { setConsent(false); }, [revision]);
+  const scope = JSON.stringify([expectedUserId, caseId, documentId, doc.version, doc.status, doc.scanStatus,
+    revision, sourceInfo?.model, selection, pages]);
+  const latestScope = useRef(scope);
+  latestScope.current = scope;
+  const visiblePreview = preview?.scope === scope && sourceInfo && !source.isError ? preview.data : null;
+  const previewReady = !!visiblePreview && loaded.length === visiblePreview.images.length;
+  const consentKey = JSON.stringify([scope, focus, question]);
+  const approved = consent && consentScope === consentKey && previewReady;
+  useEffect(() => {
+    previewToken.current++; previewCtl.current?.abort(); previewCtl.current = null;
+    setPreview(null); setPreviewPending(false); setPreviewError(null); setLoaded([]);
+    setConsent(false); setExpandedPage(null);
+  }, [scope]);
+  useEffect(() => { setConsent(false); }, [focus, question]);
   const matches = (a: DocumentAnalysis) => a.ownerId === expectedUserId && a.caseId === caseId && a.documentId === documentId;
   const items = list.data;
   const foreign = !!items && (!Array.isArray(items) || items.some(a => !matches(a)));
   const sorted = Array.isArray(items) && !foreign ? [...items].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : [];
+
+  const makePreview = async () => {
+    if (!pages || !sourceInfo || source.isError || tooBig || pending || previewPending ||
+        doc.status !== 'ready' || doc.scanStatus !== 'clean') return;
+    previewCtl.current?.abort();
+    const mine = ++previewToken.current;
+    const c = new AbortController(); previewCtl.current = c;
+    setPreview(null); setLoaded([]); setConsent(false); setPreviewError(null); setPreviewPending(true);
+    const timer = setTimeout(() => c.abort(), TIMEOUT);
+    try {
+      const data = await previewDocumentAnalysis(caseId, documentId,
+        { pages, sourceRevision: sourceInfo.sourceRevision }, { ...owner, signal: c.signal, cache: 'no-store' });
+      if (previewToken.current !== mine || latestScope.current !== scope || c.signal.aborted) return;
+      if (data.documentId !== documentId || data.caseId !== caseId || data.version !== doc.version ||
+          data.sourceRevision !== revision || data.payloadBytes < 1 || data.payloadBytes > AI_LIMIT ||
+          data.images.length !== pages.length || data.images.some((image, i) =>
+            image.sourcePage !== pages[i] || !/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(image.dataUrl))) {
+        throw new Error('preview_mismatch');
+      }
+      setPreview({ scope, data });
+    } catch {
+      if (previewToken.current === mine && latestScope.current === scope)
+        setPreviewError('Pratinjau belum dapat dibuat. Periksa pilihan halaman atau muat ulang versi dokumen, lalu coba lagi. Tidak ada pengiriman ke AI.');
+    } finally {
+      clearTimeout(timer);
+      if (previewToken.current === mine) { setPreviewPending(false); previewCtl.current = null; }
+    }
+  };
 
   const run = async () => {
     if (!approved || !pages || !sourceInfo || pending || tooBig || doc.status !== 'ready' || doc.scanStatus !== 'clean') return;
@@ -126,11 +173,33 @@ export function DocumentAnalysisPanel({ doc, expectedUserId, close }: { doc: Cas
       {source.isLoading ? <p className="mt-3 text-xs">Membaca jumlah halaman secara lokal; belum mengirim ke AI...</p>
         : source.isError || !sourceInfo ? <ErrorState retry={() => { setConsent(false); void source.refetch(); }} message="Jumlah halaman atau versi dokumen belum dapat dikonfirmasi. Tidak ada pengiriman ke AI." />
         : <p className="mt-3 text-sm text-[#365a76]">Dokumen asli: {sourceInfo.pageCount} halaman. Pilih maksimal 10 halaman; payload hasil maksimal 4 MiB.</p>}
-      <fieldset disabled={pending || tooBig || !sourceInfo} className="mt-4 min-w-0 space-y-4 border-0 p-0">
+      <fieldset disabled={pending || tooBig || !sourceInfo || source.isError} className="mt-4 min-w-0 space-y-4 border-0 p-0">
         <label className="block"><span className="mb-2 block text-xs font-bold text-[#2b4159]">Halaman asli yang dikirim</span><input data-testid="input-analysis-pages" className="field" maxLength={200} value={selection} onChange={e => { setSelection(e.target.value); setConsent(false); }} placeholder="Contoh: 2-4, 9, 15" /><span className="mt-1 block text-xs text-[#617a90]">{pages ? `Urutan kirim: ${pages.join(', ')}` : 'Masukkan 1–10 nomor halaman/rentang yang ada, tanpa duplikat.'}</span></label>
+        <section aria-label="Pratinjau halaman terpilih" className="rounded-lg border border-[#bfd0de] p-3">
+          <button type="button" data-testid="button-preview-analysis" onClick={() => void makePreview()} disabled={!pages || previewPending} className="btn btn-outline">{previewPending ? 'Menyiapkan pratinjau...' : 'Lihat pratinjau halaman'}</button>
+          <p className="mt-2 text-xs leading-5 text-[#365a76]">Pratinjau diproses lokal di server aplikasi, tanpa mengirim ke AI dan tanpa biaya model. Periksa bagian serta keterbacaan gambar sebelum memberikan persetujuan.</p>
+          {previewPending && <button type="button" className="btn btn-outline mt-2" onClick={() => {
+            previewToken.current++; previewCtl.current?.abort(); setPreviewPending(false);
+          }}>Batalkan pratinjau</button>}
+          {previewError && <p role="alert" className="mt-2 text-sm text-[#b34442]">{previewError}</p>}
+          {visiblePreview && <div data-testid="analysis-preview" className="mt-3 space-y-3">
+            <p className="text-xs text-[#365a76]">Payload versi {visiblePreview.version}: {(visiblePreview.payloadBytes / 1048576).toFixed(2)} MiB / 4 MiB · {visiblePreview.images.length} halaman. Gambar berikut memakai piksel yang sama dengan payload AI, bukan dokumen asli lengkap. Klik gambar untuk ukuran penuh; gulir bila perlu.</p>
+            {visiblePreview.images.map((image, i) => <figure key={`${scope}:${i}`} className="min-w-0">
+              <figcaption className="mb-1 text-xs font-bold text-[#2b4159]">Halaman kirim {i + 1} → halaman asli {image.sourcePage}</figcaption>
+              <div className="max-h-[500px] overflow-auto rounded border border-[#bfd0de] bg-white">
+                <button type="button" aria-label={`${expandedPage === i ? 'Perkecil' : 'Perbesar'} halaman asli ${image.sourcePage}`} className="block" onClick={() => setExpandedPage(expandedPage === i ? null : i)}>
+                  <img data-testid="analysis-preview-image" alt={`Pratinjau halaman asli ${image.sourcePage}`} src={image.dataUrl}
+                    style={expandedPage === i ? { maxWidth: 'none' } : { maxWidth: '100%', height: 'auto' }}
+                    onLoad={() => setLoaded(old => old.includes(i) ? old : [...old, i])}
+                    onError={() => { setPreview(null); setLoaded([]); setConsent(false); setPreviewError('Gambar pratinjau gagal ditampilkan. Buat pratinjau ulang sebelum menyetujui AI.'); }} />
+                </button>
+              </div>
+            </figure>)}
+          </div>}
+        </section>
         <label className="block"><span className="mb-2 block text-xs font-bold text-[#2b4159]">Fokus analisis</span><select data-testid="select-analysis-focus" className="field" value={focus} onChange={e => setFocus(e.target.value as DocumentAnalysisInput['focus'])}>{focusKeys.map(k => <option key={k} value={k}>{focusLabels[k]}</option>)}</select></label>
         <label className="block"><span className="mb-2 block text-xs font-bold text-[#2b4159]">Pertanyaan (opsional)</span><textarea data-testid="input-analysis-question" className="field min-h-[84px]" maxLength={2000} value={question} onChange={e => setQuestion(e.target.value)} placeholder="Contoh: apakah masa berlaku terbaca jelas?" /><span className="mt-1 block text-right text-[11px] text-[#688096]">{question.length}/2000</span></label>
-        <label className="flex items-start gap-3 rounded-lg border border-[#bfd0de] bg-[#f7fbfe] p-3 text-xs leading-5 text-[#2b4159]"><input data-testid="checkbox-analysis-consent" type="checkbox" disabled={!pages} className="mt-0.5 h-4 w-4 shrink-0" checked={approved} onChange={e => { setConsent(e.target.checked); setConsentScope(scope); }} /><span>Saya mengizinkan hanya halaman asli {pages?.join(', ') || '(belum dipilih)'} dari versi {sourceInfo?.version ?? doc.version} dokumen ini dan pertanyaan manual saya dikirim ke OpenAI melalui Replit, model {sourceInfo?.model ?? '(belum dikonfirmasi)'}. Kredit Replit akan terpakai sesuai pemakaian model, jumlah halaman, dan token; biaya pasti tidak dihitung di sini. Halaman dapat berisi informasi pribadi dan saya berwenang membagikannya. PDF dikirim sebagai tampilan gambar halaman, tanpa lampiran/metadata PDF; detail kecil bisa kurang terbaca. Halaman lain, dokumen lain, dan profil tidak dikirim; tidak ada integrasi Gustafta.</span></label>
+        <label className="flex items-start gap-3 rounded-lg border border-[#bfd0de] bg-[#f7fbfe] p-3 text-xs leading-5 text-[#2b4159]"><input data-testid="checkbox-analysis-consent" type="checkbox" disabled={!pages || !previewReady} className="mt-0.5 h-4 w-4 shrink-0" checked={approved} onChange={e => { setConsent(e.target.checked); setConsentScope(consentKey); }} /><span>Saya sudah memeriksa pratinjau dan mengizinkan hanya halaman asli {pages?.join(', ') || '(belum dipilih)'} dari versi {sourceInfo?.version ?? doc.version} dokumen ini dan pertanyaan manual saya dikirim ke OpenAI melalui Replit, model {sourceInfo?.model ?? '(belum dikonfirmasi)'}. Kredit Replit akan terpakai sesuai pemakaian model, jumlah halaman, dan token; biaya pasti tidak dihitung di sini. Halaman dapat berisi informasi pribadi dan saya berwenang membagikannya. PDF dikirim sebagai tampilan gambar halaman, tanpa lampiran/metadata PDF; detail kecil bisa kurang terbaca. Halaman lain, dokumen lain, dan profil tidak dikirim; tidak ada integrasi Gustafta.</span></label>
       </fieldset>
       <p className="mt-3 text-xs leading-5 text-[#617a90]">Hasil bersifat awal: bukan penilaian kepatuhan hukum, bukan keputusan SBU, bukan penilaian otomatis, dan tidak mengesahkan atau membatalkan bukti. Lokasi sumber adalah indikasi AI yang perlu Anda periksa sendiri.</p>
       {error && <p role="alert" data-testid="text-analysis-error" className="mt-3 text-sm text-[#b34442]">{error}</p>}

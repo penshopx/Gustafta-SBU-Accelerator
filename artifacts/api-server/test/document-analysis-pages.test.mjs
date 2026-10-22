@@ -69,6 +69,14 @@ test("long PDF sends only selected visible pixels, not metadata, attachments, hi
     }
     assert.deepEqual(pixels, expected.slice(0, 2), "actual outgoing pixels equal exactly the selected pages in requested order");
     assert.ok(!pixels.includes(expected[2]), "unselected page pixels absent");
+    assert.deepEqual(result.images.map(image => image.sourcePage), [15, 2]);
+    const previewPdf = await PDFDocument.create();
+    for (const image of result.images) {
+      assert.match(image.dataUrl, /^data:image\/png;base64,/);
+      await previewPdf.embedPng(Buffer.from(image.dataUrl.split(",")[1], "base64"));
+    }
+    const preview = await PDFDocument.load(await previewPdf.save(), { updateMetadata: false });
+    assert.deepEqual(imagePixels(preview), pixels, "preview shows the exact same selected pixels as the outgoing AI payload");
   } finally { await rm(dir, { recursive: true, force: true }); }
   for (const [, obj] of payload.context.enumerateIndirectObjects()) {
     const text = obj instanceof PDFRawStream ? Buffer.from(decodePDFRawStream(obj).decode()).toString("latin1") : obj.toString();
