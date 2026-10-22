@@ -78,25 +78,53 @@ recorded sign-in, refuses unexpected document attachments, deletes dependent
 rows in its own FK-safe database transaction, then deletes only verified
 synthetic Clerk users. It prints sanitized counts only.
 
-The notebook `cleanupOwners` callback stages the fixture array privately;
-immediately after the runner returns or throws, invoke the CLI through
-ShellExec, then remove the private file. Do not start another run until the
-cleanup command has succeeded. Preserve the runner's primary error separately
-from the CLI output.
+Before creating users, run the CLI below once with `[]` on stdin to verify that
+the adapter loads. This is not proof of Clerk delete permissions.
+
+Use one scenario per notebook action: `profile`, `case-create`,
+`evidence-create`, then `evidence-edit`. Do not loop over all four in a single
+action or rewrite the runner source. The runner still defaults to all four for
+environments without an action limit.
+
+In a **separate setup action**, create the private directory and record its path
+outside the notebook worker before starting the runner. Otherwise a reset can
+lose the location as well as the in-memory fixture list. Use a fresh directory
+for every scenario, only after the preceding cleanup has succeeded.
 
 ```js
-const fixtureFile =
-  `/tmp/gustafta-form-owner-fixtures-${Date.now()}-${nanoid(8)}.json`;
-const cleanupOwners = async (fixtures) => {
-  await fs.promises.writeFile(fixtureFile, JSON.stringify(fixtures), {
-    mode: 0o600,
+const fixtureDir = await fs.promises.mkdtemp("/tmp/gustafta-form-owner-");
+await fs.promises.chmod(fixtureDir, 0o700);
+const fixtureFile = `${fixtureDir}/fixtures.json`;
+console.log({ fixtureFile }); // path only; retain it outside worker memory
+```
+
+Install this adapter before the runner action. Atomic replacement retains the
+previous valid payload if an update is interrupted. The checkpoint is awaited
+before the first sign-in and after recording B and A. Both exact emails are
+already present even if neither owner ID was recorded. Staging never deletes
+anything; `cleanupOwners` is only the final refresh of the same handoff.
+
+```js
+const checkpointFixtures = async (fixtures) => {
+  const pendingFile = `${fixtureFile}.pending`;
+  // An interrupted update must be investigated/cleaned before another run.
+  await fs.promises.writeFile(pendingFile, JSON.stringify(fixtures), {
+    mode: 0o600, flag: "wx",
   });
+  await fs.promises.rename(pendingFile, fixtureFile);
 };
+const cleanupOwners = checkpointFixtures;
+```
+
+Run exactly one selected scenario in the next action:
+
+```js
 let observations, primaryError;
 try {
   observations = await run({
     browser, baseURL: `https://${REPLIT_DEV_DOMAIN}`, signInClerkUser,
-    snapshotOwners, cleanupOwners,
+    snapshotOwners, cleanupOwners, checkpointFixtures,
+    scenarios: ["profile"], // next independent actions select the other scenarios
   });
 } catch (error) {
   primaryError = error; // keep in memory; sanitize before reporting
@@ -114,16 +142,31 @@ console.log(JSON.stringify({
 Then run from the workspace root:
 
 ```sh
+# Set FIXTURE_FILE to the exact path retained from the setup action.
 pnpm --filter @workspace/gustafta-sbu exec node --import tsx \
   ../api-server/test/helpers/cleanup-form-owner-browser-fixtures.mjs \
   --stdin < "$FIXTURE_FILE"
 status=$?
-if [ "$status" -eq 0 ]; then rm -f "$FIXTURE_FILE"; fi
+if [ "$status" -eq 0 ]; then
+  rm -f -- "$FIXTURE_FILE" "$FIXTURE_FILE.pending"
+  rmdir -- "$(dirname -- "$FIXTURE_FILE")"
+fi
 exit "$status"
 ```
+
+If a worker resets, invoke this same command with the previously recorded path
+without waiting for `finally` or starting another run. Keep the payload on CLI
+failure and retry only after investigating the failure. Do not infer success
+from a staging callback returning: only the CLI performs cleanup. Never use
+`--remove-test-documents` for these scenarios or broaden the email allowlist.
+If only a `.pending` file exists (first write interrupted), validate its JSON
+before passing that exact file to the scoped CLI; keep it if parsing or cleanup
+fails. Do not overwrite the last valid checkpoint with a truncated pending file.
 
 Record only the CLI's sanitized cleanup counts. If the runner fails, clean its
 staged fixtures immediately, record the exact sanitized primary failure, and
 resume only the affected scenario and scenarios not yet run. Save rejection
 screenshots without secret IDs and persist sanitized observations, browser
 version, runner date, and cleanup counts in `run-report.json`.
+Keep the primary runner error even if context closing, final staging, or CLI
+cleanup also fails; report those cleanup failures separately, not instead.

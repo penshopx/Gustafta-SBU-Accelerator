@@ -19,6 +19,8 @@ const observations = await run({
   signInClerkUser,
   snapshotOwners,
   cleanupOwners,
+  checkpointFixtures,
+  scenarios: ["profile"], // one independently cleanable notebook action
 });
 ```
 
@@ -96,6 +98,11 @@ be rejected by the owner precondition with 409 before resource access.
 The optional `scenarios` array can select independently cleanable notebook runs;
 omitting it still runs all four scenarios. Do not change or replace the runner
 source in the notebook to select a scenario.
+The required `checkpointFixtures` callback must persist exact emails privately
+before sign-in and refresh the handoff after each owner is discovered. It only
+stages data; it never deletes accounts or the handoff. Follow
+`missed-notifications.notebook.md` for atomic mode-0600 staging, recovery after a
+worker reset, and removing the payload only after successful scoped CLI cleanup.
 
 Save only the returned sanitized observations plus browser/version and runner
 date in `run-report.json`. Do not save URLs containing sign-in tokens, cookie

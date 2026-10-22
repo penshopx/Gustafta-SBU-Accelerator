@@ -5,12 +5,14 @@
 export async function runMissedNotificationsRegression({
   browser, baseURL, signInClerkUser, snapshotOwners, cleanupOwners,
   scenarios = ["profile", "case-create", "evidence-create", "evidence-edit"],
+  checkpointFixtures,
 }) {
   const check = (condition, message) => {
     if (!condition) throw new Error(message);
   };
   check(typeof snapshotOwners === "function", "A database snapshot callback is required");
   check(typeof cleanupOwners === "function", "A scoped cleanup callback is required");
+  check(typeof checkpointFixtures === "function", "A private fixture checkpoint callback is required");
   const supported = ["profile", "case-create", "evidence-create", "evidence-edit"];
   check(Array.isArray(scenarios) && scenarios.length > 0
     && new Set(scenarios).size === scenarios.length
@@ -85,6 +87,7 @@ export async function runMissedNotificationsRegression({
   try {
     for (const scenario of scenarios) {
       const context = await browser.newContext({ baseURL });
+      let scenarioError;
       try {
         const tabA = await context.newPage();
         const tabB = await context.newPage();
@@ -147,9 +150,13 @@ export async function runMissedNotificationsRegression({
         const freshValue = `Accepted draft ${suffix}`;
         const fixture = { owners: [], names: [], emails: [people.a.email, people.b.email] };
         fixtures.push(fixture);
+        // Stage exact emails before account creation: a worker reset may skip
+        // finally, or sign-in may create a user before returning its redirect.
+        await checkpointFixtures(fixtures);
         await tabB.goto(await signInClerkUser(people.b));
         const ownerB = await authenticatedOwner(tabB);
         fixture.owners.push(ownerB); fixture.names.push(names.b);
+        await checkpointFixtures(fixtures);
         await completeProfile(tabB, ownerB, names.b);
         const caseB = await api(tabB, ownerB, "/api/cases", "POST", caseInput(`Beta case ${suffix}`));
         const evidenceB = await api(tabB, ownerB, `/api/cases/${caseB.id}/evidence`, "POST", {
@@ -158,6 +165,7 @@ export async function runMissedNotificationsRegression({
         await tabB.goto(await signInClerkUser(people.a));
         const ownerA = await authenticatedOwner(tabB, ownerB);
         fixture.owners.push(ownerA); fixture.names.push(names.a);
+        await checkpointFixtures(fixtures);
         check(ownerA !== ownerB, "Two different authenticated accounts are required");
         await completeProfile(tabB, ownerA, names.a);
         const caseA = await api(tabB, ownerA, "/api/cases", "POST", caseInput(`Alpha case ${suffix}`));
@@ -267,8 +275,16 @@ export async function runMissedNotificationsRegression({
           })),
           freshBStatus: saved.status(), freshBVisibleAndPersisted: true,
         });
+      } catch (error) {
+        scenarioError = error;
+        throw error;
       } finally {
-        await context.close();
+        try {
+          await context.close();
+        } catch (closeError) {
+          if (scenarioError) throw new AggregateError([scenarioError, closeError], "Regression and browser close failed");
+          throw closeError;
+        }
       }
     }
     return report;
