@@ -276,8 +276,9 @@ test('formulir profil lengkap menjaga nama Unicode pada onboarding dan pengatura
       }
     }
     for (const onboarding of [true, false]) {
-      for (const failure of ['network', '503'] as const) {
-        await t.test(`${onboarding ? 'onboarding' : 'pengaturan'}: isian utuh dan retry berhasil setelah ${failure}`, async () => {
+      for (const { failure, editBeforeRetry } of (['network', '503'] as const).flatMap(failure =>
+        [false, true].map(editBeforeRetry => ({ failure, editBeforeRetry })))) {
+        await t.test(`${onboarding ? 'onboarding' : 'pengaturan'}: ${editBeforeRetry ? 'retry mengirim perubahan terbaru' : 'isian utuh dan retry berhasil'} setelah ${failure}`, async () => {
           const profile: Profile = {
             userId: 'retry-profile-owner', displayName: onboarding ? '' : 'Nama awal',
             role: onboarding ? 'belum_dipilih' : 'kontraktor', organizationName: 'Organisasi awal',
@@ -286,6 +287,11 @@ test('formulir profil lengkap menjaga nama Unicode pada onboarding dan pengatura
             displayName: 'می\u200cنا क्\u200dष', organizationName: 'Organisasi Nusantara 新',
             role: 'asosiasi',
           } as const;
+          const revisedDraft = {
+            displayName: 'Nama terbaru 新', organizationName: 'Organisasi terbaru Nusantara',
+            role: 'konsultan',
+          } as const;
+          const retryDraft = editBeforeRetry ? revisedDraft : draft;
           const requests: RequestInit[] = [];
           const navigations: string[] = [];
           const releases: (() => void)[] = [];
@@ -328,13 +334,26 @@ test('formulir profil lengkap menjaga nama Unicode pada onboarding dan pengatura
               await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
             }
           };
-          const assertDraft = () => {
-            assert.equal(input('input-display-name').value, draft.displayName, 'ZWJ/ZWNJ tetap utuh');
-            assert.equal(input('input-organization').value, draft.organizationName);
+          const editDraft = async (values: typeof draft | typeof revisedDraft) => {
+            await act(async () => {
+              for (const [id, value] of [
+                ['input-display-name', values.displayName],
+                ['input-organization', values.organizationName],
+              ]) {
+                const element = input(id);
+                Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!.call(element, value);
+                element.dispatchEvent(new window.Event('input', { bubbles: true }));
+              }
+              button(`button-role-${values.role}`).click();
+            });
+          };
+          const assertDraft = (values: typeof draft | typeof revisedDraft = draft) => {
+            assert.equal(input('input-display-name').value, values.displayName, 'nama tetap utuh');
+            assert.equal(input('input-organization').value, values.organizationName);
             // The selected role is rendered with a check icon; inspect all
             // options so retaining the default role cannot pass this assertion.
             for (const role of ['kontraktor', 'konsultan', 'profesional', 'asosiasi']) {
-              assert.equal(!!button(`button-role-${role}`).querySelector('svg'), role === draft.role);
+              assert.equal(!!button(`button-role-${role}`).querySelector('svg'), role === values.role);
             }
           };
           try {
@@ -349,16 +368,8 @@ test('formulir profil lengkap menjaga nama Unicode pada onboarding dan pengatura
             });
             await act(async () => {
               client.setQueryData(getGetMeQueryKey(), profile);
-              for (const [id, value] of [
-                ['input-display-name', draft.displayName],
-                ['input-organization', draft.organizationName],
-              ]) {
-                const element = input(id);
-                Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!.call(element, value);
-                element.dispatchEvent(new window.Event('input', { bubbles: true }));
-              }
-              button(`button-role-${draft.role}`).click();
             });
+            await editDraft(draft);
             const updatesBeforeSave = client.getQueryState(getGetMeQueryKey())!.dataUpdateCount;
             const assertNoSuccess = () => {
               assert.deepEqual(client.getQueryData(getGetMeQueryKey()), profile);
@@ -382,25 +393,36 @@ test('formulir profil lengkap menjaga nama Unicode pada onboarding dan pengatura
             assertNoSuccess();
             assert.equal(requests.length, 1, 'kegagalan tidak memulai retry otomatis');
 
-            // Retry through the real enabled button without re-entering any field.
+            assert.deepEqual(JSON.parse(String(requests[0].body)), draft,
+              'PATCH pertama membawa isian sebelum kegagalan');
+            if (editBeforeRetry) {
+              // Edit the still-mounted real form only after PATCH has failed.
+              await editDraft(revisedDraft);
+              assertDraft(revisedDraft);
+              assertNoSuccess();
+              assert.equal(requests.length, 1, 'mengubah isian tidak otomatis mengirim PATCH');
+              assert.equal(button().disabled, false);
+            }
+            // Retry through the real enabled button, using the current draft.
             await act(async () => { button().click(); });
             await waitFor(() => requests.length === 2 && button().disabled);
             assert.equal(container.querySelector('[role="alert"]'), null);
-            assertDraft();
+            assertDraft(retryDraft);
             assertNoSuccess();
-            for (const request of requests) {
-              assert.deepEqual(JSON.parse(String(request.body)), draft, 'kedua PATCH membawa isian yang sama');
-            }
+            assert.deepEqual(JSON.parse(String(requests[0].body)), draft,
+              'perubahan isian tidak mengubah salinan PATCH pertama');
+            assert.deepEqual(JSON.parse(String(requests[1].body)), retryDraft,
+              'PATCH kedua membawa isian terkini, bukan salinan pengiriman yang gagal');
             await act(async () => { releases[1](); });
             await waitFor(() => !client.isMutating() && !button().disabled &&
               (onboarding ? navigations.length === 1 : !!container.querySelector('[role="status"]')));
             assert.equal(requests.length, 2);
-            assert.deepEqual(client.getQueryData(getGetMeQueryKey()), { ...profile, ...draft });
+            assert.deepEqual(client.getQueryData(getGetMeQueryKey()), { ...profile, ...retryDraft });
             assert.equal(client.getQueryState(getGetMeQueryKey())!.dataUpdateCount, updatesBeforeSave + 1);
             assert.deepEqual(navigations, onboarding ? ['/dashboard'] : []);
             assert.equal(container.querySelector('[role="alert"]'), null);
             if (!onboarding) assert.match(container.querySelector('[role="status"]')!.textContent!, /Profil berhasil disimpan/);
-            assertDraft();
+            assertDraft(retryDraft);
           } finally {
             await act(async () => { root.unmount(); });
             await act(async () => { releases.forEach(release => release()); });
