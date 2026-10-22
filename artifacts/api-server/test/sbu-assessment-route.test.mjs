@@ -1114,6 +1114,32 @@ test("GET /api/cases mempertahankan urutan ID untuk waktu pembaruan yang sama", 
   }
 });
 
+test("dashboard mempertahankan tanggal kalender dan null pada respons HTTP sesuai OpenAPI", async () => {
+  const server = app.listen(0);
+  try {
+    for (const expiresOn of [null, "2027-04-15", "2028-02-29", "2030-12-31"]) {
+      globalThis.__routeCaseRows = [{
+        id: 401, ownerId: "test-user", companyName: "Tanggal Dashboard",
+        requestType: "perpanjangan", qualification: "kecil", classification: "gedung",
+        status: "draf", existingSbuExpiresOn: expiresOn,
+        createdAt: new Date("2026-02-01T00:00:00Z"),
+        updatedAt: new Date("2026-02-02T00:00:00Z"),
+      }];
+      const { status, body, raw } = await request(server, "/api/dashboard");
+      assert.equal(status, 200, raw);
+      assert.ok(validateDashboard(body), dashboardAjv.errorsText(validateDashboard.errors));
+      assert.equal(body.recent.length, 1);
+      assert.equal(body.recent[0].existingSbuExpiresOn, expiresOn,
+        "tanggal kalender harus tetap persis sama, bukan timestamp");
+      assert.equal(body.recent[0].createdAt, "2026-02-01T00:00:00.000Z");
+      assert.equal(body.recent[0].updatedAt, "2026-02-02T00:00:00.000Z");
+    }
+  } finally {
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+    delete globalThis.__routeCaseRows;
+  }
+});
+
 test("validasi Dashboard dari OpenAPI menolak field hilang, tipe salah dan struktur recent rusak", async () => {
   globalThis.__routeCaseRows = [{
     id: 401, ownerId: "test-user", companyName: "Kontrak Dashboard",

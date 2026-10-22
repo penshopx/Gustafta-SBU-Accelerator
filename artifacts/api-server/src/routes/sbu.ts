@@ -162,13 +162,21 @@ router.get("/dashboard", async (req, res): Promise<void> => {
   const items = await db.select().from(casesTable)
     .where(eq(casesTable.ownerId, owner(req)))
     .orderBy(desc(casesTable.updatedAt), desc(casesTable.id));
-  res.json(GetDashboardResponse.parse({
+  const dashboard = GetDashboardResponse.parse({
     total: items.length,
     draft: items.filter((x) => x.status === "draf").length,
     reviewing: items.filter((x) => x.status === "ditinjau").length,
     prepared: items.filter((x) => x.status === "selesai_persiapan").length,
     recent: items.slice(0, 5),
-  }));
+  });
+  res.json({
+    ...dashboard,
+    // Generated parsing coerces calendar dates to Date; the wire contract is date-only.
+    recent: dashboard.recent.map((item) => ({
+      ...item,
+      existingSbuExpiresOn: dateOnly(item.existingSbuExpiresOn),
+    })),
+  });
 });
 
 router.get("/cases", async (req, res): Promise<void> => {
