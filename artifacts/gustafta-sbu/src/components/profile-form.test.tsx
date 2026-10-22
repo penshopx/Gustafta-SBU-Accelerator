@@ -431,6 +431,112 @@ test('formulir profil lengkap menjaga nama Unicode pada onboarding dan pengatura
         });
       }
     }
+    await t.test('pengaturan: organisasi yang dikosongkan tetap kosong setelah PATCH gagal dan retry sukses', async () => {
+      const profile: Profile = {
+        userId: 'clear-organization-owner', displayName: 'Nama awal',
+        role: 'konsultan', organizationName: 'Organisasi lama',
+      };
+      const expectedPayload = {
+        displayName: profile.displayName, role: profile.role, organizationName: '',
+      };
+      const requests: RequestInit[] = [];
+      const releases: (() => void)[] = [];
+      const navigations: string[] = [];
+      globals.fetch = async (url, init) => {
+        assert.equal(url, '/api/me', 'uji tidak boleh mengakses layanan luar');
+        assert.equal(init?.method, 'PATCH');
+        assert.equal(new Headers(init.headers).get('X-SBU-Form-Owner'), profile.userId);
+        requests.push(init);
+        const attempt = requests.length;
+        await new Promise<void>(resolve => { releases.push(resolve); });
+        if (attempt === 1) {
+          return Response.json({ error: 'Penyimpanan profil gagal sementara' }, { status: 503 });
+        }
+        assert.equal(attempt, 2, 'hanya retry pengguna yang boleh mengirim PATCH kedua');
+        return Response.json({ ...profile, ...JSON.parse(String(init.body)) });
+      };
+      let client!: ReturnType<typeof useQueryClient>;
+      function Form() {
+        client = useQueryClient();
+        const me = useGetMe({ query: { queryKey: getGetMeQueryKey(), enabled: false } });
+        return createElement(ProfileForm, { profile: me.data ?? profile });
+      }
+      const container = window.document.createElement('div');
+      window.document.body.appendChild(container);
+      const root = createRoot(container as unknown as HTMLElement);
+      const organization = () => {
+        const element = container.querySelector('[data-testid="input-organization"]');
+        assert.ok(element instanceof window.HTMLInputElement);
+        return element;
+      };
+      const button = () => {
+        const element = container.querySelector('[data-testid="button-save-profile"]');
+        assert.ok(element instanceof window.HTMLButtonElement);
+        return element;
+      };
+      const waitFor = async (predicate: () => boolean) => {
+        const deadline = Date.now() + 2000;
+        while (!predicate()) {
+          assert.ok(Date.now() < deadline, 'penyimpanan organisasi harus selesai');
+          await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)); });
+        }
+      };
+      try {
+        await act(async () => {
+          root.render(createElement(AccountQueries, {
+            userId: profile.userId,
+            children: createElement(Router, {
+              hook: () => ['/settings', path => navigations.push(path)],
+              children: createElement(Form),
+            }),
+          }));
+        });
+        await act(async () => { client.setQueryData(getGetMeQueryKey(), profile); });
+        assert.equal(organization().value, profile.organizationName);
+        await act(async () => {
+          Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')!.set!.call(organization(), '');
+          organization().dispatchEvent(new window.Event('input', { bubbles: true }));
+        });
+        assert.equal(organization().value, '');
+
+        await act(async () => { button().click(); });
+        await waitFor(() => requests.length === 1 && button().disabled);
+        assert.deepEqual(JSON.parse(String(requests[0].body)), expectedPayload,
+          'PATCH pertama harus menyertakan organizationName kosong, bukan menghilangkan field');
+        await act(async () => { releases[0](); });
+        await waitFor(() => !client.isMutating() && !!container.querySelector('[role="alert"]'));
+        assert.match(container.querySelector('[role="alert"]')!.textContent!, /Penyimpanan profil gagal sementara/);
+        assert.equal(organization().value, '', 'draf kosong tidak kembali ke organisasi lama saat gagal');
+        assert.equal(button().disabled, false, 'pengguna dapat mencoba simpan lagi');
+        assert.equal(requests.length, 1, 'tidak ada retry otomatis');
+        assert.equal(container.querySelector('[role="status"]'), null);
+        assert.deepEqual(client.getQueryData(getGetMeQueryKey()), profile,
+          'kegagalan belum boleh menghapus organisasi di cache');
+
+        // Retry without editing again: the empty draft itself must survive.
+        await act(async () => { button().click(); });
+        await waitFor(() => requests.length === 2 && button().disabled);
+        assert.equal(organization().value, '', 'draf tetap kosong selama retry tertahan');
+        assert.deepEqual(JSON.parse(String(requests[1].body)), expectedPayload,
+          'PATCH retry tetap menyertakan organizationName kosong secara eksplisit');
+        assert.deepEqual(client.getQueryData(getGetMeQueryKey()), profile,
+          'cache lama bertahan sampai retry benar-benar sukses');
+        await act(async () => { releases[1](); });
+        await waitFor(() => !client.isMutating() && !!container.querySelector('[role="status"]'));
+        assert.match(container.querySelector('[role="status"]')!.textContent!, /Profil berhasil disimpan/);
+        assert.equal(container.querySelector('[role="alert"]'), null);
+        assert.equal(organization().value, '');
+        assert.equal(button().disabled, false);
+        assert.equal(requests.length, 2);
+        assert.deepEqual(client.getQueryData(getGetMeQueryKey()), { ...profile, organizationName: '' },
+          'cache sukses menghapus organisasi lama tanpa mengubah nama, peran, atau pemilik');
+        assert.deepEqual(navigations, [], 'pengaturan tidak menavigasi setelah retry sukses');
+      } finally {
+        await act(async () => { releases.forEach(release => release()); });
+        await act(async () => { root.unmount(); });
+        container.remove();
+      }
+    });
     await t.test('pengaturan: dua perubahan berurutan tersimpan sekali masing-masing tanpa memuat ulang', async () => {
       let stored: Profile = {
         userId: 'settings-sequential-owner', displayName: 'Nama awal',
