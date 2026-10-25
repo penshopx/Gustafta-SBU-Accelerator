@@ -2,8 +2,14 @@
 
 ## Status dan batas
 
-Tanggal pemeriksaan: 20 Oktober 2026. Melanjutkan penerimaan delapan PDF
-Format Standar Skema Sertifikasi. Pemeriksaan terarah ini hanya pada
+Tanggal pemeriksaan awal: 20 Oktober 2026.
+**Adendum pemeriksaan ulang K2: 25 Oktober 2026**, lihat
+[catatan klarifikasi K2](bg001-k2-financial-source-clarification-draft.md).
+Pernyataan konflik pada telaah awal tidak terulang pada berkas yang kini
+tersedia; ini bukan bukti koreksi oleh penerbit.
+
+Melanjutkan penerimaan delapan PDF Format Standar Skema Sertifikasi.
+Pemeriksaan terarah ini hanya pada
 **BG001 BUJKN** dalam berkas BG, bukan seluruh klasifikasi atau seluruh
 206 halaman. Ini catatan pembandingan sumber, **bukan aturan aktif,
 persetujuan ahli, verifikasi keaslian dokumen, status hukum terkini, atau
@@ -45,7 +51,7 @@ pengesahan atau mulai berlakunya regulasi nasional. L diperlakukan sebagai
 | --- | --- | --- |
 | Identitas BG001 | PDF 21/cetak 7, 2.1.5: KBLI 41011, “Konstruksi Konvensional Gedung Hunian”, sifat Umum; BUJKN K (K1/K2/K3), M/B. | Selaras dengan baris D PDF 18/cetak 9 yang dicatat pada matriks. P PDF/cetak 18 memakai judul “Konstruksi Gedung Hunian”. Beda judul tidak diselesaikan dengan mengubah kode atau cakupan otomatis. Baris PMA/KPBUJKA tidak dibawa ke BUJKN. |
 | Penjualan | PDF 23/cetak 9, 3.1: K1 paling banyak Rp2 miliar; K2 lebih dari Rp2–7,5 miliar; K3 lebih dari Rp7,5–15 miliar; M lebih dari Rp15–50 miliar; B lebih dari Rp50 miliar, semuanya per BUJK. | Secara angka selaras dengan matriks P PDF/cetak 260 A.3.h.2.b dan D PDF 28/cetak 19 3.2.1. Batas bawah/atas tidak ditambah; ini bukan formula alokasi pengalaman atau penetapan kualifikasi otomatis. |
-| Keuangan K2 — **konflik internal** | PDF 23/cetak 9, 3.2 baris K2: angka **Rp1.000.000.000,00**, terbilang **“lima ratus juta rupiah”**. Teks native dan gambar memperlihatkan perbedaan yang sama. | P PDF/cetak 261 A.3.i.2.b.2 dan D PDF 28/cetak 19 3.2.2 K2 sama-sama menulis Rp1.000.000.000,00 dengan terbilang **“satu miliar rupiah”**. Jangan memilih terbilang L, mengambil rata-rata, atau menghapus konflik dari provenance. Belum ada erratum/pengesahan koreksi lembaga yang diperiksa. |
+| Keuangan K2 — **laporan konflik awal, belum terkonfirmasi ulang** | Telaah 20 Oktober mencatat PDF 23/cetak 9, 3.2 baris K2: Rp1.000.000.000,00 versus “lima ratus juta rupiah”. **Pemeriksaan ulang 25 Oktober pada berkas yang tersedia menampilkan “satu miliar rupiah” pada gambar dan teks**, bukan “lima ratus juta rupiah”. Bukti versi yang mendasari laporan awal belum teridentifikasi. | P PDF/cetak 261 A.3.i.2.b.2 dan D PDF 28/cetak 19 3.2.2 K2 sama-sama menulis Rp1.000.000.000,00 (“satu miliar rupiah”). L kini selaras pada locator itu, tetapi erratum/riwayat koreksi penerbit **belum terkonfirmasi**. Lihat [locator, sidik berkas, dan batas penelusuran](bg001-k2-financial-source-clarification-draft.md). Tidak memilih Rp500 juta, menghapus laporan awal, atau menyatakan penerbit telah mengoreksi. |
 | Keuangan baris lain | PDF 23/cetak 9, 3.2: K1 Rp300 juta; K3 Rp2,5 miliar; M Rp5 miliar; B Rp10 miliar, paling sedikit per BUJK. | Angka selaras dengan P/D pada locator keuangan di atas. Ini kecocokan salinan, bukan izin mengaktifkan persyaratan. PDF 38/cetak 24 5.1.3 membedakan ekuitas di luar tanah/bangunan, bukti neraca, audit M/B, pajak perpanjangan dan kurs tanggal neraca; total aset/omzet bukan pengganti ekuitas. |
 | Jumlah/jenjang TKK | PDF 24–25/cetak 10–11, 3.3: satu PJBU; PJTBU/PJKBU K1 jenjang 4/3, K2 5/4, K3 6/5, M 7 atau ahli muda/6, B 8 atau ahli madya/7 atau ahli muda. Baris M berlanjut pada halaman berikut. | Selaras dengan matriks P PDF/cetak 263–264 dan D PDF 29–30/cetak 20–21. Jumlah peran bukan otomatis orang unik; izin rangkap K1 dan kesesuaian SKK tetap dibaca terpisah. |
 | Kesesuaian TKK BG001 | PDF 25/cetak 11, tabel Subklasifikasi TKK baris 1: PJTBU Arsitektural, Gedung, Manajemen Konstruksi/Manajemen Proyek; PJKBU Arsitektural dan Gedung. | Bandingkan P PDF/cetak 18 A.1 KBLI 41011 angka 3.c–d dan matriks awal. Nama peran di sumber ini **PJKBU**; jangan otomatis mengganti semua istilah sumber menjadi PJSKBU atau menganggap seluruh bidang harus dimiliki serentak. |
@@ -58,8 +64,10 @@ pengesahan atau mulai berlakunya regulasi nasional. L diperlakukan sebagai
 
 1. Apakah penerbit menyediakan versi sah terbaru atau erratum untuk angka
    versus terbilang keuangan K2? Sampai ada bukti, pertahankan keduanya
-   dalam catatan konflik dan gunakan norma primer sebagai pembanding;
+   dalam riwayat laporan konflik dan gunakan norma primer sebagai pembanding;
    tidak menerbitkan koreksi atas nama lembaga.
+   Adendum 25 Oktober membedakan laporan awal dari pembacaan berkas saat ini;
+   keselarasan berkas saat ini tidak menutup pertanyaan riwayat versi.
 2. Apa status persetujuan dan cakupan penerapan revisi 01/11? Tahun sampul,
    tanggal awal dokumen, tanggal review, dan pemicu nasional harus
    dipisahkan. Jangan mengklaim tanggal operasional sudah pasti.
