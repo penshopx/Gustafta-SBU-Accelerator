@@ -30,3 +30,4 @@
 - [Browser virtual clocks](browser-clock-notifications.md) — paused timers also stop query notifications; headless visibility simulation must reach the real window listener.
 - [Mutation observer resets](mutation-observer-resets.md) — resetting a mutation observer drops per-call callbacks; server-result cache refresh must survive dialog replacement.
 - [Live-region announcements](live-region-announcements.md) — test stable empty-to-text updates for repeated saves; DOM evidence alone does not prove spoken output.
+- [Arah model AI](llm-provider-direction.md) — Claude sebagai model utama aplikasi; GPT, Gemini, atau model lain sebagai pendukung sesuai tugas.
