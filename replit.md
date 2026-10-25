@@ -59,7 +59,7 @@ Ruang kerja persiapan permohonan SBU baru dan perpanjangan untuk ekosistem jasa 
 - Profil peran tidak membuktikan keanggotaan organisasi; data kasus dibatasi ke identitas akun pemilik, tanpa akses lintas akun. Jangan mengklaim fitur kolaborasi asosiasi hingga otorisasi organisasi dibangun.
 - Deklarasi bukti tetap berupa catatan teks. Dokumen asli dapat diunggah sebagai lampiran privat, tetapi unggahan tidak otomatis menjadi deklarasi, tidak mengubah status kesiapan, dan tidak berarti terverifikasi. Keputusan tetap pada penyelenggara sertifikasi.
 - Perhitungan tenggat konversi nonaktif secara bawaan. Tanggal hanya muncul pada temuan perpanjangan untuk alur yang punya sumber penerbit resmi berstatus berlaku, disahkan penelaah yang diizinkan, dan ditelaah ahli skema/LSBU yang teridentifikasi. Catatan bukti pemohon tidak dapat melakukan verifikasi ini.
-- Produk independen, tidak terafiliasi atau mewakili Ditjen Bina Konstruksi, LPJK, Kementerian PU maupun LSBU; jangan membangun alur komunikasi dengan instansi atau mengklaim verifikasi SIJK/status regulasi dari mereka. Rujukan resmi hanya dicatat bila tersedia secara independen dan dapat diperiksa.
+- Produk independen, tidak terafiliasi atau mewakili Ditjen Bina Konstruksi, LPJK, Kementerian PU maupun LSBU; jangan membangun alur komunikasi dengan instansi atau mengklaim verifikasi SIJK/status regulasi dari mereka. Pengguna menegaskan tidak bisa klarifikasi dari LSBU karena aplikasi ini terpisah dan mandiri; jangan menjadikan permintaan klarifikasi LSBU sebagai alur kerja produk. Rujukan resmi hanya dicatat bila tersedia secara independen dan dapat diperiksa.
 
 ## Penelaahan sumber transisi
 

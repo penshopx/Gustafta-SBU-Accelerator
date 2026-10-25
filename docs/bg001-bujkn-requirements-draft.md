@@ -492,10 +492,11 @@ M/B pada SIJK melalui SIMPK**, dan **(6) pencatatan komitmen pada SIJK
 untuk jalur komitmen**. Yang satu tidak menggantikan semua yang lain.
 Konsekuensi spesifik per jenis permohonan belum disahkan.
 
-### 8.4. Pertanyaan siap ditelaah, bukan permintaan yang telah dikirim
+### 8.4. Pertanyaan telaah yang belum terjawab, bukan rencana kontak LSBU
 
-Mintakan jawaban **tertulis dengan locator sumber dan versi skema yang
-berlaku**, identitas/kompetensi penelaah serta cakupan jenis permohonan
+Jika jawaban tersedia secara independen, periksa bukti **tertulis dengan
+locator sumber dan versi skema yang berlaku**, identitas/kompetensi penelaah
+serta cakupan jenis permohonan
 (baru/perubahan/perpanjangan) dan kualifikasi (Kecil/M/B). Bila belum ada
 dasar, catat “belum diputuskan”; jangan ubah ketidaktahuan menjadi
 persyaratan belanja atau otomatis lulus.
@@ -568,6 +569,41 @@ harus diperiksa sesuai bagian 8.4; ini bukan rencana menghubungkan
 aplikasi ke LSBU. Ini bukan penyelesaian substantif G4,
 bukan daftar pengadaan, dan tidak membuka gerbang bagian 5 atau
 mengaktifkan aturan aplikasi.
+
+#### Status butir 3–6: klarifikasi tidak diizinkan
+
+Pengguna **belum mengizinkan permintaan klarifikasi** dan menegaskan:
+“tidak bisa klarifikasi dari LSBU. aplikasi ini terpisah dan mandiri”.
+Butir 3–6 dipertahankan sebagai daftar persoalan telaah, **bukan rencana
+kontak, pengiriman, integrasi, atau pengajuan melalui aplikasi**. Tidak
+ada permintaan yang dikirim atau jawaban tertulis yang diperoleh melalui
+pekerjaan ini. Batas produk independen dalam `replit.md` tetap berlaku.
+
+Karena itu, G5 **belum diputuskan untuk penerapan**, khususnya:
+
+- Jalur komitmen Kecil/Menengah/Besar dan cakupan baru/perubahan/
+  perpanjangan; cara pembuktian serta kapan dan oleh siapa pemenuhan
+  1/1/2 unit diperiksa saat pelaksanaan pekerjaan.
+- Bukti milik/sewa beli/sewa yang mengikat identitas unit, hak pakai,
+  pihak dan periode berlaku; komitmen tidak disamakan dengan perjanjian
+  yang berlaku atau ketersediaan alat nyata.
+- Pencatatan surat komitmen di SIJK tidak otomatis membuktikan
+  pencatatan alat di SIMPK. Pengecualian SIMPK bagi Kecil bukan
+  penghapusan minimum alat atau pencatatan komitmen di SIJK; penerimaan
+  status SIMPK untuk M/B dan waktu pemeriksaannya belum ditetapkan di sini.
+- Arti batas lima subklasifikasi lain dalam satu klasifikasi serta
+  pembuktian identitas, kapasitas dan ketersediaan untuk penggunaan
+  bersama; tidak ada pengesahan hitung ganda satu alat sebagai dua unit B.
+
+Locator tetap: **P PDF/cetak 265–266 A.3.k.4–14; D PDF 40–41/cetak
+31–32 5.1.5.1–10; D PDF 66/cetak 57 bagian 21.A**. Tidak ada
+kesimpulan bahwa surat komitmen membuktikan kepemilikan, ketersediaan
+alat atau pencatatan SIMPK; tidak ada kewajiban pembelian baru.
+Jika kelak tersedia rujukan resmi secara independen, dasar, kewenangan,
+versi dan cakupannya harus diperiksa, bukan dianggap sebagai jawaban
+LSBU atas pertanyaan ini. Tidak ada perubahan aplikasi, aktivasi aturan,
+atau pembukaan gerbang bagian 5. Penutupan pekerjaan atas arahan pengguna
+ini **bukan penyelesaian substantif G5**.
 
 ## Mengulang pemeriksaan
 
