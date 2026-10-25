@@ -769,6 +769,166 @@ test("scheduler warns at three unhealthy rounds, re-arms on recovery, and preser
   }
 });
 
+test("failed DELETE and deferred COMMIT retry deleted reservations and the same orphan page without touching ready objects", async () => {
+  const requireDb = createRequire(new URL("../../../lib/db/package.json", import.meta.url));
+  const { Pool } = requireDb("pg");
+  const admin = new Pool({ connectionString: process.env.DATABASE_URL });
+  const schema = `cleanup_rollback_${randomUUID().replaceAll("-", "")}`;
+  let restricted;
+  try {
+    await admin.query(`CREATE SCHEMA "${schema}"`);
+    await admin.query(`CREATE TABLE "${schema}".sbu_documents (
+      id uuid PRIMARY KEY, status text NOT NULL, object_path text NOT NULL, created_at timestamptz NOT NULL)`);
+    await admin.query(`CREATE TABLE "${schema}".failure_control (mode text NOT NULL)`);
+    await admin.query(`INSERT INTO "${schema}".failure_control VALUES ('off')`);
+    // Real PostgreSQL failures: the deferred constraint trigger fires only at
+    // COMMIT, after Drizzle's callback has returned and storage has changed.
+    await admin.query(`CREATE FUNCTION "${schema}".reject_expiration() RETURNS trigger
+      LANGUAGE plpgsql AS $$
+      BEGIN
+        IF EXISTS (SELECT 1 FROM "${schema}".failure_control WHERE mode = TG_NAME) THEN
+          RAISE EXCEPTION 'synthetic cleanup % failure', TG_NAME USING ERRCODE = 'P0001';
+        END IF;
+        RETURN OLD;
+      END $$`);
+    await admin.query(`CREATE TRIGGER delete_failure BEFORE DELETE ON "${schema}".sbu_documents
+      FOR EACH ROW EXECUTE FUNCTION "${schema}".reject_expiration()`);
+    await admin.query(`CREATE CONSTRAINT TRIGGER commit_failure AFTER DELETE ON "${schema}".sbu_documents
+      DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION "${schema}".reject_expiration()`);
+    restricted = await createRestrictedRoutePool(admin, schema);
+    globalThis.__rollbackCleanupPool = restricted.pool;
+    const productionLocks = await readFile(join(dir, "../src/lib/document-lifecycle-lock.ts"), "utf8");
+    const fixtureLocks = productionLocks.replaceAll("(137, 1)", `(${randomInt(1_000_000, 2_000_000_000)}, 1)`);
+    assert.notEqual(fixtureLocks, productionLocks);
+    const output = join(temp, "rollback-job.mjs");
+    await build({
+      entryPoints: [join(dir, "../src/lib/document-cleanup-job.ts")], outfile: output,
+      bundle: true, platform: "node", format: "esm",
+      external: ["drizzle-orm", "drizzle-orm/*", "pdf-lib"],
+      plugins: [{
+        name: "rollback-cleanup-fixture",
+        setup(builder) {
+          for (const [filter, path] of [
+            [/^@workspace\/db$/, "db"], [/^\.\/document-storage$/, "storage"],
+            [/^\.\/document-lifecycle-lock$/, "locks"], [/^\.\/logger$/, "logger"],
+          ]) builder.onResolve({ filter }, () => ({ path, namespace: "rollback-fixture" }));
+          builder.onLoad({ filter: /.*/, namespace: "rollback-fixture" }, ({ path }) => ({
+            contents: path === "db" ? `
+              import {drizzle} from "drizzle-orm/node-postgres";
+              export {documentsTable} from ${JSON.stringify(join(dir, "../../../lib/db/src/schema/standalone.ts"))};
+              export const db = drizzle(globalThis.__rollbackCleanupPool);
+            ` : path === "storage" ? `
+              export const documentStorage = globalThis.__rollbackCleanupStorage;
+              export class InvalidCleanupCursor extends Error {}
+            ` : path === "locks" ? fixtureLocks : "export const logger = {info(){},warn(){}};",
+            loader: "ts", resolveDir: dir,
+          }));
+        },
+      }],
+    });
+    for (const mode of ["delete_failure", "commit_failure"]) {
+      await restricted.pool.query("UPDATE failure_control SET mode='off'");
+      await restricted.pool.query("DELETE FROM sbu_documents");
+      const abandoned = pending(), empty = pending();
+      abandoned.id = "00000000-0000-4000-8000-000000000001";
+      empty.id = "00000000-0000-4000-8000-000000000002";
+      const readyFinal = { ...pending(), status: "ready" };
+      readyFinal.objectPath = final(readyFinal.id);
+      const readyStage = { ...pending(), status: "ready" };
+      const conflicting = { ...pending(), objectPath: readyStage.objectPath };
+      const rows = [abandoned, empty, readyFinal, readyStage, conflicting];
+      for (const r of rows) await restricted.pool.query("INSERT INTO sbu_documents VALUES ($1,$2,$3,$4)",
+        [r.id, r.status, r.objectPath, r.createdAt]);
+      const protectedPaths = [readyFinal.objectPath, readyStage.objectPath, final(readyStage.id), final(conflicting.id)];
+      const orphan = object(stage()), tail = object(stage());
+      const f = fixture([
+        object(abandoned.objectPath), object(final(abandoned.id)),
+        ...protectedPaths.map((path) => object(path)), orphan, tail,
+      ]);
+      const protectedBytes = protectedPaths.map((path) => [path, { ...f.files.get(path) }]);
+      const beforeRows = (await restricted.pool.query("SELECT * FROM sbu_documents ORDER BY id")).rows;
+      const listings = [], calls = [];
+      let failOrphan = mode === "commit_failure";
+      const remove = f.storage.removeGeneration;
+      f.storage.removeGeneration = async (entry) => {
+        calls.push(entry.path);
+        assert.ok(!protectedPaths.includes(entry.path), "ready and conflicting references never reach DELETE");
+        if (entry.path === orphan.path && failOrphan) {
+          failOrphan = false;
+          throw new Error("synthetic transient storage failure");
+        }
+        return remove(entry);
+      };
+      globalThis.__rollbackCleanupStorage = {
+        ...f.storage,
+        listCleanupObjects: async (cursor) => {
+          listings.push({ ...cursor });
+          if (cursor.namespace === "documents")
+            return { objects: [], nextCursor: { namespace: "uploads" } };
+          if (cursor.pageToken === "tail")
+            return { objects: f.files.has(tail.path) ? [tail] : [], nextCursor: { namespace: "documents" } };
+          assert.deepEqual(cursor, { namespace: "uploads" });
+          // Snapshot includes protected objects, so orphan handling must also
+          // respect references, not just the pending-reservation branch.
+          return { objects: [...protectedBytes.map(([, entry]) => entry),
+            ...(f.files.has(orphan.path) ? [orphan] : [])],
+            nextCursor: { namespace: "uploads", pageToken: "tail" } };
+        },
+      };
+      const { runDocumentCleanup: run } = await import(`${output}?mode=${mode}`);
+      await restricted.pool.query("UPDATE failure_control SET mode=$1", [mode]);
+      await assert.rejects(run(false), (error) => {
+        let cause = error;
+        while (cause.cause) cause = cause.cause;
+        assert.equal(cause.code, "P0001");
+        assert.equal(cause.message, `synthetic cleanup ${mode} failure`);
+        return true;
+      }, "database failure must reject rather than report success counts");
+      assert.ok(f.deleted.includes(abandoned.objectPath));
+      assert.ok(f.deleted.includes(final(abandoned.id)), "external deletes survive database rollback");
+      assert.deepEqual((await restricted.pool.query("SELECT * FROM sbu_documents ORDER BY id")).rows, beforeRows,
+        "rollback retains every reservation and ready row");
+      assert.ok(f.files.has(orphan.path), "unprocessed or failed orphan remains on the failed page");
+      assert.equal(calls.includes(orphan.path), mode === "commit_failure",
+        "only the COMMIT failure occurs after orphan processing");
+      assert.ok(f.files.has(tail.path));
+      assert.deepEqual(protectedPaths.map((path) => [path, f.files.get(path)]), protectedBytes);
+
+      await restricted.pool.query("UPDATE failure_control SET mode='off'");
+      const retry = await run(false);
+      assert.deepEqual(listings[1], listings[0], "failed transaction must not advance the listing cursor");
+      assert.equal(retry.expiredReservations, 2, "missing bytes do not strand rolled-back reservations");
+      assert.equal(retry.deletedObjects, 1, "retry reaches the orphan left on the failed page");
+      assert.equal(retry.failures, 0);
+      assert.equal(retry.stopped, 0);
+      assert.ok(!f.files.has(orphan.path));
+      assert.ok(f.files.has(tail.path));
+      assert.deepEqual((await restricted.pool.query("SELECT * FROM sbu_documents ORDER BY id")).rows,
+        beforeRows.filter((r) => ![abandoned.id, empty.id].includes(r.id)));
+      const next = await run(false);
+      assert.deepEqual(listings[2], { namespace: "uploads", pageToken: "tail" },
+        "successful commit advances traversal");
+      assert.equal(next.deletedObjects, 1);
+      assert.equal((await run(false)).deletedObjects, 0); // documents -> uploads
+      assert.equal((await run(false)).deletedObjects, 0); // repeat safely
+      assert.deepEqual([...f.files].sort(), [...protectedBytes].sort());
+      assert.deepEqual(new Set(f.deleted), new Set([abandoned.objectPath, final(abandoned.id), orphan.path, tail.path]));
+      assert.equal(f.deleted.length, 4, "already missing objects are not deleted again");
+    }
+  } finally {
+    try {
+      if (restricted) await restricted.close();
+    } finally {
+      try { await admin.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); }
+      finally {
+        await admin.end();
+        delete globalThis.__rollbackCleanupPool;
+        delete globalThis.__rollbackCleanupStorage;
+      }
+    }
+  }
+});
+
 test("scheduled job uses PostgreSQL transaction exclusion across uploads, crashes, and parallel cleaners", async () => {
   const requireDb = createRequire(new URL("../../../lib/db/package.json", import.meta.url));
   const { Pool } = requireDb("pg");

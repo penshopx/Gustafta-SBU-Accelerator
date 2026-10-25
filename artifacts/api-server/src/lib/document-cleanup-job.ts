@@ -12,7 +12,9 @@ let cursor: CleanupCursor = { namespace: "uploads" };
 let reservationOffset = 0;
 
 export async function runDocumentCleanup(dryRun: boolean, limits?: CleanupBudgetOptions) {
-  return db.transaction(async (tx) => {
+  let committedCursor = cursor;
+  let committedReservationOffset = reservationOffset;
+  const result = await db.transaction(async (tx) => {
     // PostgreSQL cancels the query itself (including table/row lock waits).
     // LOCAL resets on commit/rollback, so pooled upload transactions retain
     // their own timeout policy. A JS Promise race would leave the query and
@@ -43,10 +45,16 @@ export async function runDocumentCleanup(dryRun: boolean, limits?: CleanupBudget
     }, { dryRun, reservationOffset, budget });
     // Never skip the unprocessed portion of a page. Rotate reservations even
     // after a stop so a persistently slow first row cannot monopolize each run.
-    if (!counts.stopped) cursor = page.nextCursor;
-    reservationOffset += counts.reservationsScanned;
+    if (!counts.stopped) committedCursor = page.nextCursor;
+    committedReservationOffset += counts.reservationsScanned;
     return counts;
   });
+  // Storage deletes cannot roll back with PostgreSQL. Keep traversal state on
+  // the same page if metadata deletion or COMMIT fails, so both leftover
+  // reservations and failed orphan deletes remain discoverable on retry.
+  cursor = committedCursor;
+  reservationOffset = committedReservationOffset;
+  return result;
 }
 
 // One timer in the existing API workflow, not a duplicate web service.
