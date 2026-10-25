@@ -545,6 +545,30 @@ Jawaban tersebut dan gerbang bagian 5 diperlukan sebelum spesifikasi
 aturan terpisah. Tidak ada daftar pengadaan atau validasi perusahaan
 yang dihasilkan dari telaah ini.
 
+#### Status izin kontak untuk butir 1–2
+
+Aplikasi **tidak terhubung dengan LSBU**. Rujukan penelaah/LSBU pada
+bagian ini adalah kebutuhan telaah eksternal, bukan fitur pengiriman,
+integrasi, pengajuan, atau verifikasi resmi melalui aplikasi. Sesuai
+batas produk independen dalam `replit.md`, jangan membangun alur
+komunikasi dengan instansi; rujukan resmi hanya dicatat bila tersedia
+secara independen dan dapat diperiksa.
+
+Pengguna memilih **belum mengizinkan kontak**. Pemberian alamat tujuan
+tidak mengubah pilihan tersebut menjadi izin pengiriman. Permintaan
+butir 1–2 belum dikirim; belum ada jawaban tertulis dari penelaah/LSBU
+yang diperoleh melalui permintaan ini, dan kewenangan penerima belum
+diverifikasi. Data kontak tidak dicantumkan dalam dokumen proyek.
+
+Definisi satu unit scaffolding modular, kebolehan dua unit Besar sejenis,
+padanan nama/subvarian SIMPK, serta spesifikasi/kapasitas yang dinilai
+tetap **belum diputuskan**. Bila jawaban telaah diperoleh secara
+independen, kewenangan penelaah dan dasar tertulis berlocator tetap
+harus diperiksa sesuai bagian 8.4; ini bukan rencana menghubungkan
+aplikasi ke LSBU. Ini bukan penyelesaian substantif G4,
+bukan daftar pengadaan, dan tidak membuka gerbang bagian 5 atau
+mengaktifkan aturan aplikasi.
+
 ## Mengulang pemeriksaan
 
 ```sh
