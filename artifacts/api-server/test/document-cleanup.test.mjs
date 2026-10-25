@@ -731,6 +731,117 @@ test("scheduled job uses PostgreSQL transaction exclusion across uploads, crashe
         adapter.listCleanupObjects = originalList;
       }
     }
+    // Real database stalls, not unresolved JS promises: hold a table lock on
+    // the disposable schema while the restricted job owns the exclusive
+    // advisory lock. SHARE permits the snapshot but blocks reservation DELETE.
+    // ACCESS EXCLUSIVE blocks the snapshot before ANY storage work.
+    for (const mode of ["ACCESS EXCLUSIVE", "SHARE"]) {
+      const abandoned = pending();
+      await restricted.pool.query("INSERT INTO sbu_documents VALUES ($1,$2,$3,$4)",
+        [abandoned.id, abandoned.status, abandoned.objectPath, abandoned.createdAt]);
+      const orphan = object(stage());
+      f.files.set(orphan.path, orphan);
+      const blocker = await admin.connect();
+      const uploader = await restricted.pool.connect();
+      const adapter = globalThis.__cleanupStorage;
+      const originals = { ...adapter };
+      const calls = [];
+      for (const method of ["listCleanupObjects", "inspect", "removeGeneration"]) {
+        adapter[method] = (...args) => {
+          calls.push(method);
+          return originals[method](...args);
+        };
+      }
+      let cleaning, uploading;
+      try {
+        const baseline = (await uploader.query("SHOW statement_timeout")).rows[0];
+        await blocker.query("BEGIN");
+        await blocker.query(`LOCK TABLE "${schema}".sbu_documents IN ${mode} MODE`);
+        const { rows: [{ pid: blockerPid }] } = await blocker.query("SELECT pg_backend_pid() AS pid");
+        const start = performance.now();
+        // Attach rejection handling immediately, including assertion-failure
+        // paths, so teardown never leaves an unhandled transaction rejection.
+        cleaning = runDocumentCleanup(false).then(
+          (counts) => ({ counts }), (error) => ({ error }));
+        let waiting;
+        for (let i = 0; i < 100; i++) {
+          const { rows } = await admin.query(`
+            SELECT a.pid FROM pg_stat_activity a
+            WHERE $1::int = ANY(pg_blocking_pids(a.pid))
+              AND a.usename = $2 AND a.wait_event_type = 'Lock'
+          `, [blockerPid, (await uploader.query("SELECT current_user AS name")).rows[0].name]);
+          if (rows.length) { waiting = rows[0].pid; break; }
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        assert.ok(waiting, "cleanup must actually wait on the fixture table lock");
+        const atStall = [...calls];
+        if (mode === "ACCESS EXCLUSIVE") assert.deepEqual(atStall, []);
+        else {
+          assert.equal(atStall[0], "listCleanupObjects");
+          assert.ok(atStall.includes("inspect"));
+          assert.ok(!atStall.includes("removeGeneration"));
+        }
+        const filesBefore = [...f.files], deletedBefore = [...f.deleted];
+        await uploader.query("BEGIN");
+        await uploader.query("SET LOCAL statement_timeout = '5000ms'");
+        let acquired = false;
+        uploading = uploader.query(shared.sql, shared.params).then(
+          () => { acquired = true; }, (error) => { throw error; });
+        // Ensure the uploader was queued behind cleanup, not merely started
+        // after its timeout. The blocker still holds the table lock throughout.
+        let queued = false;
+        for (let i = 0; i < 100; i++) {
+          const { rows: [{ blocked }] } = await admin.query(
+            "SELECT $1::int = ANY(pg_blocking_pids($2::int)) AS blocked",
+            [waiting, uploader.processID]);
+          if (blocked) { queued = true; break; }
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+        assert.equal(queued, true);
+        assert.equal(acquired, false);
+        const { error, counts } = await cleaning;
+        assert.equal(counts, undefined, "database failure must not report a successful cleanup");
+        let cause = error;
+        while (cause?.cause) cause = cause.cause;
+        assert.equal(cause?.code, "57014", "PostgreSQL must cancel the stalled statement");
+        await uploading;
+        assert.equal(acquired, true, "rollback releases lifecycle lock before table blocker ends");
+        assert.ok(performance.now() - start < 4_500, "database wait must be bounded");
+        assert.deepEqual(calls, atStall, "no storage operations after database failure");
+        assert.deepEqual([...f.files], filesBefore);
+        assert.deepEqual(f.deleted, deletedBefore);
+        await uploader.query("COMMIT");
+        assert.deepEqual((await uploader.query("SHOW statement_timeout")).rows[0], baseline);
+        // Reserve both pool slots to check the cleanup connection too: SET
+        // LOCAL must not leak into the next normal upload transaction.
+        const reused = await restricted.pool.connect();
+        try {
+          await reused.query("BEGIN");
+          assert.deepEqual((await reused.query("SHOW statement_timeout")).rows[0], baseline);
+          await reused.query(shared.sql, shared.params);
+          await reused.query("COMMIT");
+        } finally {
+          await reused.query("ROLLBACK");
+          reused.release();
+        }
+        await blocker.query("ROLLBACK");
+        assert.equal((await uploader.query("SELECT status FROM sbu_documents WHERE id=$1",
+          [abandoned.id])).rows[0].status, "pending", "failed DELETE leaves reservation retryable");
+      } finally {
+        await blocker.query("ROLLBACK");
+        if (cleaning) await cleaning;
+        if (uploading) await uploading.catch(() => {});
+        await uploader.query("ROLLBACK");
+        blocker.release();
+        uploader.release();
+        Object.assign(adapter, originals);
+      }
+      const retry = await runDocumentCleanup(false);
+      assert.equal(retry.stopped, 0);
+      assert.equal(retry.expiredReservations, 1);
+      assert.equal(f.files.has(orphan.path), false);
+      assert.equal(f.files.has(ready.objectPath), true);
+    }
     // DB read failure fails closed BEFORE listing/deletion.
     await admin.query(`ALTER TABLE "${schema}".sbu_documents RENAME TO hidden_documents`);
     const before = listCalls;

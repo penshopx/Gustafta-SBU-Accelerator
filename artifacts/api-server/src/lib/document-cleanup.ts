@@ -77,6 +77,7 @@ export async function reconcileDocuments(
       const paths = [...new Set([row.objectPath, finalPath(row.id)])];
       if (paths.some((p) => !isManagedDocumentPath(p) ||
         referenced.get(p)?.some((r) => r.id !== row.id))) { counts.retained++; continue; }
+      let shouldExpire = false;
       try {
         const snapshots: (CleanupObject | undefined)[] = [];
         for (const path of paths) snapshots.push(await budget.run(() => storage.inspect(path)));
@@ -93,14 +94,17 @@ export async function reconcileDocuments(
           }
         }
         // A failed/changed-generation deletion keeps the reservation for retry.
-        if (!dryRun && unchanged) {
-          budget.check();
-          await expire(row.id);
-          counts.expiredReservations++;
-        }
+        shouldExpire = !dryRun && unchanged;
       } catch (error) {
         if (error instanceof CleanupStopped) throw error;
         counts.failures++;
+      }
+      if (shouldExpire) {
+        budget.check();
+        // Database errors abort the transaction. Do not treat them as a
+        // recoverable storage failure and continue deleting other objects.
+        await expire(row.id);
+        counts.expiredReservations++;
       }
     }
     for (const object of objects) {

@@ -1,5 +1,5 @@
 import { db, documentsTable } from "@workspace/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { documentStorage, InvalidCleanupCursor, type CleanupCursor } from "./document-storage";
 import { documentCleanupLock } from "./document-lifecycle-lock";
 import { reconcileDocuments } from "./document-cleanup";
@@ -12,6 +12,11 @@ let reservationOffset = 0;
 
 export async function runDocumentCleanup(dryRun: boolean, limits?: CleanupBudgetOptions) {
   return db.transaction(async (tx) => {
+    // PostgreSQL cancels the query itself (including table/row lock waits).
+    // LOCAL resets on commit/rollback, so pooled upload transactions retain
+    // their own timeout policy. A JS Promise race would leave the query and
+    // exclusive lifecycle lock alive until the database eventually responds.
+    await tx.execute(sql`SET LOCAL statement_timeout = '2000ms'`);
     const lock = await tx.execute(documentCleanupLock);
     if (!lock.rows[0]?.acquired) return { skipped: 1 };
     const budget = new CleanupBudget(limits);
