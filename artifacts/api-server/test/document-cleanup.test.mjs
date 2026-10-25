@@ -308,7 +308,7 @@ test("real storage adapter scopes listing, pins deletion generation, and rejects
   delete globalThis.__cleanupBucket;
 });
 
-test("paged job reaches both namespace tails after dry-run, restart, rejected tokens and failed snapshots", async () => {
+test("paged job reaches both namespace tails after dry-run, restart, rejected tokens, failed snapshots and behind-cursor inserts", async () => {
   const requireDb = createRequire(new URL("../../../lib/db/package.json", import.meta.url));
   const { Pool } = requireDb("pg");
   const admin = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -519,6 +519,82 @@ test("paged job reaches both namespace tails after dry-run, restart, rejected to
     const remainingRows = (await restricted.pool.query("SELECT id,status,object_path FROM sbu_documents")).rows;
     assert.equal(remainingRows.length, rows.length + 1);
     assert.ok(remainingRows.every((r) => r.status === "ready" && files.has(r.object_path)));
+
+    // Start a fresh full cycle, without restarting or invalidating its tokens
+    // afterward. New keys behind a live keyset cursor are legitimately absent
+    // from this cycle; wrapping both namespaces must discover them next time.
+    ({ runDocumentCleanup: run } = await import(`${output}?behind-cursor=1`));
+    const lateOrphans = [], lateReadyRows = [];
+    const beforeLateDeletes = [...deleted];
+    const cycleStart = listings.length;
+    for (const namespace of ["uploads", "documents"]) {
+      const firstPageIndex = listings.length;
+      const counts = await run(false);
+      assert.equal(counts.stopped, 0);
+      assert.equal(counts.deletedObjects, 0);
+      assert.equal(listings.at(-1).prefix, `private/${namespace}/`);
+      assert.equal(listings.at(-1).pageToken, undefined);
+
+      // Distinct valid UUIDs sort near the namespace start, before the active
+      // page boundary. Insert only AFTER the first page has been processed.
+      const inserted = ["a", "b", "c"].map((suffix) => {
+        const id = uuid(namespace === "uploads" ? 0 : 10000).slice(0, -1) + suffix;
+        const path = `/objects/${namespace}/${id}`;
+        assert.equal(files.has(path), false);
+        const entry = object(path, suffix === "b" ? now : old, `10${suffix.charCodeAt(0)}`);
+        files.set(path, entry);
+        if (suffix === "a") lateOrphans.push(path);
+        else expectedKept.set(path, { ...entry });
+        return { id, path };
+      });
+      const ready = inserted[2];
+      await restricted.pool.query("INSERT INTO sbu_documents VALUES ($1,'ready',$2,$3)",
+        [ready.id, ready.path, new Date(old)]);
+      lateReadyRows.push({ id: ready.id, status: "ready", object_path: ready.path });
+
+      for (let page = 0; page < 2; page++) {
+        const continued = await run(false);
+        assert.equal(continued.stopped, 0);
+        assert.equal(continued.deletedObjects, 0);
+        const listing = listings.at(-1);
+        assert.equal(listing.prefix, `private/${namespace}/`);
+        assert.ok(listing.pageToken);
+        const [version, boundary] = JSON.parse(listing.pageToken);
+        assert.equal(version, epoch, "the active token is not rejected or reset");
+        for (const { path } of inserted) {
+          assert.ok(`private/${path.slice("/objects/".length)}` < boundary,
+            "inserted objects really are behind the active cursor");
+          assert.ok(files.has(path), "the current cycle must not visit keys behind its cursor");
+        }
+      }
+      assert.equal(listings.length, firstPageIndex + 3);
+    }
+    assert.deepEqual(listings.slice(cycleStart).map((o) => o.prefix), [
+      ...Array(3).fill("private/uploads/"), ...Array(3).fill("private/documents/"),
+    ]);
+    assert.deepEqual(deleted, beforeLateDeletes);
+    assert.deepEqual(files, new Map([
+      ...expectedKept, ...lateOrphans.map((path) => [path, files.get(path)]),
+    ]));
+    const beforeNextCycle = listings.length;
+    for (let page = 0; page < 6; page++) {
+      const counts = await run(false);
+      assert.equal(counts.stopped, 0);
+      assert.equal(counts.failures, 0);
+      assert.equal(counts.expiredReservations, 0);
+    }
+    const nextCycle = listings.slice(beforeNextCycle);
+    assert.deepEqual(nextCycle.map((o) => o.prefix), [
+      ...Array(3).fill("private/uploads/"), ...Array(3).fill("private/documents/"),
+    ]);
+    for (const i of [0, 3]) assert.equal(nextCycle[i].pageToken, undefined);
+    for (const i of [1, 2, 4, 5]) assert.ok(nextCycle[i].pageToken);
+    assert.deepEqual(deleted.slice(beforeLateDeletes.length), lateOrphans,
+      "the next full cycle deletes exactly the old orphans missed behind the cursor");
+    assert.deepEqual(files, expectedKept, "young and ready objects keep their exact generations and ages");
+    const afterLateRows = (await restricted.pool.query("SELECT id,status,object_path FROM sbu_documents")).rows;
+    assert.deepEqual(afterLateRows.sort((a, b) => a.id.localeCompare(b.id)),
+      [...remainingRows, ...lateReadyRows].sort((a, b) => a.id.localeCompare(b.id)));
   } finally {
     if (restricted) await restricted.close();
     await admin.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
