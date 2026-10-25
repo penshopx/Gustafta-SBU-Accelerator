@@ -528,6 +528,171 @@ test("paged job reaches both namespace tails after dry-run, restart, rejected to
   }
 });
 
+test("scheduler warns at three unhealthy rounds, re-arms on recovery, and preserves dry-run privacy", async () => {
+  const output = join(temp, "health-job.mjs");
+  await build({
+    stdin: {
+      contents: `export * from "../src/lib/document-cleanup-job";
+        export { state } from "cleanup-health-fixture";`,
+      resolveDir: dir, loader: "ts",
+    },
+    outfile: output, bundle: true, platform: "node", format: "esm",
+    plugins: [{
+      name: "cleanup-health",
+      setup(builder) {
+        builder.onResolve({ filter: /^cleanup-health-fixture$|^@workspace\/db$|^\.\/document-storage$|^\.\/logger$|^\.\/document-lifecycle-lock$/ },
+          () => ({ path: "state", namespace: "health" }));
+        builder.onResolve({ filter: /^\.\/document-cleanup-budget$/ }, (args) => {
+          if (args.namespace !== "health-budget") return { path: "budget", namespace: "health-budget" };
+        });
+        builder.onLoad({ filter: /.*/, namespace: "health-budget" }, () => ({
+          contents: `import { CleanupBudget as Base, CleanupStopped } from ${JSON.stringify(join(dir, "../src/lib/document-cleanup-budget.ts"))};
+            export { CleanupStopped };
+            export class CleanupBudget extends Base {
+              constructor(options) { super({ operationMs: 5, roundMs: 1000, ...options }); }
+            }`, loader: "ts", resolveDir: dir,
+        }));
+        builder.onLoad({ filter: /.*/, namespace: "health" }, () => ({
+          contents: `
+            export const state = { logs: [], mode: "timeout", skipped: false, rows: [],
+              deletes: 0, expires: 0, transactions: 0 };
+            const privateError = () => new Error("private-name /objects/uploads/private https://private.invalid user-id");
+            export class InvalidCleanupCursor extends Error {}
+            export const documentCleanupLock = {};
+            export const documentsTable = {};
+            export const db = { transaction: async (run) => {
+              state.transactions++;
+              return run({
+                execute: async () => ({ rows: [{ acquired: !state.skipped }] }),
+                select: () => ({ from: async () => {
+                  if (state.mode === "db-error") throw privateError();
+                  return state.rows;
+                } }),
+                delete: () => { state.expires++; throw privateError(); },
+              });
+            } };
+            export const documentStorage = {
+              listCleanupObjects: async () => {
+                if (state.mode === "timeout") return new Promise(() => {});
+                if (state.mode === "list-error") throw privateError();
+                return { objects: [], nextCursor: { namespace: "uploads" } };
+              },
+              inspect: async () => {
+                if (state.mode === "inspect-error") throw privateError();
+                return undefined;
+              },
+              removeGeneration: async () => { state.deletes++; throw privateError(); },
+            };
+            export const logger = Object.fromEntries(["info", "warn"].map(level =>
+              [level, (counts, message) => state.logs.push({ level, counts, message })]));
+          `, loader: "ts",
+        }));
+      },
+    }],
+  });
+  const { startDocumentCleanup, state } = await import(output);
+  const savedInterval = globalThis.setInterval;
+  const savedClear = globalThis.clearInterval;
+  const savedMode = process.env.SBU_DOCUMENT_CLEANUP_MODE;
+  let scheduled;
+  globalThis.setInterval = (callback, interval) => {
+    assert.equal(interval, 60 * 60_000);
+    scheduled = callback;
+    return { unref() {} };
+  };
+  globalThis.clearInterval = () => {};
+  const alerts = () => state.logs.filter(log => log.message === "Document cleanup repeated incomplete rounds");
+  const waitForRound = async (before) => {
+    const deadline = Date.now() + 2000;
+    while (state.logs.filter(log => log.message === "Document cleanup counts").length === before) {
+      assert.ok(Date.now() < deadline, "scheduled cleanup must settle");
+      await new Promise(resolve => setTimeout(resolve, 1));
+    }
+  };
+  const tick = async () => {
+    const before = state.logs.filter(log => log.message === "Document cleanup counts").length;
+    scheduled();
+    await waitForRound(before);
+  };
+  try {
+    for (const mode of ["delete", "dry-run"]) {
+      state.logs = [];
+      state.mode = "timeout";
+      state.rows = [];
+      process.env.SBU_DOCUMENT_CLEANUP_MODE = mode;
+      const stop = startDocumentCleanup();
+      try {
+        await waitForRound(0); // startup counts as the first round
+        await tick();
+        assert.equal(alerts().length, 0);
+        state.skipped = true;
+        await tick();
+        assert.equal(alerts().length, 0, "lock skips do not advance the streak");
+        state.skipped = false;
+        await tick();
+        assert.deepEqual(alerts(), [{
+          level: "warn",
+          counts: { consecutiveUnhealthyRounds: 3, threshold: 3, stopped: 1,
+            failures: 0, timeouts: 1, operations: 1, dryRuns: mode === "dry-run" ? 1 : 0 },
+          message: "Document cleanup repeated incomplete rounds",
+        }]);
+        await tick();
+        assert.equal(alerts().length, 1, "a continuing incident does not flood warnings");
+        state.mode = "success";
+        await tick(); // recovery re-arms warning
+        state.mode = "db-error";
+        await tick();
+        state.mode = "list-error";
+        await tick();
+        assert.equal(alerts().length, 1);
+        state.mode = "inspect-error";
+        state.rows = [pending()];
+        await tick(); // caught per-object failures also count, without stopped
+        assert.equal(alerts().length, 2);
+        assert.deepEqual(alerts()[1].counts, {
+          consecutiveUnhealthyRounds: 3, threshold: 3, stopped: 0,
+          failures: 1, timeouts: 0, operations: 2, dryRuns: mode === "dry-run" ? 1 : 0,
+        });
+        state.mode = "success";
+        if (mode === "delete") state.rows = [];
+        await tick();
+        if (mode === "dry-run") {
+          const lastCounts = state.logs.at(-1).counts;
+          assert.equal(lastCounts.reservationCandidates, 1);
+          assert.equal(lastCounts.expiredReservations, 0);
+          assert.equal(lastCounts.deletedObjects, 0);
+        }
+        state.rows = [];
+        state.mode = "timeout";
+        await tick();
+        state.mode = "success";
+        await tick(); // even a sub-threshold streak resets
+        state.mode = "timeout";
+        await tick();
+        await tick();
+        assert.equal(alerts().length, 2);
+        await tick();
+        assert.equal(alerts().length, 3);
+        for (const log of state.logs) {
+          assert.ok(Object.values(log.counts).every(value => Number.isSafeInteger(value)));
+          assert.doesNotMatch(JSON.stringify(log), /private|\/objects|https:|user-id/);
+        }
+        assert.equal(state.deletes, 0);
+        assert.equal(state.expires, 0);
+      } finally { stop(); }
+    }
+    process.env.SBU_DOCUMENT_CLEANUP_MODE = "off";
+    const before = state.transactions;
+    startDocumentCleanup()();
+    assert.equal(state.transactions, before);
+  } finally {
+    globalThis.setInterval = savedInterval;
+    globalThis.clearInterval = savedClear;
+    if (savedMode === undefined) delete process.env.SBU_DOCUMENT_CLEANUP_MODE;
+    else process.env.SBU_DOCUMENT_CLEANUP_MODE = savedMode;
+  }
+});
+
 test("scheduled job uses PostgreSQL transaction exclusion across uploads, crashes, and parallel cleaners", async () => {
   const requireDb = createRequire(new URL("../../../lib/db/package.json", import.meta.url));
   const { Pool } = requireDb("pg");

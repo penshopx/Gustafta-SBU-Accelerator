@@ -7,6 +7,7 @@ import { logger } from "./logger";
 import { CleanupBudget, CleanupStopped, type CleanupBudgetOptions } from "./document-cleanup-budget";
 
 const INTERVAL_MS = 60 * 60_000;
+const UNHEALTHY_ROUND_THRESHOLD = 3;
 let cursor: CleanupCursor = { namespace: "uploads" };
 let reservationOffset = 0;
 
@@ -56,14 +57,39 @@ export function startDocumentCleanup() {
   if (!["delete", "dry-run", "off"].includes(mode)) throw new Error("Invalid document cleanup mode");
   if (mode === "off") return () => {};
   let running = false;
+  let consecutiveUnhealthyRounds = 0;
+  const recordHealth = (counts: { skipped?: number; stopped?: number; failures?: number; timeouts?: number; operations?: number }) => {
+    // Lock contention says nothing about cleanup health. Keep the streak until
+    // an actual completed round recovers. State is local to this scheduler.
+    if (counts.skipped) return;
+    if (!counts.stopped && !counts.failures) {
+      consecutiveUnhealthyRounds = 0;
+      return;
+    }
+    consecutiveUnhealthyRounds++;
+    // Warn once per unhealthy streak, including dry-run; recovery re-arms it.
+    if (consecutiveUnhealthyRounds === UNHEALTHY_ROUND_THRESHOLD) {
+      logger.warn({
+        consecutiveUnhealthyRounds,
+        threshold: UNHEALTHY_ROUND_THRESHOLD,
+        stopped: counts.stopped ?? 0,
+        failures: counts.failures ?? 0,
+        timeouts: counts.timeouts ?? 0,
+        operations: counts.operations ?? 0,
+        dryRuns: mode === "dry-run" ? 1 : 0,
+      }, "Document cleanup repeated incomplete rounds");
+    }
+  };
   const tick = async () => {
     if (running) return;
     running = true;
     try {
       const counts = await runDocumentCleanup(mode === "dry-run");
       logger.info({ ...counts, dryRuns: mode === "dry-run" ? 1 : 0 }, "Document cleanup counts");
+      recordHealth(counts);
     } catch {
       logger.warn({ failures: 1 }, "Document cleanup counts");
+      recordHealth({ failures: 1 });
     } finally { running = false; }
   };
   void tick();
