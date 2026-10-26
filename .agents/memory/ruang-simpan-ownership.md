@@ -8,6 +8,8 @@ description: User cancellation of the Gustafta integration and prior ownership c
 
 Pengguna menyatakan: “integrasi dengan gutafta dibatalkan”.
 
+Pengguna menegaskan cakupan yang digunakan: “ruang simpan mandiri saja bukan yang terintegrasi dengan gustafta”.
+
 **Why:** Pengguna membatalkan integrasi.
 
 **How to apply:** Jangan melanjutkan provisioning, pemetaan koneksi, atau pengujian live integrasi Gustafta/Ruang Simpan kecuali pengguna secara eksplisit meminta melanjutkannya. Pembatalan pekerjaan tidak dengan sendirinya mengizinkan penghapusan kode atau kredensial yang sudah ada.
