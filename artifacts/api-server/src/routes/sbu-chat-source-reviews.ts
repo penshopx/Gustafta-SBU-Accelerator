@@ -1,11 +1,41 @@
 import { Router, type IRouter } from "express";
 import { getAuth } from "@clerk/express";
-import { ListSbuChatSourceReviewsResponse, RecordSbuChatSourceReviewBody, RecordSbuChatSourceReviewResponse } from "@workspace/api-zod";
+import { ListKnowledgeSourcesResponse, ListSbuChatSourceReviewsResponse, RecordSbuChatSourceReviewBody, RecordSbuChatSourceReviewResponse } from "@workspace/api-zod";
 import { chatSourceReviewStore, InvalidSourceReview, SourceReviewConflict, type ChatSourceReviewStore } from "../lib/sbu-chat-source-reviews";
 
 // Operations-only API: a selected chat role/profile never grants review rights.
 export function createChatSourceReviewsRouter(store: ChatSourceReviewStore = chatSourceReviewStore): IRouter {
   const router = Router();
+  // Public-source excerpts for signed-in readers, not the reviewer-only ledger.
+  // Reuse active() so withdrawals/replacements also affect this view. No AI,
+  // company data, reviewer identities or decision reasons are returned.
+  router.get("/knowledge-sources", async (req, res) => {
+    res.set("Cache-Control", "private, no-store");
+    const userId = getAuth(req).userId;
+    if (!userId) { res.status(401).json({ error: "Silakan masuk untuk melanjutkan." }); return; }
+    if (req.get("X-SBU-Form-Owner") !== userId) {
+      res.status(409).json({ error: "Sesi berubah. Muat ulang Pusat Pengetahuan." }); return;
+    }
+    try {
+      const versions = await store.active();
+      const sources = versions.flatMap(version => {
+        // Only classify sources whose origin is known. A future catalog must
+        // explicitly classify new documents instead of silently calling them law.
+        if (!["permen-pu-6-2025", "kepdirjen-281-2026"].includes(version.sourceKey)) {
+          throw new Error("unclassified_source");
+        }
+        return version.citations.map(citation => ({
+        ...citation, sourceKey: version.sourceKey, versionId: version.versionId,
+        sourceRole: "primer" as const,
+        topics: version.sourceKey === "permen-pu-6-2025"
+          ? ["Perizinan", "SMAP", "Transisi SBU"] : ["Skema sertifikasi", "SMAP", "Transisi SBU"],
+        }));
+      });
+      res.json(ListKnowledgeSourcesResponse.parse(sources));
+    } catch {
+      res.status(503).json({ error: "Status sumber belum dapat diperiksa. Coba muat ulang." });
+    }
+  });
   router.use("/openai/sbu/source-reviews", (req, res, next) => {
     res.set("Cache-Control", "private, no-store");
     const userId = getAuth(req).userId;

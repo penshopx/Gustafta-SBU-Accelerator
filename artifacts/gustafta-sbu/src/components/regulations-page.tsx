@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { ArrowUpRight, CircleAlert } from 'lucide-react';
-import { getListRegulationsQueryKey, useListRegulations, type Regulation } from '@workspace/api-client-react';
+import { getListRegulationsQueryKey, getListKnowledgeSourcesQueryKey, useListRegulations, useListKnowledgeSources, type Regulation } from '@workspace/api-client-react';
+import { useAccountReadOptions } from './account-queries';
+import { KnowledgeSourcesSection, type KnowledgeSourcesResult } from './knowledge-sources-section';
 import { TransitionExplainer } from './transition-explainer';
 
 const statusLabels = {
@@ -9,14 +11,16 @@ const statusLabels = {
   verified: 'Alur terkait terverifikasi',
 };
 
-export function RegulationsPage() {
+export function RegulationsPage({ expectedUserId }: { expectedUserId?: string } = {}) {
+  const readOptions = useAccountReadOptions();
+  const sources = useListKnowledgeSources({ ...readOptions, query: { queryKey: [...getListKnowledgeSourcesQueryKey(), expectedUserId ?? 'anonymous'], retry: false, staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: 'always', refetchInterval: 30_000 } });
   const result = useListRegulations({ query: { queryKey: getListRegulationsQueryKey(), staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: 'always', refetchInterval: 30_000 } });
-  return <RegulationsPageView result={result}/>;
+  return <RegulationsPageView result={result} sources={sources}/>;
 }
 
 type RegulationsResult = { data?: Regulation[]; isLoading: boolean; isError: boolean; refetch: () => unknown };
 
-export function RegulationsPageView({ result }: { result: RegulationsResult }) {
+export function RegulationsPageView({ result, sources }: { result: RegulationsResult; sources?: KnowledgeSourcesResult }) {
   return <>
     <div className="mb-8">
       <div className="eyebrow mb-2 text-[#1769d1]">PUSAT PENGETAHUAN / REGULASI</div>
@@ -42,5 +46,6 @@ export function RegulationsPageView({ result }: { result: RegulationsResult }) {
         </article>
       ))}</div>
       : <div className="surface relative overflow-hidden px-7 py-12 text-center"><h3 className="display text-xl font-extrabold">Belum ada ringkasan regulasi</h3><p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-[#586f86]">Rujukan sedang tidak tersedia. Jangan gunakan ringkasan yang tidak dapat ditelusuri sebagai dasar keputusan.</p></div>}
+    {sources && <KnowledgeSourcesSection result={sources}/>}
   </>;
 }

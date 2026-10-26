@@ -74,7 +74,7 @@ await build({
   entryPoints: [join(dir, "../src/lib/sbu-chat-retrieval.ts")],
   outfile: join(temp, "retrieval.mjs"), platform: "node", bundle: true, format: "esm",
 });
-const { retrieveChatSources, validateCitedAnswer } = await import(join(temp, "retrieval.mjs"));
+const { retrieveChatSources, validateCitedAnswer, CHAT_SOURCE_VERSIONS } = await import(join(temp, "retrieval.mjs"));
 const body = (mode = "bujk") => ({ mode, consent: true, providerConsent: "anthropic-claude-sonnet-5-5-v1", messages: [{ role: "user", content: "Bantu persiapan SBU" }] });
 
 async function server(generate, run, reserveBudget = async () => {}) {
@@ -199,6 +199,57 @@ test("budget availability requires session owner, discloses no totals and cannot
     assert.deepEqual(reads, Array(4).fill(["assistant", "claude-sonnet-5-5"]));
     assert.deepEqual((await restricted.pool.query("SELECT * FROM sbu_chat_quota ORDER BY user_id")).rows,
       beforeQuota, "checking the shared budget never spends account quota");
+  } finally {
+    listener.closeAllConnections();
+    await new Promise(resolve => listener.close(resolve));
+  }
+});
+
+test("knowledge catalog follows active versions, enforces session owner and never exposes the reviewer ledger", async () => {
+  const quotaBefore = (await restricted.pool.query("SELECT * FROM sbu_chat_quota ORDER BY user_id")).rows;
+  const decisionsBefore = (await restricted.pool.query("SELECT * FROM sbu_chat_source_decisions ORDER BY source_key,revision")).rows;
+  let versions = structuredClone(CHAT_SOURCE_VERSIONS);
+  let fail = false, reads = 0;
+  const forbidden = async () => { assert.fail("knowledge reads must not call providers, write reviews or reserve funds"); };
+  const reviews = { read: forbidden, record: forbidden, active: async () => {
+    reads++;
+    if (fail) throw new Error("PRIVATE_REVIEWER_TOKEN");
+    return versions;
+  } };
+  const app = express();
+  app.use((req, _res, next) => { req.testUser = req.get("X-Test-Identity"); next(); });
+  app.use(createSbuChatRouter(forbidden, undefined, reviews, forbidden));
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise(resolve => listener.once("listening", resolve));
+  const url = `http://127.0.0.1:${listener.address().port}/knowledge-sources`;
+  const get = (owner = "reader-a", identity = owner) => fetch(url, { headers: {
+    ...(identity ? { "X-Test-Identity": identity } : {}),
+    "X-SBU-Form-Owner": owner,
+  } });
+  try {
+    assert.equal((await get("reader-a", "")).status, 401);
+    assert.equal((await get("reader-a", "reader-b")).status, 409);
+    assert.equal(reads, 0);
+    const response = await get();
+    assert.equal(response.status, 200, "ordinary readers do not need reviewer rights");
+    assert.equal(response.headers.get("cache-control"), "private, no-store");
+    const data = await response.json();
+    assert.equal(data.length, 4);
+    assert.ok(data.every(source => source.sourceRole === "primer" && source.id.endsWith(`@${source.versionId}`)));
+    assert.ok(data.some(source => source.verificationStatus === "unverified"));
+    assert.ok(data.some(source => source.verificationStatus === "verified"));
+    assert.ok(data.every(source => source.locator && source.limitation && source.verificationScope));
+    assert.doesNotMatch(JSON.stringify(data), /reviewedBy|reviewReference|decisions|PRIVATE_REVIEWER_TOKEN/);
+    versions = versions.slice(1);
+    assert.deepEqual((await (await get()).json()).map(source => source.sourceKey), ["kepdirjen-281-2026"]);
+    versions = [];
+    assert.deepEqual(await (await get()).json(), []);
+    fail = true;
+    const unavailable = await get();
+    assert.equal(unavailable.status, 503);
+    assert.doesNotMatch(await unavailable.text(), /PRIVATE_REVIEWER_TOKEN/);
+    assert.deepEqual((await restricted.pool.query("SELECT * FROM sbu_chat_quota ORDER BY user_id")).rows, quotaBefore);
+    assert.deepEqual((await restricted.pool.query("SELECT * FROM sbu_chat_source_decisions ORDER BY source_key,revision")).rows, decisionsBefore);
   } finally {
     listener.closeAllConnections();
     await new Promise(resolve => listener.close(resolve));

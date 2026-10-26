@@ -44,6 +44,7 @@ import type {
   EvidenceUpdate,
   FormOwnerMismatchResponse,
   HealthStatus,
+  KnowledgeSource,
   ListDocumentVault200,
   ListDocumentVaultParams,
   LocalCompanyProfile,
@@ -2295,6 +2296,83 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getDeleteDocumentAnalysisMutationOptions(options));
     }
+
+export const getListKnowledgeSourcesUrl = () => {
+
+
+
+
+  return `/api/knowledge-sources`
+}
+
+/**
+ * @summary Active curated public excerpts; retrieval admission is not legal verification
+ */
+export const listKnowledgeSources = async ( options?: Parameters<typeof customFetch>[1]): Promise<KnowledgeSource[]> => {
+
+  return customFetch<KnowledgeSource[]>(getListKnowledgeSourcesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListKnowledgeSourcesQueryKey = () => {
+    return [
+    `/api/knowledge-sources`
+    ] as const;
+    }
+
+
+export const getListKnowledgeSourcesQueryOptions = <TData = Awaited<ReturnType<typeof listKnowledgeSources>>, TError = ErrorType<void | FormOwnerMismatchResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listKnowledgeSources>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListKnowledgeSourcesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listKnowledgeSources>>> = ({ signal }) => listKnowledgeSources({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listKnowledgeSources>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListKnowledgeSourcesQueryResult = NonNullable<Awaited<ReturnType<typeof listKnowledgeSources>>>
+export type ListKnowledgeSourcesQueryError = ErrorType<void | FormOwnerMismatchResponse>
+
+
+/**
+ * @summary Active curated public excerpts; retrieval admission is not legal verification
+ */
+
+export function useListKnowledgeSources<TData = Awaited<ReturnType<typeof listKnowledgeSources>>, TError = ErrorType<void | FormOwnerMismatchResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listKnowledgeSources>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListKnowledgeSourcesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListSbuChatSourceReviewsUrl = () => {
 

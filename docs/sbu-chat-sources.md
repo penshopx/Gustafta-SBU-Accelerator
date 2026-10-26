@@ -4,6 +4,33 @@ Asisten melakukan retrieval lokal atas ringkasan terkurasi rujukan persiapan
 yang sudah dicatat pada `regulatory-basis.md`. Ini bukan indeks seluruh PDF,
 pencarian internet, autentikasi salinan, atau telaah ahli baru.
 
+## Pusat Pengetahuan
+
+Halaman `/regulations` menyediakan pencarian dan filter jenis sumber, status
+metadata dan topik untuk cuplikan aktif. Detail menampilkan identitas versi,
+locator asli, tanggal pemeriksaan, cakupan verifikasi, status dokumen serta
+batas kesimpulan. Nomor halaman PDF dan cetak tidak disamakan; jika penanda
+tidak eksplisit, antarmuka menyatakan nomor tersebut tidak tercatat.
+
+`GET /api/knowledge-sources` memakai ledger aktif yang sama dengan retrieval,
+memerlukan sesi dan `X-SBU-Form-Owner` yang sesuai, serta mengirim
+`private, no-store`. Respons hanya memuat cuplikan publik, bukan identitas
+penelaah atau alasan keputusan. Kegagalan ledger menghasilkan 503, bukan
+kembali ke sumber baseline yang mungkin telah dicabut.
+
+Query diikat ke akun, dimuat ulang saat mount/fokus dan setiap 30 detik.
+Daftar serta detail disembunyikan selama pemuatan ulang atau kegagalan;
+detail sumber yang sudah tidak ada dalam respons terbaru juga menghilang.
+Ini bukan push real-time atau jaminan bahwa keputusan yang terjadi setelah
+snapshot langsung terlihat sebelum pembacaan berikutnya.
+
+Katalog awal hanya empat cuplikan dari dua dokumen primer. Filter tidak
+menambahkan sumber klasifikasi KBLI, panduan, atau praktik yang belum
+dikurasi. Dokumen baru perlu klasifikasi eksplisit di server sebelum
+ditampilkan; katalog tidak menerima dokumen/URL bebas dari pengguna.
+Pencarian/detail tidak memanggil AI, memakai kuota, mengirim konteks ke
+Klinik, atau mengaktifkan draf BG001.
+
 ## Korpus dan batas persetujuan
 
 - Permen PU 6/2025: metadata JDIH yang diperiksa 26 September 2026;

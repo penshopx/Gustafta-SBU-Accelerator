@@ -59,6 +59,8 @@ export * from './finding';
 export * from './findingStatus';
 export * from './formOwnerMismatchResponse';
 export * from './healthStatus';
+export * from './knowledgeSource';
+export * from './knowledgeSourceSourceRole';
 export * from './listDocumentVault200';
 export * from './listDocumentVault200DocumentsItem';
 export * from './listDocumentVaultCategory';

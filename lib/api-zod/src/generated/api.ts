@@ -1270,6 +1270,33 @@ export const DeleteDocumentAnalysisResponse = zod.void()
 
 
 /**
+ * @summary Active curated public excerpts; retrieval admission is not legal verification
+ */
+export const listKnowledgeSourcesResponseOneCheckedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const ListKnowledgeSourcesResponseItem = zod.object({
+  "id": zod.string(),
+  "document": zod.string(),
+  "version": zod.string(),
+  "locator": zod.string(),
+  "excerpt": zod.string().describe('Ringkasan terkurasi, bukan kutipan verbatim.'),
+  "sourceUrl": zod.string().url(),
+  "verificationStatus": zod.enum(['verified', 'unverified']),
+  "verificationScope": zod.string(),
+  "documentStatus": zod.string(),
+  "checkedOn": zod.string().regex(listKnowledgeSourcesResponseOneCheckedOnRegExp).describe('Tanggal kalender pemeriksaan, bukan waktu verifikasi live.'),
+  "limitation": zod.string()
+}).and(zod.object({
+  "sourceKey": zod.string(),
+  "versionId": zod.string(),
+  "sourceRole": zod.enum(['primer', 'referensi_klasifikasi', 'panduan', 'praktik']),
+  "topics": zod.array(zod.string())
+}))
+export const ListKnowledgeSourcesResponse = zod.array(ListKnowledgeSourcesResponseItem)
+
+
+/**
  * @summary Reviewer-only source versions and append-only review history, separate from transition verification
  */
 export const listSbuChatSourceReviewsResponseVersionsItemCitationsItemCheckedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');

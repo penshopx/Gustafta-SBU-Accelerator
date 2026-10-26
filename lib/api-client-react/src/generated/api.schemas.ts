@@ -1521,6 +1521,23 @@ export interface Dashboard {
   recent: SbuCase[];
 }
 
+export type KnowledgeSourceSourceRole = typeof KnowledgeSourceSourceRole[keyof typeof KnowledgeSourceSourceRole];
+
+
+export const KnowledgeSourceSourceRole = {
+  primer: 'primer',
+  referensi_klasifikasi: 'referensi_klasifikasi',
+  panduan: 'panduan',
+  praktik: 'praktik',
+} as const;
+
+export type KnowledgeSource = SbuChatCitation & {
+  sourceKey: string;
+  versionId: string;
+  sourceRole: KnowledgeSourceSourceRole;
+  topics: string[];
+};
+
 export type RegulationEffectiveStatus = typeof RegulationEffectiveStatus[keyof typeof RegulationEffectiveStatus];
 
 

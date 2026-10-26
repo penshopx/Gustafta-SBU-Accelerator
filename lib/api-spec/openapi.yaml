@@ -462,6 +462,23 @@ paths:
       responses:
         "204": { description: Selected analysis removed }
         "404": { description: Analysis unavailable }
+  /knowledge-sources:
+    get:
+      operationId: listKnowledgeSources
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      summary: Active curated public excerpts; retrieval admission is not legal verification
+      responses:
+        "200":
+          description: Current sources without private review history
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/KnowledgeSource" }
+        "401": { description: Authentication required }
+        "409": { $ref: "#/components/responses/FormOwnerMismatch" }
+        "503": { description: Source status unavailable }
   /openai/sbu/source-reviews:
     get:
       operationId: listSbuChatSourceReviews
@@ -1911,6 +1928,18 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SbuCase"
+    KnowledgeSource:
+      allOf:
+        - $ref: "#/components/schemas/SbuChatCitation"
+        - type: object
+          required: [sourceKey, versionId, sourceRole, topics]
+          properties:
+            sourceKey: { type: string }
+            versionId: { type: string }
+            sourceRole: { type: string, enum: [primer, referensi_klasifikasi, panduan, praktik] }
+            topics:
+              type: array
+              items: { type: string }
     Regulation:
       type: object
       required: [id, title, detail, source, effectiveStatus, transitionFindings]
