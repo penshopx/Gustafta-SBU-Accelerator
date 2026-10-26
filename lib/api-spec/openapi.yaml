@@ -1439,10 +1439,17 @@ components:
         consent: { type: boolean, enum: [true] }
         revision: { type: integer, minimum: 0 }
         requestId: { type: string, format: uuid }
+    SbuChatPurpose:
+      type: string
+      enum: [tutor_regulasi, permohonan_baru, perpanjangan, pemeriksa_dokumen, studi_kasus, pendamping_proses]
+      description: Conversation goal only; independent of role, specialist and authorization.
     SbuChatInput:
       type: object
       required: [mode, messages, consent, providerConsent]
       properties:
+        purpose:
+          $ref: "#/components/schemas/SbuChatPurpose"
+          description: Defaults to tutor_regulasi for older clients; never grants data access.
         providerConsent:
           type: string
           enum: [anthropic-claude-sonnet-5-5-v1]
@@ -1517,8 +1524,9 @@ components:
         quota: { $ref: "#/components/schemas/SbuChatQuota" }
     SbuChatReply:
       type: object
-      required: [userId, mode, specialist, answer, disclaimer, citations, retrievalNotice, quota]
+      required: [userId, mode, purpose, specialist, answer, disclaimer, citations, retrievalNotice, quota]
       properties:
+        purpose: { $ref: "#/components/schemas/SbuChatPurpose" }
         quota: { $ref: "#/components/schemas/SbuChatQuota" }
         specialist:
           type: string

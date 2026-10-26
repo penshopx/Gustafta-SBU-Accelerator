@@ -9,8 +9,11 @@ import type { SbuChatInputMode } from './sbuChatInputMode';
 import type { SbuChatInputProviderConsent } from './sbuChatInputProviderConsent';
 import type { SbuChatInputSpecialist } from './sbuChatInputSpecialist';
 import type { SbuChatMessage } from './sbuChatMessage';
+import type { SbuChatPurpose } from './sbuChatPurpose';
 
 export interface SbuChatInput {
+  /** Defaults to tutor_regulasi for older clients; never grants data access. */
+  purpose?: SbuChatPurpose;
   /** Disclosure version accepted on the current page; old OpenAI consent does not authorize Anthropic. */
   providerConsent: SbuChatInputProviderConsent;
   specialist?: SbuChatInputSpecialist;

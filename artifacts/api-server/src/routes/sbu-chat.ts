@@ -20,9 +20,9 @@ type Generate = SbuChatGenerate;
 
 export const generateSbuChatAnswer: Generate = async (...args) => {
   // Legacy GPT adapter remains the default for Klinik Konsultasi.
-  const [mode, messages, signal, specialist, context = "", sources] = args;
+  const [mode, messages, signal, specialist, context = "", sources, _maxRetries, purpose] = args;
   const { openai } = await import("@workspace/integrations-openai-ai-server");
-  const chatInput = buildSbuChatInput(mode, messages, specialist, context, sources);
+  const chatInput = buildSbuChatInput(mode, messages, specialist, context, sources, purpose);
   const reply = await openai.chat.completions.create({
     model: BUDGET_MODEL,
     max_completion_tokens: BUDGET_OUTPUT_TOKENS,
@@ -96,6 +96,7 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
     if (!input.success || input.data.consent !== true) {
       res.status(400).json({ error: "Muat ulang halaman, pilih mode, isi percakapan yang sah, dan setujui pengiriman teks ke Claude Sonnet 5.5 melalui Replit AI Integrations." }); return;
     }
+    const purpose = input.data.purpose ?? "tutor_regulasi";
     const messages = input.data.messages.map((message) => ({ ...message, content: message.content.trim() }));
     if (messages[0]?.role !== "user" || messages.at(-1)?.role !== "user" ||
         messages.some((message, i) => !message.content ||
@@ -111,7 +112,7 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
       res.status(503).json({ error: "Status persetujuan sumber belum dapat diperiksa. Tidak ada permintaan AI yang dikirim." });
       return;
     }
-    const chatInput = buildSbuChatInput(input.data.mode, messages, input.data.specialist, "", sources);
+    const chatInput = buildSbuChatInput(input.data.mode, messages, input.data.specialist, "", sources, purpose);
     if (sbuChatInputSize(chatInput) > SBU_CHAT_MAX_INPUT_BYTES) {
       res.status(400).json({ error: "Percakapan terlalu panjang untuk batas input asisten. Mulai percakapan baru." });
       return;
@@ -148,7 +149,7 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
       const aborted = new Promise<never>((_resolve, reject) => {
         controller.signal.addEventListener("abort", () => reject(new Error("ai_cancelled")), { once: true });
       });
-      const generation = answer(input.data.mode, messages, controller.signal, input.data.specialist, "", sources, 0)
+      const generation = answer(input.data.mode, messages, controller.signal, input.data.specialist, "", sources, 0, purpose)
         .then((text) => { generationSettled = true; return text; },
           (error: unknown) => { generationSettled = true; throw error; });
       const text = await Promise.race([generation, aborted]);
@@ -160,7 +161,7 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
       }
       const cited = validateCitedAnswer(text, sources);
       payload = {
-        userId, mode: input.data.mode, specialist: input.data.specialist, ...cited,
+        userId, mode: input.data.mode, specialist: input.data.specialist, purpose, ...cited,
         disclaimer: CHAT_DISCLAIMER, retrievalNotice: RETRIEVAL_NOTICE,
       };
     } catch (error) {

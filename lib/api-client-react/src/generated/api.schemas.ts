@@ -602,6 +602,21 @@ export interface ConsultationMessageInput {
 }
 
 /**
+ * Conversation goal only; independent of role, specialist and authorization.
+ */
+export type SbuChatPurpose = typeof SbuChatPurpose[keyof typeof SbuChatPurpose];
+
+
+export const SbuChatPurpose = {
+  tutor_regulasi: 'tutor_regulasi',
+  permohonan_baru: 'permohonan_baru',
+  perpanjangan: 'perpanjangan',
+  pemeriksa_dokumen: 'pemeriksa_dokumen',
+  studi_kasus: 'studi_kasus',
+  pendamping_proses: 'pendamping_proses',
+} as const;
+
+/**
  * Disclosure version accepted on the current page; old OpenAI consent does not authorize Anthropic.
  */
 export type SbuChatInputProviderConsent = typeof SbuChatInputProviderConsent[keyof typeof SbuChatInputProviderConsent];
@@ -660,6 +675,8 @@ export interface SbuChatMessage {
 }
 
 export interface SbuChatInput {
+  /** Defaults to tutor_regulasi for older clients; never grants data access. */
+  purpose?: SbuChatPurpose;
   /** Disclosure version accepted on the current page; old OpenAI consent does not authorize Anthropic. */
   providerConsent: SbuChatInputProviderConsent;
   specialist?: SbuChatInputSpecialist;
@@ -810,6 +827,7 @@ export interface SbuChatCitation {
 }
 
 export interface SbuChatReply {
+  purpose: SbuChatPurpose;
   quota: SbuChatQuota;
   specialist: SbuChatReplySpecialist;
   userId: string;

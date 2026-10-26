@@ -87,7 +87,7 @@ test('native clipboard retains source cards and verification limits across a new
         assert.equal(request.headers()['x-sbu-form-owner'], owner);
         const body = request.postDataJSON();
         sent.push(body);
-        return json({ userId: owner, mode: body.mode, specialist: body.specialist, quota,
+        return json({ userId: owner, mode: body.mode, purpose: body.purpose, specialist: body.specialist, quota,
           answer: sent.length === 1 ? 'Jawaban sintetis pertama dengan dua sumber.' : 'Jawaban sintetis baru tanpa sumber.',
           citations: sent.length === 1 ? sources : [], retrievalNotice: sent.length === 1 ? notice : emptyNotice });
       }

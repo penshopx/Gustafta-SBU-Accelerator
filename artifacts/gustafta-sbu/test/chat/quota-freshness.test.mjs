@@ -126,7 +126,7 @@ test('browser quota freshness and fail-closed recovery with synthetic accounts',
           sent.push({ owner, body });
           state.used[owner]++;
           if (state.budgetAfterSend) state.budget = state.budgetAfterSend;
-          return json({ userId: owner, mode: body.mode, specialist: body.specialist,
+          return json({ userId: owner, mode: body.mode, purpose: body.purpose, specialist: body.specialist,
             quota: quotaFor(owner, state.now, state.used[owner]), answer: 'Jawaban sintetis.',
             citations: [], retrievalNotice: 'Tidak ada sumber nyata dalam fixture.' });
         }

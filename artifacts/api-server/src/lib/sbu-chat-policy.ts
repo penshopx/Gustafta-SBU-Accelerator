@@ -1,6 +1,7 @@
 import { REGULATIONS } from "./sbu-rules";
 import { specialistInstruction, type SpecialistId } from "./sbu-chat-specialists";
-import type { SbuChatCitation } from "@workspace/api-zod";
+import type { SbuChatCitation, SbuChatPurpose } from "@workspace/api-zod";
+import { chatPurposeInstruction } from "./sbu-chat-purposes";
 import { RETRIEVAL_NOTICE } from "./sbu-chat-retrieval";
 
 export const CHAT_DISCLAIMER = "Bantuan awal AI, bukan keputusan asesor/LSBU, verifikasi dokumen, atau jaminan penerbitan SBU. Tinjau hasil dengan manusia yang kompeten dan sumber resmi.";
@@ -15,11 +16,12 @@ export const CHAT_MODES = {
 } as const;
 export type ChatMode = keyof typeof CHAT_MODES;
 
-export function sbuChatSystemPrompt(mode: ChatMode, specialist: SpecialistId = "sbuclaw", sources?: readonly SbuChatCitation[]): string {
+export function sbuChatSystemPrompt(mode: ChatMode, specialist: SpecialistId = "sbuclaw", sources?: readonly SbuChatCitation[], purpose?: SbuChatPurpose): string {
   const references = REGULATIONS.map(({ title, detail, source }) => ({ title, detail, source }));
   return `Anda adalah Asisten SBU Accelerator, aplikasi mandiri dan tidak terhubung Gustafta, OSS, LPJK atau LSBU.
 Jawab dalam bahasa Indonesia yang jelas, praktis dan singkat. ${CHAT_MODES[mode]}
 ${specialistInstruction(specialist)}
+${chatPurposeInstruction(purpose)}
 Gabungkan konteks peran dengan fokus spesialis. Nama spesialis tidak berarti agen resmi, model terpisah, sub-agent otonom atau knowledge base khusus yang telah diverifikasi.
 Utamakan struktur: pemahaman konteks, langkah/checklist yang dapat dilakukan, hal yang perlu dikonfirmasi. Jika konteks kurang, tanyakan maksimal tiga hal penting.
 BATAS WAJIB:

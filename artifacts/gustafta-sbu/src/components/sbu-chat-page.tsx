@@ -2,16 +2,17 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 're
 import { Link } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, Copy, Loader2, Plus, SendHorizontal, ShieldAlert, Square } from 'lucide-react';
-import { sendSbuChatMessage, useGetSbuChatBudget, getGetSbuChatBudgetQueryKey, useGetSbuChatQuota, getGetSbuChatQuotaQueryKey, useGetSbuChatSpecialists, getGetSbuChatSpecialistsQueryKey, type SbuChatInput, type SbuChatSpecialist, type SbuChatCitation } from '@workspace/api-client-react';
+import { sendSbuChatMessage, useGetSbuChatBudget, getGetSbuChatBudgetQueryKey, useGetSbuChatQuota, getGetSbuChatQuotaQueryKey, useGetSbuChatSpecialists, getGetSbuChatSpecialistsQueryKey, type SbuChatInput, type SbuChatSpecialist, type SbuChatCitation, type SbuChatPurpose } from '@workspace/api-client-react';
 import { useAccountReadOptions, useFormMutationOptions } from '@/components/account-queries';
 import { ChatCitations, chatAnswerForCopy } from './chat-citations';
 import { ChatQuotaNotice, chatLimitMessage, chatQuotaFromError } from './chat-quota';
 import { aiBudgetErrorMessage } from '@/lib/ai-budget-error';
+import { PURPOSES, DEFAULT_PURPOSE, purposeInfo } from '@/lib/sbu-chat-purposes';
 import { ChatBudgetNotice, chatBudgetForOwner } from './chat-budget';
 
 type Mode = SbuChatInput['mode'];
 type SpecId = SbuChatSpecialist['id'];
-type Confirm = null | { kind: 'mode'; to: Mode } | { kind: 'specialist'; to: SpecId } | { kind: 'new' };
+type Confirm = null | { kind: 'mode'; to: Mode } | { kind: 'specialist'; to: SpecId } | { kind: 'purpose'; to: SbuChatPurpose } | { kind: 'new' };
 type Msg = { id: number; role: 'user' | 'assistant'; content: string; citations?: SbuChatCitation[]; retrievalNotice?: string };
 
 const MODES: { id: Mode; label: string; desc: string; intro: string; prompts: string[] }[] = [
@@ -66,6 +67,8 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
   const [mode, setMode] = useState<Mode>(() => defaultModeForRole(initialRole));
   const [messages, setMessages] = useState<Msg[]>([]);
   const [draft, setDraft] = useState('');
+  const [purpose, setPurpose] = useState<SbuChatPurpose>(DEFAULT_PURPOSE);
+  const purposeRef = useRef(purpose); purposeRef.current = purpose;
   const [specialist, setSpecialist] = useState<SpecId>('sbuclaw');
   const catalog = useGetSbuChatSpecialists({ query: { enabled: true, retry: 1, staleTime: 60000, queryKey: getGetSbuChatSpecialistsQueryKey() } });
   const specs = catalog.data;
@@ -84,6 +87,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
   const seq = useRef(0);
   const endRef = useRef<HTMLDivElement>(null);
   const info = MODES.find(m => m.id === mode)!;
+  const pInfo = purposeInfo(purpose);
 
   const abort = useCallback(() => {
     if (timer.current) window.clearTimeout(timer.current);
@@ -101,14 +105,14 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
     const c = new AbortController();
     ctrl.current = c; timedOut.current = false;
     timer.current = window.setTimeout(() => { timedOut.current = true; c.abort(); }, TIMEOUT_MS);
-    const sentMode = modeRef.current, sentSpec = specRef.current;
+    const sentPurpose = purposeRef.current, sentMode = modeRef.current, sentSpec = specRef.current;
     setLoading(true); setError(null);
     try {
-      const res = await sendSbuChatMessage({ mode: sentMode, specialist: sentSpec, consent: true, providerConsent: 'anthropic-claude-sonnet-5-5-v1', messages: buildPayload(next) }, { ...options.request, signal: c.signal });
+      const res = await sendSbuChatMessage({ purpose: sentPurpose, mode: sentMode, specialist: sentSpec, consent: true, providerConsent: 'anthropic-claude-sonnet-5-5-v1', messages: buildPayload(next) }, { ...options.request, signal: c.signal });
       if (c.signal.aborted) return;
-      if (res.userId !== expectedUserId || res.mode !== sentMode || res.specialist !== sentSpec || typeof res.answer !== 'string' ||
+      if (res.userId !== expectedUserId || res.purpose !== sentPurpose || res.mode !== sentMode || res.specialist !== sentSpec || typeof res.answer !== 'string' ||
           !Array.isArray(res.citations) || typeof res.retrievalNotice !== 'string') {
-        setError('Respons tidak sesuai dengan akun atau mode atau spesialis yang aktif, sehingga tidak ditampilkan. Muat ulang halaman lalu coba lagi.');
+        setError('Respons tidak sesuai dengan akun atau tujuan, mode, atau spesialis yang aktif, sehingga tidak ditampilkan. Muat ulang halaman lalu coba lagi.');
         return;
       }
       if (res.quota.userId !== expectedUserId) {
@@ -131,11 +135,15 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
   };
 
   const cancel = () => { abort(); setLoading(false); setError('Permintaan dibatalkan. Draf dipertahankan. Percobaan yang sudah diterima tetap memakai kuota.'); };
-  const resetAll = (to?: { mode?: Mode; specialist?: SpecId }) => { abort(); setLoading(false); setMessages([]); setDraft(''); setError(null); setConfirm(null); if (to?.mode) setMode(to.mode); if (to?.specialist) setSpecialist(to.specialist); };
+  const resetAll = (to?: { mode?: Mode; specialist?: SpecId; purpose?: SbuChatPurpose }) => { abort(); setLoading(false); setMessages([]); setDraft(''); setError(null); setConfirm(null); if (to?.mode) setMode(to.mode); if (to?.specialist) setSpecialist(to.specialist); if (to?.purpose) setPurpose(to.purpose); };
   const dirty = messages.length > 0 || draft.trim().length > 0;
   const pickMode = (to: Mode) => {
     if (loading || to === mode) return;
     if (dirty) setConfirm({ kind: 'mode', to }); else { setError(null); setMode(to); }
+  };
+  const pickPurpose = (to: SbuChatPurpose) => {
+    if (loading || ctrl.current || to === purpose) return;
+    if (dirty) setConfirm({ kind: 'purpose', to }); else { setError(null); setPurpose(to); }
   };
   const pickSpec = (to: string) => {
     const t = specs?.find(x => x.id === to);
@@ -153,8 +161,8 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
 
   return <div className="mx-auto max-w-5xl">
     <div className="mb-6">
-      <div className="eyebrow mb-2 text-[#1769d1]">RUANG KERJA / ASISTEN PERAN</div>
-      <h1 className="display text-[32px] font-extrabold leading-tight sm:text-[39px]">Asisten persiapan SBU</h1>
+      <div className="eyebrow mb-2 text-[#1769d1]">RUANG KERJA / ASISTEN AI</div>
+      <h1 className="display text-[32px] font-extrabold leading-tight sm:text-[39px]">Asisten Pakar SBU</h1>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#526b81]">Panduan awal sesuai konteks peran Anda. Peran di sini hanya konteks percakapan, bukan hak akses, dan asisten tidak mengubah kasus, bukti, maupun menyatakan kesiapan atau sertifikasi.</p>
     </div>
 
@@ -170,6 +178,24 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
 
     <ChatBudgetNotice budget={budget} pending={budgetQuery.isPending} checking={budgetQuery.isFetching} onRefresh={() => void budgetQuery.refetch()} />
 
+    <div className="eyebrow mb-2 text-[#1769d1]">TUJUAN PERCAKAPAN</div>
+    <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Tujuan percakapan" data-testid="group-purpose">
+      {PURPOSES.map(p => <button key={p.id} type="button" role="radio" aria-checked={purpose === p.id} disabled={loading} data-testid={`button-purpose-${p.id}`} onClick={() => pickPurpose(p.id)} className={`rounded-xl border p-4 text-left transition-colors ${purpose === p.id ? 'border-[#1769d1] bg-[#eaf4ff] ring-2 ring-[#1769d1]' : 'border-[#d1dfe9] bg-white hover:bg-[#f4f9fc]'}`}>
+        <span className="flex items-center justify-between text-sm font-extrabold text-[#14253a]">{p.label}{purpose === p.id && <Check size={15} className="text-[#1769d1]" />}</span>
+        <span className="mt-1 block text-xs leading-relaxed text-[#566f85]">{p.desc}</span>
+      </button>)}
+    </div>
+    <div data-testid="panel-purpose" className="mb-6 rounded-xl border border-[#d8e4ec] bg-white p-4 text-xs leading-5 text-[#34506a]">
+      <div className="text-sm font-bold text-[#14253a]">{pInfo.label}</div>
+      <p className="mt-1" data-testid="text-purpose-intro">{pInfo.intro}</p>
+      <div className="eyebrow mb-1 mt-3 text-[#678096]">PERTANYAAN PEMANDU</div>
+      <ul className="list-disc pl-5" data-testid="list-purpose-questions">{pInfo.questions.map(q => <li key={q}>{q}</li>)}</ul>
+      <div className="eyebrow mb-1 mt-3 text-[#678096]">HASIL YANG DIHARAPKAN</div>
+      <p data-testid="text-purpose-expected">{pInfo.expected}</p>
+      {pInfo.note && <p data-testid="text-purpose-note" className="mt-3 rounded-lg bg-[#f4f9fc] p-2.5 font-medium">{pInfo.note} <Link href="/documents" data-testid="link-purpose-documents" className="font-bold underline">Buka Brankas dokumen</Link></p>}
+      <p className="mt-3 text-[11px] text-[#688096]">Tujuan hanya mengarahkan isi jawaban. Tidak memberi akses data, tidak memeriksa keaslian dokumen, dan bukan keputusan lembaga sertifikasi.</p>
+    </div>
+    <div className="eyebrow mb-2 text-[#678096]">PERAN ANDA (KONTEKS, BUKAN HAK AKSES)</div>
     <div className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Mode peran">
       {MODES.map(m => <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} disabled={loading} data-testid={`button-mode-${m.id}`} onClick={() => pickMode(m.id)} className={`rounded-xl border p-3.5 text-left transition-colors ${mode === m.id ? 'border-[#1769d1] bg-[#eaf4ff] ring-1 ring-[#1769d1]' : 'border-[#d1dfe9] bg-white hover:bg-[#f4f9fc]'}`}>
         <span className="flex items-center justify-between text-sm font-bold text-[#14253a]">{m.label}{mode === m.id && <Check size={15} className="text-[#1769d1]" />}</span>
@@ -202,15 +228,15 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
 
     <section className="surface overflow-hidden" aria-label="Percakapan">
       <div className="flex items-center justify-between gap-3 border-b border-[#d8e4ec] bg-[#101f32] px-5 py-3 text-[#e6f2ff]">
-        <div className="min-w-0"><div className="eyebrow text-[#8ec7f4]">PERAN / SPESIALIS AKTIF</div><div className="truncate text-sm font-bold" data-testid="text-active-context">Peran: {info.label}<span className="mx-2 text-[#607d98]">/</span>Spesialis: {spec?.name ?? '...'}</div></div>
+        <div className="min-w-0"><div className="eyebrow text-[#8ec7f4]">TUJUAN / PERAN / SPESIALIS AKTIF</div><div className="truncate text-sm font-bold" data-testid="text-active-context">Tujuan: {pInfo.label}<span className="mx-2 text-[#607d98]">/</span>Peran: {info.label}<span className="mx-2 text-[#607d98]">/</span>Spesialis: {spec?.name ?? '...'}</div></div>
         <button type="button" data-testid="button-new-chat" disabled={loading || (!messages.length && !draft)} onClick={() => dirty ? setConfirm({ kind: 'new' }) : resetAll()} className="btn !min-h-[36px] border border-[#607d98] !text-xs text-white hover:bg-[#203b56]"><Plus size={14} /> Percakapan baru</button>
       </div>
 
       <div className="max-h-[56dvh] min-h-[280px] space-y-4 overflow-y-auto bg-[#f7fbfe] p-4 sm:p-6" data-testid="list-chat-messages">
         {!messages.length && <div className="fade-up">
-          <p className="text-sm leading-7 text-[#34506a]">{info.intro}</p>
+          <p className="text-sm leading-7 text-[#34506a]">{pInfo.intro}</p><p className="mt-2 text-xs leading-5 text-[#566f85]">Peran aktif: {info.label}. {info.intro}</p>
           <div className="eyebrow mb-2 mt-5 text-[#678096]">CONTOH PERTANYAAN</div>
-          <div className="grid gap-2">{(spec ? spec.prompts.slice(0, 3) : info.prompts).map((p, i) => <button key={p} type="button" data-testid={`button-suggestion-${i}`} disabled={loading} onClick={() => { setDraft(p); }} className="rounded-lg border border-[#cddcea] bg-white px-4 py-3 text-left text-sm text-[#1d3651] transition-colors hover:border-[#1769d1] hover:bg-[#eef6fc]">{p}</button>)}</div>
+          <div className="grid gap-2">{(purpose !== DEFAULT_PURPOSE ? pInfo.prompts : spec ? spec.prompts.slice(0, 3) : info.prompts).map((p, i) => <button key={p} type="button" data-testid={`button-suggestion-${i}`} disabled={loading} onClick={() => { setDraft(p); }} className="rounded-lg border border-[#cddcea] bg-white px-4 py-3 text-left text-sm text-[#1d3651] transition-colors hover:border-[#1769d1] hover:bg-[#eef6fc]">{p}</button>)}</div>
         </div>}
         {messages.map(m => <div key={m.id} data-testid={`message-${m.role}-${m.id}`} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
           <div className={`max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-7 sm:max-w-[80%] ${m.role === 'user' ? 'bg-[#1769d1] text-white' : 'border border-[#cddcea] bg-white text-[#14253a]'}`}>
@@ -247,11 +273,11 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
 
     {confirm && <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d1b2ad9] p-4" onMouseDown={e => { if (e.target === e.currentTarget) setConfirm(null); }}>
       <div role="alertdialog" aria-modal="true" aria-label="Konfirmasi" className="surface w-full max-w-md p-6">
-        <h2 className="display text-xl font-extrabold">{confirm.kind === 'mode' ? 'Ganti peran dan hapus percakapan?' : confirm.kind === 'specialist' ? 'Ganti spesialis dan hapus percakapan?' : 'Mulai percakapan baru?'}</h2>
+        <h2 className="display text-xl font-extrabold">{confirm.kind === 'purpose' ? 'Ganti tujuan dan hapus percakapan?' : confirm.kind === 'mode' ? 'Ganti peran dan hapus percakapan?' : confirm.kind === 'specialist' ? 'Ganti spesialis dan hapus percakapan?' : 'Mulai percakapan baru?'}</h2>
         <p className="mt-3 text-sm leading-6 text-[#526b81]">Percakapan dan draf saat ini akan dihapus dan tidak dapat dipulihkan. Persetujuan berbagi data tetap berlaku karena penyedia AI dan tujuan penggunaannya sama.</p>
         <div className="mt-6 flex justify-end gap-2">
           <button type="button" data-testid="button-confirm-cancel" autoFocus onClick={() => setConfirm(null)} className="btn btn-outline">Batal</button>
-          <button type="button" data-testid="button-confirm-ok" onClick={() => resetAll(confirm.kind === 'mode' ? { mode: confirm.to } : confirm.kind === 'specialist' ? { specialist: confirm.to } : undefined)} className="btn btn-primary">{confirm.kind === 'new' ? 'Hapus dan mulai baru' : 'Hapus dan ganti'}</button>
+          <button type="button" data-testid="button-confirm-ok" onClick={() => resetAll(confirm.kind === 'purpose' ? { purpose: confirm.to } : confirm.kind === 'mode' ? { mode: confirm.to } : confirm.kind === 'specialist' ? { specialist: confirm.to } : undefined)} className="btn btn-primary">{confirm.kind === 'new' ? 'Hapus dan mulai baru' : 'Hapus dan ganti'}</button>
         </div>
       </div>
     </div>}

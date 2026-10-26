@@ -47,6 +47,37 @@ try {
     assert.ok(bound <= SBU_CHAT_MAX_INPUT_BYTES);
   });
 
+  test("six goals change the real provider instructions independently of role and specialist", async () => {
+    const goals = {
+      tutor_regulasi: /penjelasan sederhana; rujukan dan locator/,
+      permohonan_baru: /apakah baru pertama bersertifikat/,
+      perpanjangan: /Jangan menolak perpanjangan otomatis/,
+      pemeriksa_dokumen: /Jika belum ada cuplikan/,
+      studi_kasus: /Contoh hipotetis harus berlabel hipotetis/,
+      pendamping_proses: /Tidak menyimpan tugas, mengubah penilaian/,
+    };
+    const calls = [];
+    const generate = createAnthropicSbuChatGenerate({ messages: { create: async (params) => {
+      calls.push(params);
+      return { content: [{ type: "text", text: '{"answer":"Draf","citationIds":[]}' }], stop_reason: "end_turn" };
+    } } });
+    for (const [goal, expected] of Object.entries(goals)) {
+      await generate("pendamping", [{ role: "user", content: "Pertanyaan anonim" }],
+        new AbortController().signal, "sbuclaw", "", [], 0, goal);
+      const prompt = calls.at(-1).system;
+      assert.match(prompt, expected);
+      assert.match(prompt, new RegExp(`TUJUAN PERCAKAPAN — ${goal}:`));
+      assert.match(prompt, /Pendamping\/fasilitator\/konsultan/);
+      assert.match(prompt, /tidak memberikan hak akses/);
+      assert.match(prompt, /Keluarkan JSON saja/);
+      assert.match(prompt, /Draf matriks BG001 bukan hasil retrieval/);
+    }
+    assert.equal(new Set(calls.map(call => call.system)).size, 6);
+    const legacyConsultation = buildSbuChatInput("pendamping", [], "sbuclaw", "Cuplikan terpilih", []);
+    assert.doesNotMatch(legacyConsultation.system, /TUJUAN PERCAKAPAN —/);
+    assert.match(legacyConsultation.system, /Cuplikan terpilih/);
+  });
+
   test("truncated provider output is rejected instead of returning incomplete JSON", async () => {
     const generate = createAnthropicSbuChatGenerate({ messages: { create: async () => ({
       content: [{ type: "text", text: '{"answer":"partial' }], stop_reason: "max_tokens",

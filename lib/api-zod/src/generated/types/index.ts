@@ -109,6 +109,7 @@ export * from './sbuChatLimitError';
 export * from './sbuChatLimitErrorCode';
 export * from './sbuChatMessage';
 export * from './sbuChatMessageRole';
+export * from './sbuChatPurpose';
 export * from './sbuChatQuota';
 export * from './sbuChatReply';
 export * from './sbuChatReplyMode';

@@ -1488,6 +1488,7 @@ export const sendSbuChatMessageBodyMessagesMax = 20;
 
 
 export const SendSbuChatMessageBody = zod.object({
+  "purpose": zod.enum(['tutor_regulasi', 'permohonan_baru', 'perpanjangan', 'pemeriksa_dokumen', 'studi_kasus', 'pendamping_proses']).optional().describe('Defaults to tutor_regulasi for older clients; never grants data access.'),
   "providerConsent": zod.enum(['anthropic-claude-sonnet-5-5-v1']).describe('Disclosure version accepted on the current page; old OpenAI consent does not authorize Anthropic.'),
   "specialist": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']).default(sendSbuChatMessageBodySpecialistDefault),
   "mode": zod.enum(['bujk', 'pendamping', 'asesor', 'lsbu', 'asosiasi', 'umum']),
@@ -1510,6 +1511,7 @@ export const sendSbuChatMessageResponseCitationsItemCheckedOnRegExp = new RegExp
 
 
 export const SendSbuChatMessageResponse = zod.object({
+  "purpose": zod.enum(['tutor_regulasi', 'permohonan_baru', 'perpanjangan', 'pemeriksa_dokumen', 'studi_kasus', 'pendamping_proses']).describe('Conversation goal only; independent of role, specialist and authorization.'),
   "quota": zod.object({
   "userId": zod.string(),
   "dailyLimit": zod.number().int().min(1),
