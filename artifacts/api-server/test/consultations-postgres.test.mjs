@@ -38,7 +38,8 @@ test("private consultations persist, isolate owners, use opted-in case context a
     await restricted.pool.query(`INSERT INTO sbu_cases(id,owner_id,company_name,request_type,qualification,classification)
       VALUES (101,'owner-a','A Private','baru','kecil','BG001'),(102,'owner-b','B Private','baru','menengah','BG002')`);
     await build({
-      entryPoints: { route: join(dir, "../src/routes/consultations.ts"), analysis: join(dir, "../src/routes/document-analysis.ts") },
+      entryPoints: { route: join(dir, "../src/routes/consultations.ts"), analysis: join(dir, "../src/routes/document-analysis.ts"),
+        chat: join(dir, "../src/routes/sbu-chat.ts") },
       outdir: temp, outExtension: { ".js": ".mjs" }, bundle: true, platform: "node", format: "esm",
       external: ["express", "drizzle-orm", "drizzle-orm/*", "pdf-lib"],
       plugins: [{
@@ -62,6 +63,14 @@ test("private consultations persist, isolate owners, use opted-in case context a
     });
     const { createConsultationsRouter } = await import(`${join(temp, "route.mjs")}?test=${Date.now()}`);
     const { createDocumentAnalysisRouter } = await import(`${join(temp, "analysis.mjs")}?test=${Date.now()}`);
+    const { createSbuChatRouter } = await import(join(temp, "chat.mjs"));
+    const chatSent = [];
+    let mutateChatSource;
+    const chatQuota = owner => ({
+      userId: owner, dailyLimit: 30, dailyRemaining: 29, minuteLimit: 6, minuteRemaining: 5,
+      dailyResetAt: "2027-01-01T00:00:00Z", minuteResetAt: "2027-01-01T00:01:00Z",
+      busy: false, retryAfterSeconds: 0,
+    });
     const app = express();
     app.use(express.json());
     app.use("/api", createConsultationsRouter(async (_mode, messages, _signal, _specialist, context) => {
@@ -70,6 +79,15 @@ test("private consultations persist, isolate owners, use opted-in case context a
       return "Jawaban draf: tinjau bersama penelaah.";
     }, async () => {}));
     app.use("/api", createDocumentAnalysisRouter(async () => { throw Error("must not analyze original"); }));
+    app.use("/api", createSbuChatRouter(async (...args) => {
+      chatSent.push(args[4]);
+      if (mutateChatSource) await mutateChatSource();
+      return JSON.stringify({ answer: "Draf cuplikan privat", citationIds: [] });
+    }, {
+      read: async owner => chatQuota(owner),
+      reserve: async owner => ({ quota: chatQuota(owner), leaseId: "fixture-lease" }),
+      finish: async owner => chatQuota(owner),
+    }, { active: async () => [] }, async () => {}));
     server = app.listen(0, "127.0.0.1");
     await new Promise(resolve => server.once("listening", resolve));
     const base = `http://127.0.0.1:${server.address().port}/api`;
@@ -155,6 +173,36 @@ test("private consultations persist, isolate owners, use opted-in case context a
     assert.equal((await call("owner-b", previewPath))[0], 404);
     assert.equal((await call("owner-a", previewPath, "GET", undefined, "owner-b"))[0], 409);
     const selection = { documentId, analysisId, revision: preview.revision, excerpt: "Ringkasan privat terpilih", consent: true };
+    const chatRequest = {
+      mode: "pendamping", purpose: "pemeriksa_dokumen", consent: true,
+      providerConsent: "anthropic-claude-sonnet-5-5-v1",
+      messages: [{ role: "user", content: "Telaah cuplikan yang saya pilih." }],
+      analysisContext: { caseId: 101, selection },
+    };
+    const beforeChat = (await restricted.pool.query("SELECT row_to_json(c) data FROM sbu_cases c ORDER BY id")).rows;
+    assert.equal((await call("owner-b", "/openai/sbu/messages", "POST", chatRequest))[0], 404);
+    assert.equal((await call("owner-a", "/openai/sbu/messages", "POST", {
+      ...chatRequest, analysisContext: { caseId: 102, selection },
+    }))[0], 404);
+    assert.equal(chatSent.length, 0);
+    const [chatStatus, chatReply] = await call("owner-a", "/openai/sbu/messages", "POST", chatRequest);
+    assert.equal(chatStatus, 200);
+    assert.deepEqual(chatReply.analysisContext, chatRequest.analysisContext);
+    const context = JSON.parse(chatSent[0]).analysisSnapshot;
+    assert.equal(context.excerpt, selection.excerpt);
+    assert.deepEqual(context.sourcePages, [2, 4]);
+    assert.equal(context.sourceVersion, 2);
+    assert.equal(context.model, "test-model");
+    assert.doesNotMatch(chatSent[0], /OTHER_ANALYSIS_SECRET|Hanya nilai terpilih|Original secret filename|must-not-read-original|A Private/);
+    assert.deepEqual((await restricted.pool.query("SELECT row_to_json(c) data FROM sbu_cases c ORDER BY id")).rows, beforeChat);
+    // Withhold an answer if the source changes while the provider is working.
+    mutateChatSource = () => restricted.pool.query("UPDATE sbu_documents SET version=3 WHERE id=$1", [documentId]);
+    const [staleChat, staleBody] = await call("owner-a", "/openai/sbu/messages", "POST", chatRequest);
+    assert.equal(staleChat, 409);
+    assert.equal(staleBody.code, "chat_analysis_changed");
+    assert.equal(staleBody.answer, undefined);
+    await restricted.pool.query("UPDATE sbu_documents SET version=2 WHERE id=$1", [documentId]);
+    mutateChatSource = undefined;
     const withAnalysis = { ...create(101, false), analysisSelection: selection };
     await restricted.pool.query("UPDATE sbu_cases SET company_name=$1 WHERE id=101", ["X".repeat(8200)]);
     assert.equal((await call("owner-a", "/consultations", "POST", {

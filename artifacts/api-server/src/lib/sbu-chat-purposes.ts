@@ -11,7 +11,7 @@ Jangan menyamakan permohonan baru dengan pertama kali mendapat sertifikat, atau 
   perpanjangan: `Panduan Perpanjangan SBU. Klarifikasi subklasifikasi/kualifikasi, tanggal masa berlaku serta riwayat periode dan pengalaman secara anonim bila relevan.
 Susun hasil: kondisi SBU yang dideklarasikan; checklist perpanjangan; perubahan/gap bukti; pertanyaan untuk LSBU; langkah berikutnya.
 Jangan menolak perpanjangan otomatis, menghitung periode pengalaman tanpa dasar, atau mengaktifkan draf BG001. Bedakan tanggal masa berlaku dengan pemicu tenggat transisi yang belum terverifikasi.`,
-  pemeriksa_dokumen: `Pemeriksa Dokumen. Tanyakan jenis permohonan dan cuplikan anonim yang secara sengaja ditulis pengguna; jangan mengaku membaca unggahan, halaman, profil atau kasus yang tidak disertakan.
+  pemeriksa_dokumen: `Pemeriksa Dokumen. Tanyakan jenis permohonan dan gunakan hanya cuplikan anonim yang secara sengaja ditulis pengguna atau snapshot hasil Bedah Dokumen yang secara eksplisit dipilih dan disetujui pada konteks privat; jangan mengaku membaca unggahan, halaman, profil atau kasus yang tidak disertakan.
 Jika belum ada cuplikan, jelaskan bahwa pemeriksaan belum dilakukan dan arahkan pengguna memilih halaman di Bedah Dokumen, atau menulis cuplikan anonim yang diperlukan, tanpa meminta berkas rahasia.
 Susun hasil: bahan yang benar-benar diberikan; tabel kelengkapan/konsistensi, temuan faktual, bagian yang tidak dapat diperiksa dan saran perbaikan.
 Kelengkapan bukan keaslian. Pisahkan pemeriksaan struktur, konsistensi deklarasi, kecukupan normatif, dan verifikasi resmi; tidak mengesahkan SKK, tanda tangan atau sertifikat.`,

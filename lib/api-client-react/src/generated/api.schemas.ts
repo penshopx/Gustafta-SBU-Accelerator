@@ -617,6 +617,15 @@ export const SbuChatPurpose = {
 } as const;
 
 /**
+ * One explicitly approved excerpt from a private analysis. Only valid for pemeriksa_dokumen; revalidated on every send. Never includes original document bytes or profile data.
+ */
+export interface SbuChatAnalysisContext {
+  /** @minimum 1 */
+  caseId: number;
+  selection: ConsultationAnalysisSelection;
+}
+
+/**
  * Disclosure version accepted on the current page; old OpenAI consent does not authorize Anthropic.
  */
 export type SbuChatInputProviderConsent = typeof SbuChatInputProviderConsent[keyof typeof SbuChatInputProviderConsent];
@@ -675,6 +684,7 @@ export interface SbuChatMessage {
 }
 
 export interface SbuChatInput {
+  analysisContext?: SbuChatAnalysisContext;
   /** Defaults to tutor_regulasi for older clients; never grants data access. */
   purpose?: SbuChatPurpose;
   /** Disclosure version accepted on the current page; old OpenAI consent does not authorize Anthropic. */
@@ -760,11 +770,26 @@ export type SbuChatUnavailableCode = typeof SbuChatUnavailableCode[keyof typeof 
 export const SbuChatUnavailableCode = {
   ai_budget_exhausted: 'ai_budget_exhausted',
   ai_budget_unavailable: 'ai_budget_unavailable',
+  chat_analysis_unavailable: 'chat_analysis_unavailable',
 } as const;
 
 export interface SbuChatUnavailable {
   error: string;
   code?: SbuChatUnavailableCode;
+  quota?: SbuChatQuota;
+}
+
+export type SbuChatSourceErrorCode = typeof SbuChatSourceErrorCode[keyof typeof SbuChatSourceErrorCode];
+
+
+export const SbuChatSourceErrorCode = {
+  chat_analysis_changed: 'chat_analysis_changed',
+  chat_analysis_unavailable: 'chat_analysis_unavailable',
+} as const;
+
+export interface SbuChatSourceError {
+  error: string;
+  code?: SbuChatSourceErrorCode;
   quota?: SbuChatQuota;
 }
 
@@ -827,6 +852,7 @@ export interface SbuChatCitation {
 }
 
 export interface SbuChatReply {
+  analysisContext?: SbuChatAnalysisContext;
   purpose: SbuChatPurpose;
   quota: SbuChatQuota;
   specialist: SbuChatReplySpecialist;

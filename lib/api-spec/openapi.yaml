@@ -562,7 +562,7 @@ paths:
     post:
       operationId: sendSbuChatMessage
       tags: [workspace]
-      summary: Role-focused SBU AI guidance without reading company data or documents
+      summary: Purpose-focused SBU guidance; private analysis excerpt only with explicit selection and consent
       security: [{ FormOwner: [] }]
       requestBody:
         required: true
@@ -579,8 +579,16 @@ paths:
           description: Invalid conversation or missing consent
         "401":
           description: Authentication required
+        "404":
+          description: Selected private analysis is unavailable or not owned by the session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SbuChatSourceError" }
         "409":
-          $ref: "#/components/responses/FormOwnerMismatch"
+          description: Session owner mismatch or selected analysis revision/excerpt changed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SbuChatSourceError" }
         "429":
           description: Too many requests or another response is being generated
           headers:
@@ -1443,10 +1451,19 @@ components:
       type: string
       enum: [tutor_regulasi, permohonan_baru, perpanjangan, pemeriksa_dokumen, studi_kasus, pendamping_proses]
       description: Conversation goal only; independent of role, specialist and authorization.
+    SbuChatAnalysisContext:
+      type: object
+      additionalProperties: false
+      required: [caseId, selection]
+      description: One explicitly approved excerpt from a private analysis. Only valid for pemeriksa_dokumen; revalidated on every send. Never includes original document bytes or profile data.
+      properties:
+        caseId: { type: integer, minimum: 1 }
+        selection: { $ref: "#/components/schemas/ConsultationAnalysisSelection" }
     SbuChatInput:
       type: object
       required: [mode, messages, consent, providerConsent]
       properties:
+        analysisContext: { $ref: "#/components/schemas/SbuChatAnalysisContext" }
         purpose:
           $ref: "#/components/schemas/SbuChatPurpose"
           description: Defaults to tutor_regulasi for older clients; never grants data access.
@@ -1520,12 +1537,20 @@ components:
         error: { type: string }
         code:
           type: string
-          enum: [ai_budget_exhausted, ai_budget_unavailable]
+          enum: [ai_budget_exhausted, ai_budget_unavailable, chat_analysis_unavailable]
+        quota: { $ref: "#/components/schemas/SbuChatQuota" }
+    SbuChatSourceError:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+        code: { type: string, enum: [chat_analysis_changed, chat_analysis_unavailable] }
         quota: { $ref: "#/components/schemas/SbuChatQuota" }
     SbuChatReply:
       type: object
       required: [userId, mode, purpose, specialist, answer, disclaimer, citations, retrievalNotice, quota]
       properties:
+        analysisContext: { $ref: "#/components/schemas/SbuChatAnalysisContext" }
         purpose: { $ref: "#/components/schemas/SbuChatPurpose" }
         quota: { $ref: "#/components/schemas/SbuChatQuota" }
         specialist:

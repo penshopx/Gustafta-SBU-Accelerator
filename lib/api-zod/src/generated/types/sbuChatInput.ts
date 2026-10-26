@@ -5,6 +5,7 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+import type { SbuChatAnalysisContext } from './sbuChatAnalysisContext';
 import type { SbuChatInputMode } from './sbuChatInputMode';
 import type { SbuChatInputProviderConsent } from './sbuChatInputProviderConsent';
 import type { SbuChatInputSpecialist } from './sbuChatInputSpecialist';
@@ -12,6 +13,7 @@ import type { SbuChatMessage } from './sbuChatMessage';
 import type { SbuChatPurpose } from './sbuChatPurpose';
 
 export interface SbuChatInput {
+  analysisContext?: SbuChatAnalysisContext;
   /** Defaults to tutor_regulasi for older clients; never grants data access. */
   purpose?: SbuChatPurpose;
   /** Disclosure version accepted on the current page; old OpenAI consent does not authorize Anthropic. */

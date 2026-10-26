@@ -5,6 +5,7 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+import type { SbuChatAnalysisContext } from './sbuChatAnalysisContext';
 import type { SbuChatCitation } from './sbuChatCitation';
 import type { SbuChatPurpose } from './sbuChatPurpose';
 import type { SbuChatQuota } from './sbuChatQuota';
@@ -12,6 +13,7 @@ import type { SbuChatReplyMode } from './sbuChatReplyMode';
 import type { SbuChatReplySpecialist } from './sbuChatReplySpecialist';
 
 export interface SbuChatReply {
+  analysisContext?: SbuChatAnalysisContext;
   purpose: SbuChatPurpose;
   quota: SbuChatQuota;
   specialist: SbuChatReplySpecialist;

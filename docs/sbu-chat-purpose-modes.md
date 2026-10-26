@@ -46,10 +46,40 @@ instruksi sebelumnya.
 
 ## Batas pemeriksaan dokumen dan tindakan
 
-Mode Pemeriksa Dokumen **tidak membaca unggahan secara otomatis** dan tidak
-menambahkan akses berkas. Pengguna dapat menulis cuplikan anonim yang
-diperlukan, atau menggunakan alur Bedah Dokumen terpisah dengan pemilihan
-halaman/persetujuannya. Ini bukan aktivasi koneksi hasil Bedah Dokumen ke chat.
+Mode Pemeriksa Dokumen **tidak membaca unggahan secara otomatis**. Pengguna
+dapat tetap menulis cuplikan anonim, atau mengaktifkan pilihan **Gunakan hasil
+Bedah Dokumen** yang awalnya mati. Daftar kasus/dokumen/analisis baru dibaca
+setelah pengguna memilih alur tersebut. Pengguna memilih satu kasus miliknya,
+dokumen bersih/ready, satu analisis versi saat ini, lalu meninjau cuplikan
+berurutan maksimal 4.000 karakter dan referensi persisnya.
+
+Persetujuan khusus cuplikan terpisah dari persetujuan pengiriman pesan ke
+Claude. Mengubah cuplikan membatalkan persetujuannya. Saat bahan dipilih,
+pengiriman dinonaktifkan sampai pilihan lengkap dan disetujui. Setelah ada
+riwayat atau selama permintaan berlangsung, bahan terkunci; menggantinya
+memerlukan percakapan baru yang membersihkan pilihan/persetujuan lama.
+
+Kontrak `analysisContext` membawa `caseId` dan `selection` (ID dokumen dan
+analisis, revision hash, cuplikan, consent=true). Hanya tujuan
+`pemeriksa_dokumen` yang menerimanya. Server memakai pemeriksaan sumber
+privat yang sama dengan Klinik: pemilik kasus/dokumen/analisis, status scan,
+versi dokumen dan hash hasil/referensi, serta kecocokan cuplikan. Hanya
+cuplikan dan referensi server yang masuk konteks AI, bukan nama berkas,
+storage path, profil, isi dokumen asli atau analisis lain.
+
+Pemeriksaan awal berlangsung sebelum reservasi kuota/anggaran. Pemeriksaan
+ulang sebelum jawaban dikembalikan menahan jawaban jika sumber berubah
+selama AI bekerja. Penolakan awal tidak memanggil AI; percobaan yang sudah
+terkirim tetap memakai kuota. Identitas sumber tidak membuktikan keaslian
+sertifikat atau validitas hukum hasil analisis.
+
+Respons sukses mengembalikan pilihan yang dipakai; klien menolak pilihan
+hilang/berbeda/tambahan yang tidak disetujui. Snapshot bahan berada di memori
+halaman dan payload pengiriman ini saja, tidak membuat konsultasi atau
+menyimpan salinan baru pada database. Alur Klinik yang menyimpan snapshot
+tetap terpisah. Penghapusan sumber tidak menghapus teks jawaban lama yang
+telah diterima di memori halaman, tetapi pengiriman berikutnya wajib
+memvalidasi sumber lagi; tidak ada pengambilan berkas ulang otomatis.
 
 Kelengkapan/konsistensi, deklarasi pengguna, verifikasi keaslian, penilaian
 normatif dan keputusan resmi tetap berbeda. Asisten tidak mengesahkan SKK,

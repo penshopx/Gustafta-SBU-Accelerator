@@ -1478,8 +1478,12 @@ export const GetSbuChatBudgetResponse = zod.object({
 
 
 /**
- * @summary Role-focused SBU AI guidance without reading company data or documents
+ * @summary Purpose-focused SBU guidance; private analysis excerpt only with explicit selection and consent
  */
+
+export const sendSbuChatMessageBodyAnalysisContextSelectionRevisionRegExp = new RegExp('^[a-f0-9]{64}$');
+export const sendSbuChatMessageBodyAnalysisContextSelectionExcerptMax = 4000;
+
 export const sendSbuChatMessageBodySpecialistDefault = `sbuclaw`;
 export const sendSbuChatMessageBodyMessagesItemContentMax = 12000;
 
@@ -1488,6 +1492,16 @@ export const sendSbuChatMessageBodyMessagesMax = 20;
 
 
 export const SendSbuChatMessageBody = zod.object({
+  "analysisContext": zod.object({
+  "caseId": zod.number().int().min(1),
+  "selection": zod.object({
+  "documentId": zod.string().uuid(),
+  "analysisId": zod.string().uuid(),
+  "revision": zod.string().regex(sendSbuChatMessageBodyAnalysisContextSelectionRevisionRegExp),
+  "excerpt": zod.string().min(1).max(sendSbuChatMessageBodyAnalysisContextSelectionExcerptMax),
+  "consent": zod.literal(true)
+})
+}).optional().describe('One explicitly approved excerpt from a private analysis. Only valid for pemeriksa_dokumen; revalidated on every send. Never includes original document bytes or profile data.'),
   "purpose": zod.enum(['tutor_regulasi', 'permohonan_baru', 'perpanjangan', 'pemeriksa_dokumen', 'studi_kasus', 'pendamping_proses']).optional().describe('Defaults to tutor_regulasi for older clients; never grants data access.'),
   "providerConsent": zod.enum(['anthropic-claude-sonnet-5-5-v1']).describe('Disclosure version accepted on the current page; old OpenAI consent does not authorize Anthropic.'),
   "specialist": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']).default(sendSbuChatMessageBodySpecialistDefault),
@@ -1498,6 +1512,10 @@ export const SendSbuChatMessageBody = zod.object({
   "content": zod.string().min(1).max(sendSbuChatMessageBodyMessagesItemContentMax)
 })).min(1).max(sendSbuChatMessageBodyMessagesMax)
 })
+
+
+export const sendSbuChatMessageResponseAnalysisContextSelectionRevisionRegExp = new RegExp('^[a-f0-9]{64}$');
+export const sendSbuChatMessageResponseAnalysisContextSelectionExcerptMax = 4000;
 
 
 export const sendSbuChatMessageResponseQuotaDailyRemainingMin = 0;
@@ -1511,6 +1529,16 @@ export const sendSbuChatMessageResponseCitationsItemCheckedOnRegExp = new RegExp
 
 
 export const SendSbuChatMessageResponse = zod.object({
+  "analysisContext": zod.object({
+  "caseId": zod.number().int().min(1),
+  "selection": zod.object({
+  "documentId": zod.string().uuid(),
+  "analysisId": zod.string().uuid(),
+  "revision": zod.string().regex(sendSbuChatMessageResponseAnalysisContextSelectionRevisionRegExp),
+  "excerpt": zod.string().min(1).max(sendSbuChatMessageResponseAnalysisContextSelectionExcerptMax),
+  "consent": zod.literal(true)
+})
+}).optional().describe('One explicitly approved excerpt from a private analysis. Only valid for pemeriksa_dokumen; revalidated on every send. Never includes original document bytes or profile data.'),
   "purpose": zod.enum(['tutor_regulasi', 'permohonan_baru', 'perpanjangan', 'pemeriksa_dokumen', 'studi_kasus', 'pendamping_proses']).describe('Conversation goal only; independent of role, specialist and authorization.'),
   "quota": zod.object({
   "userId": zod.string(),

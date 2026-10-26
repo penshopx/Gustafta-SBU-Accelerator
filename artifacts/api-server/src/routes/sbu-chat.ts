@@ -15,6 +15,7 @@ import {
   buildSbuChatInput, createAnthropicSbuChatGenerate, sbuChatInputSize,
   SBU_CHAT_MODEL, SBU_CHAT_MAX_INPUT_BYTES, type SbuChatGenerate,
 } from "../lib/sbu-chat-harness";
+import { prepareChatAnalysis, readChatAnalysis, ChatAnalysisError, CHAT_ANALYSIS_ERROR, type ReadChatAnalysis } from "../lib/sbu-chat-analysis";
 
 type Generate = SbuChatGenerate;
 
@@ -41,7 +42,7 @@ export const generateClaudeAssistantAnswer: Generate = async (...args) => {
 };
 
 // Only aggregate usage metadata is persisted, never the conversation.
-export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAnswer, quotas: ChatQuotaStore = chatQuotaStore, reviews: ChatSourceReviewStore = chatSourceReviewStore, reserveBudget: ReserveAiBudget = reserveAiBudget, readBudget: ReadAiBudgetAvailability = readAiBudgetAvailability): IRouter {
+export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAnswer, quotas: ChatQuotaStore = chatQuotaStore, reviews: ChatSourceReviewStore = chatSourceReviewStore, reserveBudget: ReserveAiBudget = reserveAiBudget, readBudget: ReadAiBudgetAvailability = readAiBudgetAvailability, readAnalysis: ReadChatAnalysis = readChatAnalysis): IRouter {
   const router: IRouter = Router();
   router.use(createChatSourceReviewsRouter(reviews));
   router.get("/openai/sbu/budget", async (req, res): Promise<void> => {
@@ -97,6 +98,10 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
       res.status(400).json({ error: "Muat ulang halaman, pilih mode, isi percakapan yang sah, dan setujui pengiriman teks ke Claude Sonnet 5.5 melalui Replit AI Integrations." }); return;
     }
     const purpose = input.data.purpose ?? "tutor_regulasi";
+    const analysisContext = input.data.analysisContext;
+    if (analysisContext && purpose !== "pemeriksa_dokumen") {
+      res.status(400).json({ error: "Hasil Bedah Dokumen hanya dapat dipilih pada tujuan Pemeriksa Dokumen." }); return;
+    }
     const messages = input.data.messages.map((message) => ({ ...message, content: message.content.trim() }));
     if (messages[0]?.role !== "user" || messages.at(-1)?.role !== "user" ||
         messages.some((message, i) => !message.content ||
@@ -105,6 +110,16 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
         messages.reduce((sum, message) => sum + message.content.length, 0) > 40000) {
       res.status(400).json({ error: "Percakapan tidak valid atau terlalu panjang. Mulai percakapan baru; pesan maksimal 4.000 karakter." }); return;
     }
+    let selectedContext = "";
+    if (analysisContext) {
+      try {
+        selectedContext = await prepareChatAnalysis(analysisContext, userId, readAnalysis);
+      } catch (error) {
+        const status = error instanceof ChatAnalysisError ? error.status : 503;
+        res.status(status).json({ error: CHAT_ANALYSIS_ERROR, code: status === 409 ? "chat_analysis_changed" : "chat_analysis_unavailable" });
+        return;
+      }
+    }
     let sources: SbuChatCitation[];
     try {
       sources = retrieveChatSources(messages.at(-1)!.content, await reviews.active());
@@ -112,7 +127,7 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
       res.status(503).json({ error: "Status persetujuan sumber belum dapat diperiksa. Tidak ada permintaan AI yang dikirim." });
       return;
     }
-    const chatInput = buildSbuChatInput(input.data.mode, messages, input.data.specialist, "", sources, purpose);
+    const chatInput = buildSbuChatInput(input.data.mode, messages, input.data.specialist, selectedContext, sources, purpose);
     if (sbuChatInputSize(chatInput) > SBU_CHAT_MAX_INPUT_BYTES) {
       res.status(400).json({ error: "Percakapan terlalu panjang untuk batas input asisten. Mulai percakapan baru." });
       return;
@@ -141,6 +156,7 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
     res.on("close", disconnect);
     let payload;
     let budgetError: AiBudgetError | undefined;
+    let analysisError: ChatAnalysisError | undefined;
     let generationSettled = false;
     try {
       await reserveBudget("assistant", SBU_CHAT_MODEL);
@@ -149,10 +165,13 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
       const aborted = new Promise<never>((_resolve, reject) => {
         controller.signal.addEventListener("abort", () => reject(new Error("ai_cancelled")), { once: true });
       });
-      const generation = answer(input.data.mode, messages, controller.signal, input.data.specialist, "", sources, 0, purpose)
+      const generation = answer(input.data.mode, messages, controller.signal, input.data.specialist, selectedContext, sources, 0, purpose)
         .then((text) => { generationSettled = true; return text; },
           (error: unknown) => { generationSettled = true; throw error; });
       const text = await Promise.race([generation, aborted]);
+      if (analysisContext && await prepareChatAnalysis(analysisContext, userId, readAnalysis) !== selectedContext) {
+        throw new ChatAnalysisError(409);
+      }
       // A withdrawal/replacement committed while the provider was running must
       // not leak an answer based on its now-retired context, even with no markers.
       const current = retrieveChatSources(messages.at(-1)!.content, await reviews.active());
@@ -161,11 +180,13 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
       }
       const cited = validateCitedAnswer(text, sources);
       payload = {
-        userId, mode: input.data.mode, specialist: input.data.specialist, purpose, ...cited,
+        userId, mode: input.data.mode, specialist: input.data.specialist, purpose,
+        ...(analysisContext ? { analysisContext } : {}), ...cited,
         disclaimer: CHAT_DISCLAIMER, retrievalNotice: RETRIEVAL_NOTICE,
       };
     } catch (error) {
       if (error instanceof AiBudgetError) budgetError = error;
+      if (error instanceof ChatAnalysisError) analysisError = error;
       // Never log private prompts, raw provider errors, credentials or response bodies.
     } finally {
       clearTimeout(timer);
@@ -185,6 +206,13 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
     if (res.destroyed) return;
     if (budgetError) {
       res.status(503).json({ error: budgetError.message, code: budgetError.code, quota });
+      return;
+    }
+    if (analysisError) {
+      res.status(analysisError.status).json({
+        error: `${CHAT_ANALYSIS_ERROR} Percobaan yang telah dikirim ke AI tetap memakai kuota.`,
+        code: analysisError.status === 409 ? "chat_analysis_changed" : "chat_analysis_unavailable", quota,
+      });
       return;
     }
     if (payload) res.json(SendSbuChatMessageResponse.parse({ ...payload, quota }));

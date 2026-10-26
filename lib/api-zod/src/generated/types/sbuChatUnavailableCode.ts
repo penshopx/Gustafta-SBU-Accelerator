@@ -12,4 +12,5 @@ export type SbuChatUnavailableCode = typeof SbuChatUnavailableCode[keyof typeof 
 export const SbuChatUnavailableCode = {
   ai_budget_exhausted: 'ai_budget_exhausted',
   ai_budget_unavailable: 'ai_budget_unavailable',
+  chat_analysis_unavailable: 'chat_analysis_unavailable',
 } as const;

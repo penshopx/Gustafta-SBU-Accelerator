@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 're
 import { Link } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, Copy, Loader2, Plus, SendHorizontal, ShieldAlert, Square } from 'lucide-react';
-import { sendSbuChatMessage, useGetSbuChatBudget, getGetSbuChatBudgetQueryKey, useGetSbuChatQuota, getGetSbuChatQuotaQueryKey, useGetSbuChatSpecialists, getGetSbuChatSpecialistsQueryKey, type SbuChatInput, type SbuChatSpecialist, type SbuChatCitation, type SbuChatPurpose } from '@workspace/api-client-react';
+import { sendSbuChatMessage, useGetSbuChatBudget, getGetSbuChatBudgetQueryKey, useGetSbuChatQuota, getGetSbuChatQuotaQueryKey, useGetSbuChatSpecialists, getGetSbuChatSpecialistsQueryKey, type SbuChatInput, type SbuChatSpecialist, type SbuChatCitation, type SbuChatPurpose, type SbuChatAnalysisContext } from '@workspace/api-client-react';
 import { useAccountReadOptions, useFormMutationOptions } from '@/components/account-queries';
 import { ChatCitations, chatAnswerForCopy } from './chat-citations';
 import { ChatQuotaNotice, chatLimitMessage, chatQuotaFromError } from './chat-quota';
 import { aiBudgetErrorMessage } from '@/lib/ai-budget-error';
 import { PURPOSES, DEFAULT_PURPOSE, purposeInfo } from '@/lib/sbu-chat-purposes';
+import { ChatAnalysisPicker } from './chat-analysis-picker';
 import { ChatBudgetNotice, chatBudgetForOwner } from './chat-budget';
 
 type Mode = SbuChatInput['mode'];
@@ -29,7 +30,18 @@ export const defaultModeForRole = (role?: string): Mode => (role && ROLE_DEFAULT
 
 const MAX_USER = 4000, MAX_MSGS = 20, MAX_TOTAL = 40000, TIMEOUT_MS = 80000;
 
+const sameContext = (a: SbuChatAnalysisContext | undefined | null, b: SbuChatAnalysisContext | undefined): boolean => {
+  if (!a || !b) return a === undefined && b === undefined;
+  const ks = (o: object) => Object.keys(o).sort().join(',');
+  if (ks(a) !== 'caseId,selection' || ks(a.selection) !== 'analysisId,consent,documentId,excerpt,revision') return false;
+  return a.caseId === b.caseId && a.selection.documentId === b.selection.documentId && a.selection.analysisId === b.selection.analysisId &&
+    a.selection.revision === b.selection.revision && a.selection.excerpt === b.selection.excerpt && a.selection.consent === true;
+};
+
 const errorFor = (e: unknown): string => {
+  const code = (e as { data?: { code?: unknown } } | null)?.data?.code;
+  if (code === 'chat_analysis_changed') return 'Hasil Bedah Dokumen yang dipilih berubah atau versinya tidak lagi sama. Pilih dan setujui ulang sumber, atau mulai Percakapan baru. Draf Anda dipertahankan.';
+  if (code === 'chat_analysis_unavailable') return 'Hasil Bedah Dokumen yang dipilih tidak tersedia atau tidak lagi memenuhi syarat. Pilih sumber lain atau lepas sumber. Draf Anda dipertahankan.';
   const budgetMessage = aiBudgetErrorMessage(e);
   if (budgetMessage) return budgetMessage;
   const status = (e as { status?: number } | null)?.status;
@@ -69,6 +81,12 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
   const [draft, setDraft] = useState('');
   const [purpose, setPurpose] = useState<SbuChatPurpose>(DEFAULT_PURPOSE);
   const purposeRef = useRef(purpose); purposeRef.current = purpose;
+  const [sourceOn, setSourceOn] = useState(false);
+  const [sourceCtx, setSourceCtx] = useState<SbuChatAnalysisContext | undefined>(undefined);
+  const [sourceKey, setSourceKey] = useState(0);
+  const sourceRef = useRef<{ on: boolean; ctx?: SbuChatAnalysisContext }>({ on: false });
+  sourceRef.current = { on: sourceOn, ctx: sourceCtx };
+  const clearSource = () => { setSourceOn(false); setSourceCtx(undefined); setSourceKey(k => k + 1); };
   const [specialist, setSpecialist] = useState<SpecId>('sbuclaw');
   const catalog = useGetSbuChatSpecialists({ query: { enabled: true, retry: 1, staleTime: 60000, queryKey: getGetSbuChatSpecialistsQueryKey() } });
   const specs = catalog.data;
@@ -100,17 +118,19 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
 
   const send = async (text: string, base: Msg[] = messages) => {
     const content = text.trim();
-    if (!content || loading || ctrl.current || !consent || !catalog.isSuccess || !spec || !quota || quotaQuery.isError || !budgetReady || content.length > MAX_USER) return;
+    if (!content || loading || ctrl.current || !consent || !catalog.isSuccess || !spec || !quota || quotaQuery.isError || !budgetReady || content.length > MAX_USER || (sourceRef.current.on && !sourceRef.current.ctx)) return;
     const next = [...base, { id: ++seq.current, role: 'user' as const, content }];
     const c = new AbortController();
     ctrl.current = c; timedOut.current = false;
     timer.current = window.setTimeout(() => { timedOut.current = true; c.abort(); }, TIMEOUT_MS);
+    const sentCtx = sourceRef.current.on && purposeRef.current === 'pemeriksa_dokumen' ? sourceRef.current.ctx : undefined;
+    if (sourceRef.current.on && !sentCtx) return;
     const sentPurpose = purposeRef.current, sentMode = modeRef.current, sentSpec = specRef.current;
     setLoading(true); setError(null);
     try {
-      const res = await sendSbuChatMessage({ purpose: sentPurpose, mode: sentMode, specialist: sentSpec, consent: true, providerConsent: 'anthropic-claude-sonnet-5-5-v1', messages: buildPayload(next) }, { ...options.request, signal: c.signal });
+      const res = await sendSbuChatMessage({ purpose: sentPurpose, ...(sentCtx ? { analysisContext: sentCtx } : {}), mode: sentMode, specialist: sentSpec, consent: true, providerConsent: 'anthropic-claude-sonnet-5-5-v1', messages: buildPayload(next) }, { ...options.request, signal: c.signal });
       if (c.signal.aborted) return;
-      if (res.userId !== expectedUserId || res.purpose !== sentPurpose || res.mode !== sentMode || res.specialist !== sentSpec || typeof res.answer !== 'string' ||
+      if (res.userId !== expectedUserId || res.purpose !== sentPurpose || !sameContext(res.analysisContext, sentCtx) || res.mode !== sentMode || res.specialist !== sentSpec || typeof res.answer !== 'string' ||
           !Array.isArray(res.citations) || typeof res.retrievalNotice !== 'string') {
         setError('Respons tidak sesuai dengan akun atau tujuan, mode, atau spesialis yang aktif, sehingga tidak ditampilkan. Muat ulang halaman lalu coba lagi.');
         return;
@@ -123,6 +143,8 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
       setDraft('');
     } catch (e) {
       if (c.signal.aborted && !timedOut.current) return;
+      const ecode = (e as { data?: { code?: unknown } } | null)?.data?.code;
+      if (ecode === 'chat_analysis_changed' || ecode === 'chat_analysis_unavailable') { setSourceCtx(undefined); setSourceKey(k => k + 1); }
       const errorQuota = chatQuotaFromError(e, expectedUserId);
       if (errorQuota) queryClient.setQueryData(getGetSbuChatQuotaQueryKey(), errorQuota);
       setError(timedOut.current ? 'Permintaan melebihi 80 detik dan dihentikan. Draf dipertahankan; percobaan yang diterima tetap memakai kuota.' :
@@ -135,20 +157,20 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
   };
 
   const cancel = () => { abort(); setLoading(false); setError('Permintaan dibatalkan. Draf dipertahankan. Percobaan yang sudah diterima tetap memakai kuota.'); };
-  const resetAll = (to?: { mode?: Mode; specialist?: SpecId; purpose?: SbuChatPurpose }) => { abort(); setLoading(false); setMessages([]); setDraft(''); setError(null); setConfirm(null); if (to?.mode) setMode(to.mode); if (to?.specialist) setSpecialist(to.specialist); if (to?.purpose) setPurpose(to.purpose); };
+  const resetAll = (to?: { mode?: Mode; specialist?: SpecId; purpose?: SbuChatPurpose }) => { abort(); setLoading(false); setMessages([]); setDraft(''); setError(null); setConfirm(null); clearSource(); if (to?.mode) setMode(to.mode); if (to?.specialist) setSpecialist(to.specialist); if (to?.purpose) setPurpose(to.purpose); };
   const dirty = messages.length > 0 || draft.trim().length > 0;
   const pickMode = (to: Mode) => {
     if (loading || to === mode) return;
-    if (dirty) setConfirm({ kind: 'mode', to }); else { setError(null); setMode(to); }
+    if (dirty) setConfirm({ kind: 'mode', to }); else { setError(null); clearSource(); setMode(to); }
   };
   const pickPurpose = (to: SbuChatPurpose) => {
     if (loading || ctrl.current || to === purpose) return;
-    if (dirty) setConfirm({ kind: 'purpose', to }); else { setError(null); setPurpose(to); }
+    if (dirty) setConfirm({ kind: 'purpose', to }); else { setError(null); clearSource(); setPurpose(to); }
   };
   const pickSpec = (to: string) => {
     const t = specs?.find(x => x.id === to);
     if (loading || !t || t.id === specialist) return;
-    if (dirty) setConfirm({ kind: 'specialist', to: t.id }); else { setError(null); setSpecialist(t.id); }
+    if (dirty) setConfirm({ kind: 'specialist', to: t.id }); else { setError(null); clearSource(); setSpecialist(t.id); }
   };
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(draft); }
@@ -157,7 +179,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
     try { await navigator.clipboard.writeText(chatAnswerForCopy(m.content, m.citations, m.retrievalNotice)); setCopied(m.id); window.setTimeout(() => setCopied(null), 1500); } catch { /* clipboard unavailable */ }
   };
   const over = draft.length > MAX_USER;
-  const canSend = consent && catalog.isSuccess && !!spec && !!quota && !quotaQuery.isError && budgetReady && !loading && !!draft.trim() && !over;
+  const canSend = consent && catalog.isSuccess && !!spec && !!quota && !quotaQuery.isError && budgetReady && !loading && !!draft.trim() && !over && (!sourceOn || !!sourceCtx);
 
   return <div className="mx-auto max-w-5xl">
     <div className="mb-6">
@@ -195,6 +217,14 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
       {pInfo.note && <p data-testid="text-purpose-note" className="mt-3 rounded-lg bg-[#f4f9fc] p-2.5 font-medium">{pInfo.note} <Link href="/documents" data-testid="link-purpose-documents" className="font-bold underline">Buka Brankas dokumen</Link></p>}
       <p className="mt-3 text-[11px] text-[#688096]">Tujuan hanya mengarahkan isi jawaban. Tidak memberi akses data, tidak memeriksa keaslian dokumen, dan bukan keputusan lembaga sertifikasi.</p>
     </div>
+    {purpose === 'pemeriksa_dokumen' && <div className="mb-6 rounded-xl border border-[#d8e4ec] bg-white p-4 text-xs leading-5 text-[#34506a]" data-testid="panel-chat-analysis">
+      <label className="flex items-start gap-2.5 font-bold text-[#14253a]">
+        <input type="checkbox" data-testid="checkbox-chat-source" className="mt-1 h-4 w-4 accent-[#1769d1]" checked={sourceOn} disabled={loading || messages.length > 0} onChange={e => { if (e.target.checked) setSourceOn(true); else clearSource(); }} />
+        <span>Gunakan hasil Bedah Dokumen saya (opsional)<span className="block font-normal text-[#566f85]">Default mati. Tanpa ini, Anda tetap dapat menempel cuplikan anonim sendiri. Daftar kasus dan dokumen baru dibaca setelah Anda mengaktifkannya.</span></span>
+      </label>
+      {sourceOn && <ChatAnalysisPicker key={sourceKey} locked={loading || messages.length > 0} onChange={setSourceCtx} />}
+      {sourceOn && !sourceCtx && <p data-testid="text-source-incomplete" className="mt-2 font-medium text-[#8a5a12]">Pengiriman dinonaktifkan sampai kasus, dokumen, hasil, dan cuplikan persis disetujui. Atau matikan opsi ini untuk mode teks saja.</p>}
+    </div>}
     <div className="eyebrow mb-2 text-[#678096]">PERAN ANDA (KONTEKS, BUKAN HAK AKSES)</div>
     <div className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Mode peran">
       {MODES.map(m => <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} disabled={loading} data-testid={`button-mode-${m.id}`} onClick={() => pickMode(m.id)} className={`rounded-xl border p-3.5 text-left transition-colors ${mode === m.id ? 'border-[#1769d1] bg-[#eaf4ff] ring-1 ring-[#1769d1]' : 'border-[#d1dfe9] bg-white hover:bg-[#f4f9fc]'}`}>
@@ -256,7 +286,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
       <div className="border-t border-[#d8e4ec] bg-white p-4 sm:p-6">
         <label className="mb-3 flex items-start gap-2.5 text-xs leading-5 text-[#34506a]">
           <input type="checkbox" data-testid="checkbox-consent" checked={consent} disabled={loading} onChange={e => setConsent(e.target.checked)} className="mt-1 h-4 w-4 accent-[#1769d1]" />
-          <span>Saya setuju teks yang saya ketik dan kirim secara manual, serta cuplikan sumber publik terkurasi yang dipilih aplikasi, dikirim ke Claude Sonnet 5.5 melalui Replit AI Integrations. Data perusahaan, kasus, dan dokumen tidak ikut terkirim otomatis; jangan menulis data sensitif yang tidak perlu.</span>
+          <span>Saya setuju teks yang saya ketik dan kirim secara manual, serta cuplikan sumber publik terkurasi yang dipilih aplikasi, dikirim ke Claude Sonnet 5.5 melalui Replit AI Integrations. Data perusahaan, kasus, dan dokumen tidak ikut terkirim otomatis; jangan menulis data sensitif yang tidak perlu.{sourceOn && sourceCtx && ' Cuplikan hasil Bedah Dokumen yang Anda setujui di atas, beserta referensi kasus, dokumen, dan analisisnya, juga dikirim pada setiap pesan; tidak ada berkas asli, profil, atau hasil lain.'}</span>
         </label>
         <textarea data-testid="input-chat-message" aria-label="Pesan Anda" className="field min-h-[88px] resize-y" rows={3} value={draft} disabled={loading} onChange={e => setDraft(e.target.value)} onKeyDown={onKey} placeholder="Tulis pertanyaan. Enter untuk kirim, Shift+Enter untuk baris baru." />
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">

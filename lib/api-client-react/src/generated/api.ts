@@ -69,6 +69,7 @@ import type {
   SbuChatQuota,
   SbuChatReply,
   SbuChatSourceDecision,
+  SbuChatSourceError,
   SbuChatSourceReviewInput,
   SbuChatSourceReviews,
   SbuChatSpecialist,
@@ -2779,7 +2780,7 @@ export const getSendSbuChatMessageUrl = () => {
 }
 
 /**
- * @summary Role-focused SBU AI guidance without reading company data or documents
+ * @summary Purpose-focused SBU guidance; private analysis excerpt only with explicit selection and consent
  */
 export const sendSbuChatMessage = async (sbuChatInput: SbuChatInput, options?: Parameters<typeof customFetch>[1]): Promise<SbuChatReply> => {
 
@@ -2812,7 +2813,7 @@ return customFetch<SbuChatReply>(getSendSbuChatMessageUrl(),
 
 export const getSendSbuChatMessageMutationKey = () => ['sendSbuChatMessage'] as const;
 
-export const getSendSbuChatMessageMutationOptions = <TError = ErrorType<void | FormOwnerMismatchResponse | SbuChatLimitError | SbuChatUnavailable>,
+export const getSendSbuChatMessageMutationOptions = <TError = ErrorType<void | SbuChatSourceError | SbuChatLimitError | SbuChatUnavailable>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendSbuChatMessage>>, TError,SendSbuChatMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof sendSbuChatMessage>>, TError,SendSbuChatMessageMutationVariables, TContext> => {
 
@@ -2841,13 +2842,13 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type SendSbuChatMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sendSbuChatMessage>>>
     export type SendSbuChatMessageMutationBody = BodyType<SbuChatInput>
-    export type SendSbuChatMessageMutationError = ErrorType<void | FormOwnerMismatchResponse | SbuChatLimitError | SbuChatUnavailable>
+    export type SendSbuChatMessageMutationError = ErrorType<void | SbuChatSourceError | SbuChatLimitError | SbuChatUnavailable>
     export type SendSbuChatMessageMutationVariables = {data: BodyType<SbuChatInput>}
 
     /**
- * @summary Role-focused SBU AI guidance without reading company data or documents
+ * @summary Purpose-focused SBU guidance; private analysis excerpt only with explicit selection and consent
  */
-export const useSendSbuChatMessage = <TError = ErrorType<void | FormOwnerMismatchResponse | SbuChatLimitError | SbuChatUnavailable>,
+export const useSendSbuChatMessage = <TError = ErrorType<void | SbuChatSourceError | SbuChatLimitError | SbuChatUnavailable>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendSbuChatMessage>>, TError,SendSbuChatMessageMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof sendSbuChatMessage>>,

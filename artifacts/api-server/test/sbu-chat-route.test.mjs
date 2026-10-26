@@ -42,13 +42,15 @@ globalThis.__chatQuotaPool = restricted.pool;
 const plugins = [{
   name: "controlled-clerk-and-quota",
   setup(builder) {
+    builder.onResolve({ filter: /\/consultation-analysis$/ }, () => ({ path: "analysis-reader", namespace: "controlled" }));
     builder.onResolve({ filter: /^@workspace\/api-zod$/ }, () => ({
       path: fileURLToPath(new URL("../../../lib/api-zod/src/index.ts", import.meta.url)),
     }));
     builder.onResolve({ filter: /^@workspace\/db$/ }, () => ({ path: "db", namespace: "controlled" }));
     builder.onResolve({ filter: /^@clerk\/express$/ }, () => ({ path: "clerk", namespace: "controlled" }));
     builder.onLoad({ filter: /.*/, namespace: "controlled" }, ({ path }) => ({
-      contents: path === "db" ? "export const pool = globalThis.__chatQuotaPool;"
+      contents: path === "analysis-reader" ? "export async function consultationAnalysis(){ throw Error('unexpected analysis read'); }"
+        : path === "db" ? "export const pool = globalThis.__chatQuotaPool;"
         : "export const getAuth = req => ({userId: req.testUser ?? null});", loader: "js",
     }));
   },
@@ -76,8 +78,21 @@ await build({
 });
 const { retrieveChatSources, validateCitedAnswer, CHAT_SOURCE_VERSIONS } = await import(join(temp, "retrieval.mjs"));
 const body = (mode = "bujk") => ({ mode, consent: true, providerConsent: "anthropic-claude-sonnet-5-5-v1", messages: [{ role: "user", content: "Bantu persiapan SBU" }] });
+const analysisContext = {
+  caseId: 101,
+  selection: {
+    documentId: "00000000-0000-4000-8000-000000000001",
+    analysisId: "00000000-0000-4000-8000-000000000002",
+    revision: "a".repeat(64), excerpt: "Cuplikan yang disetujui.", consent: true,
+  },
+};
+const analysisPreview = {
+  caseId: 101, ...analysisContext.selection, sourceVersion: 2, sourcePages: [1, 3],
+  model: "synthetic-model", focus: "kelengkapan", createdAt: new Date().toISOString(),
+  text: "Bagian lain RAHASIA_TIDAK_DIPILIH. Cuplikan yang disetujui. Akhir hasil lengkap.",
+};
 
-async function server(generate, run, reserveBudget = async () => {}) {
+async function server(generate, run, reserveBudget = async () => {}, readAnalysis) {
   await restricted.pool.query("DELETE FROM sbu_chat_quota");
   const app = express();
   app.use(express.json());
@@ -85,7 +100,7 @@ async function server(generate, run, reserveBudget = async () => {}) {
   app.use(createSbuChatRouter(async (...args) => {
     const result = await generate(...args);
     return JSON.stringify(typeof result === "string" ? { answer: result, citationIds: [] } : result);
-  }, undefined, undefined, reserveBudget));
+  }, undefined, undefined, reserveBudget, undefined, readAnalysis));
   const listener = app.listen(0, "127.0.0.1");
   await new Promise((resolve) => listener.once("listening", resolve));
   const url = `http://127.0.0.1:${listener.address().port}/openai/sbu/messages`;
@@ -101,6 +116,86 @@ async function server(generate, run, reserveBudget = async () => {}) {
     await new Promise((resolve) => listener.close(resolve));
   }
 }
+
+test("selected private excerpt is revalidated and sent alone, with explicit approval and no automatic context", async () => {
+  let reads = 0, budgets = 0, calls = 0;
+  const request = { ...body(), purpose: "pemeriksa_dokumen", analysisContext };
+  await server(async (...args) => {
+    calls++;
+    const context = JSON.parse(args[4]);
+    const snapshot = context.analysisSnapshot;
+    assert.equal(snapshot.excerpt, analysisContext.selection.excerpt);
+    assert.equal(snapshot.caseId, 101);
+    assert.equal(snapshot.sourceVersion, 2);
+    assert.deepEqual(snapshot.sourcePages, [1, 3]);
+    assert.equal(snapshot.revision, analysisContext.selection.revision);
+    assert.equal(snapshot.text, undefined);
+    assert.doesNotMatch(args[4], /RAHASIA_TIDAK_DIPILIH|companyName|storagePath/);
+    assert.equal(args[7], "pemeriksa_dokumen");
+    return "Draf berdasarkan cuplikan saja.";
+  }, async send => {
+    for (const input of [
+      { ...request, purpose: "tutor_regulasi" },
+      { ...request, analysisContext: { ...analysisContext, selection: { ...analysisContext.selection, consent: false } } },
+      { ...request, analysisContext: { ...analysisContext, selection: { ...analysisContext.selection, excerpt: "x".repeat(4001) } } },
+    ]) assert.equal((await send(input)).status, 400);
+    assert.equal((await send(request, "")).status, 401);
+    assert.equal((await send(request, "owner-a", "owner-b")).status, 409);
+    assert.equal(reads, 0);
+    assert.equal(budgets, 0);
+    const reply = await send(request);
+    assert.equal(reply.status, 200);
+    assert.match(reply.headers.get("cache-control"), /private, no-store/);
+    const data = await reply.json();
+    assert.deepEqual(data.analysisContext, analysisContext);
+    assert.doesNotMatch(JSON.stringify(data), /RAHASIA_TIDAK_DIPILIH/);
+    assert.equal(reads, 2, "ownership/revision checked before provider and before delivery");
+    assert.equal(calls, 1);
+    assert.equal(budgets, 1);
+  }, async () => { budgets++; }, async (caseId, documentId, analysisId, owner) => {
+    reads++;
+    assert.deepEqual([caseId, documentId, analysisId, owner],
+      [101, analysisContext.selection.documentId, analysisContext.selection.analysisId, "owner-a"]);
+    // Only fields exposed by the real reader, not client-provided references.
+    const { consent: _consent, excerpt: _excerpt, ...preview } = analysisPreview;
+    return preview;
+  });
+});
+
+test("private source rejection is sanitized, costs nothing before sending and never returns a stale answer", async () => {
+  let calls = 0, budgets = 0, broken = false, unavailable = false;
+  const request = { ...body(), purpose: "pemeriksa_dokumen", analysisContext };
+  await server(async () => {
+    calls++; broken = true;
+    return "PRIVATE_STALE_ANSWER";
+  }, async send => {
+    assert.equal((await send(request, "owner-b")).status, 404);
+    assert.equal((await send({ ...request, analysisContext: {
+      ...analysisContext, selection: { ...analysisContext.selection, excerpt: "forged excerpt" },
+    } })).status, 409);
+    assert.equal((await send({ ...request, analysisContext: {
+      ...analysisContext, selection: { ...analysisContext.selection, revision: "b".repeat(64) },
+    } })).status, 409);
+    unavailable = true;
+    const offline = await send(request);
+    assert.equal(offline.status, 503);
+    assert.doesNotMatch(await offline.text(), /SECRET_PROVIDER_TOKEN/);
+    assert.equal(calls, 0); assert.equal(budgets, 0);
+    unavailable = false;
+    const stale = await send(request);
+    assert.equal(stale.status, 409);
+    const rejected = await stale.json();
+    assert.equal(rejected.code, "chat_analysis_changed");
+    assert.ok(rejected.quota);
+    assert.doesNotMatch(JSON.stringify(rejected), /PRIVATE_STALE_ANSWER/);
+    assert.equal(calls, 1); assert.equal(budgets, 1);
+  }, async () => { budgets++; }, async (_caseId, _documentId, _analysisId, owner) => {
+    if (owner === "owner-b") throw Object.assign(new Error("private other owner"), { status: 404 });
+    if (unavailable) throw new Error("SECRET_PROVIDER_TOKEN");
+    const { consent: _consent, excerpt: _excerpt, ...preview } = analysisPreview;
+    return { ...preview, revision: broken ? "b".repeat(64) : preview.revision };
+  });
+});
 
 test("Claude assistant reserves the model-aware cost before calling the provider", async () => {
   const events = [];
