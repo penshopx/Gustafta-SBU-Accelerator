@@ -39,6 +39,14 @@ saat dikirim: reservasi atomik yang sudah ada tetap menjadi keputusan akhir.
 Tanggal batas periode hanya ditampilkan jika reset berpotensi mengatasi seluruh
 penghalang; batas yang lebih kecil dari satu reservasi perlu ditinjau pengelola.
 
+Tabel pengunci yang belum berisi baris sebelum reservasi pertama tidak memblokir
+pembacaan status, dan GET tidak membuat baris tersebut. Reservasi menginisialisasi
+baris `id=1` dengan INSERT idempoten dalam transaksi yang sama sebelum mengambil
+row lock. Ini hanya inisialisasi data, bukan migrasi skema saat startup. Kegagalan
+inisialisasi/penulisan tetap menolak permintaan; tidak ada reset penghitung atau
+riwayat tarif. Tabel yang belum tersedia tetap memblokir layanan sampai skema
+diterapkan melalui alur Publish.
+
 Sebelum satu panggilan provider, cadangkan batas atas biaya **seluruh kapasitas
 input model** (termasuk prompt sistem, riwayat, konteks, teks, gambar/PDF) dan
 8.192 token output, termasuk reasoning. Perhitungan integer:

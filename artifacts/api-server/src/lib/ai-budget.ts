@@ -50,6 +50,10 @@ export function createPostgresAiBudgetStore(
         await client.query("BEGIN");
         await client.query("SET LOCAL lock_timeout = '3s'");
         await client.query("SET LOCAL statement_timeout = '5s'");
+        // Data initialization only, never schema migration. The unique key makes
+        // concurrent first reservations wait for the same committed row. Keep
+        // this in the reservation transaction so failed attempts roll it back.
+        await client.query("INSERT INTO ai_budget_lock(id) VALUES (1) ON CONFLICT DO NOTHING");
         // Database-wide row, stable across day/month boundaries, serializes all
         // instances. Acquire before reading the database clock (including reset).
         const { rows: [lock] } = await client.query("SELECT id FROM ai_budget_lock WHERE id=1 FOR UPDATE");

@@ -31,7 +31,10 @@ export function createAiBudgetAvailabilityReader(
       client = await (database ?? (await import("@workspace/db")).pool).connect();
       await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
       await client.query("SET LOCAL statement_timeout = '5s'");
-      const { rows: [clock] } = await client.query("SELECT clock_timestamp() AS now, id FROM ai_budget_lock WHERE id=1");
+      // An empty singleton table is valid before the first reservation. Still
+      // require the table to exist, but never initialize it in a read-only GET.
+      const { rows: [clock] } = await client.query(
+        "SELECT clock_timestamp() AS now, EXISTS(SELECT 1 FROM ai_budget_lock WHERE id=1) AS initialized");
       if (!clock) throw new Error();
       const now = new Date(clock.now);
       checkedAt = now.toISOString();

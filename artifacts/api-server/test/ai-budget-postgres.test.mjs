@@ -371,12 +371,12 @@ test("mixed GPT and Claude instances cannot cross the same global dollar ceiling
   assert.equal(Number((await counters()).find(r => r.scope === "global" && r.period === "day").reserved_micros), accepted);
 });
 
-test("storage unavailable, missing lock row, transaction failure and ambiguous commit never authorize provider", async () => {
+test("storage unavailable, initialization failure, transaction failure and ambiguous commit never authorize provider", async () => {
   await reset();
   let providerCalls = 0;
   const privateError = new Error("PRIVATE_PROVIDER_ERROR SECRET chat/document contents");
   const badConnect = { connect: async () => { throw privateError; } };
-  for (const step of ["connect", "UPDATE ai_budget_counters", "COMMIT"]) {
+  for (const step of ["connect", "INSERT INTO ai_budget_lock", "UPDATE ai_budget_counters", "COMMIT"]) {
     const database = step === "connect" ? badConnect : {
       connect: async () => {
         const client = await first.pool.connect();
@@ -399,9 +399,59 @@ test("storage unavailable, missing lock row, transaction failure and ambiguous c
   assert.equal((await counters()).find(r => r.scope === "global" && r.period === "day").reserved_micros, String(COST));
   assert.doesNotMatch(JSON.stringify(events), /PRIVATE|SECRET|chat\/document|error":/);
   assert.ok(events.every(e => Object.keys(e).every(k => ["event", "scope", "period", "reservedMicros", "limitMicros"].includes(k))));
+});
+
+test("an empty lock table boots across two pools without writes on GET or resetting costs", async () => {
+  await reset();
   await first.pool.query("DELETE FROM ai_budget_lock");
-  try { await assert.rejects(store().reserve("assistant"), code("ai_budget_unavailable")); }
-  finally { await first.pool.query("INSERT INTO ai_budget_lock(id) VALUES (1)"); }
+  const config = policy(limits(1, 10, 1, 10));
+  try {
+    const reader = createAiBudgetAvailabilityReader(second.pool, () => config);
+    assert.equal((await reader("assistant", pricing.model)).status, "available");
+    assert.deepEqual((await first.pool.query("SELECT * FROM ai_budget_lock")).rows, []);
+    assert.deepEqual(await counters(), []);
+    const results = await Promise.allSettled([
+      store(first.pool, config).reserve("assistant"),
+      store(second.pool, config).reserve("assistant"),
+    ]);
+    assert.equal(results.filter(r => r.status === "fulfilled").length, 1);
+    const rejected = results.find(r => r.status === "rejected");
+    assert.ok(code("ai_budget_exhausted")(rejected.reason));
+    assert.deepEqual((await first.pool.query("SELECT * FROM ai_budget_lock")).rows, [{ id: 1 }]);
+    for (const row of await counters()) assert.equal(row.reserved_micros, String(COST));
+    const history = (await first.pool.query("SELECT * FROM ai_budget_counters ORDER BY scope,period")).rows;
+    const modelHistory = (await first.pool.query("SELECT * FROM ai_budget_model_policies ORDER BY model,period")).rows;
+    // Simulate lost initialization data with existing costs: re-creation must
+    // not reopen exhausted limits, change flags or rewrite pricing history.
+    await first.pool.query("DELETE FROM ai_budget_lock");
+    assert.equal((await reader("assistant", pricing.model)).status, "exhausted");
+    await assert.rejects(store(second.pool, config).reserve("assistant"), code("ai_budget_exhausted"));
+    assert.deepEqual((await first.pool.query("SELECT * FROM ai_budget_counters ORDER BY scope,period")).rows, history);
+    assert.deepEqual((await first.pool.query("SELECT * FROM ai_budget_model_policies ORDER BY model,period")).rows, modelHistory);
+  } finally {
+    await first.pool.query("INSERT INTO ai_budget_lock(id) VALUES (1) ON CONFLICT DO NOTHING");
+  }
+});
+
+test("failed first reservation rolls back singleton creation as well as charges", async () => {
+  await reset();
+  await first.pool.query("DELETE FROM ai_budget_lock");
+  const database = { connect: async () => {
+    const client = await first.pool.connect();
+    return { release: () => client.release(), query: async (...args) => {
+      if (args[0].startsWith("UPDATE ai_budget_counters")) throw Error("synthetic failure");
+      return client.query(...args);
+    } };
+  } };
+  try {
+    await assert.rejects(store(database).reserve("assistant"), code("ai_budget_unavailable"));
+    assert.deepEqual((await first.pool.query("SELECT * FROM ai_budget_lock")).rows, []);
+    assert.deepEqual(await counters(), []);
+    await store(second.pool).reserve("assistant");
+    assert.deepEqual((await first.pool.query("SELECT * FROM ai_budget_lock")).rows, [{ id: 1 }]);
+  } finally {
+    await first.pool.query("INSERT INTO ai_budget_lock(id) VALUES (1) ON CONFLICT DO NOTHING");
+  }
 });
 
 test("failure after an intermediate counter update rolls back every scope", async () => {
