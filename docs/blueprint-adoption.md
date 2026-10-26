@@ -86,6 +86,11 @@ impor database, perubahan fitur, atau penerbitan korpus pada pemeriksaan ini.
 
 ### PDF asli susulan — 6 Oktober 2026
 
+Penerimaan ulang 14 PDF pada 26 Oktober 2026 dicatat terpisah di
+[`knowledge-intake-2026-10-26.md`](knowledge-intake-2026-10-26.md), termasuk
+deduplikasi hash, peran sumber dan konflik identitas sampul paparan.
+Penerimaan ini tidak mengaktifkan sumber atau aturan baru.
+
 Tiga PDF susulan dicocokkan secara SHA-256 dengan manifest Knowledge Pack.
 Semua cocok persis; ini mengonfirmasi kesamaan berkas dengan bahan ekstraksi,
 bukan validasi tanda tangan elektronik atau verifikasi status hukum terkini.
