@@ -2,6 +2,8 @@ const HOUR_MS = 60 * 60_000;
 export const SIGNATURE_MAX_AGE_MS = 7 * 24 * HOUR_MS;
 export const SIGNATURE_WARNING_AGE_MS = 5 * 24 * HOUR_MS;
 export const SIGNATURE_ALERT_COOLDOWN_MS = 24 * HOUR_MS;
+export const SIGNATURE_ALERT_ACTION = "Check outbound DNS/HTTPS to database.clamav.net, CDN cooldown, disk space, database permissions and the freshclam executable. Retry the updater after fixing the cause; verify a fresh official daily database. Never bypass scanning; missing or expired signatures block downloads.";
+export const SIGNATURE_RECOVERY_ACTION = "Signature updates recovered and the official daily database is below the warning age. Continue monitoring; document scans still enforce their own checks.";
 
 export type SignatureHealth =
   | { state: "available"; builtAt: number }
@@ -50,7 +52,7 @@ export function createSignatureMonitor(
       lastSeverity = severity;
       notify({
         event: "scan_signature_alert", severity, reason, ...metrics,
-        action: "Check outbound DNS/HTTPS to database.clamav.net, CDN cooldown, disk space, database permissions and the freshclam executable. Retry the updater after fixing the cause; verify a fresh official daily database. Never bypass scanning; missing or expired signatures block downloads.",
+        action: SIGNATURE_ALERT_ACTION,
       });
     } else if (incident) {
       incident = false;
@@ -58,7 +60,7 @@ export function createSignatureMonitor(
       lastRecovery = time;
       notify({
         event: "scan_signature_recovered", severity: "info", reason: "healthy", ...metrics,
-        action: "Signature updates recovered and the official daily database is below the warning age. Continue monitoring; document scans still enforce their own checks.",
+        action: SIGNATURE_RECOVERY_ACTION,
       });
     }
   };

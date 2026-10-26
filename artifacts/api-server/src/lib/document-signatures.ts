@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { limitedProcess, SCAN_DATABASE } from "./document-malware";
 import { logger } from "./logger";
 import { createSignatureMonitor, type SignatureHealth } from "./document-signature-monitor";
+import { createConfiguredSignatureDelivery } from "./document-signature-slack";
 
 // Freshclam can leave the file mtime unchanged or touch an old database.
 // Read the signed CVD/CLD header's build epoch, not the filesystem timestamp.
@@ -44,11 +45,7 @@ async function updateSignatures() {
 export function startSignatureUpdates({
   run = updateSignatures,
   health = readSignatureHealth,
-  notify = createSignatureMonitor((notice) => {
-    const level = notice.severity === "critical" ? "error" : notice.severity === "warning" ? "warn" : "info";
-    logger[level](notice, notice.event === "scan_signature_recovered"
-      ? "Local signature update recovered" : "Operator action required: local antivirus signatures");
-  }),
+  notify,
   schedule = (callback: () => void) => {
     const timer = setInterval(callback, 12 * 60 * 60_000);
     timer.unref();
@@ -60,6 +57,18 @@ export function startSignatureUpdates({
   notify?: (success: boolean, health: SignatureHealth) => void;
   schedule?: (callback: () => void) => () => void;
 } = {}) {
+  const delivery = notify ? undefined : createConfiguredSignatureDelivery(
+    (event) => {
+      const level = event.endsWith("_recovered") ? "info" : "warn";
+      logger[level]({ event }, "Antivirus operational notification delivery status");
+    },
+  );
+  const monitor = notify ?? createSignatureMonitor((notice) => {
+    const level = notice.severity === "critical" ? "error" : notice.severity === "warning" ? "warn" : "info";
+    logger[level](notice, notice.event === "scan_signature_recovered"
+      ? "Local signature update recovered" : "Operator action required: local antivirus signatures");
+    delivery!.enqueue(notice);
+  });
   let running = false;
   let stopped = false;
   const update = async () => {
@@ -75,10 +84,10 @@ export function startSignatureUpdates({
       let status: SignatureHealth;
       try { status = await health(); }
       catch { status = { state: "unreadable" }; }
-      if (!stopped) notify(success, status);
+      if (!stopped) monitor(success, status);
     } finally { running = false; }
   };
   void update();
   const cancel = schedule(() => void update());
-  return () => { stopped = true; cancel(); };
+  return () => { stopped = true; cancel(); delivery?.stop(); };
 }
