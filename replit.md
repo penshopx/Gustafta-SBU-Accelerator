@@ -78,7 +78,7 @@ Empat peran dapat membentuk profil. Kontraktor/konsultan dapat membuat dan menge
 - Wadah bawaan bernama “Wadah kasus pribadi” bukan profil badan usaha yang terverifikasi. Kasus lama dapat mewakili badan usaha berbeda; jangan menggabungkan identitas perusahaan atau mengisi NIB/NPWP/alamat dari dugaan.
 - `getContext(req)` mengambil identitas sesi dan memuat ruang kerja serta daftar wadah miliknya. Semua rute kasus tetap memeriksa `owner_id`; peran profil, ID klien, dan header organisasi tidak memberi akses ke akun lain.
 - Audit CRUD kasus disimpan dalam transaksi yang sama dengan mutasi. Ringkasan audit hanya mencatat nama field yang berubah, bukan isi dokumen, catatan bukti, atau salinan data perusahaan.
-- Migrasi aditif dan backfill: `pnpm --filter @workspace/db run migrate:workspace`. Server menjalankannya sebelum mulai melayani permintaan; kegagalan migrasi menghentikan startup. Jangan menjalankan migrasi produksi manual untuk database Replit; publikasi mengikuti alur migrasi platform.
+- Migrasi development dan backfill: `pnpm --filter @workspace/db run migrate:workspace`, dipanggil oleh skrip start development dan post-merge. Startup produksi menjalankan bundle API langsung, tanpa DDL. Untuk PostgreSQL terkelola Replit, perbedaan skema diterapkan melalui Publish; jangan menambahkan migrasi ke build/startup produksi atau menjalankannya secara manual. Perubahan skema tidak membuktikan baris inisialisasi/backfill ikut dipindahkan. Lihat `docs/publication-database-readiness.md` untuk batas verifikasi dan prasyarat pengunci anggaran AI.
 - `sbu_app_settings` memuat teks deklarasi; batas minimum independensi tidak dapat dihapus oleh nilai setting. Disclaimer global juga tampil pada halaman publik dan privat.
 
 ## Rujukan framework lanjutan
