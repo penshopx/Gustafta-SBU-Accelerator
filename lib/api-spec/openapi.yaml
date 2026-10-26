@@ -527,6 +527,20 @@ paths:
         "401": { description: Authentication required }
         "409": { $ref: "#/components/responses/FormOwnerMismatch" }
         "503": { description: Shared quota database unavailable; no AI request allowed }
+  /openai/sbu/budget:
+    get:
+      operationId: getSbuChatBudget
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      summary: Read-only shared assistant budget availability; no reservation or AI call
+      responses:
+        "200":
+          description: Private advisory snapshot without financial totals; sending still requires atomic reservation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SbuChatBudget" }
+        "401": { description: Authentication required }
+        "409": { $ref: "#/components/responses/FormOwnerMismatch" }
   /openai/sbu/messages:
     post:
       operationId: sendSbuChatMessage
@@ -1449,6 +1463,17 @@ components:
         minuteResetAt: { type: string, format: date-time }
         busy: { type: boolean }
         retryAfterSeconds: { type: integer, minimum: 0 }
+    SbuChatBudget:
+      type: object
+      required: [userId, status, checkedAt, nextResetAt]
+      properties:
+        userId: { type: string }
+        status: { type: string, enum: [available, exhausted, unavailable] }
+        checkedAt: { type: string, format: date-time }
+        nextResetAt:
+          type: [string, "null"]
+          format: date-time
+          description: Earliest period reset that could clear all current blockers, not a guarantee of availability
     SbuChatLimitError:
       type: object
       required: [error, code, quota]

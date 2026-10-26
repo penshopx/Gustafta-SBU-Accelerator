@@ -25,6 +25,7 @@ export function chatLimitMessage(error: unknown): string | undefined {
 
 export function ChatQuotaNotice({ quota }: { quota: SbuChatQuota }) {
   return <div role="status" data-testid="text-chat-quota" className="mb-5 rounded-xl border border-[#b9d5e9] bg-[#eaf4ff] p-4 text-xs leading-5 text-[#173d5d]">
+    <p className="font-bold">Kuota akun Anda</p>
     <p className="font-bold">Sisa kuota: {quota.dailyRemaining} dari {quota.dailyLimit} percobaan harian; {quota.minuteRemaining} dari {quota.minuteLimit} percobaan menit ini.</p>
     <p>Reset harian pukul 07.00 WIB ({new Date(quota.dailyResetAt).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })}). Kuota berlaku per akun di semua tab, mode, dan spesialis.</p>
     {quota.busy && <p>Masih ada permintaan berjalan pada akun ini.</p>}

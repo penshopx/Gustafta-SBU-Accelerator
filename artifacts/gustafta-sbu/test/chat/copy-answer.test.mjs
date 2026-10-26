@@ -75,6 +75,10 @@ test('native clipboard retains source cards and verification limits across a new
         return json([{ id: 'sbuclaw', name: 'Spesialis fixture', group: 'Sintetis',
           description: 'Katalog pengujian', prompts: ['Pertanyaan sintetis'], knowledgeStatus: 'Tidak ada data nyata.' }]);
       }
+      if (url.origin === origin && url.pathname === '/api/openai/sbu/budget' && request.method() === 'GET') {
+        assert.equal(request.headers()['x-sbu-form-owner'], owner);
+        return json({ userId: owner, status: 'available', checkedAt: '2026-10-20T12:00:00Z', nextResetAt: null });
+      }
       if (url.origin === origin && url.pathname === '/api/openai/sbu/quota' && request.method() === 'GET') {
         assert.equal(request.headers()['x-sbu-form-owner'], owner);
         return json(quota);

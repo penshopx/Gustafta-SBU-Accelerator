@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { getAuth } from "@clerk/express";
-import { GetSbuChatQuotaResponse, GetSbuChatSpecialistsResponse, SendSbuChatMessageBody, SendSbuChatMessageResponse } from "@workspace/api-zod";
+import { GetSbuChatBudgetResponse, GetSbuChatQuotaResponse, GetSbuChatSpecialistsResponse, SendSbuChatMessageBody, SendSbuChatMessageResponse } from "@workspace/api-zod";
 import type { SbuChatCitation } from "@workspace/api-zod";
 import { chatQuotaStore, type ChatQuotaStore, type ChatLimitCode } from "../lib/sbu-chat-quota";
 import { CHAT_DISCLAIMER } from "../lib/sbu-chat-policy";
@@ -10,6 +10,7 @@ import { chatSourceReviewStore, type ChatSourceReviewStore } from "../lib/sbu-ch
 import { createChatSourceReviewsRouter } from "./sbu-chat-source-reviews";
 import { AiBudgetError, reserveAiBudget, type ReserveAiBudget } from "../lib/ai-budget";
 import { BUDGET_MODEL, BUDGET_OUTPUT_TOKENS } from "../lib/ai-budget-policy";
+import { readAiBudgetAvailability, type ReadAiBudgetAvailability } from "../lib/ai-budget-availability";
 import {
   buildSbuChatInput, createAnthropicSbuChatGenerate, sbuChatInputSize,
   SBU_CHAT_MODEL, SBU_CHAT_MAX_INPUT_BYTES, type SbuChatGenerate,
@@ -40,9 +41,26 @@ export const generateClaudeAssistantAnswer: Generate = async (...args) => {
 };
 
 // Only aggregate usage metadata is persisted, never the conversation.
-export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAnswer, quotas: ChatQuotaStore = chatQuotaStore, reviews: ChatSourceReviewStore = chatSourceReviewStore, reserveBudget: ReserveAiBudget = reserveAiBudget): IRouter {
+export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAnswer, quotas: ChatQuotaStore = chatQuotaStore, reviews: ChatSourceReviewStore = chatSourceReviewStore, reserveBudget: ReserveAiBudget = reserveAiBudget, readBudget: ReadAiBudgetAvailability = readAiBudgetAvailability): IRouter {
   const router: IRouter = Router();
   router.use(createChatSourceReviewsRouter(reviews));
+  router.get("/openai/sbu/budget", async (req, res): Promise<void> => {
+    res.set("Cache-Control", "private, no-store");
+    const userId = getAuth(req).userId;
+    if (!userId) {
+      res.status(401).json({ error: "Silakan masuk untuk memeriksa anggaran asisten." }); return;
+    }
+    if (req.get("X-SBU-Form-Owner") !== userId) {
+      res.status(409).json({ error: "Sesi berubah. Muat ulang halaman sebelum memeriksa anggaran." }); return;
+    }
+    try {
+      res.json(GetSbuChatBudgetResponse.parse({ ...await readBudget("assistant", SBU_CHAT_MODEL), userId }));
+    } catch {
+      res.json(GetSbuChatBudgetResponse.parse({
+        userId, status: "unavailable", checkedAt: new Date().toISOString(), nextResetAt: null,
+      }));
+    }
+  });
   router.get("/openai/sbu/quota", async (req, res): Promise<void> => {
     res.set("Cache-Control", "private, no-store");
     const userId = getAuth(req).userId;

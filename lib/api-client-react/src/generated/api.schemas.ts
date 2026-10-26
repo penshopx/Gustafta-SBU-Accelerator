@@ -689,6 +689,26 @@ export interface SbuChatQuota {
   retryAfterSeconds: number;
 }
 
+export type SbuChatBudgetStatus = typeof SbuChatBudgetStatus[keyof typeof SbuChatBudgetStatus];
+
+
+export const SbuChatBudgetStatus = {
+  available: 'available',
+  exhausted: 'exhausted',
+  unavailable: 'unavailable',
+} as const;
+
+export interface SbuChatBudget {
+  userId: string;
+  status: SbuChatBudgetStatus;
+  checkedAt: string;
+  /**
+     * Earliest period reset that could clear all current blockers, not a guarantee of availability
+     * @nullable
+     */
+  nextResetAt: string | null;
+}
+
 export type SbuChatLimitErrorCode = typeof SbuChatLimitErrorCode[keyof typeof SbuChatLimitErrorCode];
 
 

@@ -1440,6 +1440,17 @@ export const GetSbuChatQuotaResponse = zod.object({
 
 
 /**
+ * @summary Read-only shared assistant budget availability; no reservation or AI call
+ */
+export const GetSbuChatBudgetResponse = zod.object({
+  "userId": zod.string(),
+  "status": zod.enum(['available', 'exhausted', 'unavailable']),
+  "checkedAt": zod.coerce.date(),
+  "nextResetAt": zod.coerce.date().nullable().describe('Earliest period reset that could clear all current blockers, not a guarantee of availability')
+})
+
+
+/**
  * @summary Role-focused SBU AI guidance without reading company data or documents
  */
 export const sendSbuChatMessageBodySpecialistDefault = `sbuclaw`;

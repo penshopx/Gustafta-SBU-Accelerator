@@ -89,7 +89,8 @@ test('browser quota freshness and fail-closed recovery with synthetic accounts',
     async function scenario(run) {
       const context = await browser.newContext();
       const errors = [], requests = [], sent = [], gates = [];
-      const state = { now: Date.parse(beforeReset), used: { [A]: 2, [B]: 5 }, fail: false, hold: null };
+      const state = { now: Date.parse(beforeReset), used: { [A]: 2, [B]: 5 }, fail: false, hold: null,
+        budget: 'available', budgetFail: false, budgetOwner: null, budgetAfterSend: null };
       await context.route('**/*', async route => {
         const req = route.request(), url = new URL(req.url());
         const json = (body, status = 200) => route.fulfill({
@@ -98,6 +99,13 @@ test('browser quota freshness and fail-closed recovery with synthetic accounts',
         if (url.origin === origin && url.pathname === '/api/openai/sbu/specialists' && req.method() === 'GET') {
           return json([{ id: 'sbuclaw', name: 'Spesialis sintetis', group: 'Sintetis',
             description: 'Fixture kuota', prompts: ['Pertanyaan sintetis'], knowledgeStatus: 'Data sintetis.' }]);
+        }
+        if (url.origin === origin && url.pathname === '/api/openai/sbu/budget' && req.method() === 'GET') {
+          const owner = req.headers()['x-sbu-form-owner'];
+          assert.ok(owner === A || owner === B);
+          return state.budgetFail ? json({ error: 'Synthetic budget read failure' }, 503)
+            : json({ userId: state.budgetOwner ?? owner, status: state.budget,
+              checkedAt: new Date(state.now).toISOString(), nextResetAt: null });
         }
         if (url.origin === origin && url.pathname === '/api/openai/sbu/quota' && req.method() === 'GET') {
           const owner = req.headers()['x-sbu-form-owner'];
@@ -117,6 +125,7 @@ test('browser quota freshness and fail-closed recovery with synthetic accounts',
           assert.ok(owner === A || owner === B);
           sent.push({ owner, body });
           state.used[owner]++;
+          if (state.budgetAfterSend) state.budget = state.budgetAfterSend;
           return json({ userId: owner, mode: body.mode, specialist: body.specialist,
             quota: quotaFor(owner, state.now, state.used[owner]), answer: 'Jawaban sintetis.',
             citations: [], retrievalNotice: 'Tidak ada sumber nyata dalam fixture.' });
@@ -152,6 +161,51 @@ test('browser quota freshness and fail-closed recovery with synthetic accounts',
         await context.close();
       }
     }
+
+    await t.test('shared exhaustion blocks button and Enter, preserves draft, recovers without paid retries and refreshes after send', async () => {
+      await scenario(async ({ open, state, sent }) => {
+        const page = await open();
+        state.budget = 'exhausted';
+        await page.getByTestId('button-refresh-chat-budget').click();
+        await seeSend(page, false);
+        await settle(page, () => page.getByTestId('text-chat-budget').innerText().then(text => text.includes('meskipun kuota akun')));
+        await seeQuota(page, 28, 4);
+        await page.getByTestId('input-chat-message').press('Enter');
+        assert.equal(sent.length, 0);
+        assert.equal(await page.getByTestId('input-chat-message').inputValue(), draft);
+        state.budget = 'available';
+        await page.getByTestId('button-refresh-chat-budget').click();
+        await seeSend(page, true);
+        assert.equal(await page.getByTestId('input-chat-message').inputValue(), draft);
+        state.budgetAfterSend = 'exhausted';
+        await page.getByTestId('button-send-chat').click();
+        await seeQuota(page, 27, 3);
+        await settle(page, () => page.getByTestId('text-chat-budget').innerText().then(text => text.includes('meskipun kuota akun')));
+        await page.getByTestId('input-chat-message').fill(draft);
+        await seeSend(page, false);
+        assert.equal(sent.length, 1, "only the explicitly clicked synthetic send occurred");
+      });
+    });
+
+    await t.test('budget read errors and wrong owner remain fail-closed with the draft intact', async () => {
+      await scenario(async ({ open, state, sent }) => {
+        const page = await open();
+        for (const failure of ['unavailable', 'network', 'wrong-owner']) {
+          state.budget = failure === 'unavailable' ? 'unavailable' : 'available';
+          state.budgetFail = failure === 'network';
+          state.budgetOwner = failure === 'wrong-owner' ? B : null;
+          await page.getByTestId('button-refresh-chat-budget').click();
+          await seeSend(page, false);
+          await settle(page, () => page.getByTestId('text-chat-budget').innerText().then(text => text.includes('belum dapat diverifikasi')));
+          await page.getByTestId('input-chat-message').press('Enter');
+          assert.equal(sent.length, 0);
+          assert.equal(await page.getByTestId('input-chat-message').inputValue(), draft);
+        }
+        state.budget = 'available'; state.budgetFail = false; state.budgetOwner = null;
+        await page.getByTestId('button-refresh-chat-budget').click();
+        await seeSend(page, true);
+      });
+    });
 
     await t.test('two tabs: send refreshes the other tab via polling and independently via focus', async () => {
       await scenario(async ({ open, sent, requests }) => {

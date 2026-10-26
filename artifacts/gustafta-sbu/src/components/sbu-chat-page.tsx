@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 're
 import { Link } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, Copy, Loader2, Plus, SendHorizontal, ShieldAlert, Square } from 'lucide-react';
-import { sendSbuChatMessage, useGetSbuChatQuota, getGetSbuChatQuotaQueryKey, useGetSbuChatSpecialists, getGetSbuChatSpecialistsQueryKey, type SbuChatInput, type SbuChatSpecialist, type SbuChatCitation } from '@workspace/api-client-react';
+import { sendSbuChatMessage, useGetSbuChatBudget, getGetSbuChatBudgetQueryKey, useGetSbuChatQuota, getGetSbuChatQuotaQueryKey, useGetSbuChatSpecialists, getGetSbuChatSpecialistsQueryKey, type SbuChatInput, type SbuChatSpecialist, type SbuChatCitation } from '@workspace/api-client-react';
 import { useAccountReadOptions, useFormMutationOptions } from '@/components/account-queries';
 import { ChatCitations, chatAnswerForCopy } from './chat-citations';
 import { ChatQuotaNotice, chatLimitMessage, chatQuotaFromError } from './chat-quota';
 import { aiBudgetErrorMessage } from '@/lib/ai-budget-error';
+import { ChatBudgetNotice, chatBudgetForOwner } from './chat-budget';
 
 type Mode = SbuChatInput['mode'];
 type SpecId = SbuChatSpecialist['id'];
@@ -56,6 +57,12 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
     query: { queryKey: getGetSbuChatQuotaQueryKey(), retry: false, staleTime: 0, refetchInterval: 15000, refetchOnWindowFocus: 'always', refetchOnMount: 'always' },
   });
   const quota = quotaQuery.data?.userId === expectedUserId ? quotaQuery.data : undefined;
+  const budgetQuery = useGetSbuChatBudget({
+    ...readOptions,
+    query: { queryKey: getGetSbuChatBudgetQueryKey(), retry: false, staleTime: 0, refetchInterval: 15000, refetchOnWindowFocus: 'always', refetchOnMount: 'always' },
+  });
+  const budget = budgetQuery.isError ? undefined : chatBudgetForOwner(budgetQuery.data, expectedUserId);
+  const budgetReady = budget?.status === 'available' && !budgetQuery.isFetching;
   const [mode, setMode] = useState<Mode>(() => defaultModeForRole(initialRole));
   const [messages, setMessages] = useState<Msg[]>([]);
   const [draft, setDraft] = useState('');
@@ -89,7 +96,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
 
   const send = async (text: string, base: Msg[] = messages) => {
     const content = text.trim();
-    if (!content || loading || ctrl.current || !consent || !catalog.isSuccess || !spec || !quota || quotaQuery.isError || content.length > MAX_USER) return;
+    if (!content || loading || ctrl.current || !consent || !catalog.isSuccess || !spec || !quota || quotaQuery.isError || !budgetReady || content.length > MAX_USER) return;
     const next = [...base, { id: ++seq.current, role: 'user' as const, content }];
     const c = new AbortController();
     ctrl.current = c; timedOut.current = false;
@@ -119,6 +126,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
     } finally {
       if (ctrl.current === c) { abort(); setLoading(false); }
       void queryClient.invalidateQueries({ queryKey: getGetSbuChatQuotaQueryKey() });
+      void queryClient.invalidateQueries({ queryKey: getGetSbuChatBudgetQueryKey() });
     }
   };
 
@@ -141,7 +149,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
     try { await navigator.clipboard.writeText(chatAnswerForCopy(m.content, m.citations, m.retrievalNotice)); setCopied(m.id); window.setTimeout(() => setCopied(null), 1500); } catch { /* clipboard unavailable */ }
   };
   const over = draft.length > MAX_USER;
-  const canSend = consent && catalog.isSuccess && !!spec && !!quota && !quotaQuery.isError && !loading && !!draft.trim() && !over;
+  const canSend = consent && catalog.isSuccess && !!spec && !!quota && !quotaQuery.isError && budgetReady && !loading && !!draft.trim() && !over;
 
   return <div className="mx-auto max-w-5xl">
     <div className="mb-6">
@@ -159,6 +167,8 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
       <p role="status" className="mb-5 text-sm text-[#526b81]">{quotaQuery.isPending ? 'Memeriksa kuota asisten…' : 'Kuota belum dapat diperiksa. Pengiriman dinonaktifkan sementara.'}
         {!quotaQuery.isPending && <button type="button" className="ml-2 font-bold underline" onClick={() => void quotaQuery.refetch()}>Periksa lagi</button>}
       </p>}
+
+    <ChatBudgetNotice budget={budget} pending={budgetQuery.isPending} checking={budgetQuery.isFetching} onRefresh={() => void budgetQuery.refetch()} />
 
     <div className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Mode peran">
       {MODES.map(m => <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} disabled={loading} data-testid={`button-mode-${m.id}`} onClick={() => pickMode(m.id)} className={`rounded-xl border p-3.5 text-left transition-colors ${mode === m.id ? 'border-[#1769d1] bg-[#eaf4ff] ring-1 ring-[#1769d1]' : 'border-[#d1dfe9] bg-white hover:bg-[#f4f9fc]'}`}>

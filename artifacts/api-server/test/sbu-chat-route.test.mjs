@@ -166,6 +166,45 @@ test("all six modes return server identity and no-store; accounts never share hi
   });
 });
 
+test("budget availability requires session owner, discloses no totals and cannot call provider or reserve", async () => {
+  const beforeQuota = (await restricted.pool.query("SELECT * FROM sbu_chat_quota ORDER BY user_id")).rows;
+  const reads = [];
+  let status = "available";
+  const forbidden = async () => { assert.fail("GET must not reserve funds or call a provider"); };
+  const app = express();
+  app.use((req, _res, next) => { req.testUser = req.get("X-Test-Identity"); next(); });
+  app.use(createSbuChatRouter(forbidden, undefined, undefined, forbidden, async (...args) => {
+    reads.push(args);
+    if (status === "throw") throw new Error("PRIVATE_PROVIDER_ERROR");
+    return { status, checkedAt: "2026-10-26T00:00:00.000Z", nextResetAt: null };
+  }));
+  const listener = app.listen(0, "127.0.0.1");
+  await new Promise(resolve => listener.once("listening", resolve));
+  const url = `http://127.0.0.1:${listener.address().port}/openai/sbu/budget`;
+  try {
+    assert.equal((await fetch(url, { headers: { "X-SBU-Form-Owner": "owner-a" } })).status, 401);
+    assert.equal((await fetch(url, { headers: { "X-Test-Identity": "owner-a", "X-SBU-Form-Owner": "owner-b" } })).status, 409);
+    assert.equal(reads.length, 0);
+    for (const state of ["available", "exhausted", "unavailable", "throw"]) {
+      status = state;
+      const response = await fetch(url, { headers: { "X-Test-Identity": "owner-a", "X-SBU-Form-Owner": "owner-a" } });
+      assert.equal(response.status, 200);
+      assert.equal(response.headers.get("cache-control"), "private, no-store");
+      const data = await response.json();
+      assert.equal(data.userId, "owner-a");
+      assert.equal(data.status, state === "throw" ? "unavailable" : state);
+      assert.deepEqual(Object.keys(data).sort(), ["checkedAt", "nextResetAt", "status", "userId"]);
+      assert.doesNotMatch(JSON.stringify(data), /PRIVATE/);
+    }
+    assert.deepEqual(reads, Array(4).fill(["assistant", "claude-sonnet-5-5"]));
+    assert.deepEqual((await restricted.pool.query("SELECT * FROM sbu_chat_quota ORDER BY user_id")).rows,
+      beforeQuota, "checking the shared budget never spends account quota");
+  } finally {
+    listener.closeAllConnections();
+    await new Promise(resolve => listener.close(resolve));
+  }
+});
+
 test("catalog has thirteen unique specialists and no hidden system instructions", async () => {
   const router = createSbuChatRouter(async () => { throw new Error("catalog must not call model"); });
   const app = express();

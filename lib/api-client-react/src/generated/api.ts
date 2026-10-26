@@ -62,6 +62,7 @@ import type {
   ReviewSelection,
   ReviewWorkspace,
   SbuCase,
+  SbuChatBudget,
   SbuChatInput,
   SbuChatLimitError,
   SbuChatQuota,
@@ -2602,6 +2603,83 @@ export function useGetSbuChatQuota<TData = Awaited<ReturnType<typeof getSbuChatQ
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetSbuChatQuotaQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetSbuChatBudgetUrl = () => {
+
+
+
+
+  return `/api/openai/sbu/budget`
+}
+
+/**
+ * @summary Read-only shared assistant budget availability; no reservation or AI call
+ */
+export const getSbuChatBudget = async ( options?: Parameters<typeof customFetch>[1]): Promise<SbuChatBudget> => {
+
+  return customFetch<SbuChatBudget>(getGetSbuChatBudgetUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSbuChatBudgetQueryKey = () => {
+    return [
+    `/api/openai/sbu/budget`
+    ] as const;
+    }
+
+
+export const getGetSbuChatBudgetQueryOptions = <TData = Awaited<ReturnType<typeof getSbuChatBudget>>, TError = ErrorType<void | FormOwnerMismatchResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSbuChatBudget>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSbuChatBudgetQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSbuChatBudget>>> = ({ signal }) => getSbuChatBudget({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSbuChatBudget>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSbuChatBudgetQueryResult = NonNullable<Awaited<ReturnType<typeof getSbuChatBudget>>>
+export type GetSbuChatBudgetQueryError = ErrorType<void | FormOwnerMismatchResponse>
+
+
+/**
+ * @summary Read-only shared assistant budget availability; no reservation or AI call
+ */
+
+export function useGetSbuChatBudget<TData = Awaited<ReturnType<typeof getSbuChatBudget>>, TError = ErrorType<void | FormOwnerMismatchResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSbuChatBudget>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSbuChatBudgetQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

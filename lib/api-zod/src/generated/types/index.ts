@@ -95,6 +95,8 @@ export * from './sbuCase';
 export * from './sbuCaseQualification';
 export * from './sbuCaseRequestType';
 export * from './sbuCaseStatus';
+export * from './sbuChatBudget';
+export * from './sbuChatBudgetStatus';
 export * from './sbuChatCitation';
 export * from './sbuChatCitationVerificationStatus';
 export * from './sbuChatInput';

@@ -46,6 +46,7 @@ await build({
     contents: `
       export * from "../src/lib/ai-budget";
       export * from "../src/lib/ai-budget-policy";
+      export * from "../src/lib/ai-budget-availability";
       export * from "../src/routes/sbu-chat";
       export * from "../src/routes/consultations";
       export * from "../src/routes/document-analysis";
@@ -83,7 +84,7 @@ await build({
     },
   }],
 });
-const { createPostgresAiBudgetStore, parseBudgetPolicy, AiBudgetError,
+const { createPostgresAiBudgetStore, createAiBudgetAvailabilityReader, parseBudgetPolicy, AiBudgetError,
   createSbuChatRouter, createConsultationsRouter, createDocumentAnalysisRouter } = await import(join(temp, "fixture.mjs"));
 // Synthetic prices/capacity only, never used with a real provider.
 const pricing = { model: "gpt-5.6-terra", validUntil: "2099-01-01T00:00:00.000Z",
@@ -108,6 +109,73 @@ async function counters() {
   return (await first.pool.query("SELECT scope,period,reserved_micros FROM ai_budget_counters ORDER BY scope,period")).rows;
 }
 const code = expected => error => error instanceof AiBudgetError && error.code === expected;
+
+test("advisory budget reads are read-only, model-aware, private and recover across instances", async () => {
+  await reset();
+  const config = policy(limits(2, 4, 1, 2));
+  const reader = createAiBudgetAvailabilityReader(second.pool, () => config);
+  const read = () => reader("assistant", pricing.model);
+  assert.equal((await read()).status, "available");
+  assert.deepEqual(await counters(), [], "reading never creates financial counters");
+  assert.equal((await first.pool.query("SELECT * FROM ai_budget_model_policies")).rowCount, 0);
+  await store(first.pool, config).reserve("assistant");
+  const before = (await first.pool.query("SELECT * FROM ai_budget_counters ORDER BY scope,period")).rows;
+  const snapshot = await read();
+  assert.equal(snapshot.status, "exhausted", "insufficient remainder blocks, even below 100% of the global cap");
+  const clock = new Date(snapshot.checkedAt);
+  assert.equal(snapshot.nextResetAt, new Date(Date.UTC(clock.getUTCFullYear(), clock.getUTCMonth(),
+    clock.getUTCDate() + 1)).toISOString());
+  assert.deepEqual(Object.keys(snapshot).sort(), ["checkedAt", "nextResetAt", "status"]);
+  await read();
+  assert.deepEqual((await first.pool.query("SELECT * FROM ai_budget_counters ORDER BY scope,period")).rows,
+    before, "polling does not reserve, register prices, or change notification flags");
+  assert.equal((await reader("assistant", claudePricing.model)).status, "unavailable", "missing model config is not availability");
+  const changed = createAiBudgetAvailabilityReader(second.pool, () => policy(limits(3, 4, 1, 2)));
+  assert.equal((await changed("assistant", pricing.model)).status, "unavailable", "unknown aggregate policy fails closed");
+  const changedPrice = createAiBudgetAvailabilityReader(second.pool, () => parseBudgetPolicy(
+    JSON.stringify({ ...pricing, inputMicrosPerMillion: 2_000_000 }), JSON.stringify(config.limits)));
+  assert.equal((await changedPrice("assistant", pricing.model)).status, "unavailable");
+  const expired = createAiBudgetAvailabilityReader(second.pool, () => parseBudgetPolicy(
+    JSON.stringify({ ...pricing, validUntil: "2000-01-01T00:00:00.000Z" })));
+  assert.equal((await expired("assistant", pricing.model)).status, "unavailable");
+  const failed = createAiBudgetAvailabilityReader({ connect: async () => { throw new Error("PRIVATE_DATABASE_ERROR"); } }, () => config);
+  const failure = await failed("assistant", pricing.model);
+  assert.equal(failure.status, "unavailable");
+  assert.doesNotMatch(JSON.stringify(failure), /PRIVATE/);
+
+  await reset();
+  const monthly = policy(limits(2, 2, 1, 1));
+  await store(first.pool, monthly).reserve("assistant");
+  const monthlyStatus = await createAiBudgetAvailabilityReader(second.pool, () => monthly)("assistant", pricing.model);
+  const at = new Date(monthlyStatus.checkedAt);
+  assert.equal(monthlyStatus.nextResetAt, new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 1)).toISOString(),
+    "monthly blockers cannot promise availability at the daily reset");
+
+  await reset();
+  const impossible = parseBudgetPolicy(JSON.stringify(pricing), JSON.stringify(
+    Object.fromEntries(["global", "assistant", "consultation", "document_analysis"].map(scope =>
+      [scope, { day: COST - 1, month: COST * 2 }]))));
+  const impossibleStatus = await createAiBudgetAvailabilityReader(second.pool, () => impossible)("assistant", pricing.model);
+  assert.equal(impossibleStatus.status, "exhausted");
+  assert.equal(impossibleStatus.nextResetAt, null, "a reset does not fix a cap smaller than one reservation");
+  assert.deepEqual(await counters(), []);
+  const claudeOnly = parseBudgetPolicy(undefined, undefined, JSON.stringify({
+    ...claudePricing, maxInputTokens: 1_000_000,
+  }));
+  const claudeReader = createAiBudgetAvailabilityReader(second.pool, () => claudeOnly);
+  assert.equal((await claudeReader("assistant", claudePricing.model)).status, "available");
+  await store(first.pool, claudeOnly).reserve("assistant", claudePricing.model);
+  assert.equal((await claudeReader("assistant", claudePricing.model)).status, "exhausted",
+    "Claude's full-capacity reserve cannot be replaced with the cheaper GPT amount");
+  // Move only this fixture's rows to past periods; a new reader sees reset funds
+  // without polling inserting or resetting anything.
+  await first.pool.query("UPDATE ai_budget_counters SET period_start=period_start-interval '2 years'");
+  await first.pool.query("UPDATE ai_budget_model_policies SET period_start=period_start-interval '2 years'");
+  const historical = (await first.pool.query("SELECT * FROM ai_budget_counters ORDER BY scope,period")).rows;
+  assert.equal((await claudeReader("assistant", claudePricing.model)).status, "available");
+  assert.deepEqual((await first.pool.query("SELECT * FROM ai_budget_counters ORDER BY scope,period")).rows, historical);
+  await reset();
+});
 
 test("policy has explicit independent defaults and rejects unverified or malformed pricing without echoing config", () => {
   const config = parseBudgetPolicy(JSON.stringify(pricing));

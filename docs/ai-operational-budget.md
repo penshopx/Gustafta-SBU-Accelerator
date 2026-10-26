@@ -21,6 +21,24 @@ anggaran dalam memori.
 
 ## Pencadangan biaya, bukan tagihan aktual
 
+### Indikator sebelum pengiriman Asisten
+
+`GET /api/openai/sbu/budget` membaca ketersediaan untuk model Asisten dengan
+snapshot transaksi PostgreSQL read-only. Endpoint memerlukan sesi dan
+`X-SBU-Form-Owner` yang sesuai, memakai `private, no-store`, serta tidak
+menampilkan nominal saldo, tarif, sidik kebijakan, atau data akun lain.
+Pembacaan tidak membuat baris, mengubah alarm, mencadangkan biaya, atau
+memanggil AI. Ini terpisah dari `GET /api/openai/sbu/quota` milik akun.
+
+UI membedakan tersedia, tidak cukup untuk satu reservasi penuh, dan belum dapat
+diverifikasi. Pengiriman melalui tombol maupun Enter diblokir jika pemeriksaan
+anggaran gagal, belum selesai, atau tidak tersedia; draf dipertahankan.
+Status diperbarui setiap 15 detik, saat fokus/mount, setelah pengiriman, serta
+melalui tombol pemeriksaan manual. Nilai snapshot tidak menjamin ketersediaan
+saat dikirim: reservasi atomik yang sudah ada tetap menjadi keputusan akhir.
+Tanggal batas periode hanya ditampilkan jika reset berpotensi mengatasi seluruh
+penghalang; batas yang lebih kecil dari satu reservasi perlu ditinjau pengelola.
+
 Sebelum satu panggilan provider, cadangkan batas atas biaya **seluruh kapasitas
 input model** (termasuk prompt sistem, riwayat, konteks, teks, gambar/PDF) dan
 8.192 token output, termasuk reasoning. Perhitungan integer:
