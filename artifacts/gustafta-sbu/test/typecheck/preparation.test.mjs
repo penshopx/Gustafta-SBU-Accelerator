@@ -7,7 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const workspace = fileURLToPath(new URL("../../../../", import.meta.url));
-const libraries = ["api-client-react", "api-zod", "db", "integrations-openai-ai-server"];
+const libraries = ["api-client-react", "api-zod", "db", "integrations-openai-ai-server", "integrations-anthropic-ai"];
 const packages = [...libraries.map((name) => `lib/${name}`), "lib/api-spec", "artifacts/gustafta-sbu", "artifacts/api-server"];
 
 // Resolve workspace imports inside the fixture, not to the live checkout.
@@ -111,6 +111,9 @@ test("frontend typecheck handles stale declarations and regenerated contract cha
     // despite otherwise valid build metadata.
     writeFileSync(declaration, current.replace("transitionFindings: Finding[];", ""));
     assertPassed(run(root, "pnpm", ["--filter", "@workspace/api-spec", "run", "codegen"]));
+    for (const lib of libraries) {
+      assert.ok(existsSync(path.join(root, "lib", lib, "dist/index.d.ts")), `${lib} declarations must be built inside the fixture`);
+    }
     assert.match(readFileSync(declaration, "utf8"), /transitionFindings: Finding\[\];/);
     for (const file of [clientSource, declaration]) {
       assert.match(readFileSync(file, "utf8"), /typecheckContractProbe\?: string;/);

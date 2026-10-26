@@ -7,7 +7,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const workspace = fileURLToPath(new URL("../../../../", import.meta.url));
-const libraries = ["db", "api-zod", "integrations-openai-ai-server"];
+const libraries = ["db", "api-zod", "integrations-openai-ai-server", "integrations-anthropic-ai"];
 const packages = [...libraries.map((lib) => `lib/${lib}`), "artifacts/api-server"];
 
 // Copy sources, never dist or build metadata. Workspace imports must resolve to
@@ -67,8 +67,8 @@ test("API typecheck builds references from clean sources and refreshes stale dec
     assert.ok(!existsSync(path.join(root, "artifacts/api-server/dist")), "API typecheck must not emit application code");
 
     // Leave the first build's declaration files in place, then add exports to
-    // both libraries and consume them from the API. A leaf-only check fails here.
-    for (const lib of ["db", "api-zod"]) {
+    // workspace libraries and consume them from the API. A leaf-only check fails here.
+    for (const lib of libraries) {
       const file = path.join(root, "lib", lib, "src/index.ts");
       writeFileSync(file, readFileSync(file, "utf8") + "\nexport type FreshTypecheckExport = { fresh: true };\n");
     }
@@ -76,8 +76,12 @@ test("API typecheck builds references from clean sources and refreshes stale dec
     writeFileSync(probe, [
       'import type { FreshTypecheckExport as Db } from "@workspace/db";',
       'import type { FreshTypecheckExport as Api } from "@workspace/api-zod";',
+      'import type { FreshTypecheckExport as Claude } from "@workspace/integrations-anthropic-ai";',
+      'import type { FreshTypecheckExport as Gpt } from "@workspace/integrations-openai-ai-server";',
       "export const db: Db = { fresh: true };",
       "export const api: Api = { fresh: true };",
+      "export const claude: Claude = { fresh: true };",
+      "export const gpt: Gpt = { fresh: true };",
     ].join("\n"));
     assertPassed(check(root));
     assertPassed(check(root)); // Incremental repeat must also succeed.
@@ -92,6 +96,11 @@ test("API typecheck builds references from clean sources and refreshes stale dec
     const libError = check(root);
     assert.notEqual(libError.status, 0, libError.output);
     assert.match(libError.output, /typecheck-probe\.ts.*TS2322/);
+    rmSync(path.join(root, "lib/db/src/typecheck-probe.ts"));
+    writeFileSync(path.join(root, "lib/integrations-anthropic-ai/src/typecheck-probe.ts"), "export const invalid: string = 123;\n");
+    const claudeError = check(root);
+    assert.notEqual(claudeError.status, 0, claudeError.output);
+    assert.match(claudeError.output, /integrations-anthropic-ai\/src\/typecheck-probe\.ts.*TS2322/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

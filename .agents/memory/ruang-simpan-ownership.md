@@ -22,6 +22,14 @@ Pembersihan integrasi lama tidak mencakup halaman `/company-profile` lokal atau 
 
 **How to apply:** Pisahkan adapter/pemanggil Gustafta dari profil dan dokumen mandiri. Pencabutan token dan pembersihan konfigurasi kredensial merupakan pekerjaan terpisah, bukan izin tersirat dari pembersihan kode.
 
+## Asisten dokumen mandiri
+
+Pengguna menyatakan kebutuhan: “dalam ruang simpan ada asisten ai untuk menjadikan dokumen tersimpan bisa terbaca dan dialog”.
+
+**Why:** Pengguna menginginkan dokumen di Ruang Simpan mandiri dapat dibaca dan dibahas lewat dialog AI.
+
+**How to apply:** Jadikan ini kebutuhan pengembangan Ruang Simpan mandiri, bukan permintaan mengaktifkan integrasi Gustafta. Pernyataan kebutuhan ini tidak membuktikan fitur dialog langsung di Ruang Simpan sudah tersedia.
+
 ## Resolving an owner-supplied email
 
 An owner-supplied email may locate the local SBU account only after explicit confirmation of entitlement to the token's company profile. Require exactly one matching account with a verified email in the selected authentication environment, and map its Clerk user ID, never the email.
