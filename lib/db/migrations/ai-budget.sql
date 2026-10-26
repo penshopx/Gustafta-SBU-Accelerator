@@ -13,3 +13,12 @@ CREATE TABLE IF NOT EXISTS ai_budget_counters (
   rejected boolean NOT NULL DEFAULT false,
   PRIMARY KEY (scope,period,period_start)
 );
+-- Tracks provider pricing independently so a newly enabled model does not
+-- invalidate existing aggregate USD reservations. It stores no prompt data.
+CREATE TABLE IF NOT EXISTS ai_budget_model_policies (
+  model text NOT NULL,
+  period text NOT NULL CHECK (period IN ('day','month')),
+  period_start timestamptz NOT NULL,
+  pricing_fingerprint text NOT NULL,
+  PRIMARY KEY (model,period,period_start)
+);

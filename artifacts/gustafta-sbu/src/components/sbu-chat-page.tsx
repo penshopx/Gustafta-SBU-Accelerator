@@ -220,7 +220,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
       <div className="border-t border-[#d8e4ec] bg-white p-4 sm:p-6">
         <label className="mb-3 flex items-start gap-2.5 text-xs leading-5 text-[#34506a]">
           <input type="checkbox" data-testid="checkbox-consent" checked={consent} disabled={loading} onChange={e => setConsent(e.target.checked)} className="mt-1 h-4 w-4 accent-[#1769d1]" />
-          <span>Saya setuju teks yang saya ketik dan kirim secara manual di sini dibagikan kepada penyedia AI (OpenAI melalui Replit). Data perusahaan, kasus, dan dokumen tidak ikut terkirim otomatis; jangan menulis data sensitif yang tidak perlu.</span>
+          <span>Saya setuju teks yang saya ketik dan kirim secara manual, serta cuplikan sumber publik terkurasi yang dipilih aplikasi, dikirim ke Claude Sonnet 5.5 melalui Replit AI Integrations. Data perusahaan, kasus, dan dokumen tidak ikut terkirim otomatis; jangan menulis data sensitif yang tidak perlu.</span>
         </label>
         <textarea data-testid="input-chat-message" aria-label="Pesan Anda" className="field min-h-[88px] resize-y" rows={3} value={draft} disabled={loading} onChange={e => setDraft(e.target.value)} onKeyDown={onKey} placeholder="Tulis pertanyaan. Enter untuk kirim, Shift+Enter untuk baris baru." />
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">

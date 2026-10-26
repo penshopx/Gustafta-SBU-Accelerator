@@ -1,5 +1,8 @@
 import type { pool } from "@workspace/db";
-import { AI_FEATURES, parseBudgetPolicy, type AiFeature, type BudgetPolicy } from "./ai-budget-policy";
+import {
+  AI_FEATURES, BUDGET_MODEL, modelAttemptMicros, parseBudgetPolicy,
+  type AiFeature, type BudgetPolicy,
+} from "./ai-budget-policy";
 
 export class AiBudgetError extends Error {
   constructor(public readonly code: "ai_budget_exhausted" | "ai_budget_unavailable") {
@@ -8,7 +11,7 @@ export class AiBudgetError extends Error {
       : "Anggaran operasional AI belum dapat diverifikasi. Tidak ada permintaan AI yang dikirim; coba lagi nanti.");
   }
 }
-export type ReserveAiBudget = (feature: AiFeature) => Promise<void>;
+export type ReserveAiBudget = (feature: AiFeature, model?: string, inputTokens?: number) => Promise<void>;
 export type BudgetEvent = {
   event: "ai_budget_warning" | "ai_budget_rejected" | "ai_budget_unavailable";
   scope?: "global" | AiFeature;
@@ -31,12 +34,15 @@ export function createPostgresAiBudgetStore(
   report: Emit = emit,
 ): { reserve: ReserveAiBudget } {
   return {
-    async reserve(feature) {
+    async reserve(feature, requestedModel = BUDGET_MODEL, inputTokens) {
       let client: { query: typeof pool.query; release(): void } | undefined;
       const events: BudgetEvent[] = [];
       try {
         if (!AI_FEATURES.includes(feature)) throw new Error();
         const config = policy();
+        const modelPricing = config.models[requestedModel];
+        if (!modelPricing) throw new Error();
+        const attemptMicros = modelAttemptMicros(modelPricing, inputTokens);
         const connectionPool = database ?? (await import("@workspace/db")).pool;
         client = await connectionPool.connect();
         await client.query("BEGIN");
@@ -47,10 +53,22 @@ export function createPostgresAiBudgetStore(
         const { rows: [lock] } = await client.query("SELECT id FROM ai_budget_lock WHERE id=1 FOR UPDATE");
         if (!lock) throw new Error();
         const { rows: [clock] } = await client.query(`SELECT clock_timestamp() AS now`);
-        if (new Date(clock.now).getTime() >= config.validUntil.getTime()) throw new Error();
+        if (new Date(clock.now).getTime() >= modelPricing.validUntil.getTime()) throw new Error();
         const { rows: periods } = await client.query(`
           SELECT 'month' AS period, date_trunc('month', $1::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' AS start
           UNION ALL SELECT 'day', date_trunc('day', $1::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`, [clock.now]);
+        if (requestedModel !== BUDGET_MODEL) {
+          for (const { period, start } of periods as { period: "day" | "month"; start: Date }[]) {
+            await client.query(`INSERT INTO ai_budget_model_policies(model,period,period_start,pricing_fingerprint)
+              VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
+            [requestedModel, period, start, modelPricing.fingerprint]);
+            const { rows: [row] } = await client.query(`SELECT pricing_fingerprint FROM ai_budget_model_policies
+              WHERE model=$1 AND period=$2 AND period_start=$3 FOR UPDATE`, [requestedModel, period, start]);
+            // Price updates during an active period fail closed without resetting
+            // already reserved USD. Different model prices remain independently tracked.
+            if (!row || row.pricing_fingerprint !== modelPricing.fingerprint) throw new Error();
+          }
+        }
         const counters: {
           scope: "global" | AiFeature; period: "day" | "month"; start: Date;
           reserved: number; limit: number; warned: boolean; rejected: boolean;
@@ -67,7 +85,7 @@ export function createPostgresAiBudgetStore(
               limit: config.limits[scope][period], warned: row.warned, rejected: row.rejected });
           }
         }
-        const blocked = counters.filter(c => c.reserved + config.attemptMicros > c.limit);
+        const blocked = counters.filter(c => c.reserved + attemptMicros > c.limit);
         if (blocked.length) {
           for (const c of blocked) {
             if (!c.rejected) {
@@ -79,7 +97,7 @@ export function createPostgresAiBudgetStore(
           }
         } else {
           for (const c of counters) {
-            const reserved = c.reserved + config.attemptMicros;
+            const reserved = c.reserved + attemptMicros;
             const warn = reserved >= Math.ceil(c.limit * 0.8);
             await client.query(`UPDATE ai_budget_counters SET reserved_micros=$4, warned=warned OR $5
               WHERE scope=$1 AND period=$2 AND period_start=$3`,

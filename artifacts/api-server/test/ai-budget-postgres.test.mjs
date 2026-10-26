@@ -53,7 +53,8 @@ await build({
     resolveDir: dir, sourcefile: "budget-fixture.ts",
   },
   outfile: join(temp, "fixture.mjs"), bundle: true, platform: "node", format: "esm",
-  external: ["express", "drizzle-orm", "drizzle-orm/*", "pdf-lib", "pino", "@workspace/integrations-openai-ai-server"],
+  external: ["express", "drizzle-orm", "drizzle-orm/*", "pdf-lib", "pino",
+    "@workspace/integrations-openai-ai-server", "@workspace/integrations-anthropic-ai"],
   plugins: [{
     name: "restricted-budget-fixture",
     setup(builder) {
@@ -92,11 +93,13 @@ const limits = (globalDay = 10, globalMonth = 100, featureDay = globalDay, featu
   Object.fromEntries(["global", "assistant", "consultation", "document_analysis"].map(scope =>
     [scope, { day: COST * (scope === "global" ? globalDay : featureDay),
       month: COST * (scope === "global" ? globalMonth : featureMonth) }]));
-const policy = (caps = limits()) => parseBudgetPolicy(JSON.stringify(pricing), JSON.stringify(caps));
+const policy = (caps = limits(), additionalPricing) => parseBudgetPolicy(
+  JSON.stringify(pricing), JSON.stringify(caps), additionalPricing ? JSON.stringify(additionalPricing) : null);
 const events = [];
 const store = (pool = first.pool, config = policy()) => createPostgresAiBudgetStore(pool, () => config, e => events.push(e));
 async function reset() {
   await first.pool.query("DELETE FROM ai_budget_counters");
+  await first.pool.query("DELETE FROM ai_budget_model_policies");
   events.length = 0;
 }
 async function counters() {
@@ -130,6 +133,15 @@ test("policy has explicit independent defaults and rejects unverified or malform
   }
   assert.equal(parseBudgetPolicy(JSON.stringify({ ...pricing, maxInputTokens: 1, inputMicrosPerMillion: 1,
     outputMicrosPerMillion: 1 })).attemptMicros, 1, "round up, never down");
+  const claude = { model: "claude-sonnet-5-5", validUntil: "2099-01-01T00:00:00.000Z",
+    maxInputTokens: 150_000, inputMicrosPerMillion: 2_000_000, outputMicrosPerMillion: 10_000_000 };
+  const withClaude = parseBudgetPolicy(JSON.stringify(pricing), undefined, JSON.stringify(claude));
+  assert.equal(withClaude.models[claude.model].inputMicrosPerMillion, 2_000_000);
+  const withoutInvalidClaude = parseBudgetPolicy(JSON.stringify(pricing), undefined, "not-json");
+  assert.equal(withoutInvalidClaude.models[claude.model], undefined,
+    "invalid optional provider prices disable that provider only");
+  assert.equal(withoutInvalidClaude.fingerprint, config.fingerprint,
+    "adding an optional provider does not change existing GPT aggregate fingerprint");
 });
 
 test("two independent pools cannot overspend the shared budget across features and accounts", async () => {
@@ -196,6 +208,37 @@ test("mixed policy instances and expired pricing fail closed with no partial cha
   const expired = parseBudgetPolicy(JSON.stringify({ ...pricing, validUntil: "2000-01-01T00:00:00.000Z" }));
   await assert.rejects(store(second.pool, expired).reserve("assistant"), code("ai_budget_unavailable"));
   assert.deepEqual(await counters(), before);
+});
+
+test("Claude Sonnet uses its own public price in shared limits and detects price drift across instances", async () => {
+  await reset();
+  const claude = {
+    model: "claude-sonnet-5-5", validUntil: "2099-01-01T00:00:00.000Z",
+    maxInputTokens: 150_000, inputMicrosPerMillion: 2_000_000, outputMicrosPerMillion: 10_000_000,
+  };
+  const config = policy(limits(100, 200), claude);
+  const a = store(first.pool, config), b = store(second.pool, config);
+  await Promise.all([
+    a.reserve("assistant", claude.model, 10_000),
+    b.reserve("assistant", claude.model, 10_000),
+  ]);
+  const perAttempt = 101_920;
+  const rows = await counters();
+  assert.equal(rows.find(r => r.scope === "global" && r.period === "day").reserved_micros, String(perAttempt * 2));
+  assert.equal(rows.find(r => r.scope === "assistant" && r.period === "day").reserved_micros, String(perAttempt * 2));
+  assert.equal((await first.pool.query("SELECT count(*)::int AS count FROM ai_budget_model_policies")).rows[0].count, 2);
+
+  const changedPrice = { ...claude, inputMicrosPerMillion: 3_000_000 };
+  await assert.rejects(store(second.pool, policy(limits(100, 200), changedPrice))
+    .reserve("assistant", claude.model, 10_000), code("ai_budget_unavailable"));
+  assert.equal((await counters()).find(r => r.scope === "global" && r.period === "day").reserved_micros, String(perAttempt * 2));
+
+  // Adding Claude does not invalidate earlier reservations made under the
+  // unchanged GPT policy, and both providers still consume the same shared cap.
+  const before = Number((await counters()).find(r => r.scope === "global" && r.period === "day").reserved_micros);
+  await a.reserve("consultation");
+  assert.equal(Number((await counters()).find(r => r.scope === "global" && r.period === "day").reserved_micros),
+    before + COST);
 });
 
 test("storage unavailable, missing lock row, transaction failure and ambiguous commit never authorize provider", async () => {

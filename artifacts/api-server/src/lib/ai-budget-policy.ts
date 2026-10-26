@@ -6,11 +6,22 @@ export const BUDGET_OUTPUT_TOKENS = 8192;
 export const AI_FEATURES = ["assistant", "consultation", "document_analysis"] as const;
 export type AiFeature = typeof AI_FEATURES[number];
 export type BudgetLimits = Record<"global" | AiFeature, { day: number; month: number }>;
+export type ModelBudgetPricing = {
+  model: string;
+  validUntil: Date;
+  maxInputTokens: number;
+  inputMicrosPerMillion: number;
+  outputMicrosPerMillion: number;
+  fingerprint: string;
+};
 export interface BudgetPolicy {
+  // This legacy fingerprint remains tied to the original GPT model and limits,
+  // so adding a separately priced model does not invalidate existing counters.
   fingerprint: string;
   validUntil: Date;
   attemptMicros: number;
   limits: BudgetLimits;
+  models: Readonly<Record<string, ModelBudgetPricing>>;
 }
 
 // USD microdollars, not credits, subscription entitlements or per-account quotas.
@@ -30,16 +41,41 @@ function keys(value: unknown, expected: string[]): value is Record<string, unkno
 
 // No guessed provider prices: absent, expired or malformed pricing disables AI.
 // Operator must certify these as ceilings inclusive of proxy/provider surcharges.
-export function parseBudgetPolicy(pricingJson?: string, limitsJson?: string): BudgetPolicy {
+export function modelAttemptMicros(pricing: ModelBudgetPricing, inputTokens = pricing.maxInputTokens): number {
+  if (!integer(inputTokens, pricing.maxInputTokens)) throw new Error("AI budget configuration unavailable");
+  const numerator = BigInt(inputTokens) * BigInt(pricing.inputMicrosPerMillion) +
+    BigInt(BUDGET_OUTPUT_TOKENS) * BigInt(pricing.outputMicrosPerMillion);
+  const result = Number((numerator + 999_999n) / 1_000_000n);
+  if (!integer(result)) throw new Error("AI budget configuration unavailable");
+  return result;
+}
+
+export function parseBudgetPolicy(
+  pricingJson?: string,
+  limitsJson?: string,
+  claudePricingJson: string | null | undefined = process.env.AI_BUDGET_CLAUDE_PRICING_JSON,
+): BudgetPolicy {
   try {
-    const pricing: unknown = JSON.parse(pricingJson ?? "");
-    if (!keys(pricing, ["model", "validUntil", "maxInputTokens", "inputMicrosPerMillion", "outputMicrosPerMillion"]) ||
-        pricing.model !== BUDGET_MODEL || !integer(pricing.maxInputTokens, 10_000_000) ||
-        !integer(pricing.inputMicrosPerMillion) || !integer(pricing.outputMicrosPerMillion) ||
-        typeof pricing.validUntil !== "string" ||
-        !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/.test(pricing.validUntil)) throw new Error();
-    const validUntil = new Date(pricing.validUntil);
-    if (!Number.isFinite(validUntil.getTime()) || validUntil.toISOString() !== pricing.validUntil) throw new Error();
+    const parsePricing = (rawJson: string | undefined, expectedModel?: string): Omit<ModelBudgetPricing, "fingerprint"> => {
+      const raw: unknown = JSON.parse(rawJson ?? "");
+      if (!keys(raw, ["model", "validUntil", "maxInputTokens", "inputMicrosPerMillion", "outputMicrosPerMillion"]) ||
+          typeof raw.model !== "string" || (expectedModel && raw.model !== expectedModel) ||
+          !/^[a-z0-9][a-z0-9._-]{1,100}$/.test(raw.model) ||
+          !integer(raw.maxInputTokens, 10_000_000) ||
+          !integer(raw.inputMicrosPerMillion) || !integer(raw.outputMicrosPerMillion) ||
+          typeof raw.validUntil !== "string" ||
+          !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.000Z$/.test(raw.validUntil)) throw new Error();
+      const validUntil = new Date(raw.validUntil);
+      if (!Number.isFinite(validUntil.getTime()) || validUntil.toISOString() !== raw.validUntil) throw new Error();
+      return {
+        model: raw.model,
+        validUntil,
+        maxInputTokens: raw.maxInputTokens,
+        inputMicrosPerMillion: raw.inputMicrosPerMillion,
+        outputMicrosPerMillion: raw.outputMicrosPerMillion,
+      };
+    };
+    const pricing = parsePricing(pricingJson, BUDGET_MODEL);
     const raw: unknown = limitsJson === undefined ? DEFAULT_LIMITS : JSON.parse(limitsJson);
     const scopes = ["global", ...AI_FEATURES];
     if (!keys(raw, scopes)) throw new Error();
@@ -53,7 +89,6 @@ export function parseBudgetPolicy(pricingJson?: string, limitsJson?: string): Bu
     for (const feature of AI_FEATURES) {
       if (limits[feature].day > limits.global.day || limits[feature].month > limits.global.month) throw new Error();
     }
-    // BigInt avoids rounding downward or overflowing before dividing.
     const numerator = BigInt(pricing.maxInputTokens) * BigInt(pricing.inputMicrosPerMillion) +
       BigInt(BUDGET_OUTPUT_TOKENS) * BigInt(pricing.outputMicrosPerMillion);
     const attemptMicros = Number((numerator + 999_999n) / 1_000_000n);
@@ -61,9 +96,32 @@ export function parseBudgetPolicy(pricingJson?: string, limitsJson?: string): Bu
     const fingerprint = createHash("sha256").update(JSON.stringify({
       model: BUDGET_MODEL, outputTokens: BUDGET_OUTPUT_TOKENS,
       maxInputTokens: pricing.maxInputTokens, input: pricing.inputMicrosPerMillion,
-      output: pricing.outputMicrosPerMillion, validUntil: validUntil.toISOString(), limits,
+      output: pricing.outputMicrosPerMillion, validUntil: pricing.validUntil.toISOString(), limits,
     })).digest("hex");
-    return { fingerprint, validUntil, attemptMicros, limits };
+    const models: Record<string, ModelBudgetPricing> = {
+      [pricing.model]: {
+        ...pricing, fingerprint,
+      },
+    };
+    if (claudePricingJson !== undefined && claudePricingJson !== null) {
+      // An invalid optional provider policy disables that model only. It must not
+      // take unrelated providers offline or be allowed to reach a model request.
+      try {
+        const additional = parsePricing(claudePricingJson);
+        if (additional.model === pricing.model) throw new Error();
+        const modelFingerprint = createHash("sha256").update(JSON.stringify({
+          model: additional.model, outputTokens: BUDGET_OUTPUT_TOKENS,
+          maxInputTokens: additional.maxInputTokens, input: additional.inputMicrosPerMillion,
+          output: additional.outputMicrosPerMillion, validUntil: additional.validUntil.toISOString(),
+        })).digest("hex");
+        // Validate the maximum configured reservation at configuration time.
+        modelAttemptMicros({ ...additional, fingerprint: modelFingerprint });
+        models[additional.model] = { ...additional, fingerprint: modelFingerprint };
+      } catch {
+        // The requested model will be absent from `models` and fail closed.
+      }
+    }
+    return { fingerprint, validUntil: pricing.validUntil, attemptMicros, limits, models };
   } catch {
     // Never include config values or JSON parser errors in diagnostics.
     throw new Error("AI budget configuration unavailable");

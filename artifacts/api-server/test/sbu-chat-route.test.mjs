@@ -56,7 +56,7 @@ const plugins = [{
 await build({
   entryPoints: [join(dir, "../src/routes/sbu-chat.ts")],
   outfile: join(temp, "route.mjs"), platform: "node", bundle: true, format: "esm",
-  external: ["express", "@workspace/integrations-openai-ai-server"],
+  external: ["express", "@workspace/integrations-anthropic-ai"],
   plugins,
 });
 const { createSbuChatRouter } = await import(join(temp, "route.mjs"));
@@ -77,7 +77,7 @@ await build({
 const { retrieveChatSources, validateCitedAnswer } = await import(join(temp, "retrieval.mjs"));
 const body = (mode = "bujk") => ({ mode, consent: true, messages: [{ role: "user", content: "Bantu persiapan SBU" }] });
 
-async function server(generate, run) {
+async function server(generate, run, reserveBudget = async () => {}) {
   await restricted.pool.query("DELETE FROM sbu_chat_quota");
   const app = express();
   app.use(express.json());
@@ -85,7 +85,7 @@ async function server(generate, run) {
   app.use(createSbuChatRouter(async (...args) => {
     const result = await generate(...args);
     return JSON.stringify(typeof result === "string" ? { answer: result, citationIds: [] } : result);
-  }, undefined, undefined, async () => {}));
+  }, undefined, undefined, reserveBudget));
   const listener = app.listen(0, "127.0.0.1");
   await new Promise((resolve) => listener.once("listening", resolve));
   const url = `http://127.0.0.1:${listener.address().port}/openai/sbu/messages`;
@@ -101,6 +101,25 @@ async function server(generate, run) {
     await new Promise((resolve) => listener.close(resolve));
   }
 }
+
+test("Claude assistant reserves the model-aware cost before calling the provider", async () => {
+  const events = [];
+  const reservations = [];
+  await server(async () => {
+    events.push("provider");
+    return { answer: "Bantuan awal", citationIds: [] };
+  }, async send => {
+    const response = await send();
+    assert.equal(response.status, 200);
+  }, async (...args) => {
+    events.push("budget");
+    reservations.push(args);
+  });
+  assert.deepEqual(events, ["budget", "provider"]);
+  assert.equal(reservations[0][0], "assistant");
+  assert.equal(reservations[0][1], "claude-sonnet-5-5");
+  assert.ok(Number.isInteger(reservations[0][2]) && reservations[0][2] > 0);
+});
 
 test("unauthenticated, stale owner, consent and invalid context never call provider", async () => {
   let calls = 0;
