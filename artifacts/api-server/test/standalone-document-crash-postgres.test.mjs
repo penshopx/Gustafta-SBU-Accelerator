@@ -103,8 +103,14 @@ function startChild(file, config) {
   };
 }
 
-for (const [crashAt, initialScan] of [["scan-held", "pending"], ["scan-update-held", "error"]]) {
-  test(`process crash at ${crashAt} preserves quarantined original and owner-only retry`, { timeout: 60_000 }, async () => {
+for (const [crashAt, initialScan] of [
+  ["scan-held", "pending"], ["scan-update-held", "error"],
+  ["concurrent", "pending"], ["concurrent", "error"],
+]) {
+  const concurrent = crashAt === "concurrent";
+  test(concurrent
+    ? `two owner API processes serialize ${initialScan} document completion without rescanning`
+    : `process crash at ${crashAt} preserves quarantined original and owner-only retry`, { timeout: 60_000 }, async () => {
     const temp = await mkdtemp(join(dir, ".document-crash-"));
     const objects = join(temp, "objects");
     await mkdir(objects);
@@ -140,14 +146,16 @@ for (const [crashAt, initialScan] of [["scan-held", "pending"], ["scan-update-he
       const config = { database: { connectionString: restricted.pool.options.connectionString,
         options: `-c search_path=${schema}`, max: 2 }, objects, bytes, verdict: "clean" };
       const launch = async extra => {
-        const process = startChild(file, { ...config, ...extra });
+        const applicationName = `document_fixture_${randomUUID()}`;
+        const process = startChild(file, { ...config, ...extra,
+          database: { ...config.database, application_name: applicationName } });
         children.push(process);
         const { port } = await process.wait("listening");
-        return { process, port };
+        return { process, port, applicationName };
       };
-      let current = await launch({ crashAt });
-      const call = async (method, path, user = "crash-owner-a", body, formOwner = user) => {
-        const response = await fetch(`http://127.0.0.1:${current.port}${path}`, {
+      let current = await launch(concurrent ? { pauseScan: true } : { crashAt });
+      const call = async (method, path, user = "crash-owner-a", body, formOwner = user, target = current) => {
+        const response = await fetch(`http://127.0.0.1:${target.port}${path}`, {
           method, signal: AbortSignal.timeout(15_000),
           headers: { ...(user ? { "x-test-user": user } : {}),
             ...(formOwner ? { "X-SBU-Form-Owner": formOwner } : {}), "Content-Type": "application/json" },
@@ -169,6 +177,102 @@ for (const [crashAt, initialScan] of [["scan-held", "pending"], ["scan-update-he
         "SELECT status,object_path,scan_status,scan_generation,scanned_at FROM sbu_documents WHERE id=$1", [id])).rows[0];
       const lockedState = { status: "ready", object_path: `/objects/documents/${id}`,
         scan_status: initialScan, scan_generation: null, scanned_at: null };
+      if (concurrent) {
+        const first = current;
+        const second = await launch({});
+        // Attach both rejection handlers immediately, including on failure paths
+        // where teardown kills a child with a request still in flight.
+        const beginCompletion = target => {
+          const pending = { settled: false };
+          pending.result = call("POST", `${path}/complete`, "crash-owner-a", undefined,
+            "crash-owner-a", target).then(
+            result => ({ result }), error => ({ error }),
+          ).finally(() => { pending.settled = true; });
+          return pending;
+        };
+        const completing = beginCompletion(first);
+        await first.process.wait("scan-held");
+        const retry = beginCompletion(second);
+        const assertWaitingOnRow = async () => {
+          const deadline = Date.now() + 10_000;
+          while (Date.now() < deadline) {
+            const { rows } = await admin.query(`
+              SELECT waiter.query, waiter.wait_event_type
+              FROM pg_stat_activity waiter
+              JOIN pg_stat_activity blocker ON blocker.pid = ANY(pg_blocking_pids(waiter.pid))
+              WHERE waiter.application_name = $1 AND blocker.application_name = $2
+                AND waiter.usename = $3 AND blocker.usename = $3
+            `, [second.applicationName, first.applicationName,
+              new URL(restricted.pool.options.connectionString).username]);
+            if (rows.length) {
+              assert.equal(rows[0].wait_event_type, "Lock");
+              assert.match(rows[0].query, /from "sbu_documents".*for update/i,
+                "retry must wait on the document row, not the shared advisory lock");
+              assert.equal(completing.settled, false);
+              assert.equal(retry.settled, false);
+              return;
+            }
+            assert.equal(retry.settled, false, "retry finished instead of waiting for the row lock");
+            await new Promise(resolve => setTimeout(resolve, 10));
+          }
+          assert.fail("retry never waited on the first process's document row lock");
+        };
+        const analysis = { consent: true, focus: "keuangan", pages: [1],
+          sourceRevision: createHash("sha256").update(JSON.stringify([id, 1, "123"])).digest("hex") };
+        const assertQuarantined = async () => {
+          assert.deepEqual(await state(), lockedState, "uncommitted scan must remain invisible");
+          const before = await calls();
+          for (const target of [first, second]) {
+            for (const [method, suffix, body] of [
+              ["GET", "/download"], ["GET", "/analysis-source"], ["POST", "/analyses", analysis],
+            ]) {
+              assert.equal((await call(method, path + suffix, "crash-owner-a", body,
+                "crash-owner-a", target)).status, 404, "bytes stay private until the scan commits");
+            }
+          }
+          assert.deepEqual(await calls(), before, "quarantine must not open storage or invoke AI");
+          assert.equal(before.filter(c => c.op === "seal").length, 1, "only one private copy");
+          assert.equal(before.filter(c => c.op === "scan").length, 1, "only the lock holder scans");
+          assert.equal(before.filter(c => c.op === "remove").length, 1, "only one staging cleanup");
+        };
+        await assertWaitingOnRow();
+        await assertQuarantined();
+        first.process.child.send({ type: "release-scan-held" });
+        await first.process.wait("scan-update-held");
+        // The clean UPDATE has executed in PostgreSQL, but has not committed.
+        // Neither another API nor an independent DB reader may see it yet.
+        await assertWaitingOnRow();
+        await assertQuarantined();
+        first.process.child.send({ type: "release-scan-update-held" });
+        const [completed, retried] = await Promise.all([completing.result, retry.result]);
+        assert.ifError(completed.error);
+        assert.ifError(retried.error);
+        assert.equal(completed.result.status, 200);
+        assert.equal(retried.result.status, 200);
+        const response = JSON.parse(completed.result.bytes);
+        assert.deepEqual(JSON.parse(retried.result.bytes), response, "both sessions see the same clean document");
+        assert.equal(response.id, id);
+        assert.equal(response.scanStatus, "clean");
+        const finalState = await state();
+        assert.deepEqual(finalState, { ...lockedState, scan_status: "clean",
+          scan_generation: "123", scanned_at: finalState.scanned_at });
+        assert.ok(finalState.scanned_at instanceof Date);
+        for (const target of [first, second]) {
+          const downloaded = await call("GET", `${path}/download`, "crash-owner-a", undefined,
+            "crash-owner-a", target);
+          assert.equal(downloaded.status, 200);
+          assert.deepEqual(downloaded.bytes, Buffer.from(bytes));
+          assert.equal((await call("GET", `${path}/download`, "crash-owner-b", undefined,
+            "crash-owner-b", target)).status, 404);
+        }
+        const operations = await calls();
+        assert.equal(operations.filter(c => c.op === "seal").length, 1);
+        assert.equal(operations.filter(c => c.op === "scan").length, 1, "retry reuses the committed clean result");
+        assert.deepEqual(operations.filter(c => c.op === "file").map(c => c.generation), ["123", "123"]);
+        assert.deepEqual(await readFile(join(objects, `_objects_documents_${id}`)), Buffer.from(bytes));
+        assert.equal((await restricted.pool.query("SELECT count(*)::int AS n FROM sbu_document_analyses")).rows[0].n, 0);
+        return;
+      }
       // Attach rejection handling immediately: SIGKILL must sever the HTTP
       // response, rather than the route returning a handled storage failure.
       const completing = call("POST", `${path}/complete`).then(

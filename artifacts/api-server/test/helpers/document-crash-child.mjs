@@ -13,6 +13,19 @@ const hold = async type => {
   event(type);
   await new Promise(() => {});
 };
+// Unlike crash holds, these barriers let a concurrent request finish after
+// the parent has inspected the real PostgreSQL lock and visibility state.
+const barrier = async type => {
+  await new Promise(resolve => {
+    const release = message => {
+      if (message.type !== `release-${type}`) return;
+      process.off("message", release);
+      resolve();
+    };
+    process.on("message", release);
+    event(type);
+  });
+};
 // Let PostgreSQL execute the clean UPDATE, but never let Drizzle reach COMMIT.
 // Killing this process must roll the update back, not merely throw a JS error.
 pool.on("connect", client => {
@@ -23,6 +36,10 @@ pool.on("connect", client => {
     if (config.crashAt === "scan-update-held" &&
         /^update "sbu_documents" set "scan_status"/i.test(text)) {
       return result.then(async value => { await hold("scan-update-held"); return value; });
+    }
+    if (config.pauseScan &&
+        /^update "sbu_documents" set "scan_status"/i.test(text)) {
+      return result.then(async value => { await barrier("scan-update-held"); return value; });
     }
     return result;
   };
@@ -54,6 +71,7 @@ export const documentStorage = {
     await log("scan", path);
     await readFile(disk(path)); // fail if the original was lost during restart/GC
     if (config.crashAt === "scan-held") await hold("scan-held");
+    if (config.pauseScan) await barrier("scan-held");
     return { verdict: config.verdict, generation: "123" };
   },
   async file(path, generation) {
