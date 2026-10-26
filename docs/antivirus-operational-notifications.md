@@ -61,10 +61,35 @@ Konfigurasi salah dicatat `scan_signature_delivery_invalid_config`, tanpa
 mencoba tujuan lain. Bila integrasi dicabut atau hak kirim berubah, perbaiki
 koneksi/keanggotaan kanal melalui integrasi Replit; tidak perlu mematikan scan.
 
-Antrean, pengulangan, dan pembatasan peringatan masih lokal per proses.
-Restart/shutdown membuang antrean; beberapa instance dapat menghasilkan duplikat.
+Pembatasan peringatan dan pemulihan menggunakan satu baris operasional PostgreSQL
+(`antivirus_signature_incidents`, kunci tetap `antivirus-signatures`) bersama
+untuk Slack maupun HTTPS. Transaksi dengan penguncian baris mencegah dua instance
+mengklaim notifikasi yang sama. Status bertahan setelah restart: peringatan dan
+pemulihan masing-masing dibatasi 24 jam, sedangkan eskalasi warning ke critical
+langsung diizinkan. Waktu berasal dari database untuk menghindari perbedaan jam
+antar-instance. Hanya status insiden, tingkat keparahan terakhir, waktu notifikasi,
+dan jumlah kegagalan disimpan; tidak ada data dokumen/pengguna atau payload pesan.
+Semua instance satu aplikasi/lingkungan harus memakai database yang sama.
+
+Migrasi dijalankan otomatis sebelum API mulai. Jika penyimpanan status gagal,
+`scan_signature_state_failed` dicatat sekali per gangguan lokal; percobaan berikutnya
+mengulang dan mencatat `scan_signature_state_recovered` saat pulih. Notifikasi kanal
+tidak memakai pembatasan lokal sebagai cadangan karena akan membuka duplikasi.
+Kegagalan ini tidak mengubah keputusan pemindaian; pantau log status secara independen.
+
+Antrean dan pengulangan pengiriman masih lokal per proses. Status pembatasan
+disimpan sebelum enqueue; restart/shutdown pada jeda tersebut atau sebelum antrean
+terkirim dapat kehilangan notifikasi sampai pengingat berikutnya. Ini bukan outbox
+tahan restart. Restart/shutdown membuang antrean.
 Timeout bisa terjadi setelah Slack menerima pesan sehingga retry juga dapat
 menghasilkan duplikat. Tidak ada jaminan exactly-once atau pengiriman tahan restart.
+
+Regresi deduplikasi bersama (menggunakan skema dan akun database uji terisolasi,
+tidak mengubah tabel aplikasi):
+
+```sh
+pnpm --filter @workspace/api-server exec node --test test/document-signatures.test.mjs test/document-signature-state-postgres.test.mjs test/document-signature-delivery.test.mjs
+```
 
 ## Pemeriksaan
 

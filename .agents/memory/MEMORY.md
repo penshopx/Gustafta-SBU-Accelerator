@@ -32,3 +32,4 @@
 - [Live-region announcements](live-region-announcements.md) — test stable empty-to-text updates for repeated saves; DOM evidence alone does not prove spoken output.
 - [Arah model AI](llm-provider-direction.md) — Claude sebagai model utama aplikasi; GPT, Gemini, atau model lain sebagai pendukung sesuai tugas.
 - [Connector cancellation](connector-request-cancellation.md) — SDK convenience proxy calls may omit abort/redirect options; verify the installed fetch adapter before relying on cancellation.
+- [Antivirus notification guarantees](antivirus-notification-guarantees.md) — shared cooldown survives restart; that alone does not make asynchronous delivery durable or exactly-once.

@@ -3,7 +3,8 @@ import { userInfo } from "node:os";
 import { join } from "node:path";
 import { limitedProcess, SCAN_DATABASE } from "./document-malware";
 import { logger } from "./logger";
-import { createSignatureMonitor, type SignatureHealth } from "./document-signature-monitor";
+import { type SignatureHealth, type SignatureNotice } from "./document-signature-monitor";
+import { createSharedSignatureMonitor } from "./document-signature-state";
 import { createConfiguredSignatureDelivery } from "./document-signature-slack";
 
 // Freshclam can leave the file mtime unchanged or touch an old database.
@@ -46,6 +47,7 @@ export function startSignatureUpdates({
   run = updateSignatures,
   health = readSignatureHealth,
   notify,
+  createMonitor = createSharedSignatureMonitor,
   schedule = (callback: () => void) => {
     const timer = setInterval(callback, 12 * 60 * 60_000);
     timer.unref();
@@ -54,7 +56,11 @@ export function startSignatureUpdates({
 }: {
   run?: () => Promise<boolean>;
   health?: () => Promise<SignatureHealth>;
-  notify?: (success: boolean, health: SignatureHealth) => void;
+  notify?: (success: boolean, health: SignatureHealth) => void | Promise<void>;
+  createMonitor?: (
+    notify: (notice: SignatureNotice) => void,
+    report: Parameters<typeof createSharedSignatureMonitor>[1],
+  ) => (success: boolean, health: SignatureHealth) => void | Promise<void>;
   schedule?: (callback: () => void) => () => void;
 } = {}) {
   const delivery = notify ? undefined : createConfiguredSignatureDelivery(
@@ -63,11 +69,15 @@ export function startSignatureUpdates({
       logger[level]({ event }, "Antivirus operational notification delivery status");
     },
   );
-  const monitor = notify ?? createSignatureMonitor((notice) => {
+  const monitor = notify ?? createMonitor((notice) => {
+    if (stopped) return;
     const level = notice.severity === "critical" ? "error" : notice.severity === "warning" ? "warn" : "info";
     logger[level](notice, notice.event === "scan_signature_recovered"
       ? "Local signature update recovered" : "Operator action required: local antivirus signatures");
     delivery!.enqueue(notice);
+  }, (event) => {
+    const level = event.endsWith("_recovered") ? "info" : "error";
+    logger[level]({ event }, "Antivirus shared incident state status");
   });
   let running = false;
   let stopped = false;
@@ -84,7 +94,7 @@ export function startSignatureUpdates({
       let status: SignatureHealth;
       try { status = await health(); }
       catch { status = { state: "unreadable" }; }
-      if (!stopped) monitor(success, status);
+      if (!stopped) await monitor(success, status);
     } finally { running = false; }
   };
   void update();

@@ -206,7 +206,7 @@ test("shutdown cancels retry backoff; malformed notices and broken diagnostic si
   assert.doesNotThrow(() => broken.delivery.enqueue({ ...alert, event: "private" }));
 });
 
-test("default updater wiring preserves structured notices and enqueues both events", async t => {
+test("updater delivery wiring preserves structured notices and enqueues both events", async t => {
   const calls = [];
   records.length = 0;
   t.mock.method(globalThis, "fetch", async (_, init) => {
@@ -227,6 +227,7 @@ test("default updater wiring preserves structured notices and enqueues both even
   let tick, success = false;
   const stop = startSignatureUpdates({
     run: async () => success,
+    createMonitor: (notify) => createSignatureMonitor(notify),
     health: async () => ({ state: "available", builtAt: Date.now() - 3600_000 }),
     schedule: callback => { tick = callback; return () => {}; },
   });

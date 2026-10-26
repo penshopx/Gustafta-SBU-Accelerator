@@ -11,13 +11,14 @@ after(() => rm(temp, { recursive: true, force: true }));
 await build({
   stdin: {
     contents: `export * from "../src/lib/document-signature-monitor";
+      export * from "../src/lib/document-signature-state";
       export * from "../src/lib/document-signatures";`,
     resolveDir: directory, loader: "ts",
   },
   outfile: join(temp, "core.mjs"), bundle: true, platform: "node", format: "esm",
   packages: "external",
 });
-const { createSignatureMonitor, readSignatureHealth, startSignatureUpdates,
+const { createSignatureMonitor, createSharedSignatureMonitor, readSignatureHealth, startSignatureUpdates,
   SIGNATURE_MAX_AGE_MS, SIGNATURE_WARNING_AGE_MS,
   SIGNATURE_ALERT_COOLDOWN_MS } = await import(join(temp, "core.mjs"));
 const hour = 60 * 60_000;
@@ -31,6 +32,29 @@ function fixture(age = day) {
     advance: (ms) => { time += ms; } };
 }
 const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+test("shared state failure is sanitized, does not fall back locally, and retries on next observation", async () => {
+  const notices = [], reports = [];
+  let broken = true;
+  const local = fixture();
+  const monitor = createSharedSignatureMonitor(
+    notice => notices.push(notice), event => reports.push(event),
+    async (success, health) => {
+      if (broken) throw new Error("credential=secret document=private.pdf");
+      local.monitor(success, health);
+      return local.notices.pop();
+    },
+  );
+  await monitor(false, local.health);
+  await monitor(false, local.health);
+  assert.equal(notices.length, 0);
+  assert.deepEqual(reports, ["scan_signature_state_failed"]);
+  broken = false;
+  await monitor(false, local.health);
+  assert.equal(notices.length, 1);
+  assert.deepEqual(reports, ["scan_signature_state_failed", "scan_signature_state_recovered"]);
+  assert.doesNotMatch(JSON.stringify({ notices, reports }), /credential|private|secret/);
+});
 
 test("CDN unavailable warns immediately, reminds daily, and recovers only once", () => {
   const f = fixture();
