@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { randomUUID, randomInt, createHash } from "node:crypto";
 import { fork } from "node:child_process";
 import { once } from "node:events";
-import { mkdtemp, mkdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rename, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
@@ -104,11 +104,14 @@ function startChild(file, config) {
 }
 
 for (const [crashAt, initialScan] of [
+  ["ready-update-held", "pending"],
   ["scan-held", "pending"], ["scan-update-held", "error"],
   ["concurrent", "pending"], ["concurrent", "error"],
 ]) {
   const concurrent = crashAt === "concurrent";
-  test(concurrent
+   test(crashAt === "ready-update-held"
+     ? "SIGKILL before ready commit rolls back pending row and GC conditionally reclaims abandoned copies"
+     : concurrent
     ? `two owner API processes serialize ${initialScan} document completion without rescanning`
     : `process crash at ${crashAt} preserves quarantined original and owner-only retry`, { timeout: 60_000 }, async () => {
     const temp = await mkdtemp(join(dir, ".document-crash-"));
@@ -143,8 +146,9 @@ for (const [crashAt, initialScan] of [
       pdf.addPage().drawText("SYNTHETIC_CRASH_ORIGINAL");
       const bytes = Array.from(await pdf.save());
       const file = await bundleChild(temp);
-      const config = { database: { connectionString: restricted.pool.options.connectionString,
-        options: `-c search_path=${schema}`, max: 2 }, objects, bytes, verdict: "clean" };
+       const config = { database: { connectionString: restricted.pool.options.connectionString,
+         options: `-c search_path=${schema}`, max: 2 }, objects, bytes, verdict: "clean",
+         cleanupUsesMtime: crashAt === "ready-update-held" };
       const launch = async extra => {
         const applicationName = `document_fixture_${randomUUID()}`;
         const process = startChild(file, { ...config, ...extra,
@@ -177,6 +181,132 @@ for (const [crashAt, initialScan] of [
         "SELECT status,object_path,scan_status,scan_generation,scanned_at FROM sbu_documents WHERE id=$1", [id])).rows[0];
       const lockedState = { status: "ready", object_path: `/objects/documents/${id}`,
         scan_status: initialScan, scan_generation: null, scanned_at: null };
+       if (crashAt === "ready-update-held") {
+         const staging = (await restricted.pool.query(
+           "SELECT object_path FROM sbu_documents WHERE id=$1", [id])).rows[0].object_path;
+         const pendingState = { ...lockedState, status: "pending", object_path: staging };
+         const original = join(objects, `_objects_documents_${id}`);
+         const staged = join(objects, staging.replaceAll("/", "_"));
+         const completing = call("POST", `${path}/complete`).then(
+           result => ({ result }), error => ({ error }));
+         await current.process.wait(crashAt);
+         assert.deepEqual(await state(), pendingState, "uncommitted ready UPDATE is invisible");
+         for (const object of [original, staged]) assert.deepEqual(await readFile(object), Buffer.from(bytes));
+         assert.deepEqual((await calls()).map(c => c.op), ["reserve", "seal"],
+           "crash is after the private copy, before staging removal or scanning");
+         assert.deepEqual(await current.process.kill(), [null, "SIGKILL"]);
+         assert.ok((await completing).error, "SIGKILL severs completion instead of handling an exception");
+         current = await launch({ pauseGc: `/objects/documents/${id}` });
+         assert.deepEqual(await state(), pendingState, "process death rolls ready UPDATE back to pending");
+
+         const assertClosed = async () => {
+           const before = await calls();
+           const analysis = { consent: true, focus: "keuangan", pages: [1],
+             sourceRevision: createHash("sha256").update(JSON.stringify([id, 1, "123"])).digest("hex") };
+           for (const [method, suffix, body] of [
+             ["GET", "/download"], ["GET", "/analysis-source"], ["POST", "/analyses", analysis],
+           ]) {
+             for (const [user, formOwner, expected] of [
+               ["crash-owner-a", "crash-owner-a", 404], ["crash-owner-b", "crash-owner-b", 404],
+               ["crash-owner-a", "crash-owner-b", 409], [null, null, 401],
+             ]) assert.equal((await call(method, path + suffix, user, body, formOwner)).status, expected);
+           }
+           assert.deepEqual(await calls(), before, "pending or expired bytes never reach storage or AI");
+         };
+         const gc = async () => {
+           const response = await call("POST", "/__fixture/cleanup");
+           assert.equal(response.status, 200);
+           const counts = JSON.parse(response.bytes);
+           assert.equal(counts.skipped, undefined, "SIGKILL released the lifecycle lock");
+           assert.equal(counts.failures, 0);
+           assert.equal(counts.stopped, 0);
+           return counts;
+         };
+         const age = new Date(Date.now() - 72 * 60 * 60_000);
+         const ageRow = () => restricted.pool.query(
+           "UPDATE sbu_documents SET created_at=$2 WHERE id=$1", [id, age]);
+         await assertClosed();
+         let counts = await gc();
+         assert.equal(counts.scanned, 2);
+         assert.equal(counts.deletedObjects, 0);
+         assert.equal(counts.expiredReservations, 0);
+         // Old provider metadata alone must not bypass a fresh pending row.
+         await Promise.all([utimes(original, age, age), utimes(staged, age, age)]);
+         counts = await gc();
+         assert.equal(counts.deletedObjects, 0);
+         assert.equal(counts.expiredReservations, 0);
+         // Conversely, an expired reservation must retain a newly updated object.
+         await ageRow();
+         const fresh = new Date();
+         await utimes(original, fresh, fresh);
+         counts = await gc();
+         assert.equal(counts.deletedObjects, 0);
+         assert.equal(counts.expiredReservations, 0);
+         assert.deepEqual(await state(), pendingState);
+         for (const object of [original, staged]) assert.deepEqual(await readFile(object), Buffer.from(bytes));
+
+         // Create an unrelated ready, clean document through the restarted API.
+         const otherUpload = await call("POST", "/api/cases/2/documents", "crash-owner-b",
+           { name: "ready-control.pdf", size: bytes.length, contentType: "application/pdf" });
+         assert.equal(otherUpload.status, 201);
+         const otherId = JSON.parse(otherUpload.bytes).document.id;
+         const otherPath = `/api/cases/2/documents/${otherId}`;
+         assert.equal((await call("POST", `${otherPath}/complete`, "crash-owner-b")).status, 200);
+         const controlState = (await restricted.pool.query("SELECT * FROM sbu_documents WHERE id=$1", [otherId])).rows[0];
+         const controlObject = join(objects, `_objects_documents_${otherId}`);
+         await utimes(controlObject, age, age);
+         await utimes(original, age, age);
+         const generations = new Map(await Promise.all(
+           [[staging, staged], [`/objects/documents/${id}`, original]].map(async ([path, file]) =>
+             [path, String((await stat(file)).ino)])));
+
+         // Change a provider generation after inspection but before DELETE.
+         const cleaning = gc().then(result => ({ result }), error => ({ error }));
+         await current.process.wait("gc-delete-held");
+         const replacement = join(objects, "replacement");
+         await writeFile(replacement, Buffer.from(bytes));
+         await utimes(replacement, age, age);
+         await rename(replacement, original);
+         const replacementGeneration = String((await stat(original)).ino);
+         assert.notEqual(replacementGeneration, generations.get(`/objects/documents/${id}`));
+         current.process.child.send({ type: "release-gc-delete-held" });
+         const refused = await cleaning;
+         assert.ifError(refused.error);
+         assert.equal(refused.result.deletedObjects, 1, "only the unchanged staging generation is deleted");
+         assert.equal(refused.result.expiredReservations, 0, "generation conflict keeps the reservation for retry");
+         assert.deepEqual(await state(), pendingState);
+         assert.deepEqual(await readFile(original), Buffer.from(bytes));
+         await assertClosed();
+         const beforeRetry = await calls();
+         assert.equal((await call("POST", `${path}/complete`)).status, 422,
+           "expired reservation cannot adopt the surviving orphan");
+         assert.deepEqual(await calls(), beforeRetry);
+
+         counts = await gc();
+         assert.equal(counts.deletedObjects, 1);
+         assert.equal(counts.expiredReservations, 1);
+         assert.equal(await state(), undefined);
+         for (const object of [original, staged]) await assert.rejects(readFile(object), { code: "ENOENT" });
+         await assertClosed();
+         const operations = await calls();
+         assert.deepEqual(operations.filter(c => c.op === "gc-remove"), [
+           { op: "gc-remove", path: staging, generation: generations.get(staging) },
+           { op: "gc-remove", path: `/objects/documents/${id}`, generation: generations.get(`/objects/documents/${id}`) },
+           { op: "gc-remove", path: `/objects/documents/${id}`, generation: replacementGeneration },
+         ]);
+         assert.equal(operations.filter(c => c.op === "gc-generation-changed").length, 1);
+         assert.deepEqual((await restricted.pool.query("SELECT * FROM sbu_documents WHERE id=$1", [otherId])).rows[0], controlState);
+         assert.deepEqual(await readFile(controlObject), Buffer.from(bytes));
+         const downloaded = await call("GET", `${otherPath}/download`, "crash-owner-b");
+         assert.equal(downloaded.status, 200);
+         assert.deepEqual(downloaded.bytes, Buffer.from(bytes));
+         assert.equal((await call("GET", `${otherPath}/download`)).status, 404);
+         counts = await gc();
+         assert.equal(counts.deletedObjects, 0, "repeated GC is idempotent and retains ready control");
+         assert.equal(counts.expiredReservations, 0);
+         assert.equal((await restricted.pool.query("SELECT count(*)::int AS n FROM sbu_document_analyses")).rows[0].n, 0);
+         return;
+       }
       if (concurrent) {
         const first = current;
         const second = await launch({});

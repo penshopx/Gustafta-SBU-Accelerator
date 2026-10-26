@@ -26,13 +26,17 @@ const barrier = async type => {
     event(type);
   });
 };
-// Let PostgreSQL execute the clean UPDATE, but never let Drizzle reach COMMIT.
+// Let PostgreSQL execute the selected UPDATE, but never let Drizzle reach COMMIT.
 // Killing this process must roll the update back, not merely throw a JS error.
 pool.on("connect", client => {
   const query = client.query.bind(client);
   client.query = (...args) => {
     const text = typeof args[0] === "string" ? args[0] : args[0].text;
     const result = query(...args);
+    if (config.crashAt === "ready-update-held" &&
+        /^update "sbu_documents" set .*"status" = /i.test(text)) {
+      return result.then(async value => { await hold("ready-update-held"); return value; });
+    }
     if (config.crashAt === "scan-update-held" &&
         /^update "sbu_documents" set "scan_status"/i.test(text)) {
       return result.then(async value => { await hold("scan-update-held"); return value; });
@@ -50,6 +54,11 @@ const log = async (op, path, generation) =>
 const disk = path => {
   if (!/^\/objects\/(?:uploads|documents)\/[0-9a-f-]{36}$/.test(path)) throw new Error("Non-fixture path");
   return join(config.objects, path.replaceAll("/", "_"));
+};
+const snapshot = async path => {
+  const metadata = await stat(disk(path));
+  return { path, generation: config.cleanupUsesMtime ? String(metadata.ino) : "123",
+    updatedAt: config.cleanupUsesMtime ? metadata.mtimeMs : Date.now() - 72 * 60 * 60_000 };
 };
 export class DocumentValidationError extends Error {}
 export class InvalidCleanupCursor extends Error {}
@@ -72,7 +81,7 @@ export const documentStorage = {
     await readFile(disk(path)); // fail if the original was lost during restart/GC
     if (config.crashAt === "scan-held") await hold("scan-held");
     if (config.pauseScan) await barrier("scan-held");
-    return { verdict: config.verdict, generation: "123" };
+    return { verdict: config.verdict, generation: (await snapshot(path)).generation };
   },
   async file(path, generation) {
     await log("file", path, generation);
@@ -88,20 +97,26 @@ export const documentStorage = {
     for (const name of await readdir(config.objects)) {
       if (!name.startsWith("_objects_")) continue;
       const path = name.replaceAll("_", "/");
-      await stat(disk(path));
       // Model old provider metadata, not just old rows: GC must be allowed
       // to delete this object were its ready reference ever lost.
-      objects.push({ path, generation: "123", updatedAt: Date.now() - 72 * 60 * 60_000 });
+      objects.push(await snapshot(path));
     }
     return { objects, nextCursor: { namespace: "uploads" } };
   },
   async inspect(path) {
-    try { await stat(disk(path)); }
+    try { return await snapshot(path); }
     catch (error) { if (error.code === "ENOENT") return undefined; throw error; }
-    return { path, generation: "123", updatedAt: Date.now() - 72 * 60 * 60_000 };
   },
   async removeGeneration(object) {
-    await log("gc-remove", object.path);
+    if (config.pauseGc === object.path) {
+      config.pauseGc = undefined;
+      await barrier("gc-delete-held");
+    }
+    await log("gc-remove", object.path, object.generation);
+    if ((await snapshot(object.path)).generation !== object.generation) {
+      await log("gc-generation-changed", object.path, object.generation);
+      return false;
+    }
     await rm(disk(object.path), { force: true });
     return true;
   },
