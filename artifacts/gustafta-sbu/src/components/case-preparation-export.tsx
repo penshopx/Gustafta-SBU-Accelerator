@@ -36,12 +36,27 @@ export function CasePreparationExport({ caseId }: { caseId: number }) {
       if (controller.signal.aborted || abort.current !== controller) return;
       if (mode === 'download') {
         const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = 'ringkasan-persiapan-sbu.html';
-        anchor.click();
-        const timer = window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-        cleanup.current = () => { window.clearTimeout(timer); URL.revokeObjectURL(url); };
+        let timer: number | undefined;
+        let disposed = false;
+        const dispose = () => {
+          if (disposed) return;
+          disposed = true;
+          if (timer !== undefined) window.clearTimeout(timer);
+          URL.revokeObjectURL(url);
+          if (cleanup.current === dispose) cleanup.current = null;
+        };
+        // Own the URL before any browser download step can throw.
+        cleanup.current = dispose;
+        try {
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = 'ringkasan-persiapan-sbu.html';
+          timer = window.setTimeout(dispose, 1000);
+          anchor.click();
+        } catch (downloadError) {
+          dispose();
+          throw downloadError;
+        }
       } else {
         const frame = document.createElement('iframe');
         frame.title = 'Ringkasan persiapan untuk dicetak';

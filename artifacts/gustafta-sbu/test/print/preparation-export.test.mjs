@@ -49,6 +49,7 @@ test('CasePreparationExport disposes isolated native print surfaces and HTML dow
 
     async function scenario(name, mode, run, {
       holdLoad = false, responseStatus = 200, exportMode = 'print',
+      failDownloadClick = false,
       expectedRequests = ['/api/cases/1/preparation-summary'],
       expectedConsoleErrors = [],
     } = {}) {
@@ -75,7 +76,10 @@ test('CasePreparationExport disposes isolated native print surfaces and HTML dow
           // body exists when the fixture script starts, unlike addInitScript.
           await page.goto(origin);
           await page.getByTestId('button-print-summary').waitFor();
-          if (exportMode === 'download') await page.evaluate(installDownloadProbe);
+          if (exportMode === 'download') {
+            await page.evaluate(installDownloadProbe);
+            await page.evaluate((fail) => { window.downloadProbe.failClick = fail; }, failDownloadClick);
+          }
           else {
             await page.evaluate(installPrintProbe);
             await page.evaluate(({ mode, holdLoad }) => Object.assign(window.printProbe, { mode, holdLoad }), { mode, holdLoad });
@@ -239,6 +243,40 @@ test('CasePreparationExport disposes isolated native print surfaces and HTML dow
           : ['/api/cases/1/preparation-summary'],
       });
     }
+
+    await scenario('download: thrown anchor click releases its URL and timer immediately; retry succeeds', 'native', async (page) => {
+      await page.getByRole('alert').waitFor();
+      assert.equal(await page.getByRole('alert').textContent(), readError);
+      assert.equal(await page.getByTestId('button-download-summary').isEnabled(), true);
+      assert.equal(await page.getByTestId('button-print-summary').isEnabled(), true);
+      const first = await page.evaluate(() => window.downloadProbe.blobs[0].url);
+      assert.deepEqual(await page.evaluate(() => ({
+        blobs: window.downloadProbe.blobs.length, clicks: window.downloadProbe.clicks.length,
+        timers: window.downloadProbe.timers.size, active: [...window.downloadProbe.active],
+        revoked: window.downloadProbe.revoked,
+      })), { blobs: 1, clicks: 1, timers: 0, active: [], revoked: [first] });
+      assert.equal(await page.locator('iframe').count(), 0);
+      await assertDownloadClean(page, [first]);
+
+      await page.evaluate(() => { window.downloadProbe.failClick = false; });
+      const downloadEvent = page.waitForEvent('download');
+      await page.getByTestId('button-download-summary').click();
+      const download = await downloadEvent;
+      const second = await assertDownload(page, 1);
+      assert.equal(download.suggestedFilename(), 'ringkasan-persiapan-sbu.html');
+      assert.equal(await readFile(await download.path(), 'utf8'),
+        await page.evaluate(() => window.summaryFixture.html));
+      assert.notEqual(first, second);
+      await page.evaluate(() => [...window.downloadProbe.timers.values()][0]());
+      await assertDownloadClean(page, [second]);
+      await page.getByText('Lepas komponen', { exact: true }).click();
+      assert.deepEqual(await page.evaluate(() => window.downloadProbe.revoked), [first, second],
+        'failure, timeout and unmount must each dispose only their own live resource once');
+    }, {
+      exportMode: 'download', failDownloadClick: true,
+      expectedRequests: ['/api/cases/1/preparation-summary', '/api/cases/1/preparation-summary'],
+      expectedConsoleErrors: Array(2).fill('Failed to load resource: net::ERR_FILE_NOT_FOUND'),
+    });
 
     await scenario('download: failed summary creates no Blob URL, anchor click or cleanup timer', 'native', async (page) => {
       await page.getByRole('alert').waitFor();

@@ -39,6 +39,12 @@ timeout, pergantian `caseId`, unmount, dan ekspor berikutnya; URL yang direvoke
 harus tidak dapat dibaca lagi. Respons ringkasan gagal tidak boleh membuat Blob
 URL, klik unduhan, atau timer pembersihan.
 
+Injeksi kegagalan klik anchor melempar sebelum klik native dijalankan.
+Uji mewajibkan URL langsung direvoke, timer dibatalkan, pesan kegagalan
+ditampilkan, dan kedua tombol kembali aktif. Percobaan ulang harus menghasilkan
+unduhan native yang utuh dengan URL baru dan menghapus pesan lama. Timeout
+diikuti unmount tidak boleh merevoke ulang URL yang sudah dilepas.
+
 Uji ini tidak membuktikan interaksi dialog sistem operasi, pagination PDF,
 atau perilaku Firefox/Safari. Pagination tetap diuji terpisah dengan
 `pnpm --filter @workspace/api-server test:print`.

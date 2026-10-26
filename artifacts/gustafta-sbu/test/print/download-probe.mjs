@@ -3,6 +3,7 @@
 export function installDownloadProbe() {
   const probe = window.downloadProbe = {
     blobs: [], clicks: [], revoked: [], active: new Set(), timers: new Map(),
+    failClick: false,
   };
   const create = URL.createObjectURL.bind(URL);
   const revoke = URL.revokeObjectURL.bind(URL);
@@ -20,6 +21,7 @@ export function installDownloadProbe() {
   const click = HTMLAnchorElement.prototype.click;
   HTMLAnchorElement.prototype.click = function () {
     probe.clicks.push({ href: this.href, download: this.download });
+    if (probe.failClick) throw new Error('Synthetic anchor click failure');
     return click.call(this);
   };
   const setTimeout = window.setTimeout.bind(window);
