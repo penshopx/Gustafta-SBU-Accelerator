@@ -1450,6 +1450,7 @@ export const sendSbuChatMessageBodyMessagesMax = 20;
 
 
 export const SendSbuChatMessageBody = zod.object({
+  "providerConsent": zod.enum(['anthropic-claude-sonnet-5-5-v1']).describe('Disclosure version accepted on the current page; old OpenAI consent does not authorize Anthropic.'),
   "specialist": zod.enum(['sbuclaw', 'skemaclaw', 'lkutclaw', 'abuclaw', 'panduansbu', 'pjbuclaw', 'keuanganclaw', 'lkpmclaw', 'ossclaw', 'pub-lkutclaw', 'esimpanclaw', 'nspknavigatorclaw', 'smapclaw']).default(sendSbuChatMessageBodySpecialistDefault),
   "mode": zod.enum(['bujk', 'pendamping', 'asesor', 'lsbu', 'asosiasi', 'umum']),
   "consent": zod.boolean(),

@@ -6,10 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SbuChatInputMode } from './sbuChatInputMode';
+import type { SbuChatInputProviderConsent } from './sbuChatInputProviderConsent';
 import type { SbuChatInputSpecialist } from './sbuChatInputSpecialist';
 import type { SbuChatMessage } from './sbuChatMessage';
 
 export interface SbuChatInput {
+  /** Disclosure version accepted on the current page; old OpenAI consent does not authorize Anthropic. */
+  providerConsent: SbuChatInputProviderConsent;
   specialist?: SbuChatInputSpecialist;
   mode: SbuChatInputMode;
   consent: boolean;

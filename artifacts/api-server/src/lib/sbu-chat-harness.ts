@@ -4,7 +4,7 @@ import { sbuChatSystemPrompt, type ChatMode } from "./sbu-chat-policy";
 import type { SpecialistId } from "./sbu-chat-specialists";
 
 export const SBU_CHAT_MODEL = "claude-sonnet-5-5";
-export const SBU_CHAT_MAX_INPUT_TOKENS = 150_000;
+export const SBU_CHAT_MAX_INPUT_BYTES = 150_000;
 const PROVIDER_TIMEOUT_MS = 65_000;
 
 export type SbuChatMessage = { role: "user" | "assistant"; content: string };
@@ -36,9 +36,9 @@ export function buildSbuChatInput(
   return { system, messages };
 }
 
-// UTF-8 byte length is a conservative text-token upper bound for byte-pair
-// tokenizers. The framing margin covers provider message boundaries.
-export function estimateSbuChatInputTokens(input: SbuChatInput): number {
+// A local payload-size guard only, NOT token accounting. Budget reservations
+// still cover the configured full model input capacity and maximum output.
+export function sbuChatInputSize(input: SbuChatInput): number {
   const bytes = Buffer.byteLength(input.system, "utf8") +
     input.messages.reduce((sum, message) => sum + Buffer.byteLength(message.content, "utf8"), 0);
   return bytes + input.messages.length * 32 + 256;
@@ -64,6 +64,7 @@ export interface AnthropicMessagesClient {
 export function createAnthropicSbuChatGenerate(client: AnthropicMessagesClient): SbuChatGenerate {
   return async (mode, messages, signal, specialist, context = "", sources) => {
     const input = buildSbuChatInput(mode, messages, specialist, context, sources);
+    if (sbuChatInputSize(input) > SBU_CHAT_MAX_INPUT_BYTES) throw new Error("chat_input_limit");
     const result = await client.messages.create({
       model: SBU_CHAT_MODEL,
       max_tokens: BUDGET_OUTPUT_TOKENS,

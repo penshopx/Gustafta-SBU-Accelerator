@@ -601,6 +601,16 @@ export interface ConsultationMessageInput {
   requestId: string;
 }
 
+/**
+ * Disclosure version accepted on the current page; old OpenAI consent does not authorize Anthropic.
+ */
+export type SbuChatInputProviderConsent = typeof SbuChatInputProviderConsent[keyof typeof SbuChatInputProviderConsent];
+
+
+export const SbuChatInputProviderConsent = {
+  'anthropic-claude-sonnet-5-5-v1': 'anthropic-claude-sonnet-5-5-v1',
+} as const;
+
 export type SbuChatInputSpecialist = typeof SbuChatInputSpecialist[keyof typeof SbuChatInputSpecialist];
 
 
@@ -650,6 +660,8 @@ export interface SbuChatMessage {
 }
 
 export interface SbuChatInput {
+  /** Disclosure version accepted on the current page; old OpenAI consent does not authorize Anthropic. */
+  providerConsent: SbuChatInputProviderConsent;
   specialist?: SbuChatInputSpecialist;
   mode: SbuChatInputMode;
   consent: boolean;

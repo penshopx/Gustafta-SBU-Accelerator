@@ -43,11 +43,11 @@ kedaluwarsa bersama lease permintaan dan tidak dilepas saat klien putus.
 
 ## Aktivasi aman
 
-**AI ditolak (503) sampai pengelola menyediakan profil tarif yang terverifikasi.**
+**Setiap model ditolak (503) sampai mempunyai profil tarif yang terverifikasi.**
 Tidak ada tarif bawaan yang ditebak untuk alias `gpt-5.6-terra`. Fitur non-AI,
 daftar/riwayat, dan dokumen asli tetap tersedia. Ini bukan perubahan paket.
 
-Konfigurasi server `AI_BUDGET_PRICING_JSON` wajib mempunyai tepat field:
+Konfigurasi server `AI_BUDGET_PRICING_JSON` untuk fitur GPT wajib mempunyai tepat field:
 
 - `model`: `gpt-5.6-terra`;
 - `validUntil`: batas waktu persetujuan profil, UTC ISO lengkap
@@ -94,7 +94,8 @@ memeriksa empat penghitung (global/fitur × hari/bulan), dan menambah keempatnya
 sebelum commit. Tidak ada transaksi terbuka selama panggilan AI.
 
 Sidik kebijakan mengikat tarif, kapasitas, output, masa berlaku, dan batas.
-Konfigurasi berbeda antar-instance ditolak, bukan memilih anggaran lebih besar.
+Sidik batas agregat dipisahkan dari sidik harga per model; semuanya diperiksa
+secara atomik. Konfigurasi berbeda antar-instance ditolak, bukan memilih anggaran lebih besar.
 Kebijakan yang sudah dipakai dipertahankan selama periode aktif, termasuk bulan.
 Perubahan harga/batas/masa berlaku di tengah bulan akan memblokir AI; jangan
 menghapus penghitung untuk mengaktifkannya kembali. Pilihan aman adalah
@@ -103,6 +104,52 @@ Perubahan darurat di tengah bulan memerlukan penghentian semua panggilan AI,
 rekonsiliasi cadangan berjalan, peninjauan biaya/batas baru oleh pengelola, dan
 perubahan sidik kebijakan terkoordinasi tanpa mengurangi cadangan yang sudah
 dicatat. Tidak ada endpoint publik untuk melewati prosedur tersebut.
+
+Penghitung format lama hanya diadopsi jika sidiknya tepat cocok dengan profil
+GPT lama yang tersedia. Saldo dan penanda alarm dipertahankan, dan sidik harga
+GPT dicatat sebelum adopsi. Riwayat yang tidak dikenal ditolak. Menambahkan
+Claude tidak mereset saldo atau memerlukan tebakan tarif GPT; jika ada riwayat
+lama yang tidak dapat dikenali, Claude juga tetap diblokir.
+
+## Pilot Claude untuk Asisten Peran
+
+Hanya Asisten Peran beralih ke `claude-sonnet-5-5` melalui Replit AI Integrations.
+Klinik dan Bedah Dokumen mempertahankan GPT dan tetap memerlukan profil harganya
+sendiri. Tidak ada fallback model otomatis. MCP, integrasi Gustafta, serta
+pengiriman otomatis profil/kasus/dokumen tidak diaktifkan.
+
+Profil non-secret `AI_BUDGET_CLAUDE_PRICING_JSON` mempunyai struktur yang sama,
+dengan model Claude. Profil pengembangan yang ditinjau pada 26 Oktober 2026:
+
+```json
+{
+  "model": "claude-sonnet-5-5",
+  "validUntil": "2027-01-01T00:00:00.000Z",
+  "maxInputTokens": 1000000,
+  "inputMicrosPerMillion": 2000000,
+  "outputMicrosPerMillion": 10000000
+}
+```
+
+Sumber harga dan konteks 1 juta token:
+https://www.anthropic.com/claude/sonnet .
+Replit menyatakan penagihan integrasi mengikuti harga API publik provider:
+https://docs.replit.com/features/integrations/replit-ai-integrations .
+Sumber publik dan konfigurasi bukan bukti invoice atau konektivitas live.
+Profil ini disetel **hanya pada development**; produksi belum dikonfigurasi
+atau dipublikasikan.
+
+Harga $2/juta input dan $10/juta output menghasilkan cadangan penuh
+**$2,08192 per percobaan**. Dengan pagu Asisten $4/hari/$40/bulan, hanya satu
+percobaan harian dan paling banyak 19 percobaan bulanan gabungan dapat diterima
+selama kebijakan ini dipakai. Kuota 30 percobaan per akun tidak menjamin anggaran
+operasional tersedia. Ini sengaja mempertahankan kebijakan kapasitas penuh:
+guard ukuran teks lokal tidak dipakai untuk mengurangi cadangan biaya.
+
+Persetujuan baru menyebut provider, model, dan cakupan teks yang dikirim.
+Kontrak mewajibkan `providerConsent=anthropic-claude-sonnet-5-5-v1`; tab/bundle
+lama yang hanya mengirim consent generik ditolak sebelum reservasi dan provider.
+Sumber publik diperiksa kembali setelah jawaban untuk mendeteksi penarikan versi.
 
 Penyimpanan gagal, lock hilang, timeout lock/query, kebijakan berbeda, atau commit
 tidak dapat dikonfirmasi: **fail closed**, tidak memanggil provider. Commit yang

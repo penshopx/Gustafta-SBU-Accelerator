@@ -1410,8 +1410,12 @@ components:
         requestId: { type: string, format: uuid }
     SbuChatInput:
       type: object
-      required: [mode, messages, consent]
+      required: [mode, messages, consent, providerConsent]
       properties:
+        providerConsent:
+          type: string
+          enum: [anthropic-claude-sonnet-5-5-v1]
+          description: Disclosure version accepted on the current page; old OpenAI consent does not authorize Anthropic.
         specialist:
           type: string
           enum: [sbuclaw, skemaclaw, lkutclaw, abuclaw, panduansbu, pjbuclaw, keuanganclaw, lkpmclaw, ossclaw, pub-lkutclaw, esimpanclaw, nspknavigatorclaw, smapclaw]

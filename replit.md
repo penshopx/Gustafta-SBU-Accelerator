@@ -112,7 +112,7 @@ Empat peran dapat membentuk profil. Kontraktor/konsultan dapat membuat dan menge
 ## Gotchas
 
 - Kebijakan kuota Asisten peran: `docs/sbu-chat-quota.md`. Penghitung PostgreSQL bersama lintas instance; `SBU_CHAT_DAILY_LIMIT` bawaan 30 (1–1000), reset 07.00 WIB. Retry/kegagalan/pembatalan setelah reservasi tetap dihitung; tidak menyimpan isi chat. Berlaku hanya Asisten peran, bukan Klinik atau Bedah Dokumen.
-- Anggaran operasional AI: `docs/ai-operational-budget.md`. Asisten, Klinik, dan Bedah Dokumen berbagi pagu global dengan pagu fitur terpisah. Cadangan maksimum dicommit sebelum provider; tidak direfund. Tanpa profil tarif/kapasitas terverifikasi `AI_BUDGET_PRICING_JSON`, AI fail closed (503), bukan memakai tarif tebakan. Semua retry SDK dimatikan; paket pembayaran tidak berubah.
+- Anggaran operasional AI: `docs/ai-operational-budget.md`. Asisten Claude memakai `AI_BUDGET_CLAUDE_PRICING_JSON`; Klinik/Bedah Dokumen GPT memakai `AI_BUDGET_PRICING_JSON`. Semua berbagi pagu global dengan pagu fitur terpisah. Cadangan kapasitas penuh model dicommit sebelum provider dan tidak direfund; profil model hilang/kedaluwarsa fail closed (503), tanpa tarif tebakan atau fallback model. Semua retry SDK dimatikan; paket pembayaran tidak berubah.
 
 - Setelah mengubah OpenAPI, jalankan `pnpm --filter @workspace/api-spec run codegen`.
 - Jangan mengubah status “kasus selesai persiapan” menjadi klaim SBU diterbitkan.

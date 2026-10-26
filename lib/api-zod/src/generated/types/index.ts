@@ -99,6 +99,7 @@ export * from './sbuChatCitation';
 export * from './sbuChatCitationVerificationStatus';
 export * from './sbuChatInput';
 export * from './sbuChatInputMode';
+export * from './sbuChatInputProviderConsent';
 export * from './sbuChatInputSpecialist';
 export * from './sbuChatLimitError';
 export * from './sbuChatLimitErrorCode';

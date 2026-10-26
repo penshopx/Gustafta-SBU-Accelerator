@@ -9,21 +9,38 @@ import { retrieveChatSources, validateCitedAnswer, RETRIEVAL_NOTICE } from "../l
 import { chatSourceReviewStore, type ChatSourceReviewStore } from "../lib/sbu-chat-source-reviews";
 import { createChatSourceReviewsRouter } from "./sbu-chat-source-reviews";
 import { AiBudgetError, reserveAiBudget, type ReserveAiBudget } from "../lib/ai-budget";
+import { BUDGET_MODEL, BUDGET_OUTPUT_TOKENS } from "../lib/ai-budget-policy";
 import {
-  buildSbuChatInput, createAnthropicSbuChatGenerate, estimateSbuChatInputTokens,
-  SBU_CHAT_MODEL, type SbuChatGenerate,
+  buildSbuChatInput, createAnthropicSbuChatGenerate, sbuChatInputSize,
+  SBU_CHAT_MODEL, SBU_CHAT_MAX_INPUT_BYTES, type SbuChatGenerate,
 } from "../lib/sbu-chat-harness";
 
 type Generate = SbuChatGenerate;
 
 export const generateSbuChatAnswer: Generate = async (...args) => {
+  // Legacy GPT adapter remains the default for Klinik Konsultasi.
+  const [mode, messages, signal, specialist, context = "", sources] = args;
+  const { openai } = await import("@workspace/integrations-openai-ai-server");
+  const chatInput = buildSbuChatInput(mode, messages, specialist, context, sources);
+  const reply = await openai.chat.completions.create({
+    model: BUDGET_MODEL,
+    max_completion_tokens: BUDGET_OUTPUT_TOKENS,
+    ...(sources ? { response_format: { type: "json_object" as const } } : {}),
+    messages: [{ role: "system", content: chatInput.system }, ...chatInput.messages],
+  }, { signal, timeout: 65_000, maxRetries: 0 });
+  const answer = reply.choices[0]?.message?.content?.trim();
+  if (!answer) throw new Error("empty_ai_response");
+  return answer;
+};
+
+export const generateClaudeAssistantAnswer: Generate = async (...args) => {
   // Lazy import keeps non-AI routes/test fixtures independent from provider credentials.
   const { anthropic } = await import("@workspace/integrations-anthropic-ai");
   return createAnthropicSbuChatGenerate(anthropic)(...args);
 };
 
 // Only aggregate usage metadata is persisted, never the conversation.
-export function createSbuChatRouter(answer: Generate = generateSbuChatAnswer, quotas: ChatQuotaStore = chatQuotaStore, reviews: ChatSourceReviewStore = chatSourceReviewStore, reserveBudget: ReserveAiBudget = reserveAiBudget): IRouter {
+export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAnswer, quotas: ChatQuotaStore = chatQuotaStore, reviews: ChatSourceReviewStore = chatSourceReviewStore, reserveBudget: ReserveAiBudget = reserveAiBudget): IRouter {
   const router: IRouter = Router();
   router.use(createChatSourceReviewsRouter(reviews));
   router.get("/openai/sbu/quota", async (req, res): Promise<void> => {
@@ -59,7 +76,7 @@ export function createSbuChatRouter(answer: Generate = generateSbuChatAnswer, qu
     }
     const input = SendSbuChatMessageBody.safeParse(req.body);
     if (!input.success || input.data.consent !== true) {
-      res.status(400).json({ error: "Pilih mode, isi percakapan yang sah, dan setujui pengiriman teks ke penyedia AI." }); return;
+      res.status(400).json({ error: "Muat ulang halaman, pilih mode, isi percakapan yang sah, dan setujui pengiriman teks ke Claude Sonnet 5.5 melalui Replit AI Integrations." }); return;
     }
     const messages = input.data.messages.map((message) => ({ ...message, content: message.content.trim() }));
     if (messages[0]?.role !== "user" || messages.at(-1)?.role !== "user" ||
@@ -74,6 +91,11 @@ export function createSbuChatRouter(answer: Generate = generateSbuChatAnswer, qu
       sources = retrieveChatSources(messages.at(-1)!.content, await reviews.active());
     } catch {
       res.status(503).json({ error: "Status persetujuan sumber belum dapat diperiksa. Tidak ada permintaan AI yang dikirim." });
+      return;
+    }
+    const chatInput = buildSbuChatInput(input.data.mode, messages, input.data.specialist, "", sources);
+    if (sbuChatInputSize(chatInput) > SBU_CHAT_MAX_INPUT_BYTES) {
+      res.status(400).json({ error: "Percakapan terlalu panjang untuk batas input asisten. Mulai percakapan baru." });
       return;
     }
     let reservation;
@@ -102,9 +124,7 @@ export function createSbuChatRouter(answer: Generate = generateSbuChatAnswer, qu
     let budgetError: AiBudgetError | undefined;
     let generationSettled = false;
     try {
-      const chatInput = buildSbuChatInput(input.data.mode, messages, input.data.specialist, "", sources);
-      const inputTokenUpperBound = estimateSbuChatInputTokens(chatInput);
-      await reserveBudget("assistant", SBU_CHAT_MODEL, inputTokenUpperBound);
+      await reserveBudget("assistant", SBU_CHAT_MODEL);
       controller.signal.throwIfAborted();
       // Promise race also bounds adapters which fail to honor cancellation.
       const aborted = new Promise<never>((_resolve, reject) => {

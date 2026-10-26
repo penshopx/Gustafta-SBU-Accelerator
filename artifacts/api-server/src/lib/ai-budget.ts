@@ -1,7 +1,7 @@
 import type { pool } from "@workspace/db";
 import {
   AI_FEATURES, BUDGET_MODEL, modelAttemptMicros, parseBudgetPolicy,
-  type AiFeature, type BudgetPolicy,
+  type AiFeature, type BudgetPolicy, type ModelBudgetPricing,
 } from "./ai-budget-policy";
 
 export class AiBudgetError extends Error {
@@ -11,7 +11,7 @@ export class AiBudgetError extends Error {
       : "Anggaran operasional AI belum dapat diverifikasi. Tidak ada permintaan AI yang dikirim; coba lagi nanti.");
   }
 }
-export type ReserveAiBudget = (feature: AiFeature, model?: string, inputTokens?: number) => Promise<void>;
+export type ReserveAiBudget = (feature: AiFeature, model?: string) => Promise<void>;
 export type BudgetEvent = {
   event: "ai_budget_warning" | "ai_budget_rejected" | "ai_budget_unavailable";
   scope?: "global" | AiFeature;
@@ -30,11 +30,13 @@ const emit: Emit = async event => {
 // failure, unknown outcomes and process crashes may still be billable.
 export function createPostgresAiBudgetStore(
   database?: typeof pool,
-  policy: () => BudgetPolicy = () => parseBudgetPolicy(process.env.AI_BUDGET_PRICING_JSON, process.env.AI_BUDGET_LIMITS_JSON),
+  policy: () => BudgetPolicy = () => parseBudgetPolicy(
+    process.env.AI_BUDGET_PRICING_JSON, process.env.AI_BUDGET_LIMITS_JSON,
+    process.env.AI_BUDGET_CLAUDE_PRICING_JSON),
   report: Emit = emit,
 ): { reserve: ReserveAiBudget } {
   return {
-    async reserve(feature, requestedModel = BUDGET_MODEL, inputTokens) {
+    async reserve(feature, requestedModel = BUDGET_MODEL) {
       let client: { query: typeof pool.query; release(): void } | undefined;
       const events: BudgetEvent[] = [];
       try {
@@ -42,7 +44,7 @@ export function createPostgresAiBudgetStore(
         const config = policy();
         const modelPricing = config.models[requestedModel];
         if (!modelPricing) throw new Error();
-        const attemptMicros = modelAttemptMicros(modelPricing, inputTokens);
+        const attemptMicros = modelAttemptMicros(modelPricing);
         const connectionPool = database ?? (await import("@workspace/db")).pool;
         client = await connectionPool.connect();
         await client.query("BEGIN");
@@ -57,17 +59,19 @@ export function createPostgresAiBudgetStore(
         const { rows: periods } = await client.query(`
           SELECT 'month' AS period, date_trunc('month', $1::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' AS start
           UNION ALL SELECT 'day', date_trunc('day', $1::timestamptz AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'`, [clock.now]);
-        if (requestedModel !== BUDGET_MODEL) {
-          for (const { period, start } of periods as { period: "day" | "month"; start: Date }[]) {
-            await client.query(`INSERT INTO ai_budget_model_policies(model,period,period_start,pricing_fingerprint)
+        const transaction = client;
+        const registerModelPricing = async (pricing: ModelBudgetPricing, period: string, start: Date) => {
+            await transaction.query(`INSERT INTO ai_budget_model_policies(model,period,period_start,pricing_fingerprint)
               VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
-            [requestedModel, period, start, modelPricing.fingerprint]);
-            const { rows: [row] } = await client.query(`SELECT pricing_fingerprint FROM ai_budget_model_policies
-              WHERE model=$1 AND period=$2 AND period_start=$3 FOR UPDATE`, [requestedModel, period, start]);
+            [pricing.model, period, start, pricing.fingerprint]);
+            const { rows: [row] } = await transaction.query(`SELECT pricing_fingerprint FROM ai_budget_model_policies
+              WHERE model=$1 AND period=$2 AND period_start=$3 FOR UPDATE`, [pricing.model, period, start]);
             // Price updates during an active period fail closed without resetting
             // already reserved USD. Different model prices remain independently tracked.
-            if (!row || row.pricing_fingerprint !== modelPricing.fingerprint) throw new Error();
-          }
+            if (!row || row.pricing_fingerprint !== pricing.fingerprint) throw new Error();
+        };
+        for (const { period, start } of periods as { period: "day" | "month"; start: Date }[]) {
+          await registerModelPricing(modelPricing, period, start);
         }
         const counters: {
           scope: "global" | AiFeature; period: "day" | "month"; start: Date;
@@ -79,8 +83,16 @@ export function createPostgresAiBudgetStore(
               VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`, [scope, period, start, config.fingerprint]);
             const { rows: [row] } = await client.query(`SELECT * FROM ai_budget_counters
               WHERE scope=$1 AND period=$2 AND period_start=$3 FOR UPDATE`, [scope, period, start]);
-            // Fail closed on mixed deployments or uncoordinated price/limit edits.
-            if (row.policy_fingerprint !== config.fingerprint) throw new Error();
+            if (row.policy_fingerprint !== config.fingerprint) {
+              // Adopt a known legacy GPT policy without resetting any USD
+              // reservation or notification flag. Unknown history stays blocked.
+              const legacy = config.models[BUDGET_MODEL];
+              if (!legacy || row.policy_fingerprint !== config.legacyFingerprint) throw new Error();
+              await registerModelPricing(legacy, period, start);
+              await client.query(`UPDATE ai_budget_counters SET policy_fingerprint=$4
+                WHERE scope=$1 AND period=$2 AND period_start=$3`,
+              [scope, period, start, config.fingerprint]);
+            }
             counters.push({ scope, period, start, reserved: Number(row.reserved_micros),
               limit: config.limits[scope][period], warned: row.warned, rejected: row.rejected });
           }

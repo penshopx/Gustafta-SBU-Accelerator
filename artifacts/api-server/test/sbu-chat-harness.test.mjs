@@ -12,8 +12,8 @@ try {
     entryPoints: [join(dir, "../src/lib/sbu-chat-harness.ts")],
     outfile: join(temp, "harness.mjs"), platform: "node", bundle: true, format: "esm",
   });
-  const { createAnthropicSbuChatGenerate, buildSbuChatInput, estimateSbuChatInputTokens,
-    SBU_CHAT_MODEL, SBU_CHAT_MAX_INPUT_TOKENS } = await import(join(temp, "harness.mjs"));
+  const { createAnthropicSbuChatGenerate, buildSbuChatInput, sbuChatInputSize,
+    SBU_CHAT_MODEL, SBU_CHAT_MAX_INPUT_BYTES } = await import(join(temp, "harness.mjs"));
 
   test("fixed chat harness sends the consented prompt to Sonnet with bounded retries and output", async () => {
     const signal = new AbortController().signal;
@@ -36,15 +36,15 @@ try {
     assert.equal(calls[0].options.timeout, 65_000);
     assert.equal(calls[0].options.maxRetries, 0);
     assert.equal(SBU_CHAT_MODEL, "claude-sonnet-5-5");
-    assert.equal(SBU_CHAT_MAX_INPUT_TOKENS, 150_000);
+    assert.equal(SBU_CHAT_MAX_INPUT_BYTES, 150_000);
   });
 
-  test("input reservation bound includes UTF-8 system and conversation text", () => {
+  test("local input size guard includes UTF-8 system and conversation text, not billing tokens", () => {
     const input = buildSbuChatInput("bujk", [{ role: "user", content: "SBU 建設" }], "sbuclaw", "", []);
-    const bound = estimateSbuChatInputTokens(input);
+    const bound = sbuChatInputSize(input);
     const textBytes = Buffer.byteLength(input.system, "utf8") + Buffer.byteLength("SBU 建設", "utf8");
     assert.ok(bound >= textBytes + 32 + 256);
-    assert.ok(bound <= SBU_CHAT_MAX_INPUT_TOKENS);
+    assert.ok(bound <= SBU_CHAT_MAX_INPUT_BYTES);
   });
 
   test("truncated provider output is rejected instead of returning incomplete JSON", async () => {

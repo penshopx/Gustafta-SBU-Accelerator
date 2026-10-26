@@ -89,6 +89,8 @@ const { createPostgresAiBudgetStore, parseBudgetPolicy, AiBudgetError,
 const pricing = { model: "gpt-5.6-terra", validUntil: "2099-01-01T00:00:00.000Z",
   maxInputTokens: 8192, inputMicrosPerMillion: 1_000_000, outputMicrosPerMillion: 1_000_000 };
 const COST = 16_384;
+const claudePricing = { model: "claude-sonnet-5-5", validUntil: "2099-01-01T00:00:00.000Z",
+  maxInputTokens: 10_000, inputMicrosPerMillion: 2_000_000, outputMicrosPerMillion: 10_000_000 };
 const limits = (globalDay = 10, globalMonth = 100, featureDay = globalDay, featureMonth = globalMonth) =>
   Object.fromEntries(["global", "assistant", "consultation", "document_analysis"].map(scope =>
     [scope, { day: COST * (scope === "global" ? globalDay : featureDay),
@@ -214,13 +216,13 @@ test("Claude Sonnet uses its own public price in shared limits and detects price
   await reset();
   const claude = {
     model: "claude-sonnet-5-5", validUntil: "2099-01-01T00:00:00.000Z",
-    maxInputTokens: 150_000, inputMicrosPerMillion: 2_000_000, outputMicrosPerMillion: 10_000_000,
+    maxInputTokens: 10_000, inputMicrosPerMillion: 2_000_000, outputMicrosPerMillion: 10_000_000,
   };
   const config = policy(limits(100, 200), claude);
   const a = store(first.pool, config), b = store(second.pool, config);
   await Promise.all([
-    a.reserve("assistant", claude.model, 10_000),
-    b.reserve("assistant", claude.model, 10_000),
+    a.reserve("assistant", claude.model),
+    b.reserve("assistant", claude.model),
   ]);
   const perAttempt = 101_920;
   const rows = await counters();
@@ -230,7 +232,7 @@ test("Claude Sonnet uses its own public price in shared limits and detects price
 
   const changedPrice = { ...claude, inputMicrosPerMillion: 3_000_000 };
   await assert.rejects(store(second.pool, policy(limits(100, 200), changedPrice))
-    .reserve("assistant", claude.model, 10_000), code("ai_budget_unavailable"));
+    .reserve("assistant", claude.model), code("ai_budget_unavailable"));
   assert.equal((await counters()).find(r => r.scope === "global" && r.period === "day").reserved_micros, String(perAttempt * 2));
 
   // Adding Claude does not invalidate earlier reservations made under the
@@ -239,6 +241,66 @@ test("Claude Sonnet uses its own public price in shared limits and detects price
   await a.reserve("consultation");
   assert.equal(Number((await counters()).find(r => r.scope === "global" && r.period === "day").reserved_micros),
     before + COST);
+});
+
+test("a Claude-only configuration is independent; unknown history and unconfigured GPT stay blocked", async () => {
+  await reset();
+  const caps = limits(100, 200);
+  const config = parseBudgetPolicy(undefined, JSON.stringify(caps), JSON.stringify(claudePricing));
+  const budget = store(first.pool, config);
+  await budget.reserve("assistant", claudePricing.model);
+  const before = await counters();
+  await assert.rejects(budget.reserve("consultation"), code("ai_budget_unavailable"));
+  await assert.rejects(budget.reserve("assistant", "unknown-model"), code("ai_budget_unavailable"));
+  assert.deepEqual(await counters(), before);
+  await first.pool.query("UPDATE ai_budget_counters SET policy_fingerprint='unknown-history'");
+  const unknown = await counters();
+  await assert.rejects(budget.reserve("assistant", claudePricing.model), code("ai_budget_unavailable"));
+  assert.deepEqual(await counters(), unknown);
+});
+
+test("the published Sonnet profile reserves its full million-token capacity, not question length", async () => {
+  await reset();
+  const config = parseBudgetPolicy(undefined, undefined,
+    JSON.stringify({ ...claudePricing, maxInputTokens: 1_000_000 }));
+  const budget = store(first.pool, config);
+  await budget.reserve("assistant", claudePricing.model);
+  const before = await counters();
+  assert.equal(before.find(r => r.scope === "assistant" && r.period === "day").reserved_micros, "2081920");
+  await assert.rejects(budget.reserve("assistant", claudePricing.model), code("ai_budget_exhausted"));
+  assert.deepEqual((await counters()).map(r => r.reserved_micros), before.map(r => r.reserved_micros));
+});
+
+test("known legacy GPT reservations migrate without resetting USD or notification flags", async () => {
+  await reset();
+  const config = policy(limits(100, 200), claudePricing);
+  await store(first.pool, config).reserve("consultation");
+  await first.pool.query("UPDATE ai_budget_counters SET policy_fingerprint=$1, warned=true", [config.legacyFingerprint]);
+  await first.pool.query("DELETE FROM ai_budget_model_policies");
+  const migrated = store(second.pool, config);
+  await migrated.reserve("assistant", claudePricing.model);
+  await migrated.reserve("consultation");
+  const rows = await first.pool.query("SELECT * FROM ai_budget_counters");
+  assert.ok(rows.rows.every(row => row.policy_fingerprint === config.fingerprint));
+  assert.ok(rows.rows.filter(row => row.scope !== "assistant").every(row => row.warned));
+  assert.equal(rows.rows.find(r => r.scope === "global" && r.period === "day").reserved_micros, String(2 * COST + 101_920));
+  assert.equal(rows.rows.find(r => r.scope === "consultation" && r.period === "day").reserved_micros, String(2 * COST));
+  assert.equal((await first.pool.query("SELECT count(*)::int AS count FROM ai_budget_model_policies")).rows[0].count, 4);
+});
+
+test("mixed GPT and Claude instances cannot cross the same global dollar ceiling", async () => {
+  await reset();
+  const caps = Object.fromEntries(["global", "assistant", "consultation", "document_analysis"]
+    .map(scope => [scope, { day: 250_000, month: 500_000 }]));
+  const config = policy(caps, claudePricing);
+  const a = store(first.pool, config), b = store(second.pool, config);
+  const results = await Promise.allSettled(Array.from({ length: 20 }, (_, i) =>
+    i % 2 ? a.reserve("assistant", claudePricing.model) : b.reserve("consultation")));
+  const accepted = results.reduce((sum, result, i) => sum +
+    (result.status === "fulfilled" ? (i % 2 ? 101_920 : COST) : 0), 0);
+  assert.ok(accepted > 0 && accepted <= 250_000);
+  assert.ok(results.some(result => result.status === "rejected"));
+  assert.equal(Number((await counters()).find(r => r.scope === "global" && r.period === "day").reserved_micros), accepted);
 });
 
 test("storage unavailable, missing lock row, transaction failure and ambiguous commit never authorize provider", async () => {
@@ -299,11 +361,11 @@ test("all three real routes block before provider on exhaustion or storage outag
   await first.pool.query(`INSERT INTO sbu_documents(id,case_id,owner_id,name,content_type,size,object_path,status,scan_status,scan_generation)
     VALUES ($1,$2,'budget-owner','Synthetic','image/png',3,'synthetic/path','ready','clean','1')`, [documentId, caseId]);
   let providerCalls = 0, calls = [];
-  const config = policy(limits(1, 1));
+  const config = policy(limits(1, 1), claudePricing);
   const real = store(first.pool, config);
   await real.reserve("assistant"); // Entire shared pool now exhausted.
   let reserve = real.reserve;
-  const check = async feature => { calls.push(feature); await reserve(feature); };
+  const check = async (...args) => { calls.push(args[0]); await reserve(...args); };
   const provider = async () => { providerCalls++; throw Error("provider must not run"); };
   const quota = { userId: "budget-owner", dailyLimit: 30, dailyRemaining: 29,
     dailyResetAt: new Date("2099-01-01"), minuteLimit: 6, minuteRemaining: 5,
@@ -323,7 +385,7 @@ test("all three real routes block before provider on exhaustion or storage outag
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
   const requests = [
-    ["/openai/sbu/messages", { mode: "bujk", specialist: "panduansbu", consent: true,
+    ["/openai/sbu/messages", { mode: "bujk", specialist: "panduansbu", consent: true, providerConsent: "anthropic-claude-sonnet-5-5-v1",
       messages: [{ role: "user", content: "private question" }] }],
     [`/consultations/${consultationId}/messages`, { content: "private question", consent: true, revision: 0, requestId: randomUUID() }],
     [`/cases/${caseId}/documents/${documentId}/analyses`, { focus: "keuangan", consent: true, pages: [1], sourceRevision: "a".repeat(64) }],
@@ -347,15 +409,18 @@ test("all three real routes block before provider on exhaustion or storage outag
     assert.equal((await send("/consultations")).status, 200);
     assert.equal((await send(`/cases/${caseId}/documents/${documentId}/analyses`)).status, 200);
     await reset();
-    reserve = store().reserve;
+    reserve = store(first.pool, policy(limits(100, 200), claudePricing)).reserve;
     for (const [path, body] of requests) {
       const response = await send(path, body);
       assert.equal(response.status, 503);
       assert.equal((await response.json()).code, undefined, "provider failure is not presented as a budget refusal");
     }
     assert.equal(providerCalls, 3);
-    assert.equal((await counters()).find(r => r.scope === "global" && r.period === "day").reserved_micros, String(3 * COST),
-      "provider failures in all three features keep full reservations");
+    const rows = await counters();
+    const assistantCost = Number(rows.find(r => r.scope === "assistant" && r.period === "day").reserved_micros);
+    assert.ok(assistantCost > 0);
+    assert.equal(Number(rows.find(r => r.scope === "global" && r.period === "day").reserved_micros), assistantCost + 2 * COST,
+      "provider failures in all three features keep their model-specific reservations");
     assert.deepEqual((await first.pool.query("SELECT messages,revision FROM sbu_consultations")).rows, [{ messages: [], revision: 0 }]);
     assert.equal((await first.pool.query("SELECT count(*)::int AS count FROM sbu_document_analyses")).rows[0].count, 0);
   } finally {

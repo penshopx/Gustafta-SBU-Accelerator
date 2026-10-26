@@ -207,7 +207,7 @@ test("chat route reads decisions for each request and rejects retired IDs/histor
   const url = `http://127.0.0.1:${listener.address().port}/openai/sbu/messages`;
   const send = (messages = [{ role: "user", content: "Status Permen berlaku" }]) => fetch(url, {
     method: "POST", headers: { "Content-Type": "application/json", "X-Test-Identity": "owner", "X-SBU-Form-Owner": "owner" },
-    body: JSON.stringify({ mode: "bujk", specialist: "sbuclaw", consent: true, messages }),
+    body: JSON.stringify({ mode: "bujk", specialist: "sbuclaw", consent: true, providerConsent: "anthropic-claude-sonnet-5-5-v1", messages }),
   });
   try {
     let response = await send();

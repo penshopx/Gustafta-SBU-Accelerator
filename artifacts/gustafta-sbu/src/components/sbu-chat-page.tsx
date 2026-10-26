@@ -97,7 +97,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
     const sentMode = modeRef.current, sentSpec = specRef.current;
     setLoading(true); setError(null);
     try {
-      const res = await sendSbuChatMessage({ mode: sentMode, specialist: sentSpec, consent: true, messages: buildPayload(next) }, { ...options.request, signal: c.signal });
+      const res = await sendSbuChatMessage({ mode: sentMode, specialist: sentSpec, consent: true, providerConsent: 'anthropic-claude-sonnet-5-5-v1', messages: buildPayload(next) }, { ...options.request, signal: c.signal });
       if (c.signal.aborted) return;
       if (res.userId !== expectedUserId || res.mode !== sentMode || res.specialist !== sentSpec || typeof res.answer !== 'string' ||
           !Array.isArray(res.citations) || typeof res.retrievalNotice !== 'string') {
