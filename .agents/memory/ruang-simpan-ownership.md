@@ -30,6 +30,12 @@ Pengguna menyatakan kebutuhan: “dalam ruang simpan ada asisten ai untuk menjad
 
 **How to apply:** Jadikan ini kebutuhan pengembangan Ruang Simpan mandiri, bukan permintaan mengaktifkan integrasi Gustafta. Pernyataan kebutuhan ini tidak membuktikan fitur dialog langsung di Ruang Simpan sudah tersedia.
 
+Pengguna menyetujui alur dokumen → Bedah Dokumen → tinjau dan setujui cuplikan → chat Asisten Dokumen, setelah diperjelas bahwa chat membahas hasil analisis, bukan langsung seluruh dokumen asli: “ok pakai alur yang sudah kamu buat saja”.
+
+**Why:** Pengguna secara eksplisit memilih mempertahankan alur berbasis hasil analisis dan persetujuan cuplikan.
+
+**How to apply:** Pertahankan alur ini untuk pengembangan berikutnya; jangan menganggap kebutuhan dialog sebagai izin menggantinya dengan pembacaan seluruh berkas otomatis.
+
 ## Resolving an owner-supplied email
 
 An owner-supplied email may locate the local SBU account only after explicit confirmation of entitlement to the token's company profile. Require exactly one matching account with a verified email in the selected authentication environment, and map its Clerk user ID, never the email.
