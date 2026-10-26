@@ -90,3 +90,35 @@ diaktifkan melalui pilihan tujuan.
 
 Verifikasi perubahan menggunakan respons provider tiruan, HTTP loopback,
 PostgreSQL terisolasi dan uji komponen. Tidak diperlukan panggilan AI berbayar.
+
+## Dialog langsung dari Ruang Simpan mandiri
+
+Pada `/documents`, tombol **Asisten Dokumen** tersedia untuk dokumen milik
+akun aktif yang sudah siap dan bersih. Tombol membuka percakapan di halaman
+yang sama, dengan tujuan tetap `pemeriksa_dokumen` dan satu dokumen/versi
+terkunci. Ini bukan integrasi Ruang Simpan eksternal Gustafta.
+
+Pembukaan memeriksa metadata terkini dan memuat riwayat analisis, bukan
+mengirim berkas ke AI. Hanya hasil analisis dengan pemilik, kasus, dokumen,
+dan versi yang cocok ditawarkan. Pratinjau yang tidak cocok tidak ditampilkan.
+Pengguna memilih satu hasil, meninjau cuplikan maksimal 4.000 karakter dan
+referensinya, lalu memberikan persetujuan cuplikan serta persetujuan chat
+Claude secara terpisah. Tidak ada pengiriman teks-saja tanpa bahan yang
+disetujui dalam percakapan dokumen ini.
+
+Jika belum ada hasil untuk versi tersebut, tindakan **Jalankan Bedah Dokumen
+untuk dokumen ini** membuka panel yang sudah ada. Pemilihan halaman,
+pratinjau dan persetujuan pengiriman ke model analisis tetap berlaku;
+analisis tidak dijalankan otomatis. Kembali dari panel mempertahankan draf
+pertanyaan, tetapi memulai chat baru tanpa riwayat atau persetujuan lama.
+
+Jawaban dialog membahas cuplikan hasil analisis yang disetujui, bukan membaca
+ulang seluruh dokumen asli pada setiap pesan. Halaman lain, profil perusahaan,
+berkas lain, dan hasil analisis lain tidak otomatis dikirim. Batas kuota,
+anggaran, pemeriksaan sumber server sebelum pengiriman dan sebelum respons,
+serta aturan draf yang ada tetap digunakan.
+
+Percakapan tersimpan sementara dalam memori halaman. **Percakapan baru**
+menghapus riwayat dan kedua persetujuan. Kembali ke daftar, berpindah akun,
+atau memuat ulang mengakhiri percakapan; tidak dibuat penyimpanan chat baru.
+Tidak ada perubahan bukti, penilaian, aturan BG001, atau pengajuan eksternal.

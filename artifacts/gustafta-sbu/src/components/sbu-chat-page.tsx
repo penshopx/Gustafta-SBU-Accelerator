@@ -61,7 +61,12 @@ function buildPayload(history: Msg[]) {
   return w.map(m => ({ role: m.role, content: m.content }));
 }
 
-export default function SbuChatPage({ expectedUserId, initialRole }: { expectedUserId: string; initialRole?: string }) {
+export type ChatDocumentScope = {
+  caseId: number; documentId: string; ownerId: string; version: number; name: string;
+  initialDraft?: string; onDraftChange?: (draft: string) => void; onOpenBedah?: () => void;
+};
+
+export default function SbuChatPage({ expectedUserId, initialRole, documentScope }: { expectedUserId: string; initialRole?: string; documentScope?: ChatDocumentScope }) {
   const options = useFormMutationOptions();
   const readOptions = useAccountReadOptions();
   const queryClient = useQueryClient();
@@ -78,15 +83,17 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
   const budgetReady = budget?.status === 'available' && !budgetQuery.isFetching;
   const [mode, setMode] = useState<Mode>(() => defaultModeForRole(initialRole));
   const [messages, setMessages] = useState<Msg[]>([]);
-  const [draft, setDraft] = useState('');
-  const [purpose, setPurpose] = useState<SbuChatPurpose>(DEFAULT_PURPOSE);
+  const [draft, setDraft] = useState(documentScope?.initialDraft ?? '');
+  const draftCb = useRef(documentScope?.onDraftChange); draftCb.current = documentScope?.onDraftChange;
+  useEffect(() => { draftCb.current?.(draft); }, [draft]);
+  const [purpose, setPurpose] = useState<SbuChatPurpose>(documentScope ? 'pemeriksa_dokumen' : DEFAULT_PURPOSE);
   const purposeRef = useRef(purpose); purposeRef.current = purpose;
-  const [sourceOn, setSourceOn] = useState(false);
+  const [sourceOn, setSourceOn] = useState(!!documentScope);
   const [sourceCtx, setSourceCtx] = useState<SbuChatAnalysisContext | undefined>(undefined);
   const [sourceKey, setSourceKey] = useState(0);
   const sourceRef = useRef<{ on: boolean; ctx?: SbuChatAnalysisContext }>({ on: false });
   sourceRef.current = { on: sourceOn, ctx: sourceCtx };
-  const clearSource = () => { setSourceOn(false); setSourceCtx(undefined); setSourceKey(k => k + 1); };
+  const clearSource = () => { setSourceOn(!!documentScope); setSourceCtx(undefined); setSourceKey(k => k + 1); };
   const [specialist, setSpecialist] = useState<SpecId>('sbuclaw');
   const catalog = useGetSbuChatSpecialists({ query: { enabled: true, retry: 1, staleTime: 60000, queryKey: getGetSbuChatSpecialistsQueryKey() } });
   const specs = catalog.data;
@@ -157,7 +164,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
   };
 
   const cancel = () => { abort(); setLoading(false); setError('Permintaan dibatalkan. Draf dipertahankan. Percobaan yang sudah diterima tetap memakai kuota.'); };
-  const resetAll = (to?: { mode?: Mode; specialist?: SpecId; purpose?: SbuChatPurpose }) => { abort(); setLoading(false); setMessages([]); setDraft(''); setError(null); setConfirm(null); clearSource(); if (to?.mode) setMode(to.mode); if (to?.specialist) setSpecialist(to.specialist); if (to?.purpose) setPurpose(to.purpose); };
+  const resetAll = (to?: { mode?: Mode; specialist?: SpecId; purpose?: SbuChatPurpose }) => { abort(); setLoading(false); setMessages([]); setDraft(''); setError(null); setConfirm(null); clearSource(); if (documentScope) setConsent(false); if (to?.mode) setMode(to.mode); if (to?.specialist) setSpecialist(to.specialist); if (to?.purpose) setPurpose(to.purpose); };
   const dirty = messages.length > 0 || draft.trim().length > 0;
   const pickMode = (to: Mode) => {
     if (loading || to === mode) return;
@@ -183,8 +190,13 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
 
   return <div className="mx-auto max-w-5xl">
     <div className="mb-6">
+      {documentScope ? <>
+        <div className="eyebrow mb-2 text-[#1769d1]">RUANG SIMPAN / ASISTEN DOKUMEN</div>
+        <h2 data-testid="text-scoped-chat-title" className="display break-words text-[24px] font-extrabold leading-tight sm:text-[30px]">{documentScope.name} <span className="mono text-base font-normal text-[#526b81]">versi {documentScope.version}</span></h2>
+        <p data-testid="text-scoped-chat-notice" className="mt-2 max-w-2xl rounded-lg border border-[#e5c58f] bg-[#fff7e8] p-3 text-xs leading-5 text-[#64420e]">Percakapan sementara hanya untuk dokumen ini, tersimpan di memori halaman dan hilang saat ditutup. Jawaban AI adalah draf, bukan sertifikasi atau verifikasi keaslian. Tidak ada berkas, profil, atau hasil lain yang dikirim; hanya cuplikan persis yang Anda setujui.</p>
+      </> : <>
       <div className="eyebrow mb-2 text-[#1769d1]">RUANG KERJA / ASISTEN AI</div>
-      <h1 className="display text-[32px] font-extrabold leading-tight sm:text-[39px]">Asisten Pakar SBU</h1>
+      <h1 className="display text-[32px] font-extrabold leading-tight sm:text-[39px]">Asisten Pakar SBU</h1></>}
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#526b81]">Panduan awal sesuai konteks peran Anda. Peran di sini hanya konteks percakapan, bukan hak akses, dan asisten tidak mengubah kasus, bukti, maupun menyatakan kesiapan atau sertifikasi.</p>
     </div>
 
@@ -200,6 +212,7 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
 
     <ChatBudgetNotice budget={budget} pending={budgetQuery.isPending} checking={budgetQuery.isFetching} onRefresh={() => void budgetQuery.refetch()} />
 
+    {!documentScope && <>
     <div className="eyebrow mb-2 text-[#1769d1]">TUJUAN PERCAKAPAN</div>
     <div className="mb-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Tujuan percakapan" data-testid="group-purpose">
       {PURPOSES.map(p => <button key={p.id} type="button" role="radio" aria-checked={purpose === p.id} disabled={loading} data-testid={`button-purpose-${p.id}`} onClick={() => pickPurpose(p.id)} className={`rounded-xl border p-4 text-left transition-colors ${purpose === p.id ? 'border-[#1769d1] bg-[#eaf4ff] ring-2 ring-[#1769d1]' : 'border-[#d1dfe9] bg-white hover:bg-[#f4f9fc]'}`}>
@@ -216,8 +229,13 @@ export default function SbuChatPage({ expectedUserId, initialRole }: { expectedU
       <p data-testid="text-purpose-expected">{pInfo.expected}</p>
       {pInfo.note && <p data-testid="text-purpose-note" className="mt-3 rounded-lg bg-[#f4f9fc] p-2.5 font-medium">{pInfo.note} <Link href="/documents" data-testid="link-purpose-documents" className="font-bold underline">Buka Brankas dokumen</Link></p>}
       <p className="mt-3 text-[11px] text-[#688096]">Tujuan hanya mengarahkan isi jawaban. Tidak memberi akses data, tidak memeriksa keaslian dokumen, dan bukan keputusan lembaga sertifikasi.</p>
-    </div>
-    {purpose === 'pemeriksa_dokumen' && <div className="mb-6 rounded-xl border border-[#d8e4ec] bg-white p-4 text-xs leading-5 text-[#34506a]" data-testid="panel-chat-analysis">
+    </div></>}
+    {documentScope && <div className="mb-6 rounded-xl border border-[#d8e4ec] bg-white p-4 text-xs leading-5 text-[#34506a]" data-testid="panel-chat-analysis">
+      <ChatAnalysisPicker key={sourceKey} locked={loading || messages.length > 0} onChange={setSourceCtx} scope={documentScope}
+        emptyAction={documentScope.onOpenBedah ? <button type="button" data-testid="button-open-bedah-from-chat" onClick={documentScope.onOpenBedah} className="btn btn-outline mt-2 !min-h-[36px] !text-xs">Jalankan Bedah Dokumen untuk dokumen ini</button> : undefined} />
+      {!sourceCtx && <p data-testid="text-source-incomplete" className="mt-2 font-medium text-[#8a5a12]">Pengiriman dinonaktifkan sampai hasil, cuplikan persis, dan persetujuan diberikan. Tidak ada mode teks saja di percakapan dokumen.</p>}
+    </div>}
+    {!documentScope && purpose === 'pemeriksa_dokumen' && <div className="mb-6 rounded-xl border border-[#d8e4ec] bg-white p-4 text-xs leading-5 text-[#34506a]" data-testid="panel-chat-analysis">
       <label className="flex items-start gap-2.5 font-bold text-[#14253a]">
         <input type="checkbox" data-testid="checkbox-chat-source" className="mt-1 h-4 w-4 accent-[#1769d1]" checked={sourceOn} disabled={loading || messages.length > 0} onChange={e => { if (e.target.checked) setSourceOn(true); else clearSource(); }} />
         <span>Gunakan hasil Bedah Dokumen saya (opsional)<span className="block font-normal text-[#566f85]">Default mati. Tanpa ini, Anda tetap dapat menempel cuplikan anonim sendiri. Daftar kasus dan dokumen baru dibaca setelah Anda mengaktifkannya.</span></span>

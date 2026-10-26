@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import { ChevronDown, ChevronLeft, ChevronRight, Download, FileText, Layers, Pencil, ScanSearch, Search, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Download, FileText, Layers, MessageSquare, Pencil, ScanSearch, Search, Trash2 } from 'lucide-react';
 import {
   useListDocumentVault, useListCases, useDeleteCaseDocument,
   getListDocumentVaultQueryKey, getListCaseDocumentsQueryKey, getListCasesQueryKey,
@@ -9,6 +9,7 @@ import {
 } from '@workspace/api-client-react';
 import { useFormMutationOptions, useAccountReadOptions } from './account-queries';
 import { CaseDocuments, documentError, saveDocumentBlob, sizeLabel } from './case-documents';
+import SbuChatPage from './sbu-chat-page';
 import { DocumentAnalysisPanel } from './document-analysis-panel';
 import { DocumentMetadataDialog, SimpleModal, categoryKeys, categoryLabels } from './document-metadata-dialog';
 import { Empty } from './dashboard-overview';
@@ -27,6 +28,10 @@ export function DocumentVaultPage({ expectedUserId, canOwnCases }: { expectedUse
   const [editing, setEditing] = useState<ListDocumentVault200DocumentsItem | null>(null);
   const [analyzing, setAnalyzing] = useState<ListDocumentVault200DocumentsItem | null>(null);
   const [confirm, setConfirm] = useState<ListDocumentVault200DocumentsItem | null>(null);
+  // Scoped document chat is mutually exclusive with the Bedah Dokumen modal; the draft alone survives a hop.
+  const [chatDoc, setChatDoc] = useState<ListDocumentVault200DocumentsItem | null>(null);
+  const [chatNonce, setChatNonce] = useState(0);
+  const chatDraft = useRef('');
   const [note, setNote] = useState<string | null>(null);
   const [delError, setDelError] = useState<string | null>(null);
   useEffect(() => { const t = setTimeout(() => { setDq(q.trim()); setPage(1); }, 350); return () => clearTimeout(t); }, [q]);
@@ -53,6 +58,17 @@ export function DocumentVaultPage({ expectedUserId, canOwnCases }: { expectedUse
   };
   const newVersion = (d: ListDocumentVault200DocumentsItem) => { setUploadCase(String(d.caseId)); setUploadOpen(true); setVersionReq({ docId: d.id, nonce: Date.now() }); };
 
+  if (chatDoc && !analyzing) {
+    const d = chatDoc;
+    return <div className="min-w-0" data-testid="panel-document-chat">
+      <button type="button" data-testid="button-close-document-chat" onClick={() => { chatDraft.current = ''; setChatDoc(null); }} className="btn btn-outline mb-4 !min-h-[40px] !text-xs"><ChevronLeft size={14} /> Kembali ke Ruang Simpan</button>
+      <SbuChatPage key={`${d.id}:${chatNonce}`} expectedUserId={expectedUserId} documentScope={{
+        caseId: d.caseId, documentId: d.id, ownerId: d.ownerId, version: d.version ?? 1, name: d.name,
+        initialDraft: chatDraft.current, onDraftChange: v => { chatDraft.current = v; },
+        onOpenBedah: () => setAnalyzing(d),
+      }} />
+    </div>;
+  }
   return <div className="min-w-0">
     <div className="mb-7"><div className="eyebrow mb-2 text-[#1769d1]">RUANG KERJA / RUANG SIMPAN</div><h1 className="display text-[30px] font-extrabold leading-tight sm:text-[39px]">Ruang Simpan</h1><p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#526b81]">Berkas persiapan sertifikasi konstruksi Anda, tersimpan privat di akun ini. Menyimpan berkas bukan verifikasi, dan Gustafta bukan lembaga sertifikasi resmi.</p></div>
 
@@ -82,6 +98,7 @@ export function DocumentVaultPage({ expectedUserId, canOwnCases }: { expectedUse
         <div className="flex flex-wrap gap-1">
           <DocumentScanStatus doc={d} expectedUserId={expectedUserId}/>
           {d.status === 'ready' && d.scanStatus === 'clean' && <>
+            {d.ownerId === expectedUserId && <button data-testid={`button-assistant-${d.id}`} aria-label={`Asisten Dokumen ${d.name}`} onClick={() => { chatDraft.current = ''; setChatNonce(n => n + 1); setChatDoc(d); }} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-bold text-[#1769d1] hover:bg-[#eaf4fc]"><MessageSquare size={15} /> Asisten Dokumen</button>}
             <button data-testid={`button-bedah-${d.id}`} aria-label={`Bedah Dokumen ${d.name}`} onClick={() => setAnalyzing(d)} className="rounded-lg p-2 text-[#1769d1] hover:bg-[#eaf4fc]"><ScanSearch size={16} /></button>
             <button data-testid={`button-edit-document-${d.id}`} aria-label={`Ubah keterangan ${d.name}`} onClick={() => setEditing(d)} className="rounded-lg p-2 text-[#456986] hover:bg-[#eaf4fc]"><Pencil size={16} /></button>
             {canOwnCases && <button data-testid={`button-new-version-${d.id}`} aria-label={`Unggah versi baru ${d.name}`} onClick={() => newVersion(d)} className="rounded-lg p-2 text-[#456986] hover:bg-[#eaf4fc]"><Layers size={16} /></button>}
@@ -91,7 +108,7 @@ export function DocumentVaultPage({ expectedUserId, canOwnCases }: { expectedUse
       <nav className="mt-5 flex flex-wrap items-center justify-between gap-3" aria-label="Halaman"><span data-testid="text-vault-page" className="text-xs text-[#617a90]">{data.total} dokumen · Halaman {data.page} dari {totalPages}</span><div className="flex gap-2"><button data-testid="button-vault-prev" disabled={page <= 1 || vault.isFetching} onClick={() => setPage(p => p - 1)} className="btn btn-outline"><ChevronLeft size={15} /> Sebelumnya</button><button data-testid="button-vault-next" disabled={page >= totalPages || vault.isFetching} onClick={() => setPage(p => p + 1)} className="btn btn-outline">Berikutnya <ChevronRight size={15} /></button></div></nav></>}
 
     {editing && <DocumentMetadataDialog key={editing.id} doc={editing} expectedUserId={expectedUserId} close={() => setEditing(null)} />}
-    {analyzing && <DocumentAnalysisPanel key={analyzing.id} doc={analyzing} expectedUserId={expectedUserId} close={() => setAnalyzing(null)} />}
+    {analyzing && <DocumentAnalysisPanel key={analyzing.id} doc={analyzing} expectedUserId={expectedUserId} close={() => { setAnalyzing(null); setChatNonce(n => n + 1); }} />}
     {confirm && <SimpleModal title="Hapus dokumen?" close={() => setConfirm(null)}><p className="text-sm leading-7 text-[#567088]">Berkas akan dihapus permanen dari penyimpanan dan tidak dapat dipulihkan. Analisis tersimpan untuk versi ini juga ikut terhapus.</p>{delError && <p role="alert" className="mt-3 text-sm text-[#b34442]">{delError}</p>}<div className="mt-5 flex justify-end gap-2"><button className="btn btn-outline" onClick={() => setConfirm(null)}>Batal</button><button data-testid="button-confirm-delete-document" disabled={del.isPending} className="btn btn-danger" onClick={remove}>{del.isPending ? 'Menghapus...' : 'Ya, hapus permanen'}</button></div></SimpleModal>}
   </div>;
 }

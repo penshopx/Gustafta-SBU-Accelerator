@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AccountQueries } from '../../src/components/account-queries';
 import SbuChatPage from '../../src/components/sbu-chat-page';
+import { DocumentVaultPage } from '../../src/components/document-vault-page';
 
 // No application router, Clerk session, credentials or database. Real hooks
 // and API client are retained; the browser test intercepts every API request.
@@ -15,7 +16,9 @@ function Fixture() {
     </nav>}
     {/* Match the application's identity-keyed cache and private page boundary. */}
     <AccountQueries key={owner} userId={owner}>
-      <SbuChatPage key={owner} expectedUserId={owner} initialRole="kontraktor" />
+      {new URLSearchParams(location.search).has('vault')
+        ? <DocumentVaultPage key={owner} expectedUserId={owner} canOwnCases={true} />
+        : <SbuChatPage key={owner} expectedUserId={owner} initialRole="kontraktor" />}
     </AccountQueries>
   </>;
 }
