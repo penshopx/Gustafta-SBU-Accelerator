@@ -101,6 +101,7 @@ test('mini apps: search, filters, calendar, manual actions and download work wit
     assert.ok(find('empty-tracker'));
     assert.equal((node('button-download-actions') as unknown as HTMLButtonElement).disabled, true);
     // identity consistency
+    assert.equal(find('button-download-identity'), null);
     assert.match(node('text-identity-warning').textContent!, /tidak disimpan/);
     await click('button-compare-identity');
     assert.ok(find('text-identity-nothing'));
@@ -116,8 +117,20 @@ test('mini apps: search, filters, calendar, manual actions and download work wit
     assert.ok(find('text-identity-npwp-length'));
     assert.match(node('result-identity').textContent!, /Akta, Berkas 2/);
     assert.match(node('result-identity').textContent!, /bukan bukti NIB terdaftar/);
+    await click('button-download-identity');
+    await new Promise(resolve => setTimeout(resolve, 20));
+    assert.equal(filename, 'pemeriksaan-identitas-sbu.txt');
+    assert.ok(blob);
+    const report = await blob.text();
+    assert.match(report, /DRAF INTERNAL/);
+    assert.match(report, /Akta/);
+    assert.match(report, /NPWP — Isian berbeda/);
+    assert.doesNotMatch(report, /PT Bangun Raya|1234567890123|0012345678901000/);
+    assert.equal(revoked, 'blob:mini-app-test');
+    assert.equal(win.document.querySelector('a[download]'), null);
     await click('button-add-identity');
     assert.equal(find('result-identity'), null);
+    assert.equal(find('button-download-identity'), null, 'stale result cannot be exported');
     assert.ok(find('input-identity-nib-2'));
     await click('button-remove-identity-2');
     assert.equal(find('input-identity-nib-2'), null);

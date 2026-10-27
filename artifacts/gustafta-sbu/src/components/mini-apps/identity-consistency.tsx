@@ -1,6 +1,8 @@
 import { useId, useRef, useState } from 'react';
-import { CircleCheck, FileSearch, Plus, RotateCcw, ShieldAlert, Trash2, TriangleAlert } from 'lucide-react';
+import { CircleCheck, Download, FileSearch, Plus, RotateCcw, ShieldAlert, Trash2, TriangleAlert } from 'lucide-react';
 import { compareDocumentIdentities, type IdentityComparison, type IdentityRow } from '@/lib/document-identity';
+import { formatIdentityReport } from '@/lib/document-identity-report';
+import { downloadText } from './action-tracker';
 
 const MAX = 8;
 const FIELD: Record<'companyName' | 'nib' | 'npwp', string> = { companyName: 'Nama badan usaha', nib: 'NIB', npwp: 'NPWP' };
@@ -28,6 +30,14 @@ export function IdentityConsistency() {
   const remove = (rid: string) => { if (rows.length <= 2) return; const n = nameOf(rid); setRows(rs => rs.filter(r => r.id !== rid)); setResult(null); setNotice(`${n} dihapus.`); };
   const compare = () => { const res = compareDocumentIdentities(rows); setResult(res); setNotice(res.issues.length ? `${res.issues.length} catatan ditemukan.` : 'Tidak ada perbedaan terdeteksi pada isian.'); window.setTimeout(() => resultRef.current?.focus(), 0); };
   const reset = () => { setRows([newRow(), newRow()]); setResult(null); setNotice('Semua isian dan hasil dikosongkan.'); };
+  const download = () => {
+    try {
+      downloadText(formatIdentityReport(rows), 'pemeriksaan-identitas-sbu.txt');
+      setNotice('Unduhan laporan dimulai. Periksa folder unduhan Anda.');
+    } catch {
+      setNotice('Laporan tidak dapat diunduh. Silakan coba lagi.');
+    }
+  };
 
   return <section id="pemeriksa-identitas" aria-labelledby={`${id}-h`} data-testid="tool-identity" className="surface scroll-mt-6 p-5 sm:p-7">
     <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#142c46] text-[#8ec7f4]"><FileSearch size={19} /></span><div><div className="eyebrow text-[#1769d1]">ALAT 03 / BANDINGKAN ISIAN</div><h2 id={`${id}-h`} className="display text-xl font-extrabold">Pemeriksa konsistensi identitas berkas</h2></div></div>
@@ -62,6 +72,8 @@ export function IdentityConsistency() {
           <p className="mt-1 font-semibold">Berkas: {iss.documentIds.map(nameOf).join(', ')}</p>
         </li>; })}</ul>}
       <p className="mt-3 text-xs leading-5 text-[#526b81]">Perubahan isian akan menghapus hasil ini. Verifikasi mandiri tetap diperlukan.</p>
+      <p className="mt-3 text-xs leading-5 text-[#526b81]">Laporan teks memuat temuan dan nama berkas, tanpa nilai nama badan usaha, NIB, atau NPWP. Hindari data sensitif pada nama berkas sebelum membagikan. Simpan laporan sendiri; aplikasi tidak menyimpannya.</p>
+      <button type="button" data-testid="button-download-identity" onClick={download} className="btn btn-outline mt-3"><Download size={15} /> Unduh laporan pemeriksaan</button>
     </div>}
   </section>;
 }
