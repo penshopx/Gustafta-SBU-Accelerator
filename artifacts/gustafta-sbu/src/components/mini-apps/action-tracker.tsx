@@ -1,15 +1,13 @@
 import { forwardRef, useId, useImperativeHandle, useRef, useState, type FormEvent } from 'react';
 import { Check, Download, ListChecks, Pencil, Plus, RotateCcw, Trash2, TriangleAlert } from 'lucide-react';
 import { actionReport, validCalendarDate, type ActionItem } from '@/lib/sbu-mini-apps';
+import { actionKey, type BackupAction } from '@/lib/action-backup';
+import { ActionBackup } from './action-backup';
+import { downloadText } from '@/lib/local-download';
+export { downloadText } from '@/lib/local-download';
 
 type Draft = { title: string; responsible: string; dueOn: string };
 const empty: Draft = { title: '', responsible: '', dueOn: '' };
-
-export function downloadText(text: string, filename: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
-  try { const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); }
-  finally { window.setTimeout(() => URL.revokeObjectURL(url), 0); }
-}
 
 export type ActionTrackerHandle = { appendTitles: (titles: string[]) => number };
 
@@ -54,6 +52,18 @@ export const ActionTracker = forwardRef<ActionTrackerHandle>(function ActionTrac
   const toggle = (row: ActionItem) => { setRows(r => r.map(x => x.id === row.id ? { ...x, status: x.status === 'done' ? 'open' : 'done' } : x)); setNotice(row.status === 'done' ? 'Tindakan dibuka kembali.' : 'Tindakan ditandai selesai.'); };
   const remove = (rid: string) => { setRows(r => r.filter(x => x.id !== rid)); if (editing === rid) { setEditing(null); setForm(empty); } setConfirmDelete(null); setNotice('Tindakan dihapus.'); };
   const done = rows.filter(r => r.status === 'done').length;
+  const restore = (items: BackupAction[]) => {
+    const known = new Set(rows.map(actionKey));
+    const additions: ActionItem[] = [];
+    for (const item of items) {
+      const key = actionKey(item);
+      if (known.has(key)) continue;
+      known.add(key);
+      additions.push({ ...item, id: `a${++seq.current}` });
+    }
+    setRows(previous => [...previous, ...additions]);
+    return additions.length;
+  };
 
   return <section id="pelacak-tindakan" aria-labelledby={`${id}-h`} data-testid="tool-tracker" className="surface scroll-mt-6 p-5 sm:p-7">
     <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#142c46] text-[#8ec7f4]"><ListChecks size={19} /></span><div><div className="eyebrow text-[#1769d1]">ALAT 02 / DRAF SEMENTARA</div><h2 id={`${id}-h`} className="display text-xl font-extrabold">Pelacak tindakan manual</h2></div></div>
@@ -79,5 +89,6 @@ export const ActionTracker = forwardRef<ActionTrackerHandle>(function ActionTrac
       </li>)}</ul>}
 
     <div className="mt-5 flex flex-wrap gap-2"><button type="button" data-testid="button-download-actions" disabled={!rows.length} onClick={() => downloadText(actionReport(rows), 'rencana-tindakan-sbu.txt')} className="btn btn-dark"><Download size={15} /> Unduh laporan teks</button>{rows.length > 0 && <button type="button" data-testid="button-clear-actions" onClick={() => { setRows([]); setEditing(null); setForm(empty); setNotice('Semua tindakan dihapus.'); }} className="btn btn-outline"><RotateCcw size={15} /> Kosongkan</button>}</div>
+    <ActionBackup rows={rows} onRestore={restore} />
   </section>;
 });

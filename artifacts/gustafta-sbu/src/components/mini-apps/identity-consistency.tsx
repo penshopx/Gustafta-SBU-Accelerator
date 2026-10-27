@@ -2,7 +2,7 @@ import { useId, useRef, useState } from 'react';
 import { CircleCheck, Download, FileSearch, Plus, RotateCcw, ShieldAlert, Trash2, TriangleAlert } from 'lucide-react';
 import { compareDocumentIdentities, type IdentityComparison, type IdentityRow } from '@/lib/document-identity';
 import { formatIdentityReport } from '@/lib/document-identity-report';
-import { downloadText } from './action-tracker';
+import { downloadText } from '@/lib/local-download';
 import { identityActionTitles } from '@/lib/identity-actions';
 
 const MAX = 8;

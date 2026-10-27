@@ -149,6 +149,53 @@ test('mini apps: search, filters, calendar, manual actions and download work wit
     await click('button-reset-identity');
     assert.equal(container.querySelectorAll('[data-testid^="row-action-"]').length, actionCount, 'reset does not erase existing actions');
     assert.equal((node('input-identity-label-0') as unknown as HTMLInputElement).value, '');
+    // Backup is explicit, previewed, additive, and stays local.
+    await click('button-backup-actions');
+    await new Promise(resolve => setTimeout(resolve, 20));
+    assert.equal(filename, 'cadangan-tindakan-sbu.json');
+    assert.equal(blob!.type, 'application/json;charset=utf-8');
+    const backupText = await blob!.text();
+    assert.equal(JSON.parse(backupText).actions.length, actionCount);
+    assert.equal(revoked, 'blob:mini-app-test');
+    const selectBackup = async (text: string | Promise<string>, size = 100) => act(async () => {
+      const input = node('input-backup-actions');
+      Object.defineProperty(input, 'files', { configurable: true, value: [{ size, text: async () => text }] });
+      input.dispatchEvent(new win.Event('change', { bubbles: true }));
+    });
+    await selectBackup('{bad json');
+    assert.ok(find('error-backup'));
+    assert.equal(container.querySelectorAll('[data-testid^="row-action-"]').length, actionCount);
+    await selectBackup(backupText);
+    assert.ok(find('preview-backup'));
+    assert.equal((node('button-restore-actions') as unknown as HTMLButtonElement).disabled, true, 'existing identical actions skipped');
+    await click('button-cancel-restore');
+    assert.equal(find('preview-backup'), null);
+    const incoming = JSON.stringify({ format: 'gustafta-sbu-actions', version: 1, actions: [
+      { title: 'Tindakan dari cadangan 工程', responsible: 'Tim uji', dueOn: '2028-02-29', status: 'done' },
+      { title: 'Tindakan dari cadangan 工程', responsible: 'Tim uji', dueOn: '2028-02-29', status: 'done' },
+    ] });
+    await selectBackup(incoming);
+    assert.equal(container.querySelectorAll('[data-testid^="row-action-"]').length, actionCount, 'preview does not mutate');
+    await click('button-cancel-restore');
+    assert.equal(container.querySelectorAll('[data-testid^="row-action-"]').length, actionCount, 'cancel does not mutate');
+    await selectBackup(incoming);
+    await click('button-restore-actions');
+    assert.equal(container.querySelectorAll('[data-testid^="row-action-"]').length, actionCount + 1, 'duplicate within backup skipped');
+    assert.match(node('tool-tracker').textContent!, /Tindakan dari cadangan 工程/);
+    assert.match(node('text-tracker-progress').textContent!, /1\/5 selesai/);
+    assert.equal((node('input-action-title') as unknown as HTMLInputElement).value, 'Draf belum disimpan');
+    await selectBackup(incoming);
+    assert.equal((node('button-restore-actions') as unknown as HTMLButtonElement).disabled, true);
+    // An older file finishing late must not replace the latest preview.
+    let finishOld!: (value: string) => void;
+    const oldRead = new Promise<string>(resolve => { finishOld = resolve; });
+    await selectBackup(oldRead);
+    await selectBackup(backupText);
+    await act(async () => { finishOld(incoming); await oldRead; });
+    assert.doesNotMatch(node('preview-backup').textContent!, /Tindakan dari cadangan 工程/);
+    await selectBackup(incoming, 256 * 1024 + 1);
+    assert.match(node('error-backup').textContent!, /terlalu besar/);
+    assert.equal(find('preview-backup'), null);
     assert.equal(requests, 0);
     await act(async () => root.render(null));
     await render();
