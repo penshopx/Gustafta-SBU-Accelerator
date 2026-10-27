@@ -1057,7 +1057,7 @@ paths:
       tags: [workspace]
       responses:
         "200":
-          description: Private self-contained printable HTML from one read-only repeatable-read snapshot of the owned case, evidence categories, rules, and case-linked owned personnel/SKK (Personnel contract). Includes assignments, levels, certificate numbers, declared issue/expiry dates, declaration timestamps, Asia/Jakarta asOf date indicators and owner/case-scoped document metadata only. Excludes private notes, storage paths and download links. Preparation declaration only, not SKK authenticity verification, assessment input or certification approval.
+          description: Private self-contained printable HTML from one read-only repeatable-read snapshot of the owned case, evidence categories, rules, case-linked owned personnel/SKK (Personnel contract), and internal SMAP checklist (SmapChecklist contract). SMAP includes every template question and source locator, latest declaration/review notes, revision, reviewer account identity and timestamps, saved document names/IDs/versions and current stale-reference warnings. SMAP notes are explicitly exported; other evidence/personnel private notes, file bytes, storage paths and download links are excluded. Preparation declaration and internal review only, not SKK authenticity verification, official ISO/KPK/LSBU confirmation, scoring, assessment input or certification approval.
           content:
             text/html:
               schema: { type: string }

@@ -1,7 +1,8 @@
 import type { SbuCaseRow, EvidenceRow, TransitionVerificationRow } from "@workspace/db";
-import type { Personnel } from "@workspace/api-zod";
+import type { Personnel, SmapChecklist } from "@workspace/api-zod";
 import { assessCase, regulationsFor } from "./sbu-rules";
 import { jakartaToday } from "./skk-calendar";
+import { smapSummarySection } from "./preparation-summary-smap";
 
 export const SUMMARY_DISCLAIMER = "Data adalah deklarasi pengguna, bukan verifikasi dokumen, penetapan kelayakan, atau keputusan LSBU.";
 
@@ -37,12 +38,14 @@ function personnelArticles(people: Personnel[]) {
   </article>`).join("");
 }
 
-// No remote assets, scripts, owner IDs, evidence text or applicant URLs are exported.
+// No remote assets, scripts, evidence text or applicant URLs are exported.
+// SMAP explicitly includes its declaration/review notes and reviewer account ID.
 // Evidence categories are sufficient for this preparation list, not document review.
 export function preparationSummary(
   item: SbuCaseRow, evidence: EvidenceRow[], verifications: TransitionVerificationRow[],
   generatedAt = new Date(),
   personnel: Personnel[] = [],
+  smap?: SmapChecklist,
 ) {
   const assessment = assessCase(item, evidence, verifications);
   const categories = [...new Set(evidence.map((entry) => entry.code))].sort();
@@ -68,7 +71,8 @@ export function preparationSummary(
   @page{size:A4;margin:18mm 16mm 28mm}
   @media print{body{margin:0;max-width:none;padding:0;font-size:11pt}
   thead{display:table-header-group}thead td{padding-bottom:4mm}
-   h2,h3,h4{break-after:avoid}article,.certificate{break-inside:avoid}.personnel article{break-inside:auto}section{break-before:page}
+   h2,h3,h4{break-after:avoid}article,.certificate{break-inside:avoid}.personnel article,.smap article{break-inside:auto}section{break-before:page}
+  .smap li,.smap p{break-inside:avoid}
   .notice{background:white}a{color:inherit}}
   </style></head><body>
   <table class="print-layout"><thead><tr><td><div class="page-notice">${SUMMARY_DISCLAIMER}</div></td></tr></thead><tbody><tr><td>
@@ -89,6 +93,7 @@ export function preparationSummary(
   <p>Hanya personel milik akun ini yang ditautkan ke kasus ini. Tanggal dan penugasan adalah deklarasi pengguna; indikator tanggal bukan verifikasi keaslian, kecukupan personel, atau persetujuan sertifikasi. Data ini tidak mengubah bukti maupun penilaian kasus.</p>
   <p class="meta">Tanggal acuan indikator (asOf): ${escape(jakartaToday(generatedAt))} (Asia/Jakarta). Tanggal pencatatan/pembaruan deklarasi ditampilkan dalam UTC. Rujukan dokumen hanya metadata, bukan lampiran atau tautan unduh.</p>
   ${personnel.length ? personnelArticles(personnel) : "<p>Belum ada personel yang ditautkan ke kasus ini melalui modul Personel &amp; SKK.</p>"}</section>
+  ${smapSummarySection(smap)}
   <section><h2>Temuan dan langkah persiapan</h2>
   <p>Lengkapi kategori bertanda “Perlu catatan bukti”; bawa dokumen asli untuk pemeriksaan manual. Temuan transisi memerlukan verifikasi sumber dan telaah ahli, bukan tambahan catatan pemohon.</p>
   <p>Aturan: ${escape(assessment.ruleset)}. ${escape(assessment.disclaimer)}</p>

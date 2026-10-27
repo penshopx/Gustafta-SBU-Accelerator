@@ -97,6 +97,12 @@ await build({
                const verificationRows = () => globalThis.__routeVerificationRows ?? [];
             export const db = {
               transaction(callback) { return callback(this); },
+              selectDistinctOn() {
+                return { from(table) {
+                  if (table !== smapChecklistRevisionsTable) throw new Error("unexpected distinct query");
+                  return { where() { return { orderBy() { return Promise.resolve([]); } }; } };
+                } };
+              },
               select() {
                 return {
                   from(table) {
@@ -105,7 +111,7 @@ await build({
                          if (table === casesTable) globalThis.__routeCaseReads = (globalThis.__routeCaseReads ?? 0) + 1;
                         if (table === evidenceTable) globalThis.__routeEvidenceReads++;
                         if (table === profilesTable) globalThis.__routeProfileReads = (globalThis.__routeProfileReads ?? 0) + 1;
-                         const rows = table === personnelTable ? [] : table === casesTable ? caseRows() :
+                         const rows = table === personnelTable || table === documentsTable ? [] : table === casesTable ? caseRows() :
                             table === profilesTable ? profileRows() : evidenceRows();
                          const result = rows.filter((row) => row && predicate(row));
                           return Object.assign(Promise.resolve(result), {
@@ -252,12 +258,17 @@ await build({
              export const skkCertificatesTable = {};
              export const workroomItemsTable = {};
              export const workroomReviewsTable = {};
+             export const smapChecklistRevisionsTable = {
+               caseId: "caseId", ownerId: "ownerId", templateVersion: "templateVersion",
+               questionId: "questionId", revision: "revision",
+             };
           `,
            "@clerk/express": `export const getAuth = () => ({ userId: globalThis.__routeUserId === undefined ? "test-user" : globalThis.__routeUserId });`,
           "drizzle-orm": `
             export const eq = (column, value) => (row) => row[column] === value;
             export const and = (...predicates) => (row) => predicates.every((predicate) => predicate(row));
              export const desc = (column) => ({ column, direction: "desc" });
+             export const asc = (column) => ({ column, direction: "asc" });
              export const ilike = () => { throw new Error("unexpected vault query"); };
              export const or = () => { throw new Error("unexpected vault query"); };
              export const sql = (strings) => {
@@ -269,7 +280,6 @@ await build({
                throw new Error("unexpected document query");
              };
              export const getTableColumns = () => { throw new Error("unexpected personnel query"); };
-             export const asc = () => { throw new Error("unexpected workroom query"); };
              export const inArray = () => { throw new Error("unexpected workroom query"); };
           `,
         })[args.path],

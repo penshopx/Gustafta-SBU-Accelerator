@@ -14,8 +14,9 @@ import { exerciseSummaryConnectionLoss } from "./helpers/summary-connection-loss
 const testDir = fileURLToPath(new URL(".", import.meta.url));
 const { Pool, DatabaseError } = createRequire(new URL("../../../lib/db/package.json", import.meta.url))("pg");
 const tables = ["sbu_profiles", "sbu_cases", "sbu_evidence", "sbu_transition_verifications",
-  "sbu_documents", "sbu_personnel", "sbu_skk_certificates"];
-const emptyPersonnelReads = ["sbu_cases", "sbu_evidence", "sbu_transition_verifications", "sbu_personnel"];
+  "sbu_documents", "sbu_personnel", "sbu_skk_certificates", "sbu_smap_checklist_revisions"];
+const emptyPersonnelReads = ["sbu_cases", "sbu_evidence", "sbu_transition_verifications", "sbu_personnel",
+  "sbu_documents", "sbu_smap_checklist_revisions"];
 
 test("GET preparation-summary preserves PostgreSQL snapshots and recovers from read failures", {
   timeout: 60_000,
@@ -98,7 +99,7 @@ test("GET preparation-summary preserves PostgreSQL snapshots and recovers from r
         throw error;
       }
       const table = /^\s*select\b/i.test(sql)
-        ? /from "(sbu_cases|sbu_evidence|sbu_transition_verifications|sbu_personnel|sbu_skk_certificates)"/i.exec(sql)?.[1]
+        ? /from "(sbu_cases|sbu_evidence|sbu_transition_verifications|sbu_personnel|sbu_skk_certificates|sbu_documents|sbu_smap_checklist_revisions)"/i.exec(sql)?.[1]
         : undefined;
       if (table) {
         reads.push(table);
@@ -108,7 +109,14 @@ test("GET preparation-summary preserves PostgreSQL snapshots and recovers from r
     };
     globalThis.__summaryPostgresDb = drizzle(reader);
     await build({
-      entryPoints: [join(testDir, "../src/routes/sbu.ts")],
+      stdin: {
+        contents: `export { default } from "./src/routes/sbu";
+          export { SMAP_TEMPLATE } from "./src/lib/smap-checklist";
+          export { smapDocuments } from "./src/lib/smap-documents";
+          export { documentsTable as documentsForTest } from "@workspace/db";
+          export { GetSmapChecklistResponse } from "@workspace/api-zod";`,
+        resolveDir: join(testDir, ".."), loader: "ts",
+      },
       outfile: join(temporaryDir, "route.mjs"),
       bundle: true, platform: "node", format: "esm",
       external: ["express", "@google-cloud/*"],
@@ -139,7 +147,7 @@ test("GET preparation-summary preserves PostgreSQL snapshots and recovers from r
         },
       }],
     });
-    const { default: router } = await import(join(temporaryDir, "route.mjs"));
+    const { default: router, smapDocuments, SMAP_TEMPLATE, GetSmapChecklistResponse, documentsForTest } = await import(join(temporaryDir, "route.mjs"));
     const app = express();
     // Match Express's production error body, without substituting the route's
     // response or swallowing its rejected transaction.
@@ -296,7 +304,7 @@ test("GET preparation-summary preserves PostgreSQL snapshots and recovers from r
           const result = await query.apply(client, args);
           const sql = typeof args[0] === "string" ? args[0] : args[0].text;
           const table = /^\s*select\b/i.test(sql)
-            ? /from "(sbu_cases|sbu_evidence|sbu_transition_verifications|sbu_personnel)"/i.exec(sql)?.[1]
+            ? /from "(sbu_cases|sbu_evidence|sbu_transition_verifications|sbu_personnel|sbu_documents|sbu_smap_checklist_revisions)"/i.exec(sql)?.[1]
             : undefined;
           const step = table ?? result.command;
           events.push({ id, pid, step });
@@ -372,9 +380,9 @@ test("GET preparation-summary preserves PostgreSQL snapshots and recovers from r
         assert.deepEqual(events.map(({ id, step }) => [id, step]), [
           [1, "checkout"], [1, "BEGIN"], [1, "sbu_cases"],
           [2, "checkout"], [2, "BEGIN"], [2, "sbu_cases"], [2, "sbu_evidence"],
-          ...["sbu_evidence", "sbu_transition_verifications", "sbu_personnel", "COMMIT", "release"]
+          ...["sbu_evidence", "sbu_transition_verifications", "sbu_personnel", "sbu_documents", "sbu_smap_checklist_revisions", "COMMIT", "release"]
             .map(step => [1, step]),
-          ...["sbu_transition_verifications", "sbu_personnel", "COMMIT", "release"]
+          ...["sbu_transition_verifications", "sbu_personnel", "sbu_documents", "sbu_smap_checklist_revisions", "COMMIT", "release"]
             .map(step => [2, step]),
         ]);
 
@@ -871,6 +879,124 @@ test("GET preparation-summary preserves PostgreSQL snapshots and recovers from r
       assert.equal(missing.response.headers.get("content-disposition"), null);
       assert.deepEqual(JSON.parse(missing.html), { error: "Permohonan tidak ditemukan." });
       assert.deepEqual(reads, ["sbu_cases"], "Kasus yang sudah dihapus tidak boleh memuat bukti atau ringkasan lama");
+    });
+    await t.test("SMAP export binds latest revisions and document availability to one owned snapshot", async () => {
+      const { rows: [smapCase] } = await writer.query(`INSERT INTO sbu_cases
+        (owner_id, company_name, request_type, qualification, classification)
+        VALUES ($1,'Kasus SMAP Sintetis','baru','kecil','gedung') RETURNING id`, [owner]);
+      const { rows: [otherCase] } = await writer.query(`INSERT INTO sbu_cases
+        (owner_id, company_name, request_type, qualification, classification)
+        VALUES ($1,'Kasus SMAP Lain','perpanjangan','kecil','gedung') RETURNING id`, [owner]);
+      const docId = randomUUID();
+      await writer.query(`INSERT INTO sbu_documents
+        (id,owner_id,case_id,name,content_type,size,object_path,status,scan_status)
+        VALUES ($1,$2,$3,'Bukti <SMAP>','application/pdf',123,'/PRIVATE_OBJECT_SMAP','ready','clean')`,
+      [docId, owner, smapCase.id]);
+      // Reuse the actual fingerprint implementation over real Drizzle rows.
+      const doc = (await drizzle(writer).select().from(documentsForTest)).find(d => d.id === docId);
+      const refs = smapDocuments([doc]);
+      const now = "2026-01-15T12:00:00.000Z";
+      const record = {
+        questionId: "SMC-I-01", revision: 1, answer: "ada", notes: 'Catatan SMAP <script>uji</script>',
+        evidence: refs, reviewStatus: "adequate", reviewNote: "Telaah sebelum",
+        reviewedBy: owner, reviewedAt: now, savedAt: now, needsReview: false,
+      };
+      const insertRevision = async (account, caseId, entry, template = SMAP_TEMPLATE) => {
+        await writer.query(`INSERT INTO sbu_smap_checklist_revisions
+          (id,owner_id,case_id,template_version,question_id,revision,record)
+          VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb)`,
+        [randomUUID(), account, caseId, template, entry.questionId, entry.revision, JSON.stringify(entry)]);
+      };
+      await insertRevision(owner, smapCase.id, record);
+      await insertRevision(otherOwner, smapCase.id, {
+        ...record, questionId: "SMC-I-02", notes: "PRIVATE_FOREIGN_SMAP",
+      });
+      await insertRevision(owner, otherCase.id, { ...record, notes: "PRIVATE_OTHER_CASE_SMAP" });
+      await insertRevision(owner, smapCase.id, {
+        ...record, questionId: "SMC-I-03", notes: "PRIVATE_RETIRED_TEMPLATE",
+      }, "retired-template");
+      const safe = result => {
+        assert.equal(result.response.status, 200, result.html);
+        assert.equal(result.response.headers.get("cache-control"), "private, no-store");
+        assert.match(result.response.headers.get("content-type"), /^text\/html/);
+        assert.match(result.html, /Catatan SMAP &lt;script&gt;uji&lt;\/script&gt;/);
+        assert.doesNotMatch(result.html, /<script|PRIVATE_|href=|fingerprint/);
+        assert.equal((result.html.match(/<h3>SMC-/g) ?? []).length, 23);
+        assert.match(result.html, /Bukan skor kesiapan atau keputusan kelulusan/);
+        assert.match(result.html, /belum terverifikasi/);
+        assert.match(result.html, /SMAP.*deklarasi dan telaah internal/);
+      };
+      const before = await request(owner, smapCase.id);
+      safe(before);
+      assert.match(before.html, /Telaah sebelum/);
+      assert.match(before.html, /Bukti &lt;SMAP&gt;/);
+      assert.match(before.html, /Rujukan sesuai pada snapshot/);
+      assert.doesNotMatch(before.html, /PERLU DITINJAU ULANG/);
+      let committed = false;
+      afterRead = async table => {
+        if (table !== "sbu_documents" || committed) return;
+        committed = true;
+        await writer.query("BEGIN");
+        try {
+          await writer.query("UPDATE sbu_documents SET name='Bukti berubah' WHERE id=$1", [docId]);
+          await insertRevision(owner, smapCase.id, {
+            ...record, revision: 2, reviewNote: "Telaah sesudah", savedAt: "2026-01-16T12:00:00.000Z",
+          });
+          await writer.query("COMMIT");
+        } catch (error) { await writer.query("ROLLBACK"); throw error; }
+      };
+      let snapshot;
+      try { snapshot = await request(owner, smapCase.id); }
+      finally { afterRead = undefined; }
+      safe(snapshot);
+      assert.equal(committed, true);
+      assert.equal(content(snapshot.html), content(before.html),
+        "Revisi SMAP dan ketersediaan dokumen tidak boleh bercampur lintas commit");
+      const latest = await request(owner, smapCase.id);
+      safe(latest);
+      assert.match(latest.html, /Revisi: 2/);
+      assert.match(latest.html, /Telaah sesudah/);
+      assert.doesNotMatch(latest.html, /Telaah sebelum/);
+      assert.match(latest.html, /PERLU DITINJAU ULANG/);
+      assert.match(latest.html, /RUJUKAN BERUBAH \/ TIDAK TERSEDIA/);
+      assert.match(latest.html, new RegExp(owner));
+      // GET API and export share the same contract-validated snapshot reader.
+      const checklistResponse = await fetch(
+        `http://127.0.0.1:${server.address().port}/api/cases/${smapCase.id}/smap-checklist`,
+        { headers: { "x-test-user-id": owner, "X-SBU-Form-Owner": owner } });
+      assert.equal(checklistResponse.status, 200);
+      const checklist = GetSmapChecklistResponse.parse(await checklistResponse.json());
+      assert.equal(checklist.entries.length, 1);
+      assert.equal(checklist.entries[0].needsReview, true);
+      assert.equal(checklist.entries[0].revision, 2);
+      for (const [status, scan] of [["ready", "infected"], ["pending", "clean"]]) {
+        await writer.query("UPDATE sbu_documents SET name=$2,status=$3,scan_status=$4 WHERE id=$1",
+          [docId, doc.name, status, scan]);
+        const unavailable = await request(owner, smapCase.id);
+        safe(unavailable);
+        assert.match(unavailable.html, /PERLU DITINJAU ULANG/);
+      }
+      await writer.query("DELETE FROM sbu_documents WHERE id=$1", [docId]);
+      const deleted = await request(owner, smapCase.id);
+      safe(deleted);
+      assert.match(deleted.html, /PERLU DITINJAU ULANG/);
+      assert.match(deleted.html, /Bukti &lt;SMAP&gt;/, "Metadata versi yang disetujui tidak hilang");
+      assert.equal((await request(otherOwner, smapCase.id)).response.status, 404);
+      assert.equal((await writer.query(`SELECT count(*)::int AS count FROM sbu_smap_checklist_revisions
+        WHERE case_id=$1 AND owner_id=$2 AND template_version=$3`,
+      [smapCase.id, owner, SMAP_TEMPLATE])).rows[0].count, 2,
+      "Ekspor tidak boleh mengubah revisi atau menghapus keputusan lama");
+      // A failed SMAP read must fail the whole export, never silently omit it.
+      await admin.query(`REVOKE SELECT ON "${schema}".sbu_smap_checklist_revisions FROM "${readerRole}"`);
+      try {
+        const failed = await request(owner, smapCase.id);
+        assert.equal(failed.response.status, 500);
+        assert.equal(failed.response.headers.get("content-disposition"), null);
+        assert.doesNotMatch(failed.html, /Catatan SMAP|Kasus SMAP|<h3>SMC/);
+      } finally {
+        await admin.query(`GRANT SELECT ON "${schema}".sbu_smap_checklist_revisions TO "${readerRole}"`);
+      }
+      safe(await request(owner, smapCase.id));
     });
     // Safety checks use SELECT only against live tables.
     for (const [table, column] of [

@@ -1,14 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { getAuth } from "@clerk/express";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db, casesTable, documentsTable, smapChecklistRevisionsTable as revisions } from "@workspace/db";
 import {
-  GetSmapChecklistParams, GetSmapChecklistResponse, GetSmapChecklistHistoryParams,
+  GetSmapChecklistParams, GetSmapChecklistHistoryParams,
   GetSmapChecklistHistoryResponse, SaveSmapChecklistEntryParams, SaveSmapChecklistEntryBody,
   SaveSmapChecklistEntryResponse as Entry, ReviewSmapChecklistEntryBody,
 } from "@workspace/api-zod";
-import { SMAP_TEMPLATE, SMAP_DISCLAIMER, smapQuestions, smapDocuments } from "../lib/smap-checklist";
+import { SMAP_TEMPLATE, smapQuestions } from "../lib/smap-checklist";
+import { smapDocuments } from "../lib/smap-documents";
+import { caseSmapSnapshot } from "../lib/smap-snapshot";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type RecordEntry = ReturnType<typeof Entry.parse>;
@@ -45,16 +47,7 @@ export function createSmapChecklistRouter(): IRouter {
       const [parent] = await tx.select({ id: casesTable.id }).from(casesTable)
         .where(and(eq(casesTable.id, id), eq(casesTable.ownerId, owner)));
       if (!parent) return null;
-      // No locks in this repeatable-read snapshot: documents and declarations
-      // must be read from the same snapshot, not mixed across commits.
-      const docs = smapDocuments(await tx.select().from(documentsTable)
-        .where(and(eq(documentsTable.caseId, id), eq(documentsTable.ownerId, owner))));
-      const rows = await tx.selectDistinctOn([revisions.questionId]).from(revisions)
-        .where(scope(id, owner)).orderBy(asc(revisions.questionId), desc(revisions.revision));
-      return GetSmapChecklistResponse.parse({
-        caseId: id, templateVersion: SMAP_TEMPLATE, disclaimer: SMAP_DISCLAIMER,
-        questions: smapQuestions, documents: docs, entries: rows.map(r => serialize(r.record, docs)),
-      });
+      return caseSmapSnapshot(tx, id, owner);
     }, { isolationLevel: "repeatable read", accessMode: "read only" });
     if (!data) { res.status(404).json({ error: "Kasus tidak ditemukan." }); return; }
     res.json(data);

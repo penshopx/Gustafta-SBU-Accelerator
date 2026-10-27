@@ -183,6 +183,12 @@ test('CasePreparationExport disposes isolated native print surfaces and HTML dow
       }, index);
       assert.equal(record.isBlob, true);
       assert.equal(record.type, 'text/html;charset=utf-8');
+      assert.match(record.text, /Checklist SMAP — deklarasi dan telaah internal/);
+      assert.match(record.text, /Deklarasi SMAP &lt;script&gt;uji&lt;\/script&gt;/);
+      assert.match(record.text, /synthetic-reviewer/);
+      assert.match(record.text, /PERLU DITINJAU ULANG/);
+      assert.match(record.text, /Dokumen SMAP &lt;contoh&gt;/);
+      assert.equal((record.text.match(/<h3>SMC-/g) ?? []).length, 23);
       assert.equal(record.text, record.expected);
       assert.ok(record.url.startsWith('blob:'));
       assert.deepEqual(record.click, { href: record.url, download: 'ringkasan-persiapan-sbu.html' });

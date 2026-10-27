@@ -7,10 +7,16 @@ import { build } from "esbuild";
 export async function summaryPrintFixture(directory) {
   const bundle = join(directory, "summary.mjs");
   await build({
-    entryPoints: [fileURLToPath(new URL("../../src/lib/preparation-summary.ts", import.meta.url))],
+    stdin: {
+      contents: `export { preparationSummary, SUMMARY_DISCLAIMER } from "./src/lib/preparation-summary";
+        export { smapQuestions, SMAP_TEMPLATE, SMAP_DISCLAIMER } from "./src/lib/smap-checklist";
+        export { GetSmapChecklistResponse } from "@workspace/api-zod";`,
+      resolveDir: fileURLToPath(new URL("../..", import.meta.url)), loader: "ts",
+    },
     outfile: bundle, bundle: true, platform: "node", format: "esm",
   });
-  const { preparationSummary, SUMMARY_DISCLAIMER } = await import(pathToFileURL(bundle).href);
+  const { preparationSummary, SUMMARY_DISCLAIMER, smapQuestions, SMAP_TEMPLATE,
+    SMAP_DISCLAIMER, GetSmapChecklistResponse } = await import(pathToFileURL(bundle).href);
   const generatedAt = new Date("2026-01-15T12:00:00Z");
   const item = {
     id: 1, ownerId: "synthetic-not-a-real-account", companyName: "Usaha Fixture Cetak",
@@ -40,7 +46,20 @@ export async function summaryPrintFixture(directory) {
       createdAt: generatedAt.toISOString(), updatedAt: generatedAt.toISOString(),
     })),
   }];
-  const longHtml = preparationSummary(item, evidence, [], generatedAt, personnel);
+  const smap = GetSmapChecklistResponse.parse({
+    caseId: item.id, templateVersion: SMAP_TEMPLATE, disclaimer: SMAP_DISCLAIMER,
+    questions: smapQuestions, documents: [],
+    entries: smapQuestions.map((q, i) => ({
+      questionId: q.id, revision: i + 1, answer: i % 2 ? "tidak" : "ada",
+      notes: `Catatan SMAP sintetis ${q.id}. ` + "Penjelasan deklarasi untuk tinjauan internal. ".repeat(12),
+      evidence: [{ id: "00000000-0000-4000-8000-000000000090",
+        name: `Dokumen SMAP <contoh> ${q.id}`, version: 2, fingerprint: "a".repeat(64) }],
+      reviewStatus: "clarification", reviewNote: `Telaah SMAP sintetis ${q.id}`,
+      reviewedBy: "reviewer-fixture-smap", reviewedAt: generatedAt.toISOString(),
+      savedAt: generatedAt.toISOString(), needsReview: true,
+    })),
+  });
+  const longHtml = preparationSummary(item, evidence, [], generatedAt, personnel, smap);
   const shortHtml = preparationSummary({ ...item, requestType: "baru" }, [], [], generatedAt);
   // Invented stress values, not input-limit examples or real applicant data.
   // Distinct prefixes/tails detect truncation, while indexed chunks detect loss
@@ -55,8 +74,8 @@ export async function summaryPrintFixture(directory) {
     `AWALKATEGORIUNICODE${chunks("ÅngströmΔМосква", 60, "")}AKHIRKATEGORIUNICODE`,
   ];
   const extremeHtml = preparationSummary({ ...item, companyName },
-    extremeCodes.map((code, i) => ({ ...evidence[0], id: i + 1, code })), [], generatedAt, personnel);
-  assert.equal((longHtml.match(/<article>/g) || []).length, 12, "personnel, all nine findings and two regulations");
+    extremeCodes.map((code, i) => ({ ...evidence[0], id: i + 1, code })), [], generatedAt, personnel, smap);
+  assert.equal((longHtml.match(/<article>/g) || []).length, 35, "personnel, 23 SMAP questions, nine findings and two regulations");
   for (const html of [longHtml, shortHtml, extremeHtml]) {
     assert.doesNotMatch(html, /PRIVATE_FIXTURE|synthetic-not-a-real-account/);
   }
@@ -104,6 +123,7 @@ export function assertSummaryContent(pages, fixture, variant) {
   const text = pages.flatMap((page) => page.words.map((word) => word.text)).join(" ");
   if (variant === "short") {
     assert.ok(text.includes("Belum ada catatan bukti."));
+    assert.equal(text.split("Jawaban: Belum dijawab").length - 1, 23);
   } else {
     assert.ok(pages.length >= 6, `fixture must paginate substantially, got ${pages.length}`);
     for (const code of fixture.codes) {
@@ -114,6 +134,11 @@ export function assertSummaryContent(pages, fixture, variant) {
     assert.ok(text.includes("Penugasan: PJT"));
     assert.ok(text.includes("Jenjang: 6"));
     assert.ok(text.includes("2026-01-15 (Asia/Jakarta)"));
+    assert.equal(text.split("PERLU DITINJAU ULANG").length - 1, 23);
+    assert.ok(text.includes("reviewer-fixture-smap"));
+    for (const group of ["SMC-I-09", "SMC-II-03", "SMC-III-07", "SMC-IV-04"]) {
+      assert.ok(text.includes(group), `missing SMAP group endpoint ${group}`);
+    }
     for (let i = 0; i < 12; i++) {
       const number = `SKK-FIXTURE-${String(i).padStart(2, "0")}`;
       assert.equal(text.split(number).length - 1, 1, `certificate missing or duplicated: ${number}`);

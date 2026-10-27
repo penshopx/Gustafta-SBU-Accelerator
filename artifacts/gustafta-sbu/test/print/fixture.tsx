@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CasePreparationExport } from '../../src/components/case-preparation-export';
 import { preparationSummary } from '../../../api-server/src/lib/preparation-summary';
+import { smapQuestions, SMAP_TEMPLATE, SMAP_DISCLAIMER } from '../../../api-server/src/lib/smap-checklist';
 
 // Pure HTML generation only: the generator's database imports are type-only.
 // No application router, auth provider, credentials or database is loaded.
@@ -11,7 +12,19 @@ const html = preparationSummary({
   id: 1, ownerId: 'synthetic', companyName, requestType: 'baru',
   qualification: 'kecil', classification: 'gedung', status: 'draf',
   existingSbuExpiresOn: null, createdAt: date, updatedAt: date,
-} as Parameters<typeof preparationSummary>[0], [], [], date);
+} as Parameters<typeof preparationSummary>[0], [], [], date, [], {
+  caseId: 1, templateVersion: SMAP_TEMPLATE, disclaimer: SMAP_DISCLAIMER,
+  questions: smapQuestions, documents: [], entries: [{
+    questionId: 'SMC-I-01', revision: 2, answer: 'ada',
+    notes: 'Deklarasi SMAP <script>uji</script>', evidence: [{
+      id: '00000000-0000-4000-8000-000000000090', name: 'Dokumen SMAP <contoh>',
+      version: 1, fingerprint: 'a'.repeat(64),
+    }],
+    reviewStatus: 'adequate', reviewNote: 'Telaah sintetis',
+    reviewedBy: 'synthetic-reviewer', reviewedAt: date.toISOString(),
+    savedAt: date.toISOString(), needsReview: true,
+  }],
+});
 
 // The real generated API client still makes its HTTP request. Playwright serves
 // this synthetic response at the network boundary, never the live API.

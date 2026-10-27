@@ -1,6 +1,3 @@
-import { createHash } from "node:crypto";
-import type { DocumentRow } from "@workspace/db";
-
 export const SMAP_TEMPLATE = "smap-example-internal-1";
 export const SMAP_DISCLAIMER = "Draf persiapan/telaah internal dari contoh checklist. Identitas peraturan induk dan keberlakuan belum dipastikan. Bukan persyaratan wajib, sertifikasi ISO, konfirmasi PANCEK/KPK, atau persetujuan SBU. Tidak menghitung kelulusan.";
 const groups = ["Komitmen", "Perencanaan", "Pelaksanaan", "Evaluasi"];
@@ -42,14 +39,3 @@ export const smapQuestions = rows.flatMap((items, group) => items.map(([text, su
   group: groups[group], text, suggestedEvidence, reviewFocus,
   source: `Contoh checklist SMAP, A.2 ${["I", "II", "III", "IV"][group]}.${i + 1}; PDF/cetak ${group < 2 ? 2 : 3}. Kode lokal, bukan indikator resmi PANCEK.`,
 })));
-
-export function smapDocuments(docs: DocumentRow[]) {
-  return docs.filter(d => d.status === "ready" && d.scanStatus === "clean" &&
-    !docs.some(newer => d.seriesId && newer.seriesId === d.seriesId && newer.version > d.version))
-    .map(d => ({
-      id: d.id, name: d.name, version: d.version,
-      fingerprint: createHash("sha256").update(JSON.stringify([
-        d.id, d.version, d.name, d.description, d.category, d.scanGeneration, d.seriesId,
-      ])).digest("hex"),
-    }));
-}

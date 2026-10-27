@@ -47,8 +47,18 @@ historis; ia bukan keputusan atas bukti yang baru.
   atau salinan berkas. Nama dan catatan pada riwayat tetap data privat.
 - Penelaah saat ini adalah akun pemilik yang sah, bukan role LSBU,
   reviewer independen atau persetujuan multipihak.
-- Ringkasan cetak/unduh persiapan lama belum memuat matriks ini;
-  fitur ini menampilkan deklarasi dan riwayat di halaman kasus.
+- Ringkasan persiapan unduh HTML dan cetak/PDF memuat 23 butir SMAP,
+  locator sumber contoh, versi template, deklarasi/catatan, revisi terakhir,
+  keputusan/catatan telaah serta ID akun penelaah dan waktunya.
+  Riwayat lengkap tetap di halaman kasus.
+- Status rujukan dokumen dan checklist dibaca dalam transaksi repeatable-read
+  yang sama dengan kasus, personel dan bukti. Rujukan berubah/tidak tersedia
+  ditandai perlu tinjauan ulang; keputusan lama tidak dihapus atau dinyatakan
+  masih memadai. Ekspor tidak mengubah assessment, evidence atau revisi SMAP.
+- Catatan SMAP dan identitas penelaah ikut keluar ke perangkat saat unduh/cetak.
+  Pemberitahuan sebelum ekspor menjelaskan hal ini. Berkas asli, fingerprint,
+  lokasi storage, tautan unduh dan catatan privat modul lain tidak disertakan.
+  Salinan ekspor bersifat privat dan tidak mengikuti perubahan berikutnya.
 
 ## Kontrak dan pemeriksaan
 

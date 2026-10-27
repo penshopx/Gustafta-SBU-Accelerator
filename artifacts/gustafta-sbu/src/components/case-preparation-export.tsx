@@ -109,7 +109,7 @@ export function CasePreparationExport({ caseId }: { caseId: number }) {
       <button type="button" className="btn btn-outline" data-testid="button-download-summary" disabled={pending} onClick={() => exportSummary('download')}><Download size={16}/> Unduh HTML</button>
       <button type="button" className="btn btn-primary" data-testid="button-print-summary" disabled={pending} onClick={() => exportSummary('print')}><Printer size={16}/> Cetak / Simpan PDF</button>
     </div>
-    <p className="mt-3 text-xs leading-5 text-[#60788d]">{pending ? 'Membuat ringkasan dari data terbaru…' : 'Isi catatan pribadi tidak disertakan. Simpan unduhan secara privat; salinan tidak mengikuti perubahan berikutnya. Saat mencetak, gunakan pengaturan bawaan dan matikan header/footer browser bila perlu.'}</p>
+    <p className="mt-3 text-xs leading-5 text-[#60788d]">{pending ? 'Membuat ringkasan dari data terbaru…' : 'Checklist SMAP ikut disertakan: jawaban, catatan deklarasi/telaah, identitas akun penelaah, revisi dan rujukan versi dokumen beserta peringatan bila berubah. Ini telaah internal, bukan persetujuan LSBU, ISO atau KPK. Isi catatan bukti lainnya tidak disertakan. Simpan unduhan secara privat; salinan tidak mengikuti perubahan berikutnya. Saat mencetak, gunakan pengaturan bawaan dan matikan header/footer browser bila perlu.'}</p>
     {error && <p role="alert" className="mt-3 text-sm text-[#b34442]">{error}</p>}
   </section>;
 }

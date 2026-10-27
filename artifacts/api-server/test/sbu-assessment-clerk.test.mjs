@@ -192,6 +192,7 @@ await build({
           export const skkCertificatesTable = {};
           export const workroomItemsTable = {};
           export const workroomReviewsTable = {};
+          export const smapChecklistRevisionsTable = {};
           export const db = {
             select() {
               globalThis.__clerkTestDataReads = (globalThis.__clerkTestDataReads ?? 0) + 1;
