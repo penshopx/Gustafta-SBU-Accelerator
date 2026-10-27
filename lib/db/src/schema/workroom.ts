@@ -15,6 +15,9 @@ export const workroomItemsTable = pgTable("sbu_workroom_items", {
   revision: integer("revision").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, t => [index("sbu_workroom_case_owner_idx").on(t.caseId, t.ownerId)]);
+}, t => [
+  index("sbu_workroom_case_owner_idx").on(t.caseId, t.ownerId),
+  index("sbu_workroom_owner_kind_due_case_idx").on(t.ownerId, t.kind, t.dueOn, t.caseId),
+]);
 export const insertWorkroomItemSchema = createInsertSchema(workroomItemsTable).omit({ createdAt: true, updatedAt: true });
 export type WorkroomItemRow = typeof workroomItemsTable.$inferSelect;

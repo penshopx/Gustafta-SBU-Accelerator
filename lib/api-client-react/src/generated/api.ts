@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AccountAgenda,
   AddEvidence409,
   AiUnavailable,
   Assessment,
@@ -43,6 +44,7 @@ import type {
   EvidenceInput,
   EvidenceUpdate,
   FormOwnerMismatchResponse,
+  GetAccountAgendaParams,
   HealthStatus,
   KnowledgeSource,
   ListDocumentVault200,
@@ -670,6 +672,87 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getPreviewWorkroomReviewMutationOptions(options));
     }
+
+export const getGetAccountAgendaUrl = (params?: GetAccountAgendaParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/agenda?${stringifiedParams}` : `/api/agenda`
+}
+
+/**
+ * Private owner-bound action agenda across cases. Dates are internal preparation targets, not statutory deadlines.
+ */
+export const getAccountAgenda = async (params?: GetAccountAgendaParams, options?: Parameters<typeof customFetch>[1]): Promise<AccountAgenda> => {
+
+  return customFetch<AccountAgenda>(getGetAccountAgendaUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAccountAgendaQueryKey = (params?: GetAccountAgendaParams,) => {
+    return [
+    `/api/agenda`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAccountAgendaQueryOptions = <TData = Awaited<ReturnType<typeof getAccountAgenda>>, TError = ErrorType<void>>(params?: GetAccountAgendaParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAccountAgenda>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAccountAgendaQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAccountAgenda>>> = ({ signal }) => getAccountAgenda(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAccountAgenda>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAccountAgendaQueryResult = NonNullable<Awaited<ReturnType<typeof getAccountAgenda>>>
+export type GetAccountAgendaQueryError = ErrorType<void>
+
+
+
+export function useGetAccountAgenda<TData = Awaited<ReturnType<typeof getAccountAgenda>>, TError = ErrorType<void>>(
+ params?: GetAccountAgendaParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAccountAgenda>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAccountAgendaQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetWorkroomUrl = (id: number,) => {
 

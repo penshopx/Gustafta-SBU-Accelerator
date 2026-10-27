@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { Router, type IRouter } from "express";
 import { getAuth } from "@clerk/express";
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, isNull, lte, lt, ne, or, sql } from "drizzle-orm";
 import { db, casesTable, workroomItemsTable, type WorkroomItemRow } from "@workspace/db";
 import {
   GetWorkroomParams, GetWorkroomResponse, CreateWorkroomItemBody,
   UpdateWorkroomItemParams, UpdateWorkroomItemBody, DeleteWorkroomItemBody,
   CreateWorkroomItemResponse,
+  GetAccountAgendaQueryParams, GetAccountAgendaResponse,
 } from "@workspace/api-zod";
 import { validCalendarDay } from "../lib/skk-calendar";
 
@@ -27,7 +28,7 @@ const journalFieldsValid = (kind: string, data: { status?: string; assignee?: st
 
 export function createWorkroomRouter(): IRouter {
   const router: IRouter = Router();
-  router.use("/cases/:id/workroom", (req, res, next) => {
+  router.use(["/agenda", "/cases/:id/workroom"], (req, res, next) => {
     res.set("Cache-Control", "private, no-store");
     const ownerId = getAuth(req).userId;
     if (!ownerId) { res.status(401).json({ error: "Silakan masuk untuk melanjutkan." }); return; }
@@ -35,6 +36,61 @@ export function createWorkroomRouter(): IRouter {
       res.status(409).json({ error: "Sesi akun berubah. Muat ulang halaman." }); return;
     }
     next();
+  });
+  router.get("/agenda", async (req, res): Promise<void> => {
+    if (Object.keys(req.query).some(key => !["page", "pageSize", "filter", "search"].includes(key))) {
+      res.status(400).json({ error: "Parameter agenda tidak sah." }); return;
+    }
+    const params = GetAccountAgendaQueryParams.safeParse(req.query);
+    if (!params.success) { res.status(400).json({ error: "Parameter agenda tidak sah." }); return; }
+    const ownerId = getAuth(req).userId!;
+    const { page, pageSize, filter, search } = params.data;
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(now);
+    const today = `${parts.find(p => p.type === "year")!.value}-${parts.find(p => p.type === "month")!.value}-${parts.find(p => p.type === "day")!.value}`;
+    const through = new Date(Date.parse(`${today}T00:00:00Z`) + 7 * 86400000).toISOString().slice(0, 10);
+    const item = workroomItemsTable, parent = casesTable;
+    const active = ne(item.status, "done");
+    const filters = {
+      active,
+      overdue: and(active, lt(item.dueOn, today)),
+      today: and(active, eq(item.dueOn, today)),
+      week: and(active, gte(item.dueOn, today), lte(item.dueOn, through)),
+      undated: and(active, isNull(item.dueOn)),
+      done: eq(item.status, "done"),
+      all: sql`true`,
+    } as const;
+    // Escape LIKE wildcards: search is a literal, not a pattern or an SQL fragment.
+    const term = search?.trim();
+    const pattern = term ? `%${term.replace(/[\\%_]/g, "\\$&")}%` : null;
+    const where = and(eq(parent.ownerId, ownerId), eq(item.ownerId, ownerId), eq(item.kind, "action"),
+      filters[filter], ...(pattern ? [or(ilike(item.title, pattern), ilike(item.assignee, pattern),
+        ilike(parent.companyName, pattern), ilike(parent.classification, pattern))] : []));
+    const priority = sql<number>`case
+      when ${item.status} = 'done' then 5
+      when ${item.dueOn} is null then 4
+      when ${item.dueOn} < ${today}::date then 0
+      when ${item.dueOn} = ${today}::date then 1
+      when ${item.dueOn} <= ${through}::date then 2
+      else 3 end`;
+    const result = await db.transaction(async tx => {
+      const [{ total }] = await tx.select({ total: count() }).from(item)
+        .innerJoin(parent, eq(item.caseId, parent.id)).where(where);
+      const rows = await tx.select({
+        id: item.id, caseId: item.caseId, companyName: parent.companyName,
+        classification: parent.classification, title: item.title, status: item.status,
+        assignee: item.assignee, dueOn: item.dueOn, revision: item.revision,
+      }).from(item).innerJoin(parent, eq(item.caseId, parent.id)).where(where)
+        .orderBy(priority, asc(item.dueOn), asc(item.caseId), asc(item.id))
+        .limit(pageSize).offset((page - 1) * pageSize);
+      return GetAccountAgendaResponse.parse({
+        ownerId, today, asOf: now.toISOString(), page, pageSize, total,
+        hasNext: page * pageSize < total, items: rows,
+      });
+    }, { isolationLevel: "repeatable read", accessMode: "read only" });
+    res.json(result);
   });
   router.get("/cases/:id/workroom", async (req, res): Promise<void> => {
     const params = GetWorkroomParams.safeParse(req.params);

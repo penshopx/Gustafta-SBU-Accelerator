@@ -262,6 +262,51 @@ export interface ReviewWorkspace {
   historyTruncated: boolean;
 }
 
+export type AccountAgendaActionStatus = typeof AccountAgendaActionStatus[keyof typeof AccountAgendaActionStatus];
+
+
+export const AccountAgendaActionStatus = {
+  todo: 'todo',
+  doing: 'doing',
+  done: 'done',
+} as const;
+
+export interface AccountAgendaAction {
+  id: string;
+  /** @minimum 1 */
+  caseId: number;
+  companyName: string;
+  classification: string;
+  title: string;
+  status: AccountAgendaActionStatus;
+  assignee: string;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  dueOn: string | null;
+  /** @minimum 0 */
+  revision: number;
+}
+
+export interface AccountAgenda {
+  ownerId: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  today: string;
+  asOf: string;
+  /** @minimum 1 */
+  page: number;
+  /**
+     * @minimum 1
+     * @maximum 100
+     */
+  pageSize: number;
+  /** @minimum 0 */
+  total: number;
+  hasNext: boolean;
+  items: AccountAgendaAction[];
+}
+
 export interface WorkroomItemDeletion {
   /** @minimum 0 */
   revision: number;
@@ -1702,6 +1747,37 @@ export interface Regulation {
 export type FormOwnerMismatchResponse = {
   error: string;
 };
+
+export type GetAccountAgendaParams = {
+/**
+ * @minimum 1
+ * @maximum 100000
+ */
+page?: number;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+pageSize?: number;
+filter?: GetAccountAgendaFilter;
+/**
+ * @maxLength 120
+ */
+search?: string;
+};
+
+export type GetAccountAgendaFilter = typeof GetAccountAgendaFilter[keyof typeof GetAccountAgendaFilter];
+
+
+export const GetAccountAgendaFilter = {
+  active: 'active',
+  overdue: 'overdue',
+  today: 'today',
+  week: 'week',
+  undated: 'undated',
+  done: 'done',
+  all: 'all',
+} as const;
 
 export type ListDocumentVaultParams = {
 /**

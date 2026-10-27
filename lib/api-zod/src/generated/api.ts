@@ -517,6 +517,61 @@ export const PreviewWorkroomReviewResponse = zod.object({
 })
 
 
+/**
+ * Private owner-bound action agenda across cases. Dates are internal preparation targets, not statutory deadlines.
+ */
+export const getAccountAgendaQueryPageDefault = 1;
+export const getAccountAgendaQueryPageMax = 100000;
+
+export const getAccountAgendaQueryPageSizeDefault = 20;
+export const getAccountAgendaQueryPageSizeMax = 100;
+
+export const getAccountAgendaQueryFilterDefault = `active`;
+export const getAccountAgendaQuerySearchMax = 120;
+
+
+
+export const GetAccountAgendaQueryParams = zod.object({
+  "page": zod.coerce.number().int().min(1).max(getAccountAgendaQueryPageMax).default(getAccountAgendaQueryPageDefault),
+  "pageSize": zod.coerce.number().int().min(1).max(getAccountAgendaQueryPageSizeMax).default(getAccountAgendaQueryPageSizeDefault),
+  "filter": zod.enum(['active', 'overdue', 'today', 'week', 'undated', 'done', 'all']).default(getAccountAgendaQueryFilterDefault),
+  "search": zod.coerce.string().max(getAccountAgendaQuerySearchMax).optional()
+})
+
+export const getAccountAgendaResponseTodayRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+export const getAccountAgendaResponsePageSizeMax = 100;
+
+export const getAccountAgendaResponseTotalMin = 0;
+
+
+export const getAccountAgendaResponseItemsItemDueOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const getAccountAgendaResponseItemsItemRevisionMin = 0;
+
+
+
+export const GetAccountAgendaResponse = zod.object({
+  "ownerId": zod.string(),
+  "today": zod.string().regex(getAccountAgendaResponseTodayRegExp),
+  "asOf": zod.coerce.date(),
+  "page": zod.number().int().min(1),
+  "pageSize": zod.number().int().min(1).max(getAccountAgendaResponsePageSizeMax),
+  "total": zod.number().int().min(getAccountAgendaResponseTotalMin),
+  "hasNext": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "caseId": zod.number().int().min(1),
+  "companyName": zod.string(),
+  "classification": zod.string(),
+  "title": zod.string(),
+  "status": zod.enum(['todo', 'doing', 'done']),
+  "assignee": zod.string(),
+  "dueOn": zod.string().regex(getAccountAgendaResponseItemsItemDueOnRegExp).nullable(),
+  "revision": zod.number().int().min(getAccountAgendaResponseItemsItemRevisionMin)
+}))
+})
+
+
 
 
 

@@ -6,6 +6,18 @@ Buka **Kasus SBU → pilih kasus → Ruang kerja kasus**. Agenda membaca
 tindakan yang sudah disimpan di ruang kerja; tidak membuat daftar persyaratan
 baru, mengubah penilaian, atau menyatakan kesiapan sertifikasi.
 
+Untuk melihat semua kasus milik satu akun sekaligus, buka **Agenda kasus**
+di navigasi (alamat `/agenda`). Hasil dibatasi di server oleh identitas login
+dan kasus yang dimiliki akun yang sama; profil akun lain tidak ditampilkan.
+Pengguna tanpa peran pemilik kasus tidak mendapat menu ini. Halaman membaca
+20 tindakan per halaman, menyediakan pencarian kata literal pada judul,
+penanggung jawab, nama perusahaan, atau klasifikasi dan filter
+aktif/terlewat/hari ini/7 hari/tanpa tenggat/selesai/semua. Baris membawa
+pengguna ke kasus untuk memperbarui tindakan; ia tidak menyimpan salinan data
+terpisah. Muat ulang atau fokus jendela untuk mengambil perubahan dari sesi
+lain. Total dan isi halaman adalah snapshot satu permintaan; perpindahan
+halaman setelah perubahan paralel dapat menggeser posisi tindakan.
+
 - Prioritas: terlewat, hari ini, tujuh hari ke depan, mendatang, tanpa tenggat.
 - Pencarian judul, penanggung jawab, dan keterangan; filter status/urgensi.
 - Tambah dan ubah menggunakan formulir ruang kerja yang sudah ada. Perubahan

@@ -122,6 +122,24 @@ paths:
         '401': { description: Authentication required }
         '404': { description: Selected owned materials unavailable }
         '409': { description: Account precondition mismatch }
+  /agenda:
+    get:
+      operationId: getAccountAgenda
+      description: Private owner-bound action agenda across cases. Dates are internal preparation targets, not statutory deadlines.
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 100000, default: 1 } }
+        - { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { name: filter, in: query, schema: { type: string, enum: [active, overdue, today, week, undated, done, all], default: active } }
+        - { name: search, in: query, schema: { type: string, maxLength: 120 } }
+      responses:
+        "200":
+          description: Consistent paginated agenda for the verified session owner
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AccountAgenda" }
+        "400": { description: Invalid filter or pagination }
+        "401": { description: Sign-in required }
+        "409": { description: Initiating account does not match the session }
   /cases/{id}/workroom:
     parameters:
       - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
@@ -1361,6 +1379,33 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ReviewRecord' }
         historyTruncated: { type: boolean }
+    AccountAgendaAction:
+      type: object
+      required: [id, caseId, companyName, classification, title, status, assignee, dueOn, revision]
+      properties:
+        id: { type: string, format: uuid }
+        caseId: { type: integer, minimum: 1 }
+        companyName: { type: string }
+        classification: { type: string }
+        title: { type: string }
+        status: { type: string, enum: [todo, doing, done] }
+        assignee: { type: string }
+        dueOn: { type: ["string", "null"], pattern: '^\d{4}-\d{2}-\d{2}$' }
+        revision: { type: integer, minimum: 0 }
+    AccountAgenda:
+      type: object
+      required: [ownerId, today, asOf, page, pageSize, total, hasNext, items]
+      properties:
+        ownerId: { type: string }
+        today: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        asOf: { type: string, format: date-time }
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1, maximum: 100 }
+        total: { type: integer, minimum: 0 }
+        hasNext: { type: boolean }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AccountAgendaAction" }
     WorkroomItemDeletion:
       type: object
       required: [revision]
