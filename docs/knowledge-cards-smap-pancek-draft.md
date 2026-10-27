@@ -328,3 +328,8 @@ komitmen dan pelatihan tetap kategori bukti tersendiri, bukan
 digantikan oleh checklist ini. Tidak menggandakan identitas contoh
 ke kasus pengguna, menerbitkan dokumen mirip keluaran KPK, atau
 menyatakan hasil “lulus PANCEK”.
+
+Rancangan lanjutan tersedia pada
+[matriks pertanyaan–bukti–telaah SMAP](smap-checklist-evidence-matrix-draft.md).
+Matriks tersebut merangkum 23 pertanyaan contoh dengan kode lokal,
+bukan transkripsi indikator resmi PANCEK atau aturan aktif.
