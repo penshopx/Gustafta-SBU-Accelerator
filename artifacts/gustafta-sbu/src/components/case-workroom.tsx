@@ -8,6 +8,7 @@ import {
 import { useAccountReadOptions, useFormMutationOptions } from './account-queries';
 import { hasVisibleNameCharacter } from './profile-name-field';
 import { ErrorState, Loading } from './request-states';
+import { WorkroomAgenda } from './workroom-agenda';
 
 const kindMeta: Record<WorkroomItemKind, { label: string; add: string; icon: typeof ListChecks }> = {
   checklist: { label: 'Daftar periksa', add: 'Tambah butir', icon: ListChecks },
@@ -121,6 +122,7 @@ export function CaseWorkroom({ caseId, expectedUserId }: { caseId: number; expec
       {q.isLoading ? <div data-testid="state-workroom-loading" aria-busy="true"><Loading rows={3} /></div>
         : q.isError || foreign ? <ErrorState retry={refresh} message={foreign ? 'Data ruang kerja tidak cocok dengan kasus ini.' : undefined} />
         : <>
+          <WorkroomAgenda key={`${expectedUserId}:${caseId}`} caseId={caseId} items={items} onEdit={item => { if (!target && !deleting) setTarget({ mode: 'edit', item }); }} onAdd={() => { if (!target && !deleting) setTarget({ mode: 'create', kind: 'action' }); }} />
           <div data-testid="text-workroom-progress" className="mb-4 flex flex-wrap gap-x-6 gap-y-1 text-xs font-semibold text-[#3c566d]">
             <span>Daftar periksa: {clDone} dari {cl.length} butir tercatat selesai</span><span>Tindakan: {acDone} dari {ac.length} selesai</span><span>Catatan: {by('journal').length}</span><button type="button" data-testid="button-workroom-reload" aria-label="Muat ulang ruang kerja" disabled={q.isFetching} onClick={refresh} className="font-bold text-[#1769d1] underline disabled:opacity-50">{q.isFetching ? 'Memuat...' : 'Muat ulang'}</button></div>
           <div role="tablist" aria-label="Jenis item" className="mb-4 flex gap-1 overflow-x-auto border-b border-[#d4e1ea]">
