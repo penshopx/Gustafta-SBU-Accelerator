@@ -51,7 +51,7 @@ test('mini apps: search, filters, calendar, manual actions and download work wit
       children: React.createElement(Page),
     })));
     await render();
-    assert.equal(container.querySelectorAll('[data-testid^="link-mini-"]').length, 10);
+    assert.equal(container.querySelectorAll('[data-testid^="link-mini-"]').length, 11);
     for (const [id, href] of [['simulator', '/simulator'], ['cases', '/cases'], ['smap', '/cases'], ['documents', '/documents'], ['personnel', '/personnel'], ['regulations', '/regulations']]) {
       assert.equal(node(`link-mini-${id}`).getAttribute('href'), href);
     }
@@ -100,6 +100,29 @@ test('mini apps: search, filters, calendar, manual actions and download work wit
     await click('button-confirm-delete-a1');
     assert.ok(find('empty-tracker'));
     assert.equal((node('button-download-actions') as unknown as HTMLButtonElement).disabled, true);
+    // identity consistency
+    assert.match(node('text-identity-warning').textContent!, /tidak disimpan/);
+    await click('button-compare-identity');
+    assert.ok(find('text-identity-nothing'));
+    assert.equal(find('text-identity-consistent'), null);
+    await input('input-identity-label-0', 'Akta');
+    assert.equal(find('result-identity'), null, 'input clears stale result');
+    for (const i of [0, 1]) { await input(`input-identity-companyName-${i}`, 'PT Bangun Raya'); await input(`input-identity-nib-${i}`, '1234567890123'); await input(`input-identity-npwp-${i}`, '01.234.567.8-901.000'); }
+    await click('button-compare-identity');
+    assert.ok(find('text-identity-consistent'));
+    await input('input-identity-npwp-1', '0012345678901000');
+    await input('input-identity-nib-1', '12345');
+    await click('button-compare-identity');
+    assert.ok(find('text-identity-npwp-length'));
+    assert.match(node('result-identity').textContent!, /Akta, Berkas 2/);
+    assert.match(node('result-identity').textContent!, /bukan bukti NIB terdaftar/);
+    await click('button-add-identity');
+    assert.equal(find('result-identity'), null);
+    assert.ok(find('input-identity-nib-2'));
+    await click('button-remove-identity-2');
+    assert.equal(find('input-identity-nib-2'), null);
+    await click('button-reset-identity');
+    assert.equal((node('input-identity-label-0') as unknown as HTMLInputElement).value, '');
     assert.equal(requests, 0);
     await act(async () => root.render(null));
     await render();
