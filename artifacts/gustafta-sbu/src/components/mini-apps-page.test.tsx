@@ -51,8 +51,8 @@ test('mini apps: search, filters, calendar, manual actions and download work wit
       children: React.createElement(Page),
     })));
     await render();
-    assert.equal(container.querySelectorAll('[data-testid^="link-mini-"]').length, 9);
-    for (const [id, href] of [['simulator', '/simulator'], ['cases', '/cases'], ['documents', '/documents'], ['personnel', '/personnel'], ['regulations', '/regulations']]) {
+    assert.equal(container.querySelectorAll('[data-testid^="link-mini-"]').length, 10);
+    for (const [id, href] of [['simulator', '/simulator'], ['cases', '/cases'], ['smap', '/cases'], ['documents', '/documents'], ['personnel', '/personnel'], ['regulations', '/regulations']]) {
       assert.equal(node(`link-mini-${id}`).getAttribute('href'), href);
     }
     await click('filter-bukti');

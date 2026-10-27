@@ -116,6 +116,8 @@ Jika implementasi diminta, verifikasi setidaknya:
 5. Tidak ada pengisian fakta otomatis, status lulus resmi, atau
    pengiriman ke aplikasi eksternal.
 
-**Pekerjaan saat ini hanya menghasilkan dokumen rancangan ini.**
-Tidak ada implementasi, pengujian runtime, perubahan kasus/database,
-integrasi live, atau publikasi.
+Tahap penyusunan matriks ini hanya menghasilkan rancangan, bukan
+aktivasi persyaratan. Implementasi alat bantu internal yang dilakukan
+setelahnya dijelaskan pada
+[panduan checklist internal SMAP](smap-checklist-internal.md).
+Implementasi itu tidak mengesahkan sumber atau mengaktifkan integrasi.

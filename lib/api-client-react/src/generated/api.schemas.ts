@@ -5,6 +5,105 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+export interface SmapDocumentReference {
+  id: string;
+  name: string;
+  /** @minimum 1 */
+  version: number;
+  /** @pattern ^[a-f0-9]{64}$ */
+  fingerprint: string;
+}
+
+export interface SmapEvidenceInput {
+  id: string;
+  /** @pattern ^[a-f0-9]{64}$ */
+  fingerprint: string;
+}
+
+export type SmapAnswer = typeof SmapAnswer[keyof typeof SmapAnswer];
+
+
+export const SmapAnswer = {
+  unanswered: 'unanswered',
+  ada: 'ada',
+  tidak: 'tidak',
+} as const;
+
+export type SmapReviewStatus = typeof SmapReviewStatus[keyof typeof SmapReviewStatus];
+
+
+export const SmapReviewStatus = {
+  unreviewed: 'unreviewed',
+  clarification: 'clarification',
+  insufficient: 'insufficient',
+  adequate: 'adequate',
+} as const;
+
+export interface SmapEntryInput {
+  /** @minimum 0 */
+  revision: number;
+  answer: SmapAnswer;
+  /** @maxLength 3000 */
+  notes: string;
+  /** @maxItems 10 */
+  evidence: SmapEvidenceInput[];
+}
+
+export type SmapReviewInputStatus = typeof SmapReviewInputStatus[keyof typeof SmapReviewInputStatus];
+
+
+export const SmapReviewInputStatus = {
+  clarification: 'clarification',
+  insufficient: 'insufficient',
+  adequate: 'adequate',
+} as const;
+
+export interface SmapReviewInput {
+  /** @minimum 1 */
+  revision: number;
+  status: SmapReviewInputStatus;
+  /**
+     * @minLength 1
+     * @maxLength 3000
+     */
+  note: string;
+}
+
+export interface SmapEntry {
+  questionId: string;
+  /** @minimum 1 */
+  revision: number;
+  answer: SmapAnswer;
+  notes: string;
+  evidence: SmapDocumentReference[];
+  reviewStatus: SmapReviewStatus;
+  reviewNote: string;
+  /** @nullable */
+  reviewedBy: string | null;
+  /** @nullable */
+  reviewedAt: string | null;
+  savedAt: string;
+  needsReview: boolean;
+}
+
+export interface SmapQuestion {
+  id: string;
+  group: string;
+  text: string;
+  source: string;
+  suggestedEvidence: string;
+  reviewFocus: string;
+}
+
+export interface SmapChecklist {
+  caseId: number;
+  templateVersion: string;
+  disclaimer: string;
+  questions: SmapQuestion[];
+  entries: SmapEntry[];
+  documents: SmapDocumentReference[];
+}
+
 export interface ReviewSelection {
   /** @maxItems 50 */
   workroomIds: string[];

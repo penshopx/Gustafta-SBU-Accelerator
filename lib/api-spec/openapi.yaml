@@ -10,6 +10,65 @@ tags:
   - name: health
   - name: workspace
 paths:
+  /cases/{id}/smap-checklist:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    get:
+      operationId: getSmapChecklist
+      responses:
+        "200":
+          description: Private draft checklist and selectable case document references
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SmapChecklist" }
+  /cases/{id}/smap-checklist/{questionId}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      - { name: questionId, in: path, required: true, schema: { type: string, maxLength: 20 } }
+    put:
+      operationId: saveSmapChecklistEntry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SmapEntryInput" }
+      responses:
+        "200":
+          description: Declaration saved as a new revision; prior review retained in history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SmapEntry" }
+  /cases/{id}/smap-checklist/{questionId}/review:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      - { name: questionId, in: path, required: true, schema: { type: string, maxLength: 20 } }
+    post:
+      operationId: reviewSmapChecklistEntry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SmapReviewInput" }
+      responses:
+        "200":
+          description: Internal review bound to exact saved declaration and document snapshots
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SmapEntry" }
+  /cases/{id}/smap-checklist/{questionId}/history:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      - { name: questionId, in: path, required: true, schema: { type: string, maxLength: 20 } }
+    get:
+      operationId: getSmapChecklistHistory
+      responses:
+        "200":
+          description: Latest 50 immutable revisions for this question
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SmapEntry" }
   /cases/{id}/workroom/reviews:
     get:
       operationId: getWorkroomReviews
@@ -1104,6 +1163,92 @@ components:
       name: X-SBU-Form-Owner
       description: Required account precondition for private reads and writes. Capture the tab/cache or form owner, not the current cookie. This is not authentication; ownership is always derived from the verified Clerk session. Missing or mismatched values return 409 before private data access. Private reads use Cache-Control private, no-store.
   schemas:
+    SmapDocumentReference:
+      type: object
+      required: [id, name, version, fingerprint]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        version: { type: integer, minimum: 1 }
+        fingerprint: { type: string, pattern: "^[a-f0-9]{64}$" }
+    SmapEvidenceInput:
+      type: object
+      additionalProperties: false
+      required: [id, fingerprint]
+      properties:
+        id: { type: string, format: uuid }
+        fingerprint: { type: string, pattern: "^[a-f0-9]{64}$" }
+    SmapAnswer:
+      type: string
+      enum: [unanswered, ada, tidak]
+    SmapReviewStatus:
+      type: string
+      enum: [unreviewed, clarification, insufficient, adequate]
+    SmapEntryInput:
+      type: object
+      additionalProperties: false
+      required: [revision, answer, notes, evidence]
+      properties:
+        revision: { type: integer, minimum: 0 }
+        answer: { $ref: "#/components/schemas/SmapAnswer" }
+        notes: { type: string, maxLength: 3000 }
+        evidence:
+          type: array
+          maxItems: 10
+          items: { $ref: "#/components/schemas/SmapEvidenceInput" }
+    SmapReviewInput:
+      type: object
+      additionalProperties: false
+      required: [revision, status, note]
+      properties:
+        revision: { type: integer, minimum: 1 }
+        status:
+          type: string
+          enum: [clarification, insufficient, adequate]
+        note: { type: string, minLength: 1, maxLength: 3000 }
+    SmapEntry:
+      type: object
+      required: [questionId, revision, answer, notes, evidence, reviewStatus, reviewNote, reviewedBy, reviewedAt, savedAt, needsReview]
+      properties:
+        questionId: { type: string }
+        revision: { type: integer, minimum: 1 }
+        answer: { $ref: "#/components/schemas/SmapAnswer" }
+        notes: { type: string }
+        evidence:
+          type: array
+          items: { $ref: "#/components/schemas/SmapDocumentReference" }
+        reviewStatus: { $ref: "#/components/schemas/SmapReviewStatus" }
+        reviewNote: { type: string }
+        reviewedBy: { type: [string, "null"] }
+        reviewedAt: { type: [string, "null"] }
+        savedAt: { type: string }
+        needsReview: { type: boolean }
+    SmapQuestion:
+      type: object
+      required: [id, group, text, source, suggestedEvidence, reviewFocus]
+      properties:
+        id: { type: string }
+        group: { type: string }
+        text: { type: string }
+        source: { type: string }
+        suggestedEvidence: { type: string }
+        reviewFocus: { type: string }
+    SmapChecklist:
+      type: object
+      required: [caseId, templateVersion, disclaimer, questions, entries, documents]
+      properties:
+        caseId: { type: integer }
+        templateVersion: { type: string }
+        disclaimer: { type: string }
+        questions:
+          type: array
+          items: { $ref: "#/components/schemas/SmapQuestion" }
+        entries:
+          type: array
+          items: { $ref: "#/components/schemas/SmapEntry" }
+        documents:
+          type: array
+          items: { $ref: "#/components/schemas/SmapDocumentReference" }
     ReviewSelection:
       type: object
       required: [workroomIds, evidenceIds, documentIds]

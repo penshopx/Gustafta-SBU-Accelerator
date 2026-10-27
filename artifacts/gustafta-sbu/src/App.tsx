@@ -23,6 +23,7 @@ import { TransitionVerificationsPage } from '@/components/transition-verificatio
 import { AssessmentResults, CaseSummary } from '@/components/case-detail-display';
 import { CaseWorkroom } from '@/components/case-workroom';
 import { CaseWorkroomReviews } from '@/components/case-workroom-reviews';
+import { CaseSmapChecklist } from '@/components/case-smap-checklist';
 import { CaseEvidence } from '@/components/case-evidence';
 import { CaseActionPlan } from '@/components/case-action-plan';
 import { CasePreparationExport } from '@/components/case-preparation-export';
@@ -218,6 +219,7 @@ function CaseDetailPage({ profile }: { profile: Profile }) {
    <CasePreparationExport key={id} caseId={id}/>
    <CaseWorkroom key={`workroom-${profile.userId}-${id}`} caseId={id} expectedUserId={profile.userId}/>
    <CaseWorkroomReviews key={`workroom-reviews-${profile.userId}-${id}`} caseId={id} expectedUserId={profile.userId}/>
+  <CaseSmapChecklist key={`smap-${profile.userId}-${id}`} caseId={id} expectedUserId={profile.userId}/>
    {assessment.data && <CaseActionPlan assessment={assessment.data} onRecord={recordFromPlan}/>}
    <div className="mb-5 flex items-center gap-1 border-b border-[#d4e1ea]"><button data-testid="button-tab-evidence" onClick={() => setTab('evidence')} className={`border-b-2 px-5 py-3 text-sm font-bold ${tab === 'evidence' ? 'border-[#1769d1] text-[#1769d1]' : 'border-transparent text-[#617a90]'}`}>Deklarasi bukti</button><button data-testid="button-tab-assessment" onClick={() => setTab('assessment')} className={`border-b-2 px-5 py-3 text-sm font-bold ${tab === 'assessment' ? 'border-[#1769d1] text-[#1769d1]' : 'border-transparent text-[#617a90]'}`}>Penilaian awal</button></div>
    {tab === 'evidence' ? <CaseEvidence id={id} requestType={c.requestType} qualification={c.qualification} suggestion={suggestion} onSuggestionClose={() => setSuggestion(null)}/> : <section><div className="mb-4"><h2 className="display text-xl font-extrabold">Temuan persiapan</h2><p className="mt-1 text-xs text-[#617a90]">Pembacaan awal dari catatan Anda, bukan hasil pemeriksaan LSBU.</p></div>{assessment.isLoading ? <Loading rows={4}/> : assessment.isError ? <ErrorState retry={() => assessment.refetch()}/> : assessment.data ? <AssessmentResults assessment={assessment.data}/> : <ErrorState retry={() => assessment.refetch()} message="Penilaian belum tersedia."/>}</section>}{tab === 'evidence' && <CaseDocuments key={`${profile.userId}-${id}`} id={id} expectedUserId={profile.userId}/>}

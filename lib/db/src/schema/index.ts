@@ -24,6 +24,7 @@ export * from "./standalone";
 export * from "./consultations";
 export * from "./personnel";
 export * from "./workroom";
+export * from "./smap-checklist";
 export * from "./workroom-reviews";
 export * from "./chat-quota";
 export * from "./chat-source-reviews";

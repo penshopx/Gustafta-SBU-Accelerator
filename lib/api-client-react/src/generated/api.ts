@@ -76,6 +76,10 @@ import type {
   SbuChatUnavailable,
   SkkCertificateInput,
   SkkCertificateUpdate,
+  SmapChecklist,
+  SmapEntry,
+  SmapEntryInput,
+  SmapReviewInput,
   TransitionVerification,
   TransitionVerificationInput,
   Workroom,
@@ -112,6 +116,323 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getGetSmapChecklistUrl = (id: number,) => {
+
+
+
+
+  return `/api/cases/${id}/smap-checklist`
+}
+
+export const getSmapChecklist = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<SmapChecklist> => {
+
+  return customFetch<SmapChecklist>(getGetSmapChecklistUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSmapChecklistQueryKey = (id: number,) => {
+    return [
+    `/api/cases/${id}/smap-checklist`
+    ] as const;
+    }
+
+
+export const getGetSmapChecklistQueryOptions = <TData = Awaited<ReturnType<typeof getSmapChecklist>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSmapChecklist>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSmapChecklistQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSmapChecklist>>> = ({ signal }) => getSmapChecklist(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSmapChecklist>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSmapChecklistQueryResult = NonNullable<Awaited<ReturnType<typeof getSmapChecklist>>>
+export type GetSmapChecklistQueryError = ErrorType<unknown>
+
+
+
+export function useGetSmapChecklist<TData = Awaited<ReturnType<typeof getSmapChecklist>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSmapChecklist>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSmapChecklistQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveSmapChecklistEntryUrl = (id: number,
+    questionId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/smap-checklist/${questionId}`
+}
+
+export const saveSmapChecklistEntry = async (id: number,
+    questionId: string,
+    smapEntryInput: SmapEntryInput, options?: Parameters<typeof customFetch>[1]): Promise<SmapEntry> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SmapEntry>(getSaveSmapChecklistEntryUrl(id,questionId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(smapEntryInput)
+  }
+);}
+
+
+
+
+
+export const getSaveSmapChecklistEntryMutationKey = () => ['saveSmapChecklistEntry'] as const;
+
+export const getSaveSmapChecklistEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveSmapChecklistEntry>>, TError,SaveSmapChecklistEntryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveSmapChecklistEntry>>, TError,SaveSmapChecklistEntryMutationVariables, TContext> => {
+
+const mutationKey = getSaveSmapChecklistEntryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveSmapChecklistEntry>>, SaveSmapChecklistEntryMutationVariables> = (props) => {
+          const {id,questionId,data} = props ?? {};
+
+          return  saveSmapChecklistEntry(id,questionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveSmapChecklistEntryMutationResult = NonNullable<Awaited<ReturnType<typeof saveSmapChecklistEntry>>>
+    export type SaveSmapChecklistEntryMutationBody = BodyType<SmapEntryInput>
+    export type SaveSmapChecklistEntryMutationError = ErrorType<unknown>
+    export type SaveSmapChecklistEntryMutationVariables = {id: number;questionId: string;data: BodyType<SmapEntryInput>}
+
+    export const useSaveSmapChecklistEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveSmapChecklistEntry>>, TError,SaveSmapChecklistEntryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveSmapChecklistEntry>>,
+        TError,
+        SaveSmapChecklistEntryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveSmapChecklistEntryMutationOptions(options));
+    }
+
+export const getReviewSmapChecklistEntryUrl = (id: number,
+    questionId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/smap-checklist/${questionId}/review`
+}
+
+export const reviewSmapChecklistEntry = async (id: number,
+    questionId: string,
+    smapReviewInput: SmapReviewInput, options?: Parameters<typeof customFetch>[1]): Promise<SmapEntry> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SmapEntry>(getReviewSmapChecklistEntryUrl(id,questionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(smapReviewInput)
+  }
+);}
+
+
+
+
+
+export const getReviewSmapChecklistEntryMutationKey = () => ['reviewSmapChecklistEntry'] as const;
+
+export const getReviewSmapChecklistEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewSmapChecklistEntry>>, TError,ReviewSmapChecklistEntryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewSmapChecklistEntry>>, TError,ReviewSmapChecklistEntryMutationVariables, TContext> => {
+
+const mutationKey = getReviewSmapChecklistEntryMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewSmapChecklistEntry>>, ReviewSmapChecklistEntryMutationVariables> = (props) => {
+          const {id,questionId,data} = props ?? {};
+
+          return  reviewSmapChecklistEntry(id,questionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewSmapChecklistEntryMutationResult = NonNullable<Awaited<ReturnType<typeof reviewSmapChecklistEntry>>>
+    export type ReviewSmapChecklistEntryMutationBody = BodyType<SmapReviewInput>
+    export type ReviewSmapChecklistEntryMutationError = ErrorType<unknown>
+    export type ReviewSmapChecklistEntryMutationVariables = {id: number;questionId: string;data: BodyType<SmapReviewInput>}
+
+    export const useReviewSmapChecklistEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewSmapChecklistEntry>>, TError,ReviewSmapChecklistEntryMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewSmapChecklistEntry>>,
+        TError,
+        ReviewSmapChecklistEntryMutationVariables,
+        TContext
+      > => {
+      return useMutation(getReviewSmapChecklistEntryMutationOptions(options));
+    }
+
+export const getGetSmapChecklistHistoryUrl = (id: number,
+    questionId: string,) => {
+
+
+
+
+  return `/api/cases/${id}/smap-checklist/${questionId}/history`
+}
+
+export const getSmapChecklistHistory = async (id: number,
+    questionId: string, options?: Parameters<typeof customFetch>[1]): Promise<SmapEntry[]> => {
+
+  return customFetch<SmapEntry[]>(getGetSmapChecklistHistoryUrl(id,questionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSmapChecklistHistoryQueryKey = (id: number,
+    questionId: string,) => {
+    return [
+    `/api/cases/${id}/smap-checklist/${questionId}/history`
+    ] as const;
+    }
+
+
+export const getGetSmapChecklistHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getSmapChecklistHistory>>, TError = ErrorType<unknown>>(id: number,
+    questionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSmapChecklistHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSmapChecklistHistoryQueryKey(id,questionId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSmapChecklistHistory>>> = ({ signal }) => getSmapChecklistHistory(id,questionId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && questionId !== null && questionId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSmapChecklistHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSmapChecklistHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getSmapChecklistHistory>>>
+export type GetSmapChecklistHistoryQueryError = ErrorType<unknown>
+
+
+
+export function useGetSmapChecklistHistory<TData = Awaited<ReturnType<typeof getSmapChecklistHistory>>, TError = ErrorType<unknown>>(
+ id: number,
+    questionId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSmapChecklistHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSmapChecklistHistoryQueryOptions(id,questionId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetWorkroomReviewsUrl = (id: number,) => {
 

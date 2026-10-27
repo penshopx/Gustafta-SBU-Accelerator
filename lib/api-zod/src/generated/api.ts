@@ -11,6 +11,195 @@ import * as zod from 'zod';
 
 
 
+export const GetSmapChecklistParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+
+
+export const getSmapChecklistResponseEntriesItemEvidenceItemFingerprintRegExp = new RegExp('^[a-f0-9]{64}$');
+
+export const getSmapChecklistResponseDocumentsItemFingerprintRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
+export const GetSmapChecklistResponse = zod.object({
+  "caseId": zod.number().int(),
+  "templateVersion": zod.string(),
+  "disclaimer": zod.string(),
+  "questions": zod.array(zod.object({
+  "id": zod.string(),
+  "group": zod.string(),
+  "text": zod.string(),
+  "source": zod.string(),
+  "suggestedEvidence": zod.string(),
+  "reviewFocus": zod.string()
+})),
+  "entries": zod.array(zod.object({
+  "questionId": zod.string(),
+  "revision": zod.number().int().min(1),
+  "answer": zod.enum(['unanswered', 'ada', 'tidak']),
+  "notes": zod.string(),
+  "evidence": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "version": zod.number().int().min(1),
+  "fingerprint": zod.string().regex(getSmapChecklistResponseEntriesItemEvidenceItemFingerprintRegExp)
+})),
+  "reviewStatus": zod.enum(['unreviewed', 'clarification', 'insufficient', 'adequate']),
+  "reviewNote": zod.string(),
+  "reviewedBy": zod.string().nullable(),
+  "reviewedAt": zod.string().nullable(),
+  "savedAt": zod.string(),
+  "needsReview": zod.boolean()
+})),
+  "documents": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "version": zod.number().int().min(1),
+  "fingerprint": zod.string().regex(getSmapChecklistResponseDocumentsItemFingerprintRegExp)
+}))
+})
+
+
+
+export const saveSmapChecklistEntryPathQuestionIdMax = 20;
+
+
+
+export const SaveSmapChecklistEntryParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "questionId": zod.coerce.string().max(saveSmapChecklistEntryPathQuestionIdMax)
+})
+
+export const saveSmapChecklistEntryBodyRevisionMin = 0;
+
+export const saveSmapChecklistEntryBodyNotesMax = 3000;
+
+export const saveSmapChecklistEntryBodyEvidenceItemFingerprintRegExp = new RegExp('^[a-f0-9]{64}$');
+export const saveSmapChecklistEntryBodyEvidenceMax = 10;
+
+
+
+export const SaveSmapChecklistEntryBody = zod.object({
+  "revision": zod.number().int().min(saveSmapChecklistEntryBodyRevisionMin),
+  "answer": zod.enum(['unanswered', 'ada', 'tidak']),
+  "notes": zod.string().max(saveSmapChecklistEntryBodyNotesMax),
+  "evidence": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "fingerprint": zod.string().regex(saveSmapChecklistEntryBodyEvidenceItemFingerprintRegExp)
+})).max(saveSmapChecklistEntryBodyEvidenceMax)
+})
+
+
+
+export const saveSmapChecklistEntryResponseEvidenceItemFingerprintRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
+export const SaveSmapChecklistEntryResponse = zod.object({
+  "questionId": zod.string(),
+  "revision": zod.number().int().min(1),
+  "answer": zod.enum(['unanswered', 'ada', 'tidak']),
+  "notes": zod.string(),
+  "evidence": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "version": zod.number().int().min(1),
+  "fingerprint": zod.string().regex(saveSmapChecklistEntryResponseEvidenceItemFingerprintRegExp)
+})),
+  "reviewStatus": zod.enum(['unreviewed', 'clarification', 'insufficient', 'adequate']),
+  "reviewNote": zod.string(),
+  "reviewedBy": zod.string().nullable(),
+  "reviewedAt": zod.string().nullable(),
+  "savedAt": zod.string(),
+  "needsReview": zod.boolean()
+})
+
+
+
+export const reviewSmapChecklistEntryPathQuestionIdMax = 20;
+
+
+
+export const ReviewSmapChecklistEntryParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "questionId": zod.coerce.string().max(reviewSmapChecklistEntryPathQuestionIdMax)
+})
+
+
+export const reviewSmapChecklistEntryBodyNoteMax = 3000;
+
+
+
+export const ReviewSmapChecklistEntryBody = zod.object({
+  "revision": zod.number().int().min(1),
+  "status": zod.enum(['clarification', 'insufficient', 'adequate']),
+  "note": zod.string().min(1).max(reviewSmapChecklistEntryBodyNoteMax)
+})
+
+
+
+export const reviewSmapChecklistEntryResponseEvidenceItemFingerprintRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
+export const ReviewSmapChecklistEntryResponse = zod.object({
+  "questionId": zod.string(),
+  "revision": zod.number().int().min(1),
+  "answer": zod.enum(['unanswered', 'ada', 'tidak']),
+  "notes": zod.string(),
+  "evidence": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "version": zod.number().int().min(1),
+  "fingerprint": zod.string().regex(reviewSmapChecklistEntryResponseEvidenceItemFingerprintRegExp)
+})),
+  "reviewStatus": zod.enum(['unreviewed', 'clarification', 'insufficient', 'adequate']),
+  "reviewNote": zod.string(),
+  "reviewedBy": zod.string().nullable(),
+  "reviewedAt": zod.string().nullable(),
+  "savedAt": zod.string(),
+  "needsReview": zod.boolean()
+})
+
+
+
+export const getSmapChecklistHistoryPathQuestionIdMax = 20;
+
+
+
+export const GetSmapChecklistHistoryParams = zod.object({
+  "id": zod.coerce.number().int().min(1),
+  "questionId": zod.coerce.string().max(getSmapChecklistHistoryPathQuestionIdMax)
+})
+
+
+
+export const getSmapChecklistHistoryResponseEvidenceItemFingerprintRegExp = new RegExp('^[a-f0-9]{64}$');
+
+
+export const GetSmapChecklistHistoryResponseItem = zod.object({
+  "questionId": zod.string(),
+  "revision": zod.number().int().min(1),
+  "answer": zod.enum(['unanswered', 'ada', 'tidak']),
+  "notes": zod.string(),
+  "evidence": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string(),
+  "version": zod.number().int().min(1),
+  "fingerprint": zod.string().regex(getSmapChecklistHistoryResponseEvidenceItemFingerprintRegExp)
+})),
+  "reviewStatus": zod.enum(['unreviewed', 'clarification', 'insufficient', 'adequate']),
+  "reviewNote": zod.string(),
+  "reviewedBy": zod.string().nullable(),
+  "reviewedAt": zod.string().nullable(),
+  "savedAt": zod.string(),
+  "needsReview": zod.boolean()
+})
+export const GetSmapChecklistHistoryResponse = zod.array(GetSmapChecklistHistoryResponseItem)
+
+
+
+
+
 export const GetWorkroomReviewsParams = zod.object({
   "id": zod.coerce.number().int().min(1)
 })
