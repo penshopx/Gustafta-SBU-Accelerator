@@ -83,3 +83,8 @@ sertifikat perusahaan, atau produksi telah diverifikasi.
 
 Dasar kurasi: [kartu SMAP/PANCEK](knowledge-cards-smap-pancek-draft.md)
 dan [matriks rancangan](smap-checklist-evidence-matrix-draft.md).
+
+Untuk pemeriksaan pada build terpublikasi, ikuti
+[prosedur uji privat produksi](production-private-smoke-test.md).
+Prosedur tersebut belum dieksekusi dan mensyaratkan autentikasi serta
+pembersihan fixture yang benar-benar menargetkan produksi.
