@@ -3,6 +3,7 @@ import { CircleCheck, Download, FileSearch, Plus, RotateCcw, ShieldAlert, Trash2
 import { compareDocumentIdentities, type IdentityComparison, type IdentityRow } from '@/lib/document-identity';
 import { formatIdentityReport } from '@/lib/document-identity-report';
 import { downloadText } from './action-tracker';
+import { identityActionTitles } from '@/lib/identity-actions';
 
 const MAX = 8;
 const FIELD: Record<'companyName' | 'nib' | 'npwp', string> = { companyName: 'Nama badan usaha', nib: 'NIB', npwp: 'NPWP' };
@@ -16,7 +17,7 @@ const formatHint = (f: string) => f === 'nib' ? 'NIB diharapkan tepat 13 digit a
 let seqGlobal = 0;
 const newRow = (): IdentityRow => ({ id: `d${++seqGlobal}`, label: '', companyName: '', nib: '', npwp: '' });
 
-export function IdentityConsistency() {
+export function IdentityConsistency({ onAddActions }: { onAddActions?: (titles: string[]) => number }) {
   const id = useId();
   const [rows, setRows] = useState<IdentityRow[]>(() => [newRow(), newRow()]);
   const [result, setResult] = useState<IdentityComparison | null>(null);
@@ -37,6 +38,10 @@ export function IdentityConsistency() {
     } catch {
       setNotice('Laporan tidak dapat diunduh. Silakan coba lagi.');
     }
+  };
+  const addActions = () => {
+    const count = onAddActions?.(identityActionTitles(rows)) ?? 0;
+    setNotice(count ? `${count} tindakan ditambahkan ke Pelacak Tindakan Manual. Isikan penanggung jawab dan tenggat di sana.` : 'Tindakan yang sama sudah ada di pelacak; tidak ditambahkan ulang.');
   };
 
   return <section id="pemeriksa-identitas" aria-labelledby={`${id}-h`} data-testid="tool-identity" className="surface scroll-mt-6 p-5 sm:p-7">
@@ -74,6 +79,11 @@ export function IdentityConsistency() {
       <p className="mt-3 text-xs leading-5 text-[#526b81]">Perubahan isian akan menghapus hasil ini. Verifikasi mandiri tetap diperlukan.</p>
       <p className="mt-3 text-xs leading-5 text-[#526b81]">Laporan teks memuat temuan dan nama berkas, tanpa nilai nama badan usaha, NIB, atau NPWP. Hindari data sensitif pada nama berkas sebelum membagikan. Simpan laporan sendiri; aplikasi tidak menyimpannya.</p>
       <button type="button" data-testid="button-download-identity" onClick={download} className="btn btn-outline mt-3"><Download size={15} /> Unduh laporan pemeriksaan</button>
+      {onAddActions && result.issues.length > 0 && <div className="mt-3">
+        <p className="mb-2 text-xs leading-5 text-[#526b81]">Tambahkan satu tindakan per temuan dan berkas. Tindakan lama tidak ditimpa; judul yang sama dilewati. Nilai identitas tidak disalin, tetapi nama berkas ikut tercantum. Tindakan adalah snapshot: perubahan atau reset pemeriksaan tidak memperbarui atau menghapusnya. Draf pelacak tidak disimpan.</p>
+        <button type="button" data-testid="button-identity-actions" className="btn btn-outline" onClick={addActions}><Plus size={15} /> Jadikan tindakan perbaikan</button>
+        <a href="#pelacak-tindakan" className="ml-3 inline-block text-sm font-bold text-[#1769d1]">Lihat pelacak tindakan</a>
+      </div>}
     </div>}
   </section>;
 }

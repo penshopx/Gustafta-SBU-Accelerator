@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type FormEvent } from 'react';
+import { forwardRef, useId, useImperativeHandle, useRef, useState, type FormEvent } from 'react';
 import { Check, Download, ListChecks, Pencil, Plus, RotateCcw, Trash2, TriangleAlert } from 'lucide-react';
 import { actionReport, validCalendarDate, type ActionItem } from '@/lib/sbu-mini-apps';
 
@@ -11,7 +11,9 @@ export function downloadText(text: string, filename: string) {
   finally { window.setTimeout(() => URL.revokeObjectURL(url), 0); }
 }
 
-export function ActionTracker() {
+export type ActionTrackerHandle = { appendTitles: (titles: string[]) => number };
+
+export const ActionTracker = forwardRef<ActionTrackerHandle>(function ActionTracker(_, ref) {
   const id = useId();
   const [rows, setRows] = useState<ActionItem[]>([]);
   const [form, setForm] = useState<Draft>(empty);
@@ -21,6 +23,20 @@ export function ActionTracker() {
   const [notice, setNotice] = useState('');
   const seq = useRef(0);
   const titleRef = useRef<HTMLInputElement>(null);
+  useImperativeHandle(ref, () => ({
+    appendTitles(titles) {
+      const known = new Set(rows.map(row => row.title));
+      const additions: ActionItem[] = [];
+      for (const title of titles) {
+        if (known.has(title)) continue;
+        known.add(title);
+        additions.push({ id: `a${++seq.current}`, title, responsible: '', dueOn: '', status: 'open' });
+      }
+      if (additions.length) setRows(previous => [...previous, ...additions]);
+      setNotice(additions.length ? `${additions.length} tindakan pemeriksaan ditambahkan. Tentukan penanggung jawab dan tenggat sendiri.` : 'Tindakan yang sama sudah ada; tidak ditambahkan ulang.');
+      return additions.length;
+    },
+  }), [rows]);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -64,4 +80,4 @@ export function ActionTracker() {
 
     <div className="mt-5 flex flex-wrap gap-2"><button type="button" data-testid="button-download-actions" disabled={!rows.length} onClick={() => downloadText(actionReport(rows), 'rencana-tindakan-sbu.txt')} className="btn btn-dark"><Download size={15} /> Unduh laporan teks</button>{rows.length > 0 && <button type="button" data-testid="button-clear-actions" onClick={() => { setRows([]); setEditing(null); setForm(empty); setNotice('Semua tindakan dihapus.'); }} className="btn btn-outline"><RotateCcw size={15} /> Kosongkan</button>}</div>
   </section>;
-}
+});
