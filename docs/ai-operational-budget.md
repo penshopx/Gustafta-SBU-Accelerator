@@ -162,8 +162,12 @@ https://www.anthropic.com/claude/sonnet .
 Replit menyatakan penagihan integrasi mengikuti harga API publik provider:
 https://docs.replit.com/features/integrations/replit-ai-integrations .
 Sumber publik dan konfigurasi bukan bukti invoice atau konektivitas live.
-Profil ini disetel **hanya pada development**; produksi belum dikonfigurasi
-atau dipublikasikan.
+Pada 26 Oktober 2026, profil ini disetel hanya pada development. Pada
+27 Oktober 2026, atas persetujuan pengguna, profil yang sama disimpan sebagai
+environment variable khusus produksi dan nilainya diperiksa kembali. Pagu
+anggaran tidak diubah dan profil GPT tidak diaktifkan. Penyimpanan konfigurasi
+ini tidak disertai publikasi atau pemanggilan AI; pemakaian profil oleh proses
+produksi yang sedang berjalan belum diverifikasi.
 
 Harga $2/juta input dan $10/juta output menghasilkan cadangan penuh
 **$2,08192 per percobaan**. Dengan pagu Asisten $4/hari/$40/bulan, hanya satu

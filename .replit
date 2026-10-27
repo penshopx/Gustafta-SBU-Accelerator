@@ -157,3 +157,6 @@ AI_BUDGET_CLAUDE_PRICING_JSON = "{\"model\":\"claude-sonnet-5-5\",\"validUntil\"
 DOCUMENT_SIGNATURE_ALERT_PROVIDER = "slack"
 DOCUMENT_SIGNATURE_SLACK_CHANNEL = "C0CBXQF9D0E"
 DOCUMENT_SIGNATURE_SLACK_CONNECTION_ID = "conn_slack_01M5TP72X7D3J47H61ZYFMNZD9"
+
+[userenv.production]
+AI_BUDGET_CLAUDE_PRICING_JSON = "{\"model\":\"claude-sonnet-5-5\",\"validUntil\":\"2027-01-01T00:00:00.000Z\",\"maxInputTokens\":1000000,\"inputMicrosPerMillion\":2000000,\"outputMicrosPerMillion\":10000000}"
