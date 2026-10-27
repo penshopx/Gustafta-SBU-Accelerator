@@ -216,3 +216,115 @@ persetujuan eksplisit cuplikan AI yang sudah disepakati.
 
 Tahap ini hanya menyusun kartu: tidak mengubah kasus, database,
 prompt/korpus runtime, integrasi, pengiriman, atau deployment.
+
+## Adendum — contoh checklist tambahan dari pengguna
+
+**Status: contoh struktur dan draf kurasi; bukan aturan aktif.**
+
+| Berkas di attached_assets/ | PDF | Pemeriksaan penerimaan |
+| --- | ---: | --- |
+| `Pancek_KPK_1793066548573.pdf` | 8 halaman | Tidak memiliki teks native; PDF 1, 2, 8 diperiksa visual |
+| `Pancek-Platform_Jaga.id_1793066548574.pdf` | 10 halaman | Teks native praktis hanya spasi; PDF 1, 2, 10 diperiksa visual; bagian teks/tabel hilang atau terpotong secara visual |
+| `smap-permen_08-01_1793066629157.pdf` | 4 halaman | Teks PDF 1–4 dibaca dan seluruh halaman diperiksa visual; PDF 4 hanya nomor/footer |
+
+Nomor di atas adalah halaman PDF. Nomor cetak untuk checklist SMAP
+adalah 1–4; tidak mengasumsikan nomor cetak pada dua contoh PANCEK.
+Halaman lain dua contoh PANCEK belum ditranskripsi atau ditelaah lengkap.
+Tidak ada OCR eksternal, pembacaan QR, atau akses platform resmi.
+
+### CONTOH-01 — Keluaran pengisian PANCEK bukan bukti kesesuaian tersendiri
+
+Contoh pertama PDF 1 berjudul “Status Pengisian Formulir PanCEK” dan
+memuat jumlah terjawab/indikator/revisi serta ceklis. Tanda centang dan
+angka keterisian adalah data contoh, bukan ambang kelulusan resmi atau
+bukti bahwa semua persyaratan dinyatakan sesuai oleh platform.
+
+PDF 2 menunjukkan kode indikator dan subindikator seperti K.1.d,
+K.2.a–b dan K.6.a–d. Kode induk, butir bukti, urutan, dan locator perlu
+dipertahankan terpisah saat kurasi, bukan diratakan menjadi daftar tanpa
+asal. Daftar lengkap seluruh kode belum diekstrak.
+
+PDF 8 memuat penegasan self-assessment dan bahwa pengisian tidak dapat
+dijadikan dasar korporasi tidak terkait tindak pidana. Ini mendukung
+pemisahan keterisian, bukti penerapan, telaah internal, dan konfirmasi
+resmi sebagaimana kartu PANCEK-01.
+
+Contoh kedua memuat QR, tetapi tampilan dokumen tidak lengkap:
+PDF 1 mempunyai banyak sel kosong, PDF 2 kalimat terpotong, dan
+PDF 10 juga kehilangan beberapa label. Jangan mengisi bagian hilang
+dari ingatan, menganggap kosong berarti jawaban “tidak”, atau
+menyalin QR ke template aplikasi.
+
+**Privasi:** kedua contoh memuat identitas perusahaan/pengisi dan data
+kontak; contoh kedua juga memperlihatkan nomor identitas pribadi.
+Nilainya sengaja tidak disalin ke catatan, corpus publik, prompt,
+fixture, atau template. Untuk implementasi gunakan data sintetis,
+struktur yang telah dianonimkan, serta penghilangan identitas dari
+piksel/lapisan dokumen bila membuat turunan yang akan dibagikan.
+
+**Pertanyaan telaah:** apakah tersedia template kosong yang utuh dan
+versi indikator resmi? Apakah dokumen berstatus pengisian ini sama
+dengan lembar konfirmasi setelah dinyatakan sesuai? Tidak diasumsikan.
+
+### CONTOH-02 — Struktur checklist dokumen penerapan SMAP
+
+**Locator:** `smap-permen_08-01_1793066629157.pdf`, PDF/cetak 1–3.
+Tabel diperiksa visual, bukan sekadar hasil ekstraksi.
+
+Bagian A.1 memisahkan:
+
+- **16 baris dokumen perencanaan**, PDF/cetak 1, antara lain kebijakan,
+  identifikasi risiko, konteks organisasi, sasaran, sumber daya,
+  kompetensi, komunikasi, pengendalian dokumen, audit internal dan
+  tinjauan manajemen.
+- **6 baris rekaman pelaksanaan**, mulai PDF/cetak 1 dan berlanjut
+  PDF/cetak 2, antara lain kepemimpinan/komitmen, penilaian risiko,
+  informasi terdokumentasi, pemantauan/evaluasi dan laporan audit.
+
+Kolom tabel bertuliskan Besar, Menengah/BU Spesialis, dan Kecil, dengan
+tanda V pada baris yang terlihat. Ini transkripsi struktur contoh,
+bukan penetapan bahwa semua baris berlaku saat ini untuk semua BUJK.
+
+Bagian A.2 berisi **23 pertanyaan ADA/TIDAK**:
+
+| Kelompok | Jumlah | Locator PDF/cetak |
+| --- | ---: | --- |
+| Komitmen | 9 | 2 |
+| Perencanaan | 3 | 2 |
+| Pelaksanaan | 7 | 3 |
+| Evaluasi | 4 | 3 |
+
+Jumlah 16/6/23 adalah hitungan baris contoh, bukan target angka atau
+scorecard kelayakan. Dokumen rencana dan rekaman pelaksanaan dapat
+berkaitan, tetapi tidak otomatis merupakan bukti yang sama.
+
+### CONTOH-03 — Identitas induk, klausul, dan batas adopsi
+
+Footer checklist mencantumkan `jdih.pu.go.id`, dan pertanyaan A.2.I.3
+menyebut ISO 37001:2016 dan/atau UU Tipikor. Namun empat halaman ini
+tidak menampilkan identitas peraturan induk lengkap atau status terkini.
+Nama berkas “permen_08” bukan dasar menetapkan nomor/tahun atau
+menyatakan berlaku. Logo/footer bukan autentikasi penerbit.
+
+Nomor serta judul klausul yang dicetak harus disimpan sebagai kutipan
+dari contoh. Kesesuaiannya dengan teks standar, edisi yang berlaku,
+dan pembaruan belum dibuktikan. Jangan mengoreksi judul klausul secara
+diam-diam atau menyebut contoh sebagai checklist resmi ISO terkini.
+
+**Pertanyaan telaah:** apa peraturan induk, nomor lampiran, versi dan
+riwayat perubahan dokumen? Bagaimana hubungannya dengan jalur bukti
+pada Permen PU 6/2025 dan Kepdirjen 281? Perlu sumber induk lengkap
+sebelum menentukan kewajiban.
+
+### Implikasi rancangan, belum implementasi
+
+Gunakan struktur indikator → pertanyaan → dokumen kebijakan →
+rekaman pelaksanaan → catatan penelaah. Bedakan jawaban deklarasi
+dari kelengkapan bukti dan hasil telaah. Status kosong, tidak tersedia,
+dan perlu klarifikasi tidak disamakan.
+
+Sertifikat ISO terkait SMAP, bukti audit, lembar konfirmasi PANCEK,
+komitmen dan pelatihan tetap kategori bukti tersendiri, bukan
+digantikan oleh checklist ini. Tidak menggandakan identitas contoh
+ke kasus pengguna, menerbitkan dokumen mirip keluaran KPK, atau
+menyatakan hasil “lulus PANCEK”.
