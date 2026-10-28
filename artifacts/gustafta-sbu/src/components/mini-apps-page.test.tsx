@@ -51,6 +51,12 @@ test('mini apps: search, filters, calendar, manual actions and download work wit
       children: React.createElement(Page),
     })));
     await render();
+    const unloadBlocked = () => {
+      const event = new win.Event('beforeunload', { cancelable: true });
+      win.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    assert.equal(unloadBlocked(), false, 'empty tracker has no unload warning');
     assert.equal(container.querySelectorAll('[data-testid^="link-mini-"]').length, 11);
     for (const [id, href] of [['simulator', '/simulator'], ['cases', '/cases'], ['smap', '/cases'], ['documents', '/documents'], ['personnel', '/personnel'], ['regulations', '/regulations']]) {
       assert.equal(node(`link-mini-${id}`).getAttribute('href'), href);
@@ -157,6 +163,13 @@ test('mini apps: search, filters, calendar, manual actions and download work wit
     const backupText = await blob!.text();
     assert.equal(JSON.parse(backupText).actions.length, actionCount);
     assert.equal(revoked, 'blob:mini-app-test');
+    assert.equal(unloadBlocked(), true, 'download start is not confirmation of saved file');
+    await click('button-confirm-action-backup');
+    assert.equal(unloadBlocked(), true, 'unsubmitted form still at risk even after backup confirmation');
+    await input('input-action-title', '');
+    assert.equal(unloadBlocked(), false, 'confirmed current list and blank form need no warning');
+    await input('input-action-title', 'Draf belum disimpan');
+    assert.equal(unloadBlocked(), true);
     const selectBackup = async (text: string | Promise<string>, size = 100) => act(async () => {
       const input = node('input-backup-actions');
       Object.defineProperty(input, 'files', { configurable: true, value: [{ size, text: async () => text }] });
@@ -180,6 +193,7 @@ test('mini apps: search, filters, calendar, manual actions and download work wit
     assert.equal(container.querySelectorAll('[data-testid^="row-action-"]').length, actionCount, 'cancel does not mutate');
     await selectBackup(incoming);
     await click('button-restore-actions');
+    assert.equal(find('button-confirm-action-backup'), null, 'old download cannot confirm changed list');
     assert.equal(container.querySelectorAll('[data-testid^="row-action-"]').length, actionCount + 1, 'duplicate within backup skipped');
     assert.match(node('tool-tracker').textContent!, /Tindakan dari cadangan 工程/);
     assert.match(node('text-tracker-progress').textContent!, /1\/5 selesai/);
@@ -197,7 +211,30 @@ test('mini apps: search, filters, calendar, manual actions and download work wit
     assert.match(node('error-backup').textContent!, /terlalu besar/);
     assert.equal(find('preview-backup'), null);
     assert.equal(requests, 0);
+    await input('input-action-title', '');
+    assert.equal(unloadBlocked(), true, 'restored list differs from confirmed backup');
+    await click('button-backup-actions');
+    await click('button-confirm-action-backup');
+    assert.equal(unloadBlocked(), false);
+    const firstAction = container.querySelector('[data-testid^="button-toggle-"]')!.getAttribute('data-testid')!;
+    await click(firstAction);
+    assert.equal(unloadBlocked(), true, 'status change invalidates backup confirmation');
+    await click('button-backup-actions');
+    await click('button-confirm-action-backup');
+    assert.equal(unloadBlocked(), false);
+    const editAction = container.querySelector('[data-testid^="button-edit-"]')!.getAttribute('data-testid')!;
+    await click(editAction);
+    assert.equal(unloadBlocked(), false, 'opening unchanged edit is not a new draft');
+    await input('input-action-responsible', 'Perubahan belum disimpan');
+    assert.equal(unloadBlocked(), true);
+    await click('button-cancel-edit');
+    assert.equal(unloadBlocked(), false);
+    await click('button-clear-actions');
+    assert.equal(unloadBlocked(), false, 'empty list removes warning');
+    await input('input-action-due', '2028-02-29');
+    assert.equal(unloadBlocked(), true, 'date-only draft also protected');
     await act(async () => root.render(null));
+    assert.equal(unloadBlocked(), false, 'unmount/session replacement removes all guards');
     await render();
     assert.ok(find('empty-tracker'), 'draft is not persisted after unmount');
   } finally {

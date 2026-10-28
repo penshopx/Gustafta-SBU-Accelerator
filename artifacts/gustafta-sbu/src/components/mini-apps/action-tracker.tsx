@@ -1,9 +1,10 @@
-import { forwardRef, useId, useImperativeHandle, useRef, useState, type FormEvent } from 'react';
+import { forwardRef, useEffect, useId, useImperativeHandle, useRef, useState, type FormEvent } from 'react';
 import { Check, Download, ListChecks, Pencil, Plus, RotateCcw, Trash2, TriangleAlert } from 'lucide-react';
 import { actionReport, validCalendarDate, type ActionItem } from '@/lib/sbu-mini-apps';
 import { actionKey, type BackupAction } from '@/lib/action-backup';
 import { ActionBackup } from './action-backup';
 import { downloadText } from '@/lib/local-download';
+import { installLocalDraftGuard } from '@/lib/local-draft-guard';
 export { downloadText } from '@/lib/local-download';
 
 type Draft = { title: string; responsible: string; dueOn: string };
@@ -19,6 +20,15 @@ export const ActionTracker = forwardRef<ActionTrackerHandle>(function ActionTrac
   const [errors, setErrors] = useState<Partial<Record<keyof Draft, string>>>({});
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
+  const [downloadedSnapshot, setDownloadedSnapshot] = useState<string | null>(null);
+  const [confirmedSnapshot, setConfirmedSnapshot] = useState<string | null>(null);
+  const snapshot = JSON.stringify(rows.map(actionKey));
+  const original = rows.find(row => row.id === editing) ?? empty;
+  const hasDraft = (Object.keys(empty) as (keyof Draft)[]).some(key => form[key] !== original[key]);
+  const atRisk = hasDraft || (rows.length > 0 && snapshot !== confirmedSnapshot);
+  useEffect(() => {
+    return atRisk ? installLocalDraftGuard(window) : undefined;
+  }, [atRisk]);
   const seq = useRef(0);
   const titleRef = useRef<HTMLInputElement>(null);
   useImperativeHandle(ref, () => ({
@@ -68,7 +78,8 @@ export const ActionTracker = forwardRef<ActionTrackerHandle>(function ActionTrac
   return <section id="pelacak-tindakan" aria-labelledby={`${id}-h`} data-testid="tool-tracker" className="surface scroll-mt-6 p-5 sm:p-7">
     <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#142c46] text-[#8ec7f4]"><ListChecks size={19} /></span><div><div className="eyebrow text-[#1769d1]">ALAT 02 / DRAF SEMENTARA</div><h2 id={`${id}-h`} className="display text-xl font-extrabold">Pelacak tindakan manual</h2></div></div>
       {rows.length > 0 && <span data-testid="text-tracker-progress" className="mono rounded-md bg-[#eaf4ff] px-2.5 py-1 text-xs font-bold text-[#0c4a96]">{done}/{rows.length} selesai</span>}</div>
-    <p role="note" data-testid="text-tracker-warning" className="mt-4 flex gap-2.5 rounded-xl border border-[#ecc58f] bg-[#fdf1e3] p-3.5 text-sm leading-6 text-[#6b3a08]"><TriangleAlert size={17} className="mt-0.5 shrink-0" /><span><b>Draf tidak disimpan.</b> Isian hilang bila Anda pindah halaman, menutup tab, atau memuat ulang. Tidak dikirim ke server, cloud, atau AI. Unduh laporan teks untuk menyimpannya.</span></p>
+    <p role="note" data-testid="text-tracker-warning" className="mt-4 flex gap-2.5 rounded-xl border border-[#ecc58f] bg-[#fdf1e3] p-3.5 text-sm leading-6 text-[#6b3a08]"><TriangleAlert size={17} className="mt-0.5 shrink-0" /><span><b>Draf tidak disimpan.</b> Isian hilang bila Anda pindah halaman, menutup tab, atau memuat ulang. Tidak dikirim ke server, cloud, atau AI. Unduh cadangan JSON untuk memulihkan daftar di sesi lain.</span></p>
+    <p data-testid="text-action-leave-guard" role="status" className="mt-2 text-xs leading-5 text-[#526b81]">{atRisk ? 'Peringatan meninggalkan halaman aktif: ada daftar yang belum dikonfirmasi dicadangkan atau perubahan isian.' : 'Tidak ada perubahan lokal yang memerlukan peringatan.'} Peringatan browser tidak menjamin pemulihan dan dapat tidak muncul, terutama pada perangkat seluler atau tombol Kembali/Maju di browser lama. Pergantian sesi tidak diblokir.</p>
 
     <form onSubmit={submit} noValidate className="mt-5 grid gap-3 sm:grid-cols-[1.5fr_1fr_.9fr_auto] sm:items-start">
       <div><label htmlFor={`${id}-t`} className="mb-1.5 block text-xs font-bold text-[#2b4159]">Tindakan</label><input ref={titleRef} id={`${id}-t`} data-testid="input-action-title" className="field" maxLength={200} value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} aria-invalid={!!errors.title || undefined} aria-describedby={errors.title ? `${id}-te` : undefined} placeholder="Mis. lengkapi laporan keuangan" />{errors.title && <p id={`${id}-te`} className="mt-1 text-xs font-semibold text-[#9a3432]">{errors.title}</p>}</div>
@@ -89,6 +100,10 @@ export const ActionTracker = forwardRef<ActionTrackerHandle>(function ActionTrac
       </li>)}</ul>}
 
     <div className="mt-5 flex flex-wrap gap-2"><button type="button" data-testid="button-download-actions" disabled={!rows.length} onClick={() => downloadText(actionReport(rows), 'rencana-tindakan-sbu.txt')} className="btn btn-dark"><Download size={15} /> Unduh laporan teks</button>{rows.length > 0 && <button type="button" data-testid="button-clear-actions" onClick={() => { setRows([]); setEditing(null); setForm(empty); setNotice('Semua tindakan dihapus.'); }} className="btn btn-outline"><RotateCcw size={15} /> Kosongkan</button>}</div>
-    <ActionBackup rows={rows} onRestore={restore} />
+    <ActionBackup rows={rows} onRestore={restore} onDownloadStarted={() => setDownloadedSnapshot(snapshot)} />
+    {rows.length > 0 && downloadedSnapshot === snapshot && confirmedSnapshot !== snapshot && <div className="mt-3 text-xs leading-5 text-[#526b81]">
+      <p>Unduhan dimulai bukan bukti berkas tersimpan. Periksa file terlebih dahulu. Konfirmasi hanya berlaku untuk daftar ini, bukan isian formulir yang belum ditambahkan atau disimpan.</p>
+      <button type="button" data-testid="button-confirm-action-backup" className="btn btn-outline mt-2" onClick={() => setConfirmedSnapshot(snapshot)}>Saya sudah menyimpan cadangan terbaru</button>
+    </div>}
   </section>;
 });

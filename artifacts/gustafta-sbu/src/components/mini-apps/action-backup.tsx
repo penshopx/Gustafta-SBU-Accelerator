@@ -3,7 +3,7 @@ import { actionKey, MAX_BACKUP_BYTES, parseActionBackup, serializeActionBackup, 
 import type { ActionItem } from '@/lib/sbu-mini-apps';
 import { downloadText } from '@/lib/local-download';
 
-export function ActionBackup({ rows, onRestore }: { rows: ActionItem[]; onRestore: (items: BackupAction[]) => number }) {
+export function ActionBackup({ rows, onRestore, onDownloadStarted }: { rows: ActionItem[]; onRestore: (items: BackupAction[]) => number; onDownloadStarted?: () => void }) {
   const [preview, setPreview] = useState<BackupAction[] | null>(null);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
@@ -33,6 +33,7 @@ export function ActionBackup({ rows, onRestore }: { rows: ActionItem[]; onRestor
     setError('');
     try {
       downloadText(serializeActionBackup(rows), 'cadangan-tindakan-sbu.json', 'application/json;charset=utf-8');
+      onDownloadStarted?.();
       setNotice('Unduhan cadangan dimulai. Simpan file di tempat yang aman.');
     } catch {
       setError('Cadangan tidak dapat dibuat. Batas cadangan 200 tindakan / 256 KiB. Laporan teks tetap tersedia.');
