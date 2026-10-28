@@ -1,5 +1,6 @@
 import type { SbuChatCitation, SbuChatScheme } from "@workspace/api-zod";
 import type { ChatSourceVersion } from "./sbu-chat-retrieval";
+import { BS_SCHEME_CATALOG, BS_SOURCE_VERSIONS } from "./sbu-chat-bs-schemes";
 
 // Bounded explanatory cards only. No assessment criteria, draft matrices,
 // financial thresholds, transition dates, or private files are admitted here.
@@ -65,15 +66,15 @@ export const BG_SOURCE_VERSIONS: readonly ChatSourceVersion[] = [
 
 export function schemeSources(scheme: SbuChatScheme, versions: readonly ChatSourceVersion[]) {
   const prefix = `${scheme.toLowerCase()}-`;
-  return versions.filter(v => BG_SOURCE_VERSIONS.some(p => p.sourceKey === v.sourceKey))
+  return versions.filter(v => [...BG_SOURCE_VERSIONS, ...BS_SOURCE_VERSIONS].some(p => p.sourceKey === v.sourceKey))
     .flatMap(v => v.citations.filter(c => c.id.startsWith(prefix))).map(c => ({ ...c }));
 }
 
 export function schemeInstruction(scheme?: SbuChatScheme) {
   if (!scheme) return "";
-  const row = BG_SCHEME_CATALOG.find(r => r.code === scheme);
+  const row = [...BG_SCHEME_CATALOG, ...BS_SCHEME_CATALOG].find(r => r.code === scheme);
   if (!row) throw new Error("invalid_scheme");
-  return `\nPAKAR SKEMA SBU — PILOT BG: konteks pilihan server ${row.code}, ${row.title}, KBLI ${row.kbli}.
+  return `\nPAKAR SKEMA SBU — PILOT ${scheme.slice(0, 2)}: konteks pilihan server ${row.code}, ${row.title}, KBLI ${row.kbli}.
 Sumber pilot hanya ringkasan pemetaan dan ruang lingkup, bukan dokumen lengkap. Jangan mengaku membaca seluruh PDF.
 Jawab hanya dalam konteks ini. Pertanyaan subklasifikasi lain: minta pengguna mengganti pilihan; jangan membawa sumber percakapan lama.
 Untuk pertanyaan persyaratan, kualifikasi, jenis BUJK, permohonan baru/perpanjangan: tanyakan konteks yang kurang dan katakan bahwa dasar persyaratan spesifik belum tersedia dalam pilot ini. Jangan mengarang angka, SKK, alat atau pengalaman.

@@ -7,7 +7,7 @@
  */
 
 /**
- * Optional BG pilot context; never grants document access or activates assessment rules.
+ * Optional BG or BS pilot context; never grants document access or activates assessment rules.
  */
 export type SbuChatScheme = typeof SbuChatScheme[keyof typeof SbuChatScheme];
 
@@ -22,4 +22,24 @@ export const SbuChatScheme = {
   BG007: 'BG007',
   BG008: 'BG008',
   BG009: 'BG009',
+  BS001: 'BS001',
+  BS002: 'BS002',
+  BS003: 'BS003',
+  BS004: 'BS004',
+  BS005: 'BS005',
+  BS006: 'BS006',
+  BS007: 'BS007',
+  BS008: 'BS008',
+  BS009: 'BS009',
+  BS010: 'BS010',
+  BS011: 'BS011',
+  BS012: 'BS012',
+  BS013: 'BS013',
+  BS014: 'BS014',
+  BS015: 'BS015',
+  BS016: 'BS016',
+  BS017: 'BS017',
+  BS018: 'BS018',
+  BS019: 'BS019',
+  BS020: 'BS020',
 } as const;

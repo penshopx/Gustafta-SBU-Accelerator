@@ -1759,7 +1759,7 @@ export const sendSbuChatMessageBodyMessagesMax = 20;
 
 
 export const SendSbuChatMessageBody = zod.object({
-  "scheme": zod.enum(['BG001', 'BG002', 'BG003', 'BG004', 'BG005', 'BG006', 'BG007', 'BG008', 'BG009']).optional().describe('Optional BG pilot context; never grants document access or activates assessment rules.'),
+  "scheme": zod.enum(['BG001', 'BG002', 'BG003', 'BG004', 'BG005', 'BG006', 'BG007', 'BG008', 'BG009', 'BS001', 'BS002', 'BS003', 'BS004', 'BS005', 'BS006', 'BS007', 'BS008', 'BS009', 'BS010', 'BS011', 'BS012', 'BS013', 'BS014', 'BS015', 'BS016', 'BS017', 'BS018', 'BS019', 'BS020']).optional().describe('Optional BG or BS pilot context; never grants document access or activates assessment rules.'),
   "analysisContext": zod.object({
   "caseId": zod.number().int().min(1),
   "selection": zod.object({
@@ -1797,7 +1797,7 @@ export const sendSbuChatMessageResponseCitationsItemCheckedOnRegExp = new RegExp
 
 
 export const SendSbuChatMessageResponse = zod.object({
-  "scheme": zod.enum(['BG001', 'BG002', 'BG003', 'BG004', 'BG005', 'BG006', 'BG007', 'BG008', 'BG009']).optional().describe('Optional BG pilot context; never grants document access or activates assessment rules.'),
+  "scheme": zod.enum(['BG001', 'BG002', 'BG003', 'BG004', 'BG005', 'BG006', 'BG007', 'BG008', 'BG009', 'BS001', 'BS002', 'BS003', 'BS004', 'BS005', 'BS006', 'BS007', 'BS008', 'BS009', 'BS010', 'BS011', 'BS012', 'BS013', 'BS014', 'BS015', 'BS016', 'BS017', 'BS018', 'BS019', 'BS020']).optional().describe('Optional BG or BS pilot context; never grants document access or activates assessment rules.'),
   "analysisContext": zod.object({
   "caseId": zod.number().int().min(1),
   "selection": zod.object({

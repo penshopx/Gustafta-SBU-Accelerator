@@ -18,7 +18,7 @@ import {
 import { prepareChatAnalysis, readChatAnalysis, ChatAnalysisError, CHAT_ANALYSIS_ERROR, type ReadChatAnalysis } from "../lib/sbu-chat-analysis";
 import { schemeSources } from "../lib/sbu-chat-schemes";
 
-const SCHEME_NOTICE = "Pilot BG: ringkasan pemetaan subklasifikasi dan ruang lingkup dari salinan skema LSBU Konstruksi Indonesia dan KBLI 2025. Bukan dokumen lengkap, persyaratan terverifikasi, verifikasi live, atau keputusan sertifikasi. Tautan sumber adalah kanal rujukan, bukan PDF unggahan; halaman PDF/cetak tercantum pada kartu.";
+const schemeNotice = (scheme: string) => `Pilot ${scheme.slice(0, 2)}: ringkasan pemetaan subklasifikasi dan ruang lingkup dari salinan skema LSBU Konstruksi Indonesia dan KBLI 2025. Bukan dokumen lengkap, persyaratan terverifikasi, verifikasi live, atau keputusan sertifikasi. Tautan sumber adalah kanal rujukan, bukan PDF unggahan; halaman PDF/cetak tercantum pada kartu.`;
 
 type Generate = SbuChatGenerate;
 
@@ -195,7 +195,7 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
         userId, mode: input.data.mode, specialist: input.data.specialist, purpose,
         ...(scheme ? { scheme } : {}),
         ...(analysisContext ? { analysisContext } : {}), ...cited,
-        disclaimer: CHAT_DISCLAIMER, retrievalNotice: scheme ? SCHEME_NOTICE : RETRIEVAL_NOTICE,
+        disclaimer: CHAT_DISCLAIMER, retrievalNotice: scheme ? schemeNotice(scheme) : RETRIEVAL_NOTICE,
       };
     } catch (error) {
       if (error instanceof AiBudgetError) budgetError = error;

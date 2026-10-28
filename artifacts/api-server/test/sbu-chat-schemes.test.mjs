@@ -41,7 +41,7 @@ test("withdrawal cannot fall back to the bundled catalog or another scheme", () 
 
 test("pilot instructions request clarification and never authorize hidden documents or criteria", () => {
   assert.equal(schemeInstruction(), "");
-  assert.throws(() => schemeInstruction("BS001"), /invalid_scheme/);
+  assert.throws(() => schemeInstruction("IN001"), /invalid_scheme/);
   const prompt = schemeInstruction("BG001");
   assert.match(prompt, /BG001.*41011/);
   assert.match(prompt, /tanyakan konteks yang kurang/);

@@ -9,7 +9,7 @@ import { ChatQuotaNotice, chatLimitMessage, chatQuotaFromError } from './chat-qu
 import { aiBudgetErrorMessage } from '@/lib/ai-budget-error';
 import { PURPOSES, DEFAULT_PURPOSE, purposeInfo } from '@/lib/sbu-chat-purposes';
 import { ChatAnalysisPicker } from './chat-analysis-picker';
-import { BG_SCHEMES, UNAVAILABLE_CLASSIFICATIONS, PILOT_SOURCE_NOTICE, schemeInfo, schemeAllowed, schemeForSend, sameScheme, schemePrompts } from '@/lib/sbu-chat-schemes';
+import { SCHEME_FAMILIES, UNAVAILABLE_CLASSIFICATIONS, PILOT_SOURCE_NOTICE, schemeInfo, schemeAllowed, schemeForSend, sameScheme, schemePrompts, schemesForFamily, familyInfo, schemeActiveLabel, type SchemeFamily } from '@/lib/sbu-chat-schemes';
 import { ChatBudgetNotice, chatBudgetForOwner } from './chat-budget';
 
 type Mode = SbuChatInput['mode'];
@@ -97,6 +97,7 @@ export default function SbuChatPage({ expectedUserId, initialRole, documentScope
   const clearSource = () => { setSourceOn(!!documentScope); setSourceCtx(undefined); setSourceKey(k => k + 1); };
   const [scheme, setScheme] = useState<SbuChatScheme | undefined>(undefined);
   const schemeRef = useRef(scheme); schemeRef.current = scheme;
+  const [familyView, setFamilyView] = useState<SchemeFamily>('BG');
   const [specialist, setSpecialist] = useState<SpecId>('sbuclaw');
   const catalog = useGetSbuChatSpecialists({ query: { enabled: true, retry: 1, staleTime: 60000, queryKey: getGetSbuChatSpecialistsQueryKey() } });
   const specs = catalog.data;
@@ -255,19 +256,36 @@ export default function SbuChatPage({ expectedUserId, initialRole, documentScope
     </div>}
     {!documentScope && <section aria-labelledby="scheme-pilot-title" data-testid="panel-scheme-pilot" className="mb-6 rounded-xl border border-border bg-card p-4 text-xs leading-5 text-card-foreground">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="scheme-pilot-title" className="eyebrow text-primary">PAKAR SKEMA SBU / PILOT BG (OPSIONAL)</h2>
-        <span data-testid="status-scheme-pilot" className="mono text-[11px] text-muted-foreground">{activeScheme ? `Aktif: ${activeScheme.id} / KBLI ${activeScheme.kbli}` : 'Tidak aktif: asisten umum'}</span>
+        <h2 id="scheme-pilot-title" className="eyebrow text-primary">PAKAR SKEMA SBU / PILOT BG DAN BS (OPSIONAL)</h2>
+        <span data-testid="status-scheme-pilot" className="mono min-w-0 break-words text-[11px] text-muted-foreground">{activeScheme ? `Aktif: ${activeScheme.id} / ${familyInfo(activeScheme.family).label} / KBLI ${activeScheme.kbli}` : 'Tidak aktif: asisten umum'}</span>
       </div>
-      <p className="mt-1 text-muted-foreground">Fokuskan percakapan pada satu subklasifikasi Bangunan Gedung. Ini bukan sertifikasi, bukan penilaian kelayakan, dan tidak membaca dokumen pribadi Anda.</p>
+      <p className="mt-1 text-muted-foreground">Fokuskan percakapan pada satu subklasifikasi Bangunan Gedung (BG) atau Bangunan Sipil (BS) untuk penjelasan ruang lingkup berbasis sumber. Ini bukan sertifikasi, bukan penilaian kelayakan, dan tidak membaca dokumen pribadi Anda.</p>
       <p role="note" data-testid="text-scheme-source-notice" className="mt-2 rounded-lg border border-border bg-muted p-2.5 font-medium text-foreground">{PILOT_SOURCE_NOTICE}</p>
-      {!schemeOk ? <p data-testid="text-scheme-disabled" className="mt-3 font-medium text-foreground">Skema tidak tersedia untuk tujuan Pemeriksa dokumen. Pilih tujuan lain untuk memakai pilot BG.</p> : <>
-        <div role="radiogroup" aria-label="Skema pilot BG" data-testid="group-scheme" className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {[undefined, ...BG_SCHEMES].map(s => { const id = s?.id; const on = scheme === id; return <button key={id ?? 'off'} type="button" role="radio" aria-checked={on} disabled={loading} data-testid={`button-scheme-${id ?? 'off'}`} onClick={() => pickScheme(id)} className={`min-w-0 rounded-lg border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${on ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-border bg-background hover:bg-muted'}`}>
-            <span className="flex items-center justify-between gap-2 text-sm font-bold text-foreground"><span className="mono">{s ? s.id : 'Tanpa skema'}</span>{on && <Check size={15} className="shrink-0 text-primary" />}</span>
-            <span className="mt-0.5 block break-words text-muted-foreground">{s ? `KBLI ${s.kbli} / ${s.title}` : 'Asisten umum (default)'}</span>
+      {!schemeOk ? <p data-testid="text-scheme-disabled" className="mt-3 font-medium text-foreground">Skema tidak tersedia untuk tujuan Pemeriksa dokumen. Pilih tujuan lain untuk memakai pilot BG atau BS.</p> : <>
+        <div className="mt-3 flex flex-wrap items-stretch gap-2">
+          <button type="button" aria-pressed={scheme === undefined} disabled={loading} data-testid="button-scheme-off" onClick={() => pickScheme(undefined)} className={`min-w-0 rounded-lg border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${scheme === undefined ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-border bg-background hover:bg-muted'}`}>
+            <span className="flex items-center gap-2 text-sm font-bold text-foreground">Tanpa skema{scheme === undefined && <Check size={15} className="shrink-0 text-primary" />}</span>
+            <span className="block text-muted-foreground">Asisten umum (default)</span>
+          </button>
+        </div>
+        <div className="mt-3" data-testid="group-scheme-family">
+          <div id="scheme-family-label" className="eyebrow mb-1.5 text-muted-foreground">KLASIFIKASI (HANYA MENAMPILKAN DAFTAR, TIDAK MENGUBAH SKEMA AKTIF)</div>
+          <div role="group" aria-labelledby="scheme-family-label" className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted p-1">
+            {SCHEME_FAMILIES.map(f => { const on = familyView === f.id; const hasActive = activeScheme?.family === f.id; return <button key={f.id} type="button" aria-pressed={on} aria-controls="group-scheme-list" data-testid={`button-scheme-family-${f.id}`} onClick={() => setFamilyView(f.id)} className={`min-w-0 rounded-md px-2 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${on ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+              <span className="flex flex-wrap items-center gap-1.5 text-sm font-bold"><span className="mono">{f.short}</span><span className="break-words">{f.label}</span>{hasActive && <span className="rounded bg-primary/15 px-1.5 text-[10px] font-bold text-primary">aktif</span>}</span>
+              <span className="mt-0.5 block text-[11px] text-muted-foreground">{schemesForFamily(f.id).length} subklasifikasi</span>
+            </button>; })}
+          </div>
+          <p className="mt-1.5 text-[11px] text-muted-foreground">{familyInfo(familyView).desc}</p>
+        </div>
+        <div id="group-scheme-list" role="radiogroup" aria-label={`Skema pilot ${familyInfo(familyView).label}`} data-testid="group-scheme" className="mt-2 grid max-h-[22rem] gap-2 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
+          {schemesForFamily(familyView).map(s => { const on = scheme === s.id; return <button key={s.id} type="button" role="radio" aria-checked={on} disabled={loading} data-testid={`button-scheme-${s.id}`} onClick={() => pickScheme(s.id)} className={`min-w-0 rounded-lg border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${on ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-border bg-background hover:bg-muted'}`}>
+            <span className="flex items-center justify-between gap-2 text-sm font-bold text-foreground"><span className="mono">{s.id}</span><span className="mono text-[11px] font-normal text-muted-foreground">KBLI {s.kbli}</span>{on && <Check size={15} className="shrink-0 text-primary" />}</span>
+            <span className="mt-0.5 block break-words text-muted-foreground">{s.title}</span>
           </button>; })}
         </div>
-        <p className="mt-3 text-[11px] text-muted-foreground"><span className="font-bold">Belum tersedia di pilot:</span> <span data-testid="text-scheme-unavailable">{UNAVAILABLE_CLASSIFICATIONS.join(', ')}</span>. Mengganti skema saat ada percakapan atau draf akan meminta konfirmasi, menghapus percakapan, dan meminta persetujuan ulang.</p>
+        {activeScheme && activeScheme.family !== familyView && <p data-testid="text-scheme-other-family" className="mt-2 font-medium text-foreground">Skema aktif tetap {activeScheme.id} ({familyInfo(activeScheme.family).label}). Memilih skema di daftar ini akan meminta konfirmasi bila ada percakapan atau draf.</p>}
+        <p className="mt-3 text-[11px] text-muted-foreground"><span className="font-bold">Belum tersedia di pilot:</span> <span data-testid="text-scheme-unavailable">{UNAVAILABLE_CLASSIFICATIONS.join(', ')}</span>. Mengganti skema, termasuk antara BG dan BS, saat ada percakapan atau draf akan meminta konfirmasi, menghapus percakapan, dan meminta persetujuan ulang.</p>
       </>}
     </section>}
     <div className="eyebrow mb-2 text-[#678096]">PERAN ANDA (KONTEKS, BUKAN HAK AKSES)</div>
@@ -303,14 +321,14 @@ export default function SbuChatPage({ expectedUserId, initialRole, documentScope
 
     <section className="surface overflow-hidden" aria-label="Percakapan">
       <div className="flex items-center justify-between gap-3 border-b border-[#d8e4ec] bg-[#101f32] px-5 py-3 text-[#e6f2ff]">
-        <div className="min-w-0"><div className="eyebrow text-[#8ec7f4]">TUJUAN / SKEMA / PERAN / SPESIALIS AKTIF</div><div className="truncate text-sm font-bold" data-testid="text-active-context">Tujuan: {pInfo.label}<span className="mx-2 text-[#607d98]">/</span><span data-testid="text-active-scheme">Skema: {activeScheme ? `${activeScheme.id} (KBLI ${activeScheme.kbli}, pilot)` : 'tidak aktif'}</span><span className="mx-2 text-[#607d98]">/</span>Peran: {info.label}<span className="mx-2 text-[#607d98]">/</span>Spesialis: {spec?.name ?? '...'}</div></div>
+        <div className="min-w-0"><div className="eyebrow text-[#8ec7f4]">TUJUAN / SKEMA / PERAN / SPESIALIS AKTIF</div><div className="break-words text-sm font-bold" data-testid="text-active-context">Tujuan: {pInfo.label}<span className="mx-2 text-[#607d98]">/</span><span data-testid="text-active-scheme">Skema: {activeScheme ? schemeActiveLabel(activeScheme) : 'tidak aktif'}</span><span className="mx-2 text-[#607d98]">/</span>Peran: {info.label}<span className="mx-2 text-[#607d98]">/</span>Spesialis: {spec?.name ?? '...'}</div></div>
         <button type="button" data-testid="button-new-chat" disabled={loading || (!messages.length && !draft)} onClick={() => dirty ? setConfirm({ kind: 'new' }) : resetAll()} className="btn !min-h-[36px] border border-[#607d98] !text-xs text-white hover:bg-[#203b56]"><Plus size={14} /> Percakapan baru</button>
       </div>
 
       <div style={{ overflowWrap: 'anywhere' }} className="max-h-[56dvh] min-h-[280px] min-w-0 space-y-4 overflow-y-auto bg-[#f7fbfe] p-4 sm:p-6" data-testid="list-chat-messages">
         {!messages.length && <div className="fade-up">
           <p className="text-sm leading-7 text-[#34506a]">{pInfo.intro}</p><p className="mt-2 text-xs leading-5 text-[#566f85]">Peran aktif: {info.label}. {info.intro}</p>
-          {activeScheme && <p data-testid="text-scheme-chat-notice" className="mt-2 text-xs leading-5 text-[#566f85]">Skema pilot aktif: {activeScheme.id} / {activeScheme.title}. Sumber hanya pemetaan KBLI dan penjelasan ruang lingkup, bukan persyaratan lengkap.</p>}
+          {activeScheme && <p data-testid="text-scheme-chat-notice" className="mt-2 text-xs leading-5 text-[#566f85]">Skema pilot {familyInfo(activeScheme.family).label} aktif: {activeScheme.id} / KBLI {activeScheme.kbli} / {activeScheme.title}. Sumber hanya pemetaan KBLI dan penjelasan ruang lingkup, bukan persyaratan lengkap.</p>}
           <div className="eyebrow mb-2 mt-5 text-[#678096]">CONTOH PERTANYAAN</div>
           <div className="grid gap-2">{(activeScheme ? schemePrompts(activeScheme) : purpose !== DEFAULT_PURPOSE ? pInfo.prompts : spec ? spec.prompts.slice(0, 3) : info.prompts).map((p, i) => <button key={p} type="button" data-testid={`button-suggestion-${i}`} disabled={loading} onClick={() => { setDraft(p); }} className="rounded-lg border border-[#cddcea] bg-white px-4 py-3 text-left text-sm text-[#1d3651] transition-colors hover:border-[#1769d1] hover:bg-[#eef6fc]">{p}</button>)}</div>
         </div>}

@@ -136,7 +136,7 @@ test("BG pilot binds follow-up context, echoes scheme and uses only its bounded 
     assert.ok(result.citations.every(s => s.id.startsWith("bg002-")));
     assert.equal(calls, 1);
     for (const invalid of [
-      { ...body(), scheme: "BS001" },
+      { ...body(), scheme: "IN001" },
       { ...body(), scheme: "BG001", analysisContext },
       { ...body(), scheme: "BG001", purpose: "pemeriksa_dokumen" },
     ]) assert.equal((await send(invalid)).status, 400);
@@ -165,6 +165,51 @@ test("BG source withdrawal blocks before cost and rejects an in-flight answer", 
     assert.equal(calls, 1);
     assert.equal(costs, 1);
   }, async () => { costs++; }, undefined, reviews);
+});
+
+test("all BS choices reach the generator with scoped sources, not BG sources", async () => {
+  let calls = 0;
+  await server(async (...args) => {
+    calls++;
+    const scheme = args[8];
+    assert.match(scheme, /^BS0[01][0-9]$|^BS020$/);
+    assert.equal(args[4], "");
+    assert.equal(args[5].length, 2);
+    assert.ok(args[5].every(s => s.id.startsWith(`${scheme.toLowerCase()}-`)));
+    const id = args[5][0].id;
+    return { answer: `Pemetaan belum terverifikasi [${id}]`, citationIds: [id] };
+  }, async send => {
+    for (let i = 1; i <= 20; i++) {
+      const scheme = `BS${String(i).padStart(3, "0")}`;
+      const response = await send({ ...body("asesor"), scheme }, `owner-bs-${i}`);
+      assert.equal(response.status, 200);
+      const result = await response.json();
+      assert.equal(result.scheme, scheme);
+      assert.match(result.retrievalNotice, /^Pilot BS:/);
+      assert.ok(result.citations.every(c => c.id.startsWith(scheme.toLowerCase())));
+    }
+    assert.equal(calls, 20);
+  });
+});
+
+test("BS withdrawal fails closed before charging and during generation without affecting BG", async () => {
+  let active = CHAT_SOURCE_VERSIONS.filter(v => v.sourceKey !== "pilot-bs-kbli2025-scope");
+  let calls = 0, costs = 0;
+  await server(async (...args) => {
+    calls++;
+    active = active.filter(v => v.sourceKey !== "pilot-bs-kbli2025-scope");
+    const id = args[5][0].id;
+    return { answer: `BS lama [${id}]`, citationIds: [id] };
+  }, async send => {
+    assert.equal((await send({ ...body(), scheme: "BS018" })).status, 503);
+    assert.equal(calls, 0); assert.equal(costs, 0);
+    active = CHAT_SOURCE_VERSIONS;
+    const response = await send({ ...body(), scheme: "BS018" });
+    assert.equal(response.status, 503);
+    assert.doesNotMatch(await response.text(), /BS lama|bs018-mapping@/);
+    assert.equal(calls, 1); assert.equal(costs, 1);
+    assert.ok(active.some(v => v.sourceKey === "pilot-bg-kbli2025-scope"));
+  }, async () => { costs++; }, undefined, { active: async () => active });
 });
 
 test("selected private excerpt is revalidated and sent alone, with explicit approval and no automatic context", async () => {
@@ -381,9 +426,9 @@ test("knowledge catalog follows active versions, enforces session owner and neve
     assert.equal(response.status, 200, "ordinary readers do not need reviewer rights");
     assert.equal(response.headers.get("cache-control"), "private, no-store");
     const data = await response.json();
-    assert.equal(data.length, 31);
+    assert.equal(data.length, 71);
     assert.equal(data.filter(source => source.sourceRole === "primer").length, 4);
-    assert.equal(data.filter(source => source.sourceRole === "panduan").length, 24);
+    assert.equal(data.filter(source => source.sourceRole === "panduan").length, 64);
     assert.equal(data.filter(source => source.sourceRole === "praktik").length, 3);
     assert.ok(data.every(source => source.id.endsWith(`@${source.versionId}`)));
     assert.ok(data.filter(source => source.sourceKey.startsWith("teras-")).every(source => source.verificationStatus === "unverified"));

@@ -173,3 +173,8 @@ privat atau distribusi ulang buku KBLI lengkap.
 Tautan pada kartu adalah kanal rujukan, bukan pembaca PDF. Khusus skema LSBU,
 kanal Bina Konstruksi adalah kanal pembina, bukan bukti penerbit/autentikasi
 skema institusional. Pembaca sumber lengkap belum ditambahkan pada pilot ini.
+
+Pilot selanjutnya mencakup BS001–BS020 dengan batas yang sama.
+Pemetaan, locator lintas halaman dan pengecualian ruang lingkupnya dijelaskan
+dalam [catatan pilot Bangunan Sipil](pakar-skema-bs-pilot.md). Klasifikasi lain
+tetap inventaris, belum menjadi sumber pilot aktif.
