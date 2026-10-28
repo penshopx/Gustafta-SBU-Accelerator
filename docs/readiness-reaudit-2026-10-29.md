@@ -214,6 +214,24 @@ dari inspeksi kode dan endpoint publik.
   sementara sesuai preview path: frontend `/`, film `/gustafta-film/`, dan
   sandbox `/__mockup`; API build juga lulus. Tidak mengubah variabel lingkungan
   tersimpan atau mengendurkan pemeriksaan startup.
-- Peringatan ukuran chunk frontend serta peer React/Clerk dari instalasi tetap
-  ada dan belum ditangani dalam perubahan ini. Kelulusan dua pemeriksaan
+- Peringatan ukuran chunk frontend tetap ada. Peringatan peer React/Clerk
+  diselesaikan pada tindak lanjut di bawah. Kelulusan pemeriksaan
   bukan pengesahan produksi atau hasil pemindaian keamanan.
+
+## Tindak lanjut kompatibilitas React/Clerk
+
+- React dan React DOM diselaraskan dari 19.1.0 ke 19.1.4, tetap pada minor yang
+  sama dan memenuhi peer Clerk yang terpasang. Renderer pengujian juga memakai
+  19.1.4; ada pengujian baru yang menolak ketidaksamaan ketiga versi.
+- Tidak ada aplikasi Expo aktif dalam workspace yang diperiksa. Catatan pin
+  Expo pada katalog lama diganti dengan alasan penyelarasan artefak web.
+- Instalasi tidak lagi melaporkan unmet peer React/React DOM pada Clerk. Versi
+  SDK Clerk, konfigurasi provider, sesi, izin, secret dan data tidak diubah.
+- Typecheck seluruh workspace lulus. Pengujian frontend terfokus 40/40 lulus
+  (isolasi akun, pembacaan privat, profil, Help Desk, regulasi dan versi runtime).
+  Pengujian sesi Clerk dengan fixture terkontrol 58/58 lulus.
+- Build frontend utama, film dan sandbox dengan konteks artefaknya lulus.
+  Peringatan chunk besar dan beberapa dependensi deprecated masih terpisah;
+  tidak dinonaktifkan atau disembunyikan.
+- Tidak ada publikasi, pengujian login nyata produksi atau penilaian ulang
+  persentase kesiapan berdasarkan perubahan dependensi ini.
