@@ -20,3 +20,12 @@ Do not treat Happy DOM image `load` events as proof that preview pixels decode o
 **Why:** Happy DOM can emit `load` synchronously for a data URL without a real image decoder. Even non-image base64 can appear loaded, unlike a browser.
 
 **How to apply:** Use DOM tests for state invalidation and explicit error handling; verify image decoding, intrinsic-size zoom and readability in a real browser with synthetic image fixtures.
+
+Synthetic DOM style parsing may omit valid nested CSS math expressions.
+
+**Why:** A nested `min()`/`calc()` height appeared as an empty inline style
+in Happy DOM, even though this CSS form is valid in browsers.
+
+**How to apply:** Do not interpret missing synthetic style values as proof of
+a broken layout. Assert numeric computed branches where appropriate and
+check responsive CSS in an actual browser.
