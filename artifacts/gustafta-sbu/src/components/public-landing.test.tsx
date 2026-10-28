@@ -37,6 +37,8 @@ test('landing: renders honest copy, working CTAs, and mounts film only on click'
     for (const banned of [/\d+\s*%/, /dijamin|garansi|pasti lolos|100/i, /resmi dari|mitra resmi/i]) assert.doesNotMatch(text, banned);
     assert.match(text, /bukan jaminan/); assert.match(text, /DRAF AI/); assert.match(text, /VERIFIKASI MANUSIA/);
     assert.doesNotMatch(text, /[\u{1F300}-\u{1FAFF}]/u, 'no emoji');
+    for (const id of ['illus-site', 'illus-flow', 'illus-desk', 'illus-review', 'illus-boundary']) { const el = find(id); assert.ok(el, id); assert.equal(el.getAttribute('aria-hidden'), 'true', id); }
+    assert.equal(container.querySelectorAll('img[src^="http"], svg image').length, 0, 'no external images');
     assert.equal(container.querySelector('iframe'), null, 'film not mounted before click');
     assert.match(find('note-film-concept')?.textContent ?? '', /bukan hasil pemeriksaan dokumen atau keputusan sertifikasi/);
     assert.match(find('note-film-concept')?.textContent ?? '', /berdiri sendiri dan privat/);

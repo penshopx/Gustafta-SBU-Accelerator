@@ -12,3 +12,9 @@
 .lp-scatter > *:nth-child(2n) { animation-delay: -2s; }
 .lp-scatter > *:nth-child(3n) { animation-delay: -4s; }
 @keyframes lp-drift { to { transform: translate(4px, -6px) rotate(var(--r, 0deg)); } }
+.lp-illus { max-width: 100%; height: auto; }
+.lp-swing { transform-origin: 300px 40px; animation: lp-swing 5s ease-in-out infinite alternate; }
+@keyframes lp-swing { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+.lp-dash { animation: lp-dash 6s linear infinite; }
+@keyframes lp-dash { to { stroke-dashoffset: -1000; } }
+@media (prefers-reduced-motion: reduce) { .lp-swing, .lp-dash, .lp-scatter > * { animation: none; } }

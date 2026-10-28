@@ -1,6 +1,7 @@
 import { Link } from 'wouter';
 import { ArrowRight, ArrowUpRight, BookOpen, BriefcaseBusiness, CalendarDays, FileSearch, Folder, LayoutGrid, MessagesSquare, Search, UsersRound, type LucideIcon } from 'lucide-react';
 import { FilmEmbed } from './film-embed';
+import { BoundaryScene, DeskScene, FlowScene, ReviewScene, SiteScene } from './illustrations';
 import './landing.css';
 
 const scattered = [
@@ -67,6 +68,7 @@ export default function PublicLanding() {
               <Link data-testid="link-try-simulator" href="/simulator" className="lp-btn lp-btn-ghost">Coba simulator tanpa akun</Link>
             </div>
             <Link data-testid="link-login-hero" href="/sign-in" className="mt-5 inline-block text-sm font-semibold text-[#9ccbff] underline-offset-4 hover:underline">Saya sudah punya akun</Link>
+            <SiteScene className="mt-10 max-w-[520px] opacity-95" />
           </div>
           <div className="relative">
             <div className="eyebrow mb-4 text-[#8ea3ba]">SITUASI YANG SERING TERJADI</div>
@@ -82,7 +84,8 @@ export default function PublicLanding() {
       <section className="border-t border-[#1a2433] bg-[#0a0f18]">
         <div className="mx-auto max-w-7xl px-5 py-20 md:px-10">
           <div className="grid gap-6 md:grid-cols-[.8fr_1.2fr] md:items-end"><div><Kicker n="01">CARA KERJA</Kicker><h2 className="display mt-4 text-4xl font-extrabold leading-tight">Dari tumpukan berkas ke daftar tindakan.</h2></div><p className="text-base leading-8 text-[#c2d1e1]">Celah yang tidak terlihat baru ketahuan saat permohonan berjalan. Gustafta membuatnya terlihat lebih awal, dari data yang Anda deklarasikan sendiri.</p></div>
-          <ol className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-[#1f2b3b] bg-[#1f2b3b] md:grid-cols-4">
+          <FlowScene className="mt-12 hidden md:block" />
+          <ol className="mt-6 grid gap-px overflow-hidden rounded-2xl border border-[#1f2b3b] bg-[#1f2b3b] md:grid-cols-4">
             {[['Buka kasus', 'Perusahaan, jenis permohonan, kualifikasi, klasifikasi.'], ['Deklarasikan bukti', 'Tandai yang ada, simpan salinan privat bila perlu.'], ['Baca temuan', 'Kebutuhan yang belum tercatat beserta sumber rujukannya.'], ['Susun tindakan', 'Penanggung jawab, tenggat, lalu ekspor ringkasan persiapan.']].map(([t, d], i) =>
               <li key={t} className="bg-[#0c121c] p-6"><span className="mono text-xs text-[#4ea4ff]">0{i + 1}</span><h3 className="display mt-6 text-xl font-extrabold text-white">{t}</h3><p className="mt-2 text-sm leading-6 text-[#b4c4d6]">{d}</p></li>)}
           </ol>
@@ -92,7 +95,7 @@ export default function PublicLanding() {
       {/* Features */}
       <section className="mx-auto max-w-7xl px-5 py-20 md:px-10">
         <Kicker n="02">YANG SUDAH BISA DIPAKAI</Kicker>
-        <div className="mt-4 flex flex-col justify-between gap-4 md:flex-row md:items-end"><h2 className="display max-w-2xl text-4xl font-extrabold leading-tight">Alat konkret, bukan janji.</h2><p className="max-w-sm text-sm leading-6 text-[#b4c4d6]">Simulator dan Mini Apps terbuka untuk umum. Ruang kerja lain memerlukan akun dan bersifat pribadi.</p></div>
+        <div className="mt-4 flex flex-col justify-between gap-4 md:flex-row md:items-end"><h2 className="display max-w-2xl text-4xl font-extrabold leading-tight">Alat konkret, bukan janji.</h2><div className="flex items-end gap-6"><p className="max-w-sm text-sm leading-6 text-[#b4c4d6]">Simulator dan Mini Apps terbuka untuk umum. Ruang kerja lain memerlukan akun dan bersifat pribadi.</p><DeskScene className="hidden w-[220px] shrink-0 lg:block" /></div></div>
         <ul className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {features.map(({ href, title, text, icon: Icon, access }, i) => <li key={href} className={i === 0 ? 'sm:col-span-2 lg:row-span-2' : ''}>
             <Link href={href} data-testid={`link-feature-${href.slice(1)}`} className={`group flex h-full flex-col rounded-2xl border p-5 transition-colors ${i === 0 ? 'border-[#4ea4ff] bg-[#0d1d33]' : 'border-[#1f2b3b] bg-[#0c121c] hover:border-[#4ea4ff]'}`}>
@@ -108,7 +111,7 @@ export default function PublicLanding() {
       <section className="border-y border-[#1a2433] bg-[#0a0f18]">
         <div className="mx-auto max-w-7xl px-5 py-20 md:px-10">
           <Kicker n="03">TIGA JENIS HASIL, TIGA LABEL</Kicker>
-          <h2 className="display mt-4 max-w-3xl text-4xl font-extrabold leading-tight">Bedakan hasil pemeriksaan, draf AI, dan keputusan manusia.</h2>
+          <div className="mt-4 flex items-end justify-between gap-8"><h2 className="display max-w-3xl text-4xl font-extrabold leading-tight">Bedakan hasil pemeriksaan, draf AI, dan keputusan manusia.</h2><ReviewScene className="hidden w-[200px] shrink-0 md:block" /></div>
           <div className="mt-10 grid gap-4 lg:grid-cols-[1fr_1.1fr_1.2fr]">
             {outputs.map(o => <article key={o.tag} data-testid={`card-output-${o.tag.split(' ')[0].toLowerCase()}`} className={`rounded-2xl border-t-4 bg-[#0c121c] p-6 ${o.tone}`}><div className="eyebrow text-[#9ccbff]">{o.tag}</div><h3 className="display mt-5 text-xl font-extrabold text-white">{o.title}</h3><p className="mt-3 text-sm leading-6 text-[#c2d1e1]">{o.text}</p></article>)}
           </div>
@@ -130,7 +133,7 @@ export default function PublicLanding() {
             <li>Status "persiapan selesai" bukan keputusan LSBU dan bukan jaminan sertifikat terbit.</li>
             <li>Bukti yang dideklarasikan atau disimpan belum berarti terverifikasi.</li>
             <li>Tidak ada pengiriman otomatis ke sistem lembaga mana pun.</li>
-          </ul></div>
+          </ul><BoundaryScene className="mt-10 max-w-[420px]" /></div>
           <div className="bg-[#4ea4ff] p-8 text-[#04111f] md:p-12"><div className="eyebrow">MULAI HARI INI</div><h2 className="display mt-5 text-4xl font-extrabold leading-tight">Rapikan persiapan sebelum tenggat mendekat.</h2>
             <div className="mt-8 flex flex-wrap gap-3"><Link href="/sign-up" data-testid="link-join-bottom" className="lp-btn bg-[#06090f] text-white">Mulai persiapan <ArrowRight size={16} /></Link><Link href="/mini-apps" data-testid="link-mini-apps-bottom" className="lp-btn border border-[#06090f]">Lihat Mini Apps</Link></div></div>
         </div>
