@@ -8,6 +8,9 @@ import { REGULATIONS, regulationsFor } from '../../../api-server/src/lib/sbu-rul
 import { ListRegulationsResponse } from '../../../../lib/api-zod/src/generated/api';
 import { RegulationsPage, RegulationsPageView } from './regulations-page';
 
+const OWNER = 'regulations-test-owner';
+const regulationsKey = (owner = OWNER) => [...getListRegulationsQueryKey(), owner];
+
 test('halaman regulasi menahan tenggat respons API tanpa menyatukan tiga alur transisi', () => {
   // Tanggal contoh hanya berada di sumber; bukan surat Pasal 20 ayat (2) atau
   // bukti bahwa tenggat LSBU maupun konversi boleh dihitung.
@@ -18,10 +21,10 @@ test('halaman regulasi menahan tenggat respons API tanpa menyatukan tiga alur tr
       : rule.source,
   }));
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
-  client.setQueryData(getListRegulationsQueryKey(), wireResponse(response));
+  client.setQueryData(regulationsKey(), wireResponse(response));
 
   const html = renderToStaticMarkup(
-    createElement(QueryClientProvider, { client }, createElement(RegulationsPage)),
+    createElement(QueryClientProvider, { client }, createElement<{ expectedUserId?: string }>(RegulationsPage, { expectedUserId: OWNER })),
   );
   assert.match(html, /Rujukan regulasi/);
   assert.doesNotMatch(html, /Memuat data regulasi|Belum ada ringkasan regulasi|Data belum dapat ditampilkan/);
@@ -57,8 +60,8 @@ function wireResponse(response: Regulation[]): Regulation[] {
 
 function renderRegulations(response?: Regulation[]) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
-  if (response) client.setQueryData(getListRegulationsQueryKey(), wireResponse(response));
-  return renderToStaticMarkup(createElement(QueryClientProvider, { client }, createElement(RegulationsPage)));
+  if (response) client.setQueryData(regulationsKey(), wireResponse(response));
+  return renderToStaticMarkup(createElement(QueryClientProvider, { client }, createElement<{ expectedUserId?: string }>(RegulationsPage, { expectedUserId: OWNER })));
 }
 
 function verification(track: string): NonNullable<Parameters<typeof regulationsFor>[0]>[number] {
@@ -110,6 +113,28 @@ test('keadaan memuat atau kosong tidak menyatakan status terbaru sudah diketahui
     assert.equal(html.match(/Status verifikasi belum tersedia/g)?.length, 3);
     assert.doesNotMatch(html, /data-testid="transition-date-|Keberadaan surat dan telaah ahli yang sah/);
   }
+});
+
+test('cache lama tanpa pemilik dan cache akun lain tidak memasok keputusan ke akun baru', () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+  const approved = wireResponse(regulationsFor(['transisi', 'transisi_operasional', 'transisi_konversi'].map(verification)));
+  client.setQueryData(getListRegulationsQueryKey(), approved);
+  client.setQueryData(regulationsKey(OWNER), approved);
+  const renderFor = (owner: string) => renderToStaticMarkup(
+    createElement(QueryClientProvider, { client }, createElement<{ expectedUserId?: string }>(RegulationsPage, { expectedUserId: owner })),
+  );
+  assert.equal(renderFor(OWNER).match(/data-testid="transition-date-/g)?.length, 3);
+  const otherOwner = 'regulations-other-owner';
+  const pending = renderFor(otherOwner);
+  assert.equal(pending.match(/Status verifikasi belum tersedia/g)?.length, 3);
+  assert.doesNotMatch(pending, /data-testid="transition-date-|Sumber dan telaah terverifikasi/);
+
+  client.setQueryData(regulationsKey(otherOwner), wireResponse(regulationsFor()));
+  const current = renderFor(otherOwner);
+  assert.doesNotMatch(current, /Memuat data regulasi|data-testid="transition-date-|Sumber dan telaah terverifikasi/);
+  assert.match(current, /Belum ada tanggal atau hitung mundur di aplikasi/);
+  assert.equal(renderFor(OWNER).match(/data-testid="transition-date-/g)?.length, 3);
+  client.clear();
 });
 
 test('kegagalan memuat ulang menyembunyikan tanggal dari cache dan menyediakan coba lagi', () => {

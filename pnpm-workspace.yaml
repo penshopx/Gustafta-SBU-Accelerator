@@ -68,6 +68,16 @@ catalog:
 
 autoInstallPeers: false
 
+# These plugins import Vite's types but do not declare the peer themselves.
+# Bind them to each consumer's Vite instance, not an unrelated hoisted copy.
+packageExtensions:
+  '@replit/vite-plugin-runtime-error-modal@0.0.6':
+    peerDependencies:
+      vite: '^7.3.2'
+  '@replit/vite-plugin-cartographer@0.5.21':
+    peerDependencies:
+      vite: '^7.3.2'
+
 onlyBuiltDependencies:
   - '@swc/core'
   - esbuild

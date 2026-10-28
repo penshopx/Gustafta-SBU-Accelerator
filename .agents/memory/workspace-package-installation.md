@@ -19,3 +19,14 @@ program along with dependency and system-library configuration.
 **How to apply:** Inspect the resulting changes. Keep necessary inspection
 tooling, remove only confirmed generated starter content, and preserve existing
 application entry points and workflow configuration.
+
+Vite plugins that expose Vite types need an explicit Vite peer dependency, even
+when their package metadata omits it.
+
+**Why:** pnpm can resolve the same Vite version through different peer contexts;
+its internal types then conflict across module identities. A frozen reinstall
+does not repair missing peer declarations.
+
+**How to apply:** Check the plugin's resolved Vite context and metadata before
+casting away plugin type errors. Preserve the consumer-bound peer extensions
+when updating dependencies; remove them only after upstream declares the peer.

@@ -1,5 +1,11 @@
 # Audit ulang kesiapan operasional — 29 Oktober 2026 (WIB)
 
+> **Pembaruan setelah perbaikan yang diizinkan pengguna:** P0-A dan P0-B di bawah
+> sudah diselesaikan. Typecheck seluruh workspace lulus; enam uji regulasi
+> lulus; build frontend, API, film dan sandbox lulus menggunakan konteks build
+> masing-masing artefak. Tidak ada publikasi. Isi audit dan nilai awal di bawah
+> merekam kondisi sebelum perbaikan, bukan penilaian ulang produksi.
+
 ## Kesimpulan
 
 **Estimasi engineering: 72/100, dengan rentang ketidakpastian 70–80.**
@@ -191,3 +197,23 @@ pelanggan. Tidak membaca dokumen privat atau nilai secret.
 disepakati, lalu nilai pilot terbatas. Peluncuran berbayar terbatas memerlukan
 bukti operasi/dukungan yang cukup; penjualan umum belum dapat disahkan hanya
 dari inspeksi kode dan endpoint publik.
+
+## Bukti penutupan dua pemeriksaan
+
+- P0-A: plugin Replit yang memakai tipe Vite diberi deklarasi peer dependency
+  yang hilang melalui `packageExtensions`; lockfile diperbarui. Versi plugin
+  tidak dinaikkan, pemeriksaan tipe tidak dilemahkan, dan tipe tidak dipaksa
+  melalui cast.
+- P0-B: fixture query memakai key yang menyertakan pemilik, sesuai hook asli.
+  Seluruh asersi pemisahan alur, tanggal, pencabutan dan penanganan error tetap
+  dipertahankan. Ada regresi tambahan untuk cache lama tanpa pemilik dan cache
+  akun lain. Hasil: enam lulus, nol gagal.
+- Typecheck root selesai untuk seluruh library dan lima leaf workspace.
+- `pnpm run build` tanpa konteks service berhenti pada pemeriksaan wajib
+  `PORT`/`BASE_PATH`. Build kemudian diverifikasi per artefak dengan nilai
+  sementara sesuai preview path: frontend `/`, film `/gustafta-film/`, dan
+  sandbox `/__mockup`; API build juga lulus. Tidak mengubah variabel lingkungan
+  tersimpan atau mengendurkan pemeriksaan startup.
+- Peringatan ukuran chunk frontend serta peer React/Clerk dari instalasi tetap
+  ada dan belum ditangani dalam perubahan ini. Kelulusan dua pemeriksaan
+  bukan pengesahan produksi atau hasil pemindaian keamanan.
