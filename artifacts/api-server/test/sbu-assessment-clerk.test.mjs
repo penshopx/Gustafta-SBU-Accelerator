@@ -168,6 +168,14 @@ await build({
           export const getTableColumns = () => { throw new Error("unexpected personnel query"); };
           export const ilike = () => { throw new Error("unexpected vault query"); };
           export const or = () => { throw new Error("unexpected vault query"); };
+          // The real workroom/agenda router imports these operators. Keep
+          // them fail-closed: this session suite must reject before querying.
+          export const count = () => { throw new Error("unexpected agenda query"); };
+          export const gte = () => { throw new Error("unexpected agenda query"); };
+          export const isNull = () => { throw new Error("unexpected agenda query"); };
+          export const lte = () => { throw new Error("unexpected agenda query"); };
+          export const lt = () => { throw new Error("unexpected agenda query"); };
+          export const ne = () => { throw new Error("unexpected agenda query"); };
           // Document lock constants are constructed at import time, not run.
           // Permit only those declarations; all other SQL remains forbidden.
           export const sql = (strings, ...values) => {
@@ -357,6 +365,7 @@ test("GET privat tab A ditolak dengan cookie B atau tanpa prakondisi sebelum que
     "/cases/35/preparation-summary", "/cases/35/documents",
     "/cases/35/documents/1/download", "/transition-verifications",
     "/documents", "/cases/35/documents/1/analyses",
+     "/agenda", "/cases/35/workroom",
   ];
   try {
     for (const path of paths) {
