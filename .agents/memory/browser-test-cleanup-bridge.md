@@ -44,3 +44,12 @@ Account creation can succeed even when its sign-in navigation has not finished.
 update it after owner discovery, and remove it only after successful host-side
 cleanup. Wait explicitly for the real shared session cookie after sign-in;
 navigation completion alone does not establish that the ticket exchange finished.
+
+Validate the checkpoint's outer structure before handing it to the cleanup CLI;
+an individual fixture object and a list of fixtures are not interchangeable.
+
+**Why:** A tester can preserve the correct account scope but write a single
+object where the host cleanup contract requires a list, preventing cleanup.
+
+**How to apply:** Check the payload shape without logging its identifiers, and
+normalize only the outer container; never broaden the exact synthetic scope.
