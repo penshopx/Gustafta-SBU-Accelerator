@@ -33,6 +33,9 @@ test('landing: renders honest copy, working CTAs, and mounts film only on click'
     const hrefs: Record<string, string> = { 'link-sign-up': '/sign-up', 'link-start': '/sign-up', 'link-join-bottom': '/sign-up', 'link-sign-in': '/sign-in', 'link-login-hero': '/sign-in', 'link-simulator': '/simulator', 'link-mini-apps': '/mini-apps', 'link-feature-cases': '/cases', 'link-feature-documents': '/documents', 'link-feature-regulations': '/regulations', 'link-feature-assistant': '/assistant', 'link-feature-personnel': '/personnel', 'link-feature-agenda': '/agenda' };
     for (const [id, href] of Object.entries(hrefs)) assert.equal(find(id)?.getAttribute('href'), href, id);
     const text = container.textContent ?? '';
+    const sections = container.querySelectorAll('main > section');
+    assert.equal(sections[1]?.getAttribute('data-testid'), 'section-introduction-video', 'video follows opening section');
+    assert.equal(container.querySelectorAll('[data-testid="button-load-film"]').length, 1, 'video is not duplicated');
     assert.match(find('note-independence')?.textContent ?? '', /tidak terafiliasi.*LSBU/);
     for (const banned of [/\d+\s*%/, /dijamin|garansi|pasti lolos|100/i, /resmi dari|mitra resmi/i]) assert.doesNotMatch(text, banned);
     assert.match(text, /bukan jaminan/); assert.match(text, /DRAF AI/); assert.match(text, /VERIFIKASI MANUSIA/);

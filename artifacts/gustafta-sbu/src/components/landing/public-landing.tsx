@@ -80,10 +80,17 @@ export default function PublicLanding() {
         </div>
       </section>
 
+      {/* Introduction video, immediately after the opening */}
+      <section data-testid="section-introduction-video" className="mx-auto max-w-7xl px-5 py-20 md:px-10">
+        <Kicker n="01">KENALI ALUR PERSIAPAN</Kicker>
+        <h2 className="display mt-4 mb-10 max-w-3xl text-4xl font-extrabold leading-tight">Kumpulkan, baca, tindak lanjuti.</h2>
+        <FilmEmbed />
+      </section>
+
       {/* Agitate -> Solve: how it works */}
       <section className="border-t border-[#1a2433] bg-[#0a0f18]">
         <div className="mx-auto max-w-7xl px-5 py-20 md:px-10">
-          <div className="grid gap-6 md:grid-cols-[.8fr_1.2fr] md:items-end"><div><Kicker n="01">CARA KERJA</Kicker><h2 className="display mt-4 text-4xl font-extrabold leading-tight">Dari tumpukan berkas ke daftar tindakan.</h2></div><p className="text-base leading-8 text-[#c2d1e1]">Celah yang tidak terlihat baru ketahuan saat permohonan berjalan. Gustafta membuatnya terlihat lebih awal, dari data yang Anda deklarasikan sendiri.</p></div>
+          <div className="grid gap-6 md:grid-cols-[.8fr_1.2fr] md:items-end"><div><Kicker n="02">CARA KERJA</Kicker><h2 className="display mt-4 text-4xl font-extrabold leading-tight">Dari tumpukan berkas ke daftar tindakan.</h2></div><p className="text-base leading-8 text-[#c2d1e1]">Celah yang tidak terlihat baru ketahuan saat permohonan berjalan. Gustafta membuatnya terlihat lebih awal, dari data yang Anda deklarasikan sendiri.</p></div>
           <FlowScene className="mt-12 hidden md:block" />
           <ol className="mt-6 grid gap-px overflow-hidden rounded-2xl border border-[#1f2b3b] bg-[#1f2b3b] md:grid-cols-4">
             {[['Buka kasus', 'Perusahaan, jenis permohonan, kualifikasi, klasifikasi.'], ['Deklarasikan bukti', 'Tandai yang ada, simpan salinan privat bila perlu.'], ['Baca temuan', 'Kebutuhan yang belum tercatat beserta sumber rujukannya.'], ['Susun tindakan', 'Penanggung jawab, tenggat, lalu ekspor ringkasan persiapan.']].map(([t, d], i) =>
@@ -94,7 +101,7 @@ export default function PublicLanding() {
 
       {/* Features */}
       <section className="mx-auto max-w-7xl px-5 py-20 md:px-10">
-        <Kicker n="02">YANG SUDAH BISA DIPAKAI</Kicker>
+        <Kicker n="03">YANG SUDAH BISA DIPAKAI</Kicker>
         <div className="mt-4 flex flex-col justify-between gap-4 md:flex-row md:items-end"><h2 className="display max-w-2xl text-4xl font-extrabold leading-tight">Alat konkret, bukan janji.</h2><div className="flex items-end gap-6"><p className="max-w-sm text-sm leading-6 text-[#b4c4d6]">Simulator dan Mini Apps terbuka untuk umum. Ruang kerja lain memerlukan akun dan bersifat pribadi.</p><DeskScene className="hidden w-[220px] shrink-0 lg:block" /></div></div>
         <ul className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {features.map(({ href, title, text, icon: Icon, access }, i) => <li key={href} className={i === 0 ? 'sm:col-span-2 lg:row-span-2' : ''}>
@@ -110,20 +117,13 @@ export default function PublicLanding() {
       {/* Three kinds of output */}
       <section className="border-y border-[#1a2433] bg-[#0a0f18]">
         <div className="mx-auto max-w-7xl px-5 py-20 md:px-10">
-          <Kicker n="03">TIGA JENIS HASIL, TIGA LABEL</Kicker>
+          <Kicker n="04">TIGA JENIS HASIL, TIGA LABEL</Kicker>
           <div className="mt-4 flex items-end justify-between gap-8"><h2 className="display max-w-3xl text-4xl font-extrabold leading-tight">Bedakan hasil pemeriksaan, draf AI, dan keputusan manusia.</h2><ReviewScene className="hidden w-[200px] shrink-0 md:block" /></div>
           <div className="mt-10 grid gap-4 lg:grid-cols-[1fr_1.1fr_1.2fr]">
             {outputs.map(o => <article key={o.tag} data-testid={`card-output-${o.tag.split(' ')[0].toLowerCase()}`} className={`rounded-2xl border-t-4 bg-[#0c121c] p-6 ${o.tone}`}><div className="eyebrow text-[#9ccbff]">{o.tag}</div><h3 className="display mt-5 text-xl font-extrabold text-white">{o.title}</h3><p className="mt-3 text-sm leading-6 text-[#c2d1e1]">{o.text}</p></article>)}
           </div>
           <div className="mt-6 flex items-start gap-3 text-sm leading-6 text-[#b4c4d6]"><FileSearch size={18} className="mt-0.5 shrink-0 text-[#4ea4ff]" />Pusat regulasi memuat ringkasan aturan terpilih, bukan seluruh regulasi nasional. Selalu buka sumber primernya sebelum bertindak.</div>
         </div>
-      </section>
-
-      {/* Film */}
-      <section className="mx-auto max-w-7xl px-5 py-20 md:px-10">
-        <Kicker n="04">KENALI ALUR PERSIAPAN</Kicker>
-        <h2 className="display mt-4 mb-10 max-w-3xl text-4xl font-extrabold leading-tight">Kumpulkan, baca, tindak lanjuti.</h2>
-        <FilmEmbed />
       </section>
 
       {/* Boundaries + Action */}
