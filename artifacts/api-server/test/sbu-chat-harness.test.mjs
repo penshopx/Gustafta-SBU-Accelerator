@@ -15,6 +15,18 @@ try {
   const { createAnthropicSbuChatGenerate, buildSbuChatInput, sbuChatInputSize,
     SBU_CHAT_MODEL, SBU_CHAT_MAX_INPUT_BYTES } = await import(join(temp, "harness.mjs"));
 
+  test("BG pilot scope reaches the actual provider system prompt without private context", async () => {
+    let payload;
+    const generate = createAnthropicSbuChatGenerate({ messages: { create: async params => {
+      payload = params;
+      return { content: [{ type: "text", text: '{"answer":"Belum terverifikasi.","citationIds":[]}' }], stop_reason: "end_turn" };
+    } } });
+    await generate("asesor", [{ role: "user", content: "Apa ruang lingkupnya?" }], new AbortController().signal, "skemaclaw", "", [], 0, "tutor_regulasi", "BG001");
+    assert.match(payload.system, /PILOT BG.*BG001/);
+    assert.match(payload.system, /Jangan mengarang angka, SKK, alat atau pengalaman/);
+    assert.doesNotMatch(payload.system, /KONSULTASI PRIVAT:/);
+  });
+
   test("fixed chat harness sends the consented prompt to Sonnet with bounded retries and output", async () => {
     const signal = new AbortController().signal;
     const calls = [];

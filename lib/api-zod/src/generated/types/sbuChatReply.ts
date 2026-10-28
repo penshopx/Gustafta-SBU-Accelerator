@@ -11,8 +11,10 @@ import type { SbuChatPurpose } from './sbuChatPurpose';
 import type { SbuChatQuota } from './sbuChatQuota';
 import type { SbuChatReplyMode } from './sbuChatReplyMode';
 import type { SbuChatReplySpecialist } from './sbuChatReplySpecialist';
+import type { SbuChatScheme } from './sbuChatScheme';
 
 export interface SbuChatReply {
+  scheme?: SbuChatScheme;
   analysisContext?: SbuChatAnalysisContext;
   purpose: SbuChatPurpose;
   quota: SbuChatQuota;

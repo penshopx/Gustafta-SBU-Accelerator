@@ -11,8 +11,10 @@ import type { SbuChatInputProviderConsent } from './sbuChatInputProviderConsent'
 import type { SbuChatInputSpecialist } from './sbuChatInputSpecialist';
 import type { SbuChatMessage } from './sbuChatMessage';
 import type { SbuChatPurpose } from './sbuChatPurpose';
+import type { SbuChatScheme } from './sbuChatScheme';
 
 export interface SbuChatInput {
+  scheme?: SbuChatScheme;
   analysisContext?: SbuChatAnalysisContext;
   /** Defaults to tutor_regulasi for older clients; never grants data access. */
   purpose?: SbuChatPurpose;

@@ -121,6 +121,7 @@ export * from './sbuChatQuota';
 export * from './sbuChatReply';
 export * from './sbuChatReplyMode';
 export * from './sbuChatReplySpecialist';
+export * from './sbuChatScheme';
 export * from './sbuChatSourceDecision';
 export * from './sbuChatSourceError';
 export * from './sbuChatSourceErrorCode';

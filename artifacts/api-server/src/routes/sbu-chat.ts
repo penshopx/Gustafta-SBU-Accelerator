@@ -16,14 +16,17 @@ import {
   SBU_CHAT_MODEL, SBU_CHAT_MAX_INPUT_BYTES, type SbuChatGenerate,
 } from "../lib/sbu-chat-harness";
 import { prepareChatAnalysis, readChatAnalysis, ChatAnalysisError, CHAT_ANALYSIS_ERROR, type ReadChatAnalysis } from "../lib/sbu-chat-analysis";
+import { schemeSources } from "../lib/sbu-chat-schemes";
+
+const SCHEME_NOTICE = "Pilot BG: ringkasan pemetaan subklasifikasi dan ruang lingkup dari salinan skema LSBU Konstruksi Indonesia dan KBLI 2025. Bukan dokumen lengkap, persyaratan terverifikasi, verifikasi live, atau keputusan sertifikasi. Tautan sumber adalah kanal rujukan, bukan PDF unggahan; halaman PDF/cetak tercantum pada kartu.";
 
 type Generate = SbuChatGenerate;
 
 export const generateSbuChatAnswer: Generate = async (...args) => {
   // Legacy GPT adapter remains the default for Klinik Konsultasi.
-  const [mode, messages, signal, specialist, context = "", sources, _maxRetries, purpose] = args;
+  const [mode, messages, signal, specialist, context = "", sources, _maxRetries, purpose, scheme] = args;
   const { openai } = await import("@workspace/integrations-openai-ai-server");
-  const chatInput = buildSbuChatInput(mode, messages, specialist, context, sources, purpose);
+  const chatInput = buildSbuChatInput(mode, messages, specialist, context, sources, purpose, scheme);
   const reply = await openai.chat.completions.create({
     model: BUDGET_MODEL,
     max_completion_tokens: BUDGET_OUTPUT_TOKENS,
@@ -99,6 +102,10 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
     }
     const purpose = input.data.purpose ?? "tutor_regulasi";
     const analysisContext = input.data.analysisContext;
+    const scheme = input.data.scheme;
+    if (scheme && (analysisContext || purpose === "pemeriksa_dokumen")) {
+      res.status(400).json({ error: "Pilot skema tidak membaca dokumen privat. Lepas konteks skema untuk menggunakan Pemeriksa Dokumen." }); return;
+    }
     if (analysisContext && purpose !== "pemeriksa_dokumen") {
       res.status(400).json({ error: "Hasil Bedah Dokumen hanya dapat dipilih pada tujuan Pemeriksa Dokumen." }); return;
     }
@@ -122,12 +129,16 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
     }
     let sources: SbuChatCitation[];
     try {
-      sources = retrieveChatSources(messages.at(-1)!.content, await reviews.active());
+      const active = await reviews.active();
+      sources = scheme ? schemeSources(scheme, active) : retrieveChatSources(messages.at(-1)!.content, active);
     } catch {
       res.status(503).json({ error: "Status persetujuan sumber belum dapat diperiksa. Tidak ada permintaan AI yang dikirim." });
       return;
     }
-    const chatInput = buildSbuChatInput(input.data.mode, messages, input.data.specialist, selectedContext, sources, purpose);
+    if (scheme && sources.length !== 2) {
+      res.status(503).json({ error: "Sumber pilot skema tidak lengkap atau telah dicabut. Tidak ada permintaan AI yang dikirim." }); return;
+    }
+    const chatInput = buildSbuChatInput(input.data.mode, messages, input.data.specialist, selectedContext, sources, purpose, scheme);
     if (sbuChatInputSize(chatInput) > SBU_CHAT_MAX_INPUT_BYTES) {
       res.status(400).json({ error: "Percakapan terlalu panjang untuk batas input asisten. Mulai percakapan baru." });
       return;
@@ -165,7 +176,7 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
       const aborted = new Promise<never>((_resolve, reject) => {
         controller.signal.addEventListener("abort", () => reject(new Error("ai_cancelled")), { once: true });
       });
-      const generation = answer(input.data.mode, messages, controller.signal, input.data.specialist, selectedContext, sources, 0, purpose)
+      const generation = answer(input.data.mode, messages, controller.signal, input.data.specialist, selectedContext, sources, 0, purpose, scheme)
         .then((text) => { generationSettled = true; return text; },
           (error: unknown) => { generationSettled = true; throw error; });
       const text = await Promise.race([generation, aborted]);
@@ -174,15 +185,17 @@ export function createSbuChatRouter(answer: Generate = generateClaudeAssistantAn
       }
       // A withdrawal/replacement committed while the provider was running must
       // not leak an answer based on its now-retired context, even with no markers.
-      const current = retrieveChatSources(messages.at(-1)!.content, await reviews.active());
+      const active = await reviews.active();
+      const current = scheme ? schemeSources(scheme, active) : retrieveChatSources(messages.at(-1)!.content, active);
       if (sources.some(source => !current.some(item => item.id === source.id))) {
         throw new Error("retrieved_source_retired");
       }
       const cited = validateCitedAnswer(text, sources);
       payload = {
         userId, mode: input.data.mode, specialist: input.data.specialist, purpose,
+        ...(scheme ? { scheme } : {}),
         ...(analysisContext ? { analysisContext } : {}), ...cited,
-        disclaimer: CHAT_DISCLAIMER, retrievalNotice: RETRIEVAL_NOTICE,
+        disclaimer: CHAT_DISCLAIMER, retrievalNotice: scheme ? SCHEME_NOTICE : RETRIEVAL_NOTICE,
       };
     } catch (error) {
       if (error instanceof AiBudgetError) budgetError = error;

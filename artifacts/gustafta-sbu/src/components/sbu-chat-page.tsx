@@ -2,23 +2,24 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 're
 import { Link } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, Copy, Loader2, Plus, SendHorizontal, ShieldAlert, Square } from 'lucide-react';
-import { sendSbuChatMessage, useGetSbuChatBudget, getGetSbuChatBudgetQueryKey, useGetSbuChatQuota, getGetSbuChatQuotaQueryKey, useGetSbuChatSpecialists, getGetSbuChatSpecialistsQueryKey, type SbuChatInput, type SbuChatSpecialist, type SbuChatCitation, type SbuChatPurpose, type SbuChatAnalysisContext } from '@workspace/api-client-react';
+import { sendSbuChatMessage, useGetSbuChatBudget, getGetSbuChatBudgetQueryKey, useGetSbuChatQuota, getGetSbuChatQuotaQueryKey, useGetSbuChatSpecialists, getGetSbuChatSpecialistsQueryKey, type SbuChatInput, type SbuChatSpecialist, type SbuChatCitation, type SbuChatPurpose, type SbuChatAnalysisContext, type SbuChatScheme } from '@workspace/api-client-react';
 import { useAccountReadOptions, useFormMutationOptions } from '@/components/account-queries';
 import { ChatCitations, chatAnswerForCopy } from './chat-citations';
 import { ChatQuotaNotice, chatLimitMessage, chatQuotaFromError } from './chat-quota';
 import { aiBudgetErrorMessage } from '@/lib/ai-budget-error';
 import { PURPOSES, DEFAULT_PURPOSE, purposeInfo } from '@/lib/sbu-chat-purposes';
 import { ChatAnalysisPicker } from './chat-analysis-picker';
+import { BG_SCHEMES, UNAVAILABLE_CLASSIFICATIONS, PILOT_SOURCE_NOTICE, schemeInfo, schemeAllowed, schemeForSend, sameScheme, schemePrompts } from '@/lib/sbu-chat-schemes';
 import { ChatBudgetNotice, chatBudgetForOwner } from './chat-budget';
 
 type Mode = SbuChatInput['mode'];
 type SpecId = SbuChatSpecialist['id'];
-type Confirm = null | { kind: 'mode'; to: Mode } | { kind: 'specialist'; to: SpecId } | { kind: 'purpose'; to: SbuChatPurpose } | { kind: 'new' };
+type Confirm = null | { kind: 'mode'; to: Mode } | { kind: 'specialist'; to: SpecId } | { kind: 'purpose'; to: SbuChatPurpose } | { kind: 'new' } | { kind: 'scheme'; to: SbuChatScheme | undefined };
 type Msg = { id: number; role: 'user' | 'assistant'; content: string; citations?: SbuChatCitation[]; retrievalNotice?: string };
 
 const MODES: { id: Mode; label: string; desc: string; intro: string; prompts: string[] }[] = [
   { id: 'bujk', label: 'BUJK', desc: 'Badan usaha jasa konstruksi yang menyiapkan berkas SBU sendiri.', intro: 'Tanyakan cara menyusun berkas, memahami istilah, dan menyiapkan diri sebelum pra-verifikasi. Jawaban bersifat panduan, bukan penilaian kelayakan.', prompts: ['Bantu saya membuat daftar periksa persiapan dokumen SBU untuk badan usaha saya.', 'Apa saja yang biasanya perlu saya siapkan sebelum pra-verifikasi?', 'Jelaskan perbedaan permohonan baru dan perpanjangan dengan bahasa sederhana.'] },
-  { id: 'pendamping', label: 'Pendamping / Fasilitator / Konsultan', desc: 'Pihak yang mendampingi klien menyiapkan berkas dan komunikasi.', intro: 'Gunakan untuk merapikan alur pendampingan, menyusun pertanyaan klarifikasi ke klien, dan membahasakan persyaratan secara jelas.', prompts: ['Susun daftar pertanyaan klarifikasi awal untuk klien yang baru mulai menyiapkan SBU.', 'Bagaimana membagi tahapan pendampingan agar klien paham perannya?', 'Bantu saya menulis catatan ketidaklengkapan dokumen yang sopan dan jelas untuk klien.'] },
+  { id: 'pendamping', label: 'Pendamping / Fasilitator / Konsultan', desc: 'Pihak yang mendampingi klien menyiapkan berkas dan komunikasi, termasuk peninjau internal.', intro: 'Gunakan untuk merapikan alur pendampingan, menyusun pertanyaan klarifikasi ke klien, dan membahasakan persyaratan secara jelas.', prompts: ['Susun daftar pertanyaan klarifikasi awal untuk klien yang baru mulai menyiapkan SBU.', 'Bagaimana membagi tahapan pendampingan agar klien paham perannya?', 'Bantu saya menulis catatan ketidaklengkapan dokumen yang sopan dan jelas untuk klien.'] },
   { id: 'asesor', label: 'Asesor Badan Usaha', desc: 'Panduan struktur telaah dan catatan, bukan pengganti keputusan asesmen.', intro: 'Gunakan untuk menata kerangka telaah, pertanyaan verifikasi, dan penulisan catatan temuan. Penilaian tetap tanggung jawab Anda dan lembaga berwenang.', prompts: ['Bantu saya menyusun kerangka catatan temuan telaah dokumen yang netral.', 'Pertanyaan klarifikasi apa yang layak diajukan saat bukti tampak tidak konsisten?', 'Bagaimana membedakan temuan faktual dari opini dalam laporan telaah?'] },
   { id: 'lsbu', label: 'LSBU', desc: 'Pertimbangan operasional lembaga sertifikasi badan usaha.', intro: 'Gunakan untuk berpikir tentang alur kerja, komunikasi pemohon, dan dokumentasi internal. Ini bukan layanan resmi dan tidak mewakili lembaga mana pun.', prompts: ['Bantu saya merancang alur komunikasi status permohonan yang jelas bagi pemohon.', 'Apa praktik baik pendokumentasian internal untuk proses telaah?', 'Susun draf panduan singkat bagi pemohon tentang kelengkapan berkas.'] },
   { id: 'asosiasi', label: 'Asosiasi Badan Usaha', desc: 'Dukungan pembinaan anggota dan bahan sosialisasi.', intro: 'Gunakan untuk menyiapkan materi pembinaan anggota, tanya jawab umum, dan alur rujukan. Tidak ada data anggota yang terbaca di sini.', prompts: ['Bantu saya menyusun materi sosialisasi persiapan SBU untuk anggota.', 'Buat daftar pertanyaan umum yang sering diajukan anggota baru.', 'Bagaimana mengarahkan anggota agar memeriksa sumber regulasi primer sendiri?'] },
@@ -94,6 +95,8 @@ export default function SbuChatPage({ expectedUserId, initialRole, documentScope
   const sourceRef = useRef<{ on: boolean; ctx?: SbuChatAnalysisContext }>({ on: false });
   sourceRef.current = { on: sourceOn, ctx: sourceCtx };
   const clearSource = () => { setSourceOn(!!documentScope); setSourceCtx(undefined); setSourceKey(k => k + 1); };
+  const [scheme, setScheme] = useState<SbuChatScheme | undefined>(undefined);
+  const schemeRef = useRef(scheme); schemeRef.current = scheme;
   const [specialist, setSpecialist] = useState<SpecId>('sbuclaw');
   const catalog = useGetSbuChatSpecialists({ query: { enabled: true, retry: 1, staleTime: 60000, queryKey: getGetSbuChatSpecialistsQueryKey() } });
   const specs = catalog.data;
@@ -113,6 +116,8 @@ export default function SbuChatPage({ expectedUserId, initialRole, documentScope
   const endRef = useRef<HTMLDivElement>(null);
   const info = MODES.find(m => m.id === mode)!;
   const pInfo = purposeInfo(purpose);
+  const schemeOk = schemeAllowed(purpose, !!documentScope);
+  const activeScheme = schemeOk ? schemeInfo(scheme) : undefined;
 
   const abort = useCallback(() => {
     if (timer.current) window.clearTimeout(timer.current);
@@ -133,13 +138,14 @@ export default function SbuChatPage({ expectedUserId, initialRole, documentScope
     const sentCtx = sourceRef.current.on && purposeRef.current === 'pemeriksa_dokumen' ? sourceRef.current.ctx : undefined;
     if (sourceRef.current.on && !sentCtx) return;
     const sentPurpose = purposeRef.current, sentMode = modeRef.current, sentSpec = specRef.current;
+    const sentScheme = schemeForSend(schemeRef.current, sentPurpose, !!documentScope);
     setLoading(true); setError(null);
     try {
-      const res = await sendSbuChatMessage({ purpose: sentPurpose, ...(sentCtx ? { analysisContext: sentCtx } : {}), mode: sentMode, specialist: sentSpec, consent: true, providerConsent: 'anthropic-claude-sonnet-5-5-v1', messages: buildPayload(next) }, { ...options.request, signal: c.signal });
+      const res = await sendSbuChatMessage({ purpose: sentPurpose, ...(sentScheme ? { scheme: sentScheme } : {}), ...(sentCtx ? { analysisContext: sentCtx } : {}), mode: sentMode, specialist: sentSpec, consent: true, providerConsent: 'anthropic-claude-sonnet-5-5-v1', messages: buildPayload(next) }, { ...options.request, signal: c.signal });
       if (c.signal.aborted) return;
-      if (res.userId !== expectedUserId || res.purpose !== sentPurpose || !sameContext(res.analysisContext, sentCtx) || res.mode !== sentMode || res.specialist !== sentSpec || typeof res.answer !== 'string' ||
+      if (res.userId !== expectedUserId || !sameScheme(sentScheme, res.scheme) || res.purpose !== sentPurpose || !sameContext(res.analysisContext, sentCtx) || res.mode !== sentMode || res.specialist !== sentSpec || typeof res.answer !== 'string' ||
           !Array.isArray(res.citations) || typeof res.retrievalNotice !== 'string') {
-        setError('Respons tidak sesuai dengan akun atau tujuan, mode, atau spesialis yang aktif, sehingga tidak ditampilkan. Muat ulang halaman lalu coba lagi.');
+        setError('Respons tidak sesuai dengan akun atau tujuan, skema, mode, atau spesialis yang aktif, sehingga tidak ditampilkan. Muat ulang halaman lalu coba lagi.');
         return;
       }
       if (res.quota.userId !== expectedUserId) {
@@ -164,7 +170,7 @@ export default function SbuChatPage({ expectedUserId, initialRole, documentScope
   };
 
   const cancel = () => { abort(); setLoading(false); setError('Permintaan dibatalkan. Draf dipertahankan. Percobaan yang sudah diterima tetap memakai kuota.'); };
-  const resetAll = (to?: { mode?: Mode; specialist?: SpecId; purpose?: SbuChatPurpose }) => { abort(); setLoading(false); setMessages([]); setDraft(''); setError(null); setConfirm(null); clearSource(); if (documentScope) setConsent(false); if (to?.mode) setMode(to.mode); if (to?.specialist) setSpecialist(to.specialist); if (to?.purpose) setPurpose(to.purpose); };
+  const resetAll = (to?: { mode?: Mode; specialist?: SpecId; purpose?: SbuChatPurpose; scheme?: { to: SbuChatScheme | undefined } }) => { if (to?.scheme) { setScheme(to.scheme.to); setConsent(false); } if (to?.purpose === 'pemeriksa_dokumen') setScheme(undefined); abort(); setLoading(false); setMessages([]); setDraft(''); setError(null); setConfirm(null); clearSource(); if (documentScope) setConsent(false); if (to?.mode) setMode(to.mode); if (to?.specialist) setSpecialist(to.specialist); if (to?.purpose) setPurpose(to.purpose); };
   const dirty = messages.length > 0 || draft.trim().length > 0;
   const pickMode = (to: Mode) => {
     if (loading || to === mode) return;
@@ -172,12 +178,16 @@ export default function SbuChatPage({ expectedUserId, initialRole, documentScope
   };
   const pickPurpose = (to: SbuChatPurpose) => {
     if (loading || ctrl.current || to === purpose) return;
-    if (dirty) setConfirm({ kind: 'purpose', to }); else { setError(null); clearSource(); setPurpose(to); }
+    if (dirty) setConfirm({ kind: 'purpose', to }); else { setError(null); clearSource(); if (to === 'pemeriksa_dokumen') setScheme(undefined); setPurpose(to); }
   };
   const pickSpec = (to: string) => {
     const t = specs?.find(x => x.id === to);
     if (loading || !t || t.id === specialist) return;
     if (dirty) setConfirm({ kind: 'specialist', to: t.id }); else { setError(null); clearSource(); setSpecialist(t.id); }
+  };
+  const pickScheme = (to: SbuChatScheme | undefined) => {
+    if (loading || ctrl.current || !schemeOk || to === scheme) return;
+    if (dirty) setConfirm({ kind: 'scheme', to }); else { setError(null); clearSource(); setConsent(false); setScheme(to); }
   };
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(draft); }
@@ -243,6 +253,23 @@ export default function SbuChatPage({ expectedUserId, initialRole, documentScope
       {sourceOn && <ChatAnalysisPicker key={sourceKey} locked={loading || messages.length > 0} onChange={setSourceCtx} />}
       {sourceOn && !sourceCtx && <p data-testid="text-source-incomplete" className="mt-2 font-medium text-[#8a5a12]">Pengiriman dinonaktifkan sampai kasus, dokumen, hasil, dan cuplikan persis disetujui. Atau matikan opsi ini untuk mode teks saja.</p>}
     </div>}
+    {!documentScope && <section aria-labelledby="scheme-pilot-title" data-testid="panel-scheme-pilot" className="mb-6 rounded-xl border border-border bg-card p-4 text-xs leading-5 text-card-foreground">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="scheme-pilot-title" className="eyebrow text-primary">PAKAR SKEMA SBU / PILOT BG (OPSIONAL)</h2>
+        <span data-testid="status-scheme-pilot" className="mono text-[11px] text-muted-foreground">{activeScheme ? `Aktif: ${activeScheme.id} / KBLI ${activeScheme.kbli}` : 'Tidak aktif: asisten umum'}</span>
+      </div>
+      <p className="mt-1 text-muted-foreground">Fokuskan percakapan pada satu subklasifikasi Bangunan Gedung. Ini bukan sertifikasi, bukan penilaian kelayakan, dan tidak membaca dokumen pribadi Anda.</p>
+      <p role="note" data-testid="text-scheme-source-notice" className="mt-2 rounded-lg border border-border bg-muted p-2.5 font-medium text-foreground">{PILOT_SOURCE_NOTICE}</p>
+      {!schemeOk ? <p data-testid="text-scheme-disabled" className="mt-3 font-medium text-foreground">Skema tidak tersedia untuk tujuan Pemeriksa dokumen. Pilih tujuan lain untuk memakai pilot BG.</p> : <>
+        <div role="radiogroup" aria-label="Skema pilot BG" data-testid="group-scheme" className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {[undefined, ...BG_SCHEMES].map(s => { const id = s?.id; const on = scheme === id; return <button key={id ?? 'off'} type="button" role="radio" aria-checked={on} disabled={loading} data-testid={`button-scheme-${id ?? 'off'}`} onClick={() => pickScheme(id)} className={`min-w-0 rounded-lg border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${on ? 'border-primary bg-primary/10 ring-1 ring-primary' : 'border-border bg-background hover:bg-muted'}`}>
+            <span className="flex items-center justify-between gap-2 text-sm font-bold text-foreground"><span className="mono">{s ? s.id : 'Tanpa skema'}</span>{on && <Check size={15} className="shrink-0 text-primary" />}</span>
+            <span className="mt-0.5 block break-words text-muted-foreground">{s ? `KBLI ${s.kbli} / ${s.title}` : 'Asisten umum (default)'}</span>
+          </button>; })}
+        </div>
+        <p className="mt-3 text-[11px] text-muted-foreground"><span className="font-bold">Belum tersedia di pilot:</span> <span data-testid="text-scheme-unavailable">{UNAVAILABLE_CLASSIFICATIONS.join(', ')}</span>. Mengganti skema saat ada percakapan atau draf akan meminta konfirmasi, menghapus percakapan, dan meminta persetujuan ulang.</p>
+      </>}
+    </section>}
     <div className="eyebrow mb-2 text-[#678096]">PERAN ANDA (KONTEKS, BUKAN HAK AKSES)</div>
     <div className="mb-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="radiogroup" aria-label="Mode peran">
       {MODES.map(m => <button key={m.id} type="button" role="radio" aria-checked={mode === m.id} disabled={loading} data-testid={`button-mode-${m.id}`} onClick={() => pickMode(m.id)} className={`rounded-xl border p-3.5 text-left transition-colors ${mode === m.id ? 'border-[#1769d1] bg-[#eaf4ff] ring-1 ring-[#1769d1]' : 'border-[#d1dfe9] bg-white hover:bg-[#f4f9fc]'}`}>
@@ -276,15 +303,16 @@ export default function SbuChatPage({ expectedUserId, initialRole, documentScope
 
     <section className="surface overflow-hidden" aria-label="Percakapan">
       <div className="flex items-center justify-between gap-3 border-b border-[#d8e4ec] bg-[#101f32] px-5 py-3 text-[#e6f2ff]">
-        <div className="min-w-0"><div className="eyebrow text-[#8ec7f4]">TUJUAN / PERAN / SPESIALIS AKTIF</div><div className="truncate text-sm font-bold" data-testid="text-active-context">Tujuan: {pInfo.label}<span className="mx-2 text-[#607d98]">/</span>Peran: {info.label}<span className="mx-2 text-[#607d98]">/</span>Spesialis: {spec?.name ?? '...'}</div></div>
+        <div className="min-w-0"><div className="eyebrow text-[#8ec7f4]">TUJUAN / SKEMA / PERAN / SPESIALIS AKTIF</div><div className="truncate text-sm font-bold" data-testid="text-active-context">Tujuan: {pInfo.label}<span className="mx-2 text-[#607d98]">/</span><span data-testid="text-active-scheme">Skema: {activeScheme ? `${activeScheme.id} (KBLI ${activeScheme.kbli}, pilot)` : 'tidak aktif'}</span><span className="mx-2 text-[#607d98]">/</span>Peran: {info.label}<span className="mx-2 text-[#607d98]">/</span>Spesialis: {spec?.name ?? '...'}</div></div>
         <button type="button" data-testid="button-new-chat" disabled={loading || (!messages.length && !draft)} onClick={() => dirty ? setConfirm({ kind: 'new' }) : resetAll()} className="btn !min-h-[36px] border border-[#607d98] !text-xs text-white hover:bg-[#203b56]"><Plus size={14} /> Percakapan baru</button>
       </div>
 
-      <div className="max-h-[56dvh] min-h-[280px] space-y-4 overflow-y-auto bg-[#f7fbfe] p-4 sm:p-6" data-testid="list-chat-messages">
+      <div style={{ overflowWrap: 'anywhere' }} className="max-h-[56dvh] min-h-[280px] min-w-0 space-y-4 overflow-y-auto bg-[#f7fbfe] p-4 sm:p-6" data-testid="list-chat-messages">
         {!messages.length && <div className="fade-up">
           <p className="text-sm leading-7 text-[#34506a]">{pInfo.intro}</p><p className="mt-2 text-xs leading-5 text-[#566f85]">Peran aktif: {info.label}. {info.intro}</p>
+          {activeScheme && <p data-testid="text-scheme-chat-notice" className="mt-2 text-xs leading-5 text-[#566f85]">Skema pilot aktif: {activeScheme.id} / {activeScheme.title}. Sumber hanya pemetaan KBLI dan penjelasan ruang lingkup, bukan persyaratan lengkap.</p>}
           <div className="eyebrow mb-2 mt-5 text-[#678096]">CONTOH PERTANYAAN</div>
-          <div className="grid gap-2">{(purpose !== DEFAULT_PURPOSE ? pInfo.prompts : spec ? spec.prompts.slice(0, 3) : info.prompts).map((p, i) => <button key={p} type="button" data-testid={`button-suggestion-${i}`} disabled={loading} onClick={() => { setDraft(p); }} className="rounded-lg border border-[#cddcea] bg-white px-4 py-3 text-left text-sm text-[#1d3651] transition-colors hover:border-[#1769d1] hover:bg-[#eef6fc]">{p}</button>)}</div>
+          <div className="grid gap-2">{(activeScheme ? schemePrompts(activeScheme) : purpose !== DEFAULT_PURPOSE ? pInfo.prompts : spec ? spec.prompts.slice(0, 3) : info.prompts).map((p, i) => <button key={p} type="button" data-testid={`button-suggestion-${i}`} disabled={loading} onClick={() => { setDraft(p); }} className="rounded-lg border border-[#cddcea] bg-white px-4 py-3 text-left text-sm text-[#1d3651] transition-colors hover:border-[#1769d1] hover:bg-[#eef6fc]">{p}</button>)}</div>
         </div>}
         {messages.map(m => <div key={m.id} data-testid={`message-${m.role}-${m.id}`} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
           <div className={`max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-7 sm:max-w-[80%] ${m.role === 'user' ? 'bg-[#1769d1] text-white' : 'border border-[#cddcea] bg-white text-[#14253a]'}`}>
@@ -321,11 +349,11 @@ export default function SbuChatPage({ expectedUserId, initialRole, documentScope
 
     {confirm && <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d1b2ad9] p-4" onMouseDown={e => { if (e.target === e.currentTarget) setConfirm(null); }}>
       <div role="alertdialog" aria-modal="true" aria-label="Konfirmasi" className="surface w-full max-w-md p-6">
-        <h2 className="display text-xl font-extrabold">{confirm.kind === 'purpose' ? 'Ganti tujuan dan hapus percakapan?' : confirm.kind === 'mode' ? 'Ganti peran dan hapus percakapan?' : confirm.kind === 'specialist' ? 'Ganti spesialis dan hapus percakapan?' : 'Mulai percakapan baru?'}</h2>
-        <p className="mt-3 text-sm leading-6 text-[#526b81]">Percakapan dan draf saat ini akan dihapus dan tidak dapat dipulihkan. Persetujuan berbagi data tetap berlaku karena penyedia AI dan tujuan penggunaannya sama.</p>
+        <h2 className="display text-xl font-extrabold">{confirm.kind === 'purpose' ? 'Ganti tujuan dan hapus percakapan?' : confirm.kind === 'mode' ? 'Ganti peran dan hapus percakapan?' : confirm.kind === 'specialist' ? 'Ganti spesialis dan hapus percakapan?' : confirm.kind === 'scheme' ? 'Ganti skema dan hapus percakapan?' : 'Mulai percakapan baru?'}</h2>
+        <p className="mt-3 text-sm leading-6 text-[#526b81]">Percakapan dan draf saat ini akan dihapus dan tidak dapat dipulihkan. {confirm.kind === 'scheme' ? 'Sumber pribadi yang dipilih dilepas dan persetujuan berbagi data perlu diberikan ulang untuk konteks skema yang baru.' : 'Persetujuan berbagi data tetap berlaku karena penyedia AI dan tujuan penggunaannya sama.'}</p>
         <div className="mt-6 flex justify-end gap-2">
           <button type="button" data-testid="button-confirm-cancel" autoFocus onClick={() => setConfirm(null)} className="btn btn-outline">Batal</button>
-          <button type="button" data-testid="button-confirm-ok" onClick={() => resetAll(confirm.kind === 'purpose' ? { purpose: confirm.to } : confirm.kind === 'mode' ? { mode: confirm.to } : confirm.kind === 'specialist' ? { specialist: confirm.to } : undefined)} className="btn btn-primary">{confirm.kind === 'new' ? 'Hapus dan mulai baru' : 'Hapus dan ganti'}</button>
+          <button type="button" data-testid="button-confirm-ok" onClick={() => resetAll(confirm.kind === 'purpose' ? { purpose: confirm.to } : confirm.kind === 'mode' ? { mode: confirm.to } : confirm.kind === 'specialist' ? { specialist: confirm.to } : confirm.kind === 'scheme' ? { scheme: { to: confirm.to } } : undefined)} className="btn btn-primary">{confirm.kind === 'new' ? 'Hapus dan mulai baru' : 'Hapus dan ganti'}</button>
         </div>
       </div>
     </div>}

@@ -1674,6 +1674,7 @@ components:
       type: object
       required: [mode, messages, consent, providerConsent]
       properties:
+        scheme: { $ref: "#/components/schemas/SbuChatScheme" }
         analysisContext: { $ref: "#/components/schemas/SbuChatAnalysisContext" }
         purpose:
           $ref: "#/components/schemas/SbuChatPurpose"
@@ -1696,6 +1697,10 @@ components:
           minItems: 1
           maxItems: 20
           items: { $ref: "#/components/schemas/SbuChatMessage" }
+    SbuChatScheme:
+      type: string
+      description: Optional BG pilot context; never grants document access or activates assessment rules.
+      enum: [BG001, BG002, BG003, BG004, BG005, BG006, BG007, BG008, BG009]
     SbuChatMessage:
       type: object
       required: [role, content]
@@ -1761,6 +1766,7 @@ components:
       type: object
       required: [userId, mode, purpose, specialist, answer, disclaimer, citations, retrievalNotice, quota]
       properties:
+        scheme: { $ref: "#/components/schemas/SbuChatScheme" }
         analysisContext: { $ref: "#/components/schemas/SbuChatAnalysisContext" }
         purpose: { $ref: "#/components/schemas/SbuChatPurpose" }
         quota: { $ref: "#/components/schemas/SbuChatQuota" }

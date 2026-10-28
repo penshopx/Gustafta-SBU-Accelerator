@@ -92,7 +92,7 @@ const analysisPreview = {
   text: "Bagian lain RAHASIA_TIDAK_DIPILIH. Cuplikan yang disetujui. Akhir hasil lengkap.",
 };
 
-async function server(generate, run, reserveBudget = async () => {}, readAnalysis) {
+async function server(generate, run, reserveBudget = async () => {}, readAnalysis, reviews) {
   await restricted.pool.query("DELETE FROM sbu_chat_quota");
   const app = express();
   app.use(express.json());
@@ -100,7 +100,7 @@ async function server(generate, run, reserveBudget = async () => {}, readAnalysi
   app.use(createSbuChatRouter(async (...args) => {
     const result = await generate(...args);
     return JSON.stringify(typeof result === "string" ? { answer: result, citationIds: [] } : result);
-  }, undefined, undefined, reserveBudget, undefined, readAnalysis));
+  }, undefined, reviews, reserveBudget, undefined, readAnalysis));
   const listener = app.listen(0, "127.0.0.1");
   await new Promise((resolve) => listener.once("listening", resolve));
   const url = `http://127.0.0.1:${listener.address().port}/openai/sbu/messages`;
@@ -116,6 +116,56 @@ async function server(generate, run, reserveBudget = async () => {}, readAnalysi
     await new Promise((resolve) => listener.close(resolve));
   }
 }
+
+test("BG pilot binds follow-up context, echoes scheme and uses only its bounded sources", async () => {
+  let calls = 0;
+  await server(async (...args) => {
+    calls++;
+    assert.equal(args[8], "BG002");
+    assert.equal(args[4], "");
+    assert.equal(args[5].length, 2);
+    assert.ok(args[5].every(s => s.id.startsWith("bg002-") && s.verificationStatus === "unverified"));
+    const id = args[5][0].id;
+    return { answer: `Pemetaan awal belum terverifikasi [${id}]`, citationIds: [id] };
+  }, async send => {
+    const res = await send({ ...body(), scheme: "BG002", messages: [{ role: "user", content: "Jelaskan ruang lingkupnya." }] });
+    assert.equal(res.status, 200);
+    const result = await res.json();
+    assert.equal(result.scheme, "BG002");
+    assert.match(result.retrievalNotice, /Pilot BG/);
+    assert.ok(result.citations.every(s => s.id.startsWith("bg002-")));
+    assert.equal(calls, 1);
+    for (const invalid of [
+      { ...body(), scheme: "BS001" },
+      { ...body(), scheme: "BG001", analysisContext },
+      { ...body(), scheme: "BG001", purpose: "pemeriksa_dokumen" },
+    ]) assert.equal((await send(invalid)).status, 400);
+    assert.equal(calls, 1);
+  });
+});
+
+test("BG source withdrawal blocks before cost and rejects an in-flight answer", async () => {
+  let active = CHAT_SOURCE_VERSIONS.filter(v => v.sourceKey !== "pilot-bg-kbli2025-scope");
+  let calls = 0, costs = 0;
+  const reviews = { active: async () => active };
+  await server(async (...args) => {
+    calls++;
+    active = active.filter(v => v.sourceKey !== "pilot-bg-kbli2025-scope");
+    const id = args[5][0].id;
+    return { answer: `Jawaban lama [${id}]`, citationIds: [id] };
+  }, async send => {
+    const unavailable = await send({ ...body(), scheme: "BG001" });
+    assert.equal(unavailable.status, 503);
+    assert.equal(calls, 0);
+    assert.equal(costs, 0);
+    active = CHAT_SOURCE_VERSIONS;
+    const retired = await send({ ...body(), scheme: "BG001" });
+    assert.equal(retired.status, 503);
+    assert.doesNotMatch(await retired.text(), /Jawaban lama|bg001-mapping@/);
+    assert.equal(calls, 1);
+    assert.equal(costs, 1);
+  }, async () => { costs++; }, undefined, reviews);
+});
 
 test("selected private excerpt is revalidated and sent alone, with explicit approval and no automatic context", async () => {
   let reads = 0, budgets = 0, calls = 0;
@@ -331,9 +381,9 @@ test("knowledge catalog follows active versions, enforces session owner and neve
     assert.equal(response.status, 200, "ordinary readers do not need reviewer rights");
     assert.equal(response.headers.get("cache-control"), "private, no-store");
     const data = await response.json();
-    assert.equal(data.length, 13);
+    assert.equal(data.length, 31);
     assert.equal(data.filter(source => source.sourceRole === "primer").length, 4);
-    assert.equal(data.filter(source => source.sourceRole === "panduan").length, 6);
+    assert.equal(data.filter(source => source.sourceRole === "panduan").length, 24);
     assert.equal(data.filter(source => source.sourceRole === "praktik").length, 3);
     assert.ok(data.every(source => source.id.endsWith(`@${source.versionId}`)));
     assert.ok(data.filter(source => source.sourceKey.startsWith("teras-")).every(source => source.verificationStatus === "unverified"));

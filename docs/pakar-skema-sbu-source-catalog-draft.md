@@ -156,3 +156,20 @@ Antarmuka perlu membedakan:
 
 Tidak satu pun tahap itu otomatis mengaktifkan aturan asesmen BG001.
 Tidak ada pengiriman isi lampiran ke AI berbayar pada tahap katalog ini.
+
+## Perkembangan implementasi pilot
+
+Setelah tahap inventaris, dibuat pilot opsional BG001–BG009 di Asisten Peran.
+Hanya ringkasan pemetaan dan ruang lingkup pada katalog ini yang dikurasi menjadi
+kartu runtime; ini bukan aktivasi seluruh dokumen atau matriks persyaratan.
+Kelanjutan BG009 pada KBLI PDF 575 dicakup dalam ringkasan ruang lingkup.
+
+Kartu diberi status unverified dan identitas versi tersendiri. Keputusan
+penarikan pada ledger sumber tetap berlaku dan diperiksa lagi setelah generasi;
+jika salah satu sumber pemetaan/uraian tidak tersedia, pengiriman pilot ditolak.
+Kartu tidak ikut retrieval umum tanpa pilihan skema. Tidak ada impor file
+privat atau distribusi ulang buku KBLI lengkap.
+
+Tautan pada kartu adalah kanal rujukan, bukan pembaca PDF. Khusus skema LSBU,
+kanal Bina Konstruksi adalah kanal pembina, bukan bukti penerbit/autentikasi
+skema institusional. Pembaca sumber lengkap belum ditambahkan pada pilot ini.

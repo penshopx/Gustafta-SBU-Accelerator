@@ -810,6 +810,24 @@ export const SbuChatInputMode = {
   umum: 'umum',
 } as const;
 
+/**
+ * Optional BG pilot context; never grants document access or activates assessment rules.
+ */
+export type SbuChatScheme = typeof SbuChatScheme[keyof typeof SbuChatScheme];
+
+
+export const SbuChatScheme = {
+  BG001: 'BG001',
+  BG002: 'BG002',
+  BG003: 'BG003',
+  BG004: 'BG004',
+  BG005: 'BG005',
+  BG006: 'BG006',
+  BG007: 'BG007',
+  BG008: 'BG008',
+  BG009: 'BG009',
+} as const;
+
 export type SbuChatMessageRole = typeof SbuChatMessageRole[keyof typeof SbuChatMessageRole];
 
 
@@ -828,6 +846,7 @@ export interface SbuChatMessage {
 }
 
 export interface SbuChatInput {
+  scheme?: SbuChatScheme;
   analysisContext?: SbuChatAnalysisContext;
   /** Defaults to tutor_regulasi for older clients; never grants data access. */
   purpose?: SbuChatPurpose;
@@ -996,6 +1015,7 @@ export interface SbuChatCitation {
 }
 
 export interface SbuChatReply {
+  scheme?: SbuChatScheme;
   analysisContext?: SbuChatAnalysisContext;
   purpose: SbuChatPurpose;
   quota: SbuChatQuota;

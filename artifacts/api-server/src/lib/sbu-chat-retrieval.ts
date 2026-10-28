@@ -1,5 +1,6 @@
 import type { SbuChatCitation } from "@workspace/api-zod";
 import { TERAS_LPJK_VERSIONS } from "./sbu-chat-teras-lpjk";
+import { BG_SOURCE_VERSIONS } from "./sbu-chat-schemes";
 
 export const RETRIEVAL_NOTICE = "Pencarian lokal pada ringkasan sumber publik terkurasi, bukan dokumen lengkap atau verifikasi live. Nomor halaman merujuk PDF yang ditelaah. Draf BG001 tidak digunakan; status terkini dan penerapan harus dikonfirmasi.";
 
@@ -78,7 +79,7 @@ const PRIMARY_SOURCE_VERSIONS: readonly ChatSourceVersion[] = [
 }));
 
 export const CHAT_SOURCE_VERSIONS: readonly ChatSourceVersion[] = [
-  ...PRIMARY_SOURCE_VERSIONS, ...TERAS_LPJK_VERSIONS,
+  ...PRIMARY_SOURCE_VERSIONS, ...TERAS_LPJK_VERSIONS, ...BG_SOURCE_VERSIONS,
 ];
 
 export function retrieveChatSources(question: string, versions: readonly ChatSourceVersion[] = CHAT_SOURCE_VERSIONS): SbuChatCitation[] {

@@ -2,10 +2,10 @@ import React from 'react';
 import type { SbuChatCitation } from '@workspace/api-client-react';
 
 export function ChatCitations({ citations, notice }: { citations: SbuChatCitation[]; notice: string }) {
-  return <section aria-label="Sumber jawaban" className="mt-3 space-y-3 border-t border-[#d8e4ec] pt-3 text-xs leading-5">
+  return <section aria-label="Sumber jawaban" style={{ overflowWrap: 'anywhere' }} className="mt-3 min-w-0 max-w-full space-y-3 border-t border-[#d8e4ec] pt-3 text-xs leading-5">
     <p className="text-[#526b81]">{notice}</p>
     {!citations.length && <p className="font-bold text-[#80511b]">Tidak ada kutipan sumber yang digunakan. Rujukan spesifik belum terverifikasi.</p>}
-    {citations.map(source => <article key={source.id} className="rounded-lg border border-[#d8e4ec] bg-[#f7fbfe] p-3">
+    {citations.map(source => <article key={source.id} className="min-w-0 max-w-full rounded-lg border border-[#d8e4ec] bg-[#f7fbfe] p-3">
       <p className="font-bold">[{source.id}] {source.document}</p>
       <p>{source.version}</p>
       <p className="font-semibold">{source.locator}</p>
