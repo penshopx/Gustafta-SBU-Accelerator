@@ -5,6 +5,7 @@
  * Gustafta SBU Accelerator - persiapan bukti, bukan keputusan sertifikasi
  * OpenAPI spec version: 0.1.0
  */
+import type { KnowledgeSourcePdf } from './knowledgeSourcePdf';
 import type { KnowledgeSourceSourceRole } from './knowledgeSourceSourceRole';
 import type { SbuChatCitation } from './sbuChatCitation';
 
@@ -12,5 +13,6 @@ export type KnowledgeSource = SbuChatCitation & {
   sourceKey: string;
   versionId: string;
   sourceRole: KnowledgeSourceSourceRole;
+  pdf?: KnowledgeSourcePdf;
   topics: string[];
 };

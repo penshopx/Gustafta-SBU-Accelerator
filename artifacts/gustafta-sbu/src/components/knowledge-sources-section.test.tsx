@@ -99,6 +99,13 @@ test('interaksi filter, detail, keyboard, pencabutan dan coba lagi memakai kompo
     });
     assert.equal(container.querySelector('[role="dialog"]'), null);
     await click('button-source-detail-a');
+    const retainedDialog = container.querySelector('[role="dialog"]');
+    await render({ isFetching: true });
+    assert.equal(container.querySelector('[role="dialog"]'), retainedDialog, 'background check retains the mounted reader');
+    assert.ok(retainedDialog?.closest('[hidden]'), 'retained details are concealed until status is fresh');
+    await render();
+    assert.equal(container.querySelector('[role="dialog"]'), retainedDialog, 'same active source restores without losing the PDF');
+    assert.equal(retainedDialog?.closest('[hidden]'), null);
     await render({ data: [data[1]] });
     assert.equal(container.querySelector('[role="dialog"]'), null, 'withdrawn source closes detail');
     await render({ isError: true });

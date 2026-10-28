@@ -556,6 +556,27 @@ paths:
         "401": { description: Authentication required }
         "409": { $ref: "#/components/responses/FormOwnerMismatch" }
         "503": { description: Source status unavailable }
+  /knowledge-sources/{citationId}/pdf:
+    get:
+      operationId: getKnowledgeSourcePdf
+      tags: [workspace]
+      security: [{ FormOwner: [] }]
+      summary: Private immutable original PDF of an active curated citation
+      parameters:
+        - in: path
+          name: citationId
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 160 }
+      responses:
+        "200":
+          description: Hash-checked PDF, private no-store; page target is in citation pdf metadata
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "401": { description: Authentication required }
+        "404": { description: "Citation withdrawn, unknown, or original PDF unavailable for this version" }
+        "409": { $ref: "#/components/responses/FormOwnerMismatch" }
+        "503": { description: Source ledger or archive storage unavailable; no partial PDF returned }
   /openai/sbu/source-reviews:
     get:
       operationId: listSbuChatSourceReviews
@@ -2160,6 +2181,14 @@ components:
             sourceKey: { type: string }
             versionId: { type: string }
             sourceRole: { type: string, enum: [primer, referensi_klasifikasi, panduan, praktik] }
+            pdf:
+              type: object
+              required: [sha256, pageCount, page, filename]
+              properties:
+                sha256: { type: string, pattern: "^[a-f0-9]{64}$" }
+                pageCount: { type: integer, minimum: 1 }
+                page: { type: integer, minimum: 1 }
+                filename: { type: string }
             topics:
               type: array
               items: { type: string }

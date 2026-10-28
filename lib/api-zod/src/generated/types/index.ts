@@ -65,6 +65,7 @@ export * from './getAccountAgendaFilter';
 export * from './getAccountAgendaParams';
 export * from './healthStatus';
 export * from './knowledgeSource';
+export * from './knowledgeSourcePdf';
 export * from './knowledgeSourceSourceRole';
 export * from './listDocumentVault200';
 export * from './listDocumentVault200DocumentsItem';

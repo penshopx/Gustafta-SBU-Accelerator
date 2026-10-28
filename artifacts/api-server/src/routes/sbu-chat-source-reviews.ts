@@ -2,6 +2,8 @@ import { Router, type IRouter } from "express";
 import { getAuth } from "@clerk/express";
 import { ListKnowledgeSourcesResponse, ListSbuChatSourceReviewsResponse, RecordSbuChatSourceReviewBody, RecordSbuChatSourceReviewResponse } from "@workspace/api-zod";
 import { chatSourceReviewStore, InvalidSourceReview, SourceReviewConflict, type ChatSourceReviewStore } from "../lib/sbu-chat-source-reviews";
+import { knowledgePdf } from "../lib/knowledge-pdf-manifest";
+import { createKnowledgePdfRouter } from "./knowledge-pdf";
 
 const SOURCE_CLASSIFICATIONS: Record<string, { sourceRole: "primer" | "panduan" | "praktik"; topics: string[] }> = {
   "permen-pu-6-2025": { sourceRole: "primer", topics: ["Perizinan", "SMAP", "Transisi SBU"] },
@@ -14,6 +16,7 @@ const SOURCE_CLASSIFICATIONS: Record<string, { sourceRole: "primer" | "panduan" 
 // Operations-only API: a selected chat role/profile never grants review rights.
 export function createChatSourceReviewsRouter(store: ChatSourceReviewStore = chatSourceReviewStore): IRouter {
   const router = Router();
+  router.use(createKnowledgePdfRouter(store));
   // Public-source excerpts for signed-in readers, not the reviewer-only ledger.
   // Reuse active() so withdrawals/replacements also affect this view. No AI,
   // company data, reviewer identities or decision reasons are returned.
@@ -36,6 +39,7 @@ export function createChatSourceReviewsRouter(store: ChatSourceReviewStore = cha
         return version.citations.map(citation => ({
         ...citation, sourceKey: version.sourceKey, versionId: version.versionId,
         ...classification,
+        pdf: knowledgePdf(version.sourceKey, version.versionId, citation.id)?.metadata,
         }));
       });
       res.json(ListKnowledgeSourcesResponse.parse(sources));

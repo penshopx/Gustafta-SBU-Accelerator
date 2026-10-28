@@ -1719,10 +1719,21 @@ export const KnowledgeSourceSourceRole = {
   praktik: 'praktik',
 } as const;
 
+export type KnowledgeSourcePdf = {
+  /** @pattern ^[a-f0-9]{64}$ */
+  sha256: string;
+  /** @minimum 1 */
+  pageCount: number;
+  /** @minimum 1 */
+  page: number;
+  filename: string;
+};
+
 export type KnowledgeSource = SbuChatCitation & {
   sourceKey: string;
   versionId: string;
   sourceRole: KnowledgeSourceSourceRole;
+  pdf?: KnowledgeSourcePdf;
   topics: string[];
 };
 

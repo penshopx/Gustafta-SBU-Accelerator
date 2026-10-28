@@ -2779,6 +2779,83 @@ export function useListKnowledgeSources<TData = Awaited<ReturnType<typeof listKn
 
 
 
+export const getGetKnowledgeSourcePdfUrl = (citationId: string,) => {
+
+
+
+
+  return `/api/knowledge-sources/${citationId}/pdf`
+}
+
+/**
+ * @summary Private immutable original PDF of an active curated citation
+ */
+export const getKnowledgeSourcePdf = async (citationId: string, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetKnowledgeSourcePdfUrl(citationId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetKnowledgeSourcePdfQueryKey = (citationId: string,) => {
+    return [
+    `/api/knowledge-sources/${citationId}/pdf`
+    ] as const;
+    }
+
+
+export const getGetKnowledgeSourcePdfQueryOptions = <TData = Awaited<ReturnType<typeof getKnowledgeSourcePdf>>, TError = ErrorType<void | FormOwnerMismatchResponse>>(citationId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeSourcePdf>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetKnowledgeSourcePdfQueryKey(citationId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getKnowledgeSourcePdf>>> = ({ signal }) => getKnowledgeSourcePdf(citationId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: citationId !== null && citationId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeSourcePdf>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetKnowledgeSourcePdfQueryResult = NonNullable<Awaited<ReturnType<typeof getKnowledgeSourcePdf>>>
+export type GetKnowledgeSourcePdfQueryError = ErrorType<void | FormOwnerMismatchResponse>
+
+
+/**
+ * @summary Private immutable original PDF of an active curated citation
+ */
+
+export function useGetKnowledgeSourcePdf<TData = Awaited<ReturnType<typeof getKnowledgeSourcePdf>>, TError = ErrorType<void | FormOwnerMismatchResponse>>(
+ citationId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getKnowledgeSourcePdf>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetKnowledgeSourcePdfQueryOptions(citationId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getListSbuChatSourceReviewsUrl = () => {
 
 

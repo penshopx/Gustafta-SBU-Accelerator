@@ -1517,6 +1517,9 @@ export const DeleteDocumentAnalysisResponse = zod.void()
  * @summary Active curated public excerpts; retrieval admission is not legal verification
  */
 export const listKnowledgeSourcesResponseOneCheckedOnRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const listKnowledgeSourcesResponseTwoPdfSha256RegExp = new RegExp('^[a-f0-9]{64}$');
+
+
 
 
 export const ListKnowledgeSourcesResponseItem = zod.object({
@@ -1535,9 +1538,29 @@ export const ListKnowledgeSourcesResponseItem = zod.object({
   "sourceKey": zod.string(),
   "versionId": zod.string(),
   "sourceRole": zod.enum(['primer', 'referensi_klasifikasi', 'panduan', 'praktik']),
+  "pdf": zod.object({
+  "sha256": zod.string().regex(listKnowledgeSourcesResponseTwoPdfSha256RegExp),
+  "pageCount": zod.number().int().min(1),
+  "page": zod.number().int().min(1),
+  "filename": zod.string()
+}).optional(),
   "topics": zod.array(zod.string())
 }))
 export const ListKnowledgeSourcesResponse = zod.array(ListKnowledgeSourcesResponseItem)
+
+
+/**
+ * @summary Private immutable original PDF of an active curated citation
+ */
+export const getKnowledgeSourcePdfPathCitationIdMax = 160;
+
+
+
+export const GetKnowledgeSourcePdfParams = zod.object({
+  "citationId": zod.coerce.string().min(1).max(getKnowledgeSourcePdfPathCitationIdMax)
+})
+
+export const GetKnowledgeSourcePdfResponse = zod.unknown()
 
 
 /**

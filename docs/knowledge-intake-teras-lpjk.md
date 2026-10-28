@@ -15,10 +15,11 @@ Teks seluruh halaman diekstrak; bagian yang diringkas ditelaah untuk kurasi. Sam
 serta diagram timeline materi 2 dan slide SMAP materi 3 diperiksa visual.
 Tabel dan angka rinci tidak dijadikan persyaratan penilaian. Ini bukan
 indeks seluruh teks PDF, autentikasi dokumen, atau unggahan dokumen ke AI.
-PDF asli tetap merupakan berkas unggahan proyek; tidak disalin ke bundle
-aplikasi, database, atau penyimpanan dokumen pengguna. URL kartu adalah
-kanal LPJK, **bukan** tautan unduh PDF. Nama dan hash di bawah mengikat
-locator ke salinan yang benar-benar dibaca.
+PDF asli diarsipkan di App Storage privat pada namespace khusus sumber
+terkurasi, bukan bundle aplikasi, database, atau namespace dokumen pengguna.
+URL penerbit pada kartu tetap kanal LPJK, **bukan** tautan unduh PDF.
+Tombol PDF terpisah memakai endpoint sesi/pemilik untuk salinan unggahan.
+Nama dan hash di bawah mengikat locator ke salinan yang benar-benar dibaca.
 
 ## Identitas salinan
 
@@ -73,3 +74,41 @@ Pencarian lokal tidak memanggil AI atau layanan luar. Hanya cuplikan yang
 relevan dapat masuk konteks Asisten sesuai alur persetujuan chat yang sudah
 ada. Tidak ada dokumen privat, profil, data kasus atau kredensial yang
 ditambahkan ke korpus, dan tidak ada integrasi Gustafta/OSS/SIMPAN baru.
+
+## Pembaca arsip privat
+
+`knowledge-pdf-manifest.ts` mengikat sumber/versi dan ID kutipan ke SHA-256,
+jumlah halaman, serta halaman PDF awal; nomor slide tidak dipakai sebagai
+indeks halaman. Sembilan kutipan memiliki target halaman pada tiga PDF.
+Versi baru tidak otomatis mewarisi PDF versi lama.
+
+Operator menjalankan `scripts/publish-knowledge-pdfs.ts` dengan root workspace.
+Skrip memeriksa hash, format/struktur dan jumlah halaman, kemudian melakukan
+create-only di `curated-knowledge/<sha256>.pdf` di bawah private dir yang sudah
+ada, dengan metadata ACL privat untuk pemilik sistem. Tidak melist objek
+pelanggan, mengubah ACL bucket, atau membuat tautan publik. Pemeriksaan
+format/hash bukan pemindaian antivirus atau autentikasi penerbit.
+
+GET `/api/knowledge-sources/:citationId/pdf` memerlukan sesi dan pemilik
+formulir yang sesuai. Ledger diperiksa sebelum dan sesudah pembacaan berkas;
+ketidaktersediaan ledger/arsip, hash berbeda, sumber dicabut atau versi
+tak dikenal tidak boleh mengirim PDF parsial. Pembacaan dibatasi ukuran,
+waktu, dan dibatalkan saat koneksi klien ditutup. Konten dikirim no-store,
+bukan redirect atau URL bertanda tangan.
+
+Pembaca membuat blob setelah klik pengguna dan merender halaman melalui
+PDF.js beserta worker yang dibundel lokal, bukan CDN atau plugin PDF browser.
+Library dan worker memakai pasangan legacy agar browser yang belum memiliki
+API JavaScript terkini tetap dapat merender.
+Navigasi sebelumnya/berikutnya memakai halaman PDF, bukan nomor slide.
+URL dilepas saat diganti,
+dialog/sumber ditutup, atau akun berganti; respons terlambat tidak boleh
+membuka berkas lama. Buka tab baru tetap menggunakan fragmen `#page=`
+sebagai petunjuk pembaca PDF bawaan; dukungan dapat berbeda.
+Disediakan tautan unduh bila pratinjau tidak didukung.
+Pemeriksaan status latar sementara menyembunyikan pembaca dan menonaktifkan
+interaksinya tanpa membuang halaman yang sudah dibuka. Jika sumber tetap
+aktif, pembaca yang sama kembali terlihat. Penarikan, kegagalan pemeriksaan,
+penutupan eksplisit dan pergantian akun tetap melepas pembaca/URL.
+Berkas yang telah diterima/diunduh
+tidak dapat ditarik dari perangkat; penarikan sumber mencegah akses berikutnya.

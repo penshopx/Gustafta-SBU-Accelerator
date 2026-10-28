@@ -14,7 +14,7 @@ const statusLabels = {
 export function RegulationsPage({ expectedUserId }: { expectedUserId?: string } = {}) {
   const readOptions = useAccountReadOptions();
   const sources = useListKnowledgeSources({ ...readOptions, query: { queryKey: [...getListKnowledgeSourcesQueryKey(), expectedUserId ?? 'anonymous'], retry: false, staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: 'always', refetchInterval: 30_000 } });
-  const result = useListRegulations({ query: { queryKey: getListRegulationsQueryKey(), staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: 'always', refetchInterval: 30_000 } });
+  const result = useListRegulations({ ...readOptions, query: { queryKey: [...getListRegulationsQueryKey(), expectedUserId ?? 'anonymous'], staleTime: 0, refetchOnMount: 'always', refetchOnWindowFocus: 'always', refetchInterval: 30_000 } });
   return <RegulationsPageView result={result} sources={sources}/>;
 }
 
