@@ -37,3 +37,4 @@
 - [Connector cancellation](connector-request-cancellation.md) — SDK convenience proxy calls may omit abort/redirect options; verify the installed fetch adapter before relying on cancellation.
 - [Antivirus notification guarantees](antivirus-notification-guarantees.md) — shared cooldown survives restart; that alone does not make asynchronous delivery durable or exactly-once.
 - [Mini Apps SBU scope](mini-apps-scope.md) — user chose ready-to-use SBU tools and reuse, not an AI app builder or external integration.
+- [Scheme chatbot purpose](scheme-chatbot-purpose.md) — classification-specific guidance for admin BUJK, reviewers, assessors, and LSBU operators.
