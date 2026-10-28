@@ -18,3 +18,18 @@
 .lp-dash { animation: lp-dash 6s linear infinite; }
 @keyframes lp-dash { to { stroke-dashoffset: -1000; } }
 @media (prefers-reduced-motion: reduce) { .lp-swing, .lp-dash, .lp-scatter > * { animation: none; } }
+.sr-panel { background: var(--ink-2); border: 1px solid var(--line); border-radius: 20px; padding: clamp(20px, 4vw, 40px); }
+.sr-label { display: block; margin-bottom: 8px; font-size: 13px; font-weight: 700; color: #d5e2f0; }
+.sr-input { width: 100%; border-radius: 10px; border: 1px solid #2c3d52; background: #070c14; color: var(--text); padding: 11px 13px; font-size: 15px; }
+.sr-input:focus, .sr-option:focus-within, .sr-chip:focus-within, .sr-consent:focus-within { outline: 2px solid var(--blue-2); outline-offset: 2px; }
+.sr-input[aria-invalid="true"] { border-color: #ff9b8a; }
+.sr-err { margin-top: 6px; font-size: 13px; color: #ffb4a6; font-weight: 600; }
+.sr-chip { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #2c3d52; border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.sr-chip:has(input:checked), .sr-option:has(input:checked) { border-color: var(--blue); background: #0d1d33; }
+.sr-option { display: flex; gap: 10px; align-items: flex-start; border: 1px solid #2c3d52; border-radius: 12px; padding: 12px; cursor: pointer; }
+.sr-option input, .sr-consent input { margin-top: 3px; accent-color: var(--blue); width: 16px; height: 16px; flex-shrink: 0; }
+.sr-chip input { accent-color: var(--blue); }
+.sr-consent { display: flex; gap: 12px; border-radius: 12px; background: #0b1a2c; border: 1px solid #1d3a5c; padding: 14px; font-size: 13px; line-height: 1.6; color: #cfe3f8; cursor: pointer; }
+.sr-alert { margin-top: 18px; border: 1px solid #ff9b8a; border-radius: 12px; background: #2a1310; color: #ffd9d1; padding: 14px; font-size: 13px; line-height: 1.6; }
+.sr-alert a { text-decoration: underline; }
+.sr-summary { margin-top: 20px; white-space: pre-wrap; word-break: break-word; background: #070c14; border: 1px solid #2c3d52; border-radius: 12px; padding: 18px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.7; color: #e3eefa; }

@@ -1,6 +1,8 @@
 import { Link } from 'wouter';
 import { ArrowRight, ArrowUpRight, BookOpen, BriefcaseBusiness, CalendarDays, FileSearch, Folder, LayoutGrid, MessagesSquare, Search, UsersRound, type LucideIcon } from 'lucide-react';
 import { FilmEmbed } from './film-embed';
+import { ServiceRequestForm } from './service-request-form';
+import { SERVICE_WHATSAPP_DISPLAY } from '@/lib/service-request';
 import { BoundaryScene, DeskScene, FlowScene, ReviewScene, SiteScene } from './illustrations';
 import './landing.css';
 
@@ -47,6 +49,7 @@ export default function PublicLanding() {
         <nav className="flex items-center gap-4">
           <Link data-testid="link-simulator" href="/simulator" className="hidden text-sm font-bold text-[#d5e2f0] hover:text-white sm:block">Simulator</Link>
           <Link data-testid="link-mini-apps" href="/mini-apps" className="hidden text-sm font-bold text-[#d5e2f0] hover:text-white md:block">Mini Apps</Link>
+          <a data-testid="link-service-header" href="#layanan-pengurusan" className="hidden text-sm font-bold text-[#d5e2f0] hover:text-white lg:block">Jasa pengurusan</a>
           <Link data-testid="link-sign-in" href="/sign-in" className="hidden text-sm font-bold text-[#d5e2f0] hover:text-white sm:block">Masuk</Link>
           <Link data-testid="link-sign-up" href="/sign-up" className="lp-btn lp-btn-blue whitespace-nowrap !min-h-[40px] !px-4 !text-[13px]">Mulai sekarang <ArrowUpRight size={15} /></Link>
         </nav>
@@ -68,6 +71,7 @@ export default function PublicLanding() {
               <Link data-testid="link-try-simulator" href="/simulator" className="lp-btn lp-btn-ghost">Coba simulator tanpa akun</Link>
             </div>
             <Link data-testid="link-login-hero" href="/sign-in" className="mt-5 inline-block text-sm font-semibold text-[#9ccbff] underline-offset-4 hover:underline">Saya sudah punya akun</Link>
+            <a data-testid="link-service-hero" href="#layanan-pengurusan" className="mt-3 block text-sm font-semibold text-[#d5e2f0] underline underline-offset-4 hover:text-white">Ingin dibantu menyiapkan dokumen? Isi formulir kontak awal</a>
             <SiteScene className="mt-10 max-w-[520px] opacity-95" />
           </div>
           <div className="relative">
@@ -126,10 +130,25 @@ export default function PublicLanding() {
         </div>
       </section>
 
+      {/* Service enquiry */}
+      <section id="layanan-pengurusan" data-testid="section-service-request" className="scroll-mt-24 border-t border-[#1a2433] bg-[#0a0f18]">
+        <div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 md:px-10 lg:grid-cols-[.8fr_1.2fr]">
+          <div><Kicker n="05">JASA PENGURUSAN DOKUMEN</Kicker>
+            <h2 className="display mt-4 text-4xl font-extrabold leading-tight">Ingin dibantu menyiapkan berkas permohonan SBU?</h2>
+            <p className="mt-5 text-base leading-7 text-[#c2d1e1]">Ceritakan kebutuhan Anda. Formulir ini menyusun pesan kontak awal untuk pengelola Gustafta. Kami membantu menyiapkan bukti dan dokumen; penilaian dan penerbitan SBU tetap wewenang lembaga sertifikasi.</p>
+            <ol className="mt-8 space-y-4 text-sm leading-6 text-[#d5e2f0]">
+              {['Isi kebutuhan di formulir.', 'Tinjau ringkasan pesan persis seperti yang akan dikirim.', 'Buka WhatsApp dan tekan kirim sendiri.'].map((t, i) => <li key={t} className="flex gap-3"><span className="mono text-[#4ea4ff]">0{i + 1}</span>{t}</li>)}
+            </ol>
+            <div data-testid="text-service-destination" className="mt-8 rounded-xl border border-[#1f2b3b] bg-[#0c121c] p-4 text-sm leading-6 text-[#c9d7e6]">WhatsApp pengelola: <strong className="mono text-white">{SERVICE_WHATSAPP_DISPLAY}</strong><br />Isian tidak disimpan di situs ini. Informasi baru keluar saat Anda membuka tautan WhatsApp. Ini permintaan kontak awal, bukan pengajuan resmi, dan tidak menjamin SBU terbit.</div>
+          </div>
+          <ServiceRequestForm />
+        </div>
+      </section>
+
       {/* Boundaries + Action */}
       <section className="mx-auto max-w-7xl px-5 pb-24 md:px-10">
         <div className="grid overflow-hidden rounded-3xl border border-[#1f2b3b] lg:grid-cols-2">
-          <div className="bg-[#0c121c] p-8 md:p-12"><Kicker n="05">BATAS YANG JELAS</Kicker><ul className="mt-6 space-y-4 text-[15px] leading-7 text-[#d5e2f0]">
+          <div className="bg-[#0c121c] p-8 md:p-12"><Kicker n="06">BATAS YANG JELAS</Kicker><ul className="mt-6 space-y-4 text-[15px] leading-7 text-[#d5e2f0]">
             <li>Status "persiapan selesai" bukan keputusan LSBU dan bukan jaminan sertifikat terbit.</li>
             <li>Bukti yang dideklarasikan atau disimpan belum berarti terverifikasi.</li>
             <li>Tidak ada pengiriman otomatis ke sistem lembaga mana pun.</li>
