@@ -24,13 +24,13 @@ function PlaybackStatus({ sceneKeys, activeIndex, activeDuration, activeStartTim
   const progress = activeDuration > 0 ? Math.min(1, elapsed / activeDuration) : 0;
   const total = Math.min(totalDuration, activeStartTime + Math.min(elapsed, activeDuration));
   return <>
-    <div className="flex flex-1 items-center gap-1.5">{sceneKeys.map((key, index) => <button key={key}
-      onClick={() => onJumpTo(index)} className="relative h-3 min-h-[12px] flex-1 overflow-hidden rounded-full bg-white/20 hover:h-4 hover:bg-white/30"
+    <div className="flex min-w-0 flex-1 items-center gap-0.5 sm:gap-1.5">{sceneKeys.map((key, index) => <button key={key}
+      onClick={() => onJumpTo(index)} className="relative h-3 min-h-[12px] min-w-0 flex-1 overflow-hidden rounded-full bg-white/20 hover:h-4 hover:bg-white/30"
       aria-label={`Adegan ${index + 1}: ${SCENE_DETAILS[key]?.title}`} aria-current={index === activeIndex ? 'true' : undefined}>
       <div className="absolute inset-y-0 left-0 rounded-full bg-white/90 transition-[width] duration-100" style={{ width: index === activeIndex ? `${progress * 100}%` : '0%' }} />
     </button>)}</div>
-    <span className="font-mono text-xl text-white/70">{activeIndex + 1}/{sceneKeys.length}</span>
-    <span className="min-w-[11ch] text-right font-mono text-xl text-white/90" role="timer">{formatTime(total)} / {formatTime(totalDuration)}</span>
+    <span className="hidden shrink-0 font-mono text-xl text-white/70 sm:inline">{activeIndex + 1}/{sceneKeys.length}</span>
+    <span className="shrink-0 whitespace-nowrap text-right font-mono text-[10px] text-white/90 sm:min-w-[11ch] sm:text-xl" role="timer">{formatTime(total)} / {formatTime(totalDuration)}</span>
   </>;
 }
 function ControlledPreview() {
@@ -71,19 +71,19 @@ function ControlledPreview() {
       return !value;
     });
   };
-  const buttonStyle = 'flex h-14 w-14 shrink-0 items-center justify-center rounded-lg text-white/70 hover:bg-white/10 hover:text-white';
-  return <div className="relative h-screen w-full">
+  const buttonStyle = 'flex h-8 w-8 shrink-0 sm:h-14 sm:w-14 items-center justify-center rounded-lg text-white/70 hover:bg-white/10 hover:text-white';
+  return <div className="relative h-screen w-full overflow-hidden">
     <VideoTemplate key={controls.mountKey} durations={controls.durations} loop paused={controls.paused} muted={muted} onSceneChange={controls.onSceneChange} />
     <div ref={sensorRef} className="absolute bottom-0 left-0 right-0 z-50 flex flex-col justify-end" style={{ height: '25%' }}
       onPointerEnter={pointerEnter} onPointerLeave={pointerLeave} onPointerDown={event => { if (event.pointerType !== 'mouse' && collapsed) setTapPinned(true); }}>
       <div className="w-full flex-1" aria-hidden="true" />
-      <div aria-hidden={!visible} className={`flex items-center gap-3 bg-black/70 px-5 py-4 backdrop-blur-sm transition-all duration-200 ${visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-full opacity-0'}`}>
-        <button className={buttonStyle} onClick={controls.togglePause} aria-label={controls.paused ? 'Putar' : 'Jeda'}>{controls.paused ? <Play size={32} /> : <Pause size={32} />}</button>
-        <button className={buttonStyle} onClick={controls.toggleLock} aria-label="Ulangi adegan" aria-pressed={controls.locked}><Repeat size={32} /></button>
-        <button className={buttonStyle} onClick={() => setMuted(value => !value)} aria-label={muted ? 'Aktifkan musik' : 'Bisukan musik'}>{muted ? <VolumeX size={32} /> : <Volume2 size={32} />}</button>
-        <div className="w-px self-stretch bg-white/20" />
+      <div aria-hidden={!visible} className={`flex min-w-0 items-center gap-1 overflow-hidden bg-black/70 px-1.5 py-1.5 sm:gap-3 sm:px-5 sm:py-4 backdrop-blur-sm transition-all duration-200 ${visible ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-full opacity-0'}`}>
+        <button className={buttonStyle} onClick={controls.togglePause} aria-label={controls.paused ? 'Putar' : 'Jeda'}>{controls.paused ? <Play size={32} className="h-4 w-4 sm:h-8 sm:w-8" /> : <Pause size={32} className="h-4 w-4 sm:h-8 sm:w-8" />}</button>
+        <button className={buttonStyle} onClick={controls.toggleLock} aria-label="Ulangi adegan" aria-pressed={controls.locked}><Repeat size={32} className="h-4 w-4 sm:h-8 sm:w-8" /></button>
+        <button className={buttonStyle} onClick={() => setMuted(value => !value)} aria-label={muted ? 'Aktifkan musik' : 'Bisukan musik'}>{muted ? <VolumeX size={32} className="h-4 w-4 sm:h-8 sm:w-8" /> : <Volume2 size={32} className="h-4 w-4 sm:h-8 sm:w-8" />}</button>
+        <div className="w-px shrink-0 self-stretch bg-white/20" />
         <PlaybackStatus {...controls} onJumpTo={jump} />
-        <button className={buttonStyle} onClick={toggleCollapsed} aria-label={collapsed ? 'Tampilkan kontrol' : 'Sembunyikan kontrol'} aria-expanded={!collapsed}>{collapsed ? <ChevronUp size={40} /> : <ChevronDown size={40} />}</button>
+        <button className={buttonStyle} onClick={toggleCollapsed} aria-label={collapsed ? 'Tampilkan kontrol' : 'Sembunyikan kontrol'} aria-expanded={!collapsed}>{collapsed ? <ChevronUp size={40} className="h-5 w-5 sm:h-10 sm:w-10" /> : <ChevronDown size={40} className="h-5 w-5 sm:h-10 sm:w-10" />}</button>
       </div>
     </div>
   </div>;

@@ -14,3 +14,13 @@ Do not infer that the reported problem is resolved merely from HTTP 200.
 that its timeline advances. Include bounded loading, visible failure/retry,
 and a standalone fallback. When embedding application-owned HTML, preserve
 asset base paths and never apply that trust to user-supplied HTML.
+
+Check overflow and control visibility inside the frame as well as outside it.
+
+**Why:** The landing page fit the mobile viewport while the film's own document
+was wider than its frame, clipping playback controls. An outer-page width
+check alone missed the problem.
+
+**How to apply:** Measure the inner document's scroll width against its viewport
+and check all control bounds at the embedded width, not only at the phone's
+full viewport width.
