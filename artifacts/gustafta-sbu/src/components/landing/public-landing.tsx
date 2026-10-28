@@ -118,8 +118,8 @@ export default function PublicLanding() {
 
       {/* Film */}
       <section className="mx-auto max-w-7xl px-5 py-20 md:px-10">
-        <Kicker n="04">FILM KONSEP</Kicker>
-        <h2 className="display mt-4 mb-10 max-w-3xl text-4xl font-extrabold leading-tight">Gagasan awal: satu sumber, akses terarah.</h2>
+        <Kicker n="04">KENALI ALUR PERSIAPAN</Kicker>
+        <h2 className="display mt-4 mb-10 max-w-3xl text-4xl font-extrabold leading-tight">Kumpulkan, baca, tindak lanjuti.</h2>
         <FilmEmbed />
       </section>
 

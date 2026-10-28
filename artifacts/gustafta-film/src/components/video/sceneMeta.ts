@@ -17,9 +17,9 @@ export interface SceneDetails {
 
 export const SCENE_DETAILS: Record<string, SceneDetails> = {
   preparation: { title: 'Persiapan SBU', filePath: 'src/components/video/video_scenes/Scene1.tsx' },
-  source: { title: 'Satu sumber', filePath: 'src/components/video/video_scenes/Scene2.tsx' },
-  connections: { title: 'Koneksi atas izin', filePath: 'src/components/video/video_scenes/Scene3.tsx' },
-  folders: { title: 'Rencana akses folder', filePath: 'src/components/video/video_scenes/Scene4.tsx' },
-  review: { title: 'Tinjau persiapan', filePath: 'src/components/video/video_scenes/Scene5.tsx' },
+  source: { title: 'Ruang Simpan', filePath: 'src/components/video/video_scenes/Scene2.tsx' },
+  connections: { title: 'Sumber & draf AI', filePath: 'src/components/video/video_scenes/Scene3.tsx' },
+  folders: { title: 'Batas yang jelas', filePath: 'src/components/video/video_scenes/Scene4.tsx' },
+  review: { title: 'Rencana tindakan', filePath: 'src/components/video/video_scenes/Scene5.tsx' },
   brand: { title: 'Gustafta', filePath: 'src/components/video/video_scenes/Scene6.tsx' },
 };

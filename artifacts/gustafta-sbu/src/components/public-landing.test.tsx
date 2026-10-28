@@ -38,7 +38,9 @@ test('landing: renders honest copy, working CTAs, and mounts film only on click'
     assert.match(text, /bukan jaminan/); assert.match(text, /DRAF AI/); assert.match(text, /VERIFIKASI MANUSIA/);
     assert.doesNotMatch(text, /[\u{1F300}-\u{1FAFF}]/u, 'no emoji');
     assert.equal(container.querySelector('iframe'), null, 'film not mounted before click');
-    assert.match(find('note-film-concept')?.textContent ?? '', /bukan bukti integrasi/);
+    assert.match(find('note-film-concept')?.textContent ?? '', /bukan hasil pemeriksaan dokumen atau keputusan sertifikasi/);
+    assert.match(find('note-film-concept')?.textContent ?? '', /berdiri sendiri dan privat/);
+    assert.doesNotMatch(text, /konsep lama|Gagasan awal: satu sumber/);
     assert.equal(find('link-open-film')?.getAttribute('href'), '/gustafta-film/');
     await act(async () => { (find('button-load-film') as unknown as HTMLButtonElement).click(); });
     const frame = find('iframe-film');

@@ -7,7 +7,7 @@ export function Scene6() {
     <motion.div className="finale-lockup" animate={{ scale: beat >= 5 ? .94 : 1 }} transition={{ duration: .7, ease: EASE }}>
       <img className="brand-logo" src={`${import.meta.env.BASE_URL}images/logo.svg`} alt="gustafta" />
       <Reveal delay={.3} className="eyebrow product-name">SBU ACCELERATOR</Reveal>
-      <div className="finale-message"><Reveal delay={.7}><h1>Satu sumber.</h1></Reveal><Reveal delay={1.3}><h1 className="cobalt">Akses terarah.</h1></Reveal></div>
+      <div className="finale-message"><Reveal delay={.7}><h1>Kumpulkan. Baca.</h1></Reveal><Reveal delay={1.3}><h1 className="cobalt">Tindak lanjuti.</h1></Reveal></div>
       <Reveal delay={2.1} className="support">Ruang kerja persiapan SBU.</Reveal>
       <Reveal delay={2.8} className="finale-note">Independen • bukan jaminan penerbitan SBU.</Reveal>
     </motion.div>

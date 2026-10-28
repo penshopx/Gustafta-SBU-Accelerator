@@ -7,7 +7,7 @@ export function Scene1() {
     <div className="eyebrow top-label">GUSTAFTA / SBU ACCELERATOR</div>
     <div className="opener-copy"><Reveal><h1>Persiapan</h1></Reveal><Reveal delay={.45}><h1 className="blue giant">SBU.</h1></Reveal>
       <div className="application-types"><Reveal delay={.95}>Baru</Reveal><Reveal delay={1.45}>Perpanjangan</Reveal></div>
-      <Reveal delay={2.2} className="support">Rapi sejak awal.</Reveal></div>
+      <Reveal delay={2.2} className="support">Kumpulkan, baca, tindak lanjuti.</Reveal></div>
     <motion.div className="dossier" animate={{ scale: beat >= 7 ? 1.17 : beat >= 6 ? 1.04 : 1, rotate: beat >= 7 ? 0 : -4 }}
       transition={{ duration: .65, ease: EASE }}>
       <motion.div className="sheet-back" initial={{ rotate: 15, x: '12%', y: '7%' }} animate={{ rotate: beat >= 2 ? 5 : 15, x: beat >= 2 ? '4%' : '12%' }} transition={{ type: 'spring', stiffness: 300, damping: 28 }} />
