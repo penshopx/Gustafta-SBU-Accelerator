@@ -50,3 +50,31 @@ mtime_ms = 1791613147859
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/728c263a-4d9e-455a-a906-c45d8828fdff/bb38211b-edd9-41cf-b239-c059a774a394"
 storage_version_token = "1791613220397913"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "m8XFsnIowlRWkcDA-JLJl"
+uri = "file://generated-artifacts/manual/Panduan-Pengguna-Gustafta-SBU-Accelerator.pdf"
+type = "pdf"
+title = "Manual Pengguna Gustafta SBU Accelerator"
+description = "Panduan PDF 19 halaman: langkah operasional, contoh alur permohonan baru/perpanjangan, Asisten AI dan Pakar Skema, keamanan serta pemulihan kendala. Siap dibaca atau dicetak."
+logical_id = "4ba5fb9d-f35a-420b-9c97-3a227008f318"
+content_hash = "sha256:e52f8e1c2238574e9a443ef7d8184392dcf7310a6c5b0b069290988f4273d208"
+size = 107072
+mtime_ms = 1793222935567
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/4ba5fb9d-f35a-420b-9c97-3a227008f318/efb8845f-df1c-4634-8c98-402a27d486e7"
+storage_version_token = "1793222950947474"
+content_type = "application/pdf"
+
+[[outputs]]
+id = "MKycA-pGoxDZmnH82Qfdy"
+uri = "file://docs/panduan-pengguna-sbu-accelerator.html"
+type = "html"
+title = "Manual Pengguna — Versi HTML"
+description = "Panduan mandiri dengan daftar isi yang dapat diklik, tampilan ponsel dan tombol cetak. Dapat dibaca tanpa internet setelah diunduh."
+logical_id = "69d91c9a-55d6-4c9a-bd4d-0b975f4f35c9"
+content_hash = "sha256:036fa702f19e7d8daae49f115539bbe12e115e998631faad81f49ba147778671"
+size = 45330
+mtime_ms = 1793222920919
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/69d91c9a-55d6-4c9a-bd4d-0b975f4f35c9/bff3cb47-82e6-4f43-ac4c-b6dc0c411615"
+storage_version_token = "1793222952251944"
+content_type = "text/html"

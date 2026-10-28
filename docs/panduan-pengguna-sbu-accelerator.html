@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panduan Pengguna — Gustafta SBU Accelerator</title>
+<style>
+:root{--navy:#102a43;--blue:#1261b5;--ink:#23394d;--muted:#516779;--line:#d6e1ea;--paper:#fff;--soft:#edf5fc}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:75px}body{margin:0;background:#eaf0f5;color:var(--ink);font:16px/1.65 Arial,Helvetica,sans-serif}h1,h2,h3{color:var(--navy);line-height:1.2}h1{font-size:42px;letter-spacing:-1px;margin:15px 0 22px}h2{font-size:30px;letter-spacing:-.6px;margin:10px 0 20px}h3{font-size:18px;margin:24px 0 9px}p{margin:10px 0 16px}a{color:var(--blue)}strong{color:var(--navy)}li{padding-left:3px;margin:8px 0}ol,ul{padding-left:24px}.top{position:sticky;top:0;z-index:3;background:var(--navy);color:white;display:flex;justify-content:space-between;align-items:center;padding:13px 24px;gap:18px}.top strong{color:white;font-size:14px;letter-spacing:.5px}.top button{background:white;color:var(--navy);border:0;border-radius:6px;padding:10px 15px;cursor:pointer;font-weight:bold}.top button:focus-visible,a:focus-visible{outline:3px solid #f5ab25;outline-offset:3px}main{max-width:900px;margin:28px auto 70px}.page{background:var(--paper);border:1px solid var(--line);border-radius:8px;margin-bottom:24px;padding:48px 52px;scroll-margin-top:80px}.kicker{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;color:var(--blue)}.lead{font-size:20px;line-height:1.5;color:var(--muted)}.note,.warn,.example{padding:15px 18px;border-left:4px solid var(--blue);background:var(--soft);margin:20px 0;border-radius:0 6px 6px 0}.warn{border-color:#af751c;background:#fff7e9}.example{border-color:#6a8194;background:#f3f6f8}.note p,.warn p,.example p{margin:4px 0}.small{font-size:13px;color:var(--muted)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card{border:1px solid var(--line);padding:16px;border-radius:7px}.card h3{margin:0 0 8px}.flow{display:flex;gap:10px;margin:26px 0}.flow div{flex:1;background:var(--soft);padding:14px 12px;border-top:3px solid var(--blue);font-size:14px}.flow b{display:block;color:var(--navy);margin-bottom:5px}.toc{columns:2;column-gap:30px;list-style:none;padding:0}.toc li{break-inside:avoid;margin:8px 0;padding:0}.toc a{text-decoration:none;border-bottom:1px solid #d6e1ea}.tag{display:inline-block;background:#dcecff;color:#144e85;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:bold;margin-bottom:8px}table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;line-height:1.45}th,td{border:1px solid var(--line);padding:10px 11px;vertical-align:top;text-align:left}th{background:var(--soft);color:var(--navy)}.cover{border-top:8px solid var(--blue);padding-top:50px}.cover h1{font-size:48px;max-width:650px}.cover .subtitle{font-size:25px;color:var(--blue);font-weight:700}.cover hr{border:0;border-top:1px solid var(--line);margin:30px 0}.checklist{list-style:none;padding-left:0}.checklist li:before{content:"□";color:var(--blue);font-size:19px;margin-right:9px}.end{text-align:center;padding:18px;color:var(--muted);font-size:13px}
+@media(max-width:680px){.top{padding:10px 14px}.top strong{font-size:11px}main{margin:14px 10px 30px}.page{padding:28px 22px}h1,.cover h1{font-size:35px}h2{font-size:27px}.lead{font-size:18px}.grid{grid-template-columns:1fr}.flow{flex-direction:column}.toc{columns:1}table{font-size:12px}th,td{padding:8px 7px}}
+@page{size:A4;margin:18mm 16mm 18mm}
+@media print{html{scroll-behavior:auto}body{background:white;font-size:10.5pt;line-height:1.45;color:#23394d;print-color-adjust:exact;-webkit-print-color-adjust:exact}.top,.end{display:none}main{margin:0;max-width:none}.page{border:0;border-radius:0;padding:0;margin:0;break-after:page;scroll-margin:0}.page:last-of-type{break-after:auto}.cover{border-top:6px solid var(--blue);padding-top:24px}.cover h1{font-size:36pt}h1{font-size:29pt}h2{font-size:24pt;margin:8px 0 16px}h3{font-size:13pt;margin:17px 0 7px}p{margin:8px 0 11px}.lead{font-size:15pt}.kicker{font-size:9pt}.small{font-size:9pt}table{font-size:9pt;margin:12px 0}th,td{padding:7px 8px}li{margin:6px 0}h1,h2,h3{break-after:avoid}tr,.note,.warn,.example,.card,.flow{break-inside:avoid}.note,.warn,.example{padding:10px 13px;margin:14px 0}.grid{grid-template-columns:1fr 1fr}.flow{flex-direction:row;margin:19px 0}.flow div{font-size:10pt}a{color:#1261b5;text-decoration:none}.toc{columns:2}.tag{font-size:9pt}.card{padding:12px}}
+</style>
+</head>
+<body>
+<header class="top"><strong>GUSTAFTA / PANDUAN PENGGUNA</strong><button type="button" onclick="window.print()">Cetak / Simpan PDF</button></header>
+<main>
+<section class="page cover" id="sampul">
+<div class="kicker">Manual operasional pengguna</div>
+<h1>Gustafta<br>SBU Accelerator</h1>
+<p class="subtitle">Kumpulkan, baca, tindak lanjuti.</p>
+<p class="lead">Panduan menggunakan ruang kerja persiapan Sertifikat Badan Usaha jasa konstruksi untuk permohonan baru dan perpanjangan.</p>
+<div class="flow"><div><b>Susun bahan</b>Kasus, dokumen, personel dan deklarasi bukti.</div><div><b>Pahami konteks</b>Rujukan regulasi, analisis dokumen dan percakapan AI.</div><div><b>Kelola tindak lanjut</b>Daftar kerja, telaah internal, agenda dan ringkasan.</div></div>
+<div class="note"><strong>Untuk siapa panduan ini?</strong><p>Admin BUJK, pendamping persiapan, serta pengguna yang ingin mempelajari skema dan proses sertifikasi. Fitur yang terlihat bergantung pada peran akun dan izin yang diberikan server.</p></div>
+<div class="warn"><strong>Bukan sistem penerbitan SBU.</strong><p>Aplikasi membantu persiapan dan pemahaman. Menyimpan berkas, menandai checklist, memperoleh jawaban AI atau mencetak ringkasan bukan persetujuan LSBU/OSS dan tidak membuktikan keaslian dokumen.</p></div>
+<hr>
+<p class="small"><strong>Cakupan edisi ini:</strong> ruang kerja mandiri, Asisten peran, serta pilot Pakar Skema BG001–BG009 dan BS001–BS020. Panduan disusun dari fitur pada kode aplikasi saat penyusunan, bukan bukti bahwa semua pembaruan sudah aktif di situs publik. Menu publik dapat berbeda bila versi terbaru belum dipublikasikan.</p>
+<p class="small">Contoh nama perusahaan, pertanyaan dan situasi dalam panduan bersifat sintetis. Tidak ada data pelanggan atau dokumen privat yang digunakan.</p>
+</section>
+
+<section class="page" id="mulai">
+<div class="kicker">01 / Mulai di sini</div><h2>Peta panduan dan alur cepat</h2>
+<ul class="toc">
+<li><a href="#akun">02 · Akun, profil dan navigasi</a></li><li><a href="#kasus">03 · Membuat kasus SBU</a></li>
+<li><a href="#bukti">04 · Deklarasi bukti dan penilaian awal</a></li><li><a href="#simpan">05 · Ruang Simpan</a></li>
+<li><a href="#bedah">06 · Bedah Dokumen</a></li><li><a href="#asisten">07 · Asisten peran dan tujuan chat</a></li>
+<li><a href="#skema">08 · Pakar Skema BG dan BS</a></li><li><a href="#regulasi">09 · Pusat regulasi dan sumber</a></li>
+<li><a href="#personel">10 · Personel &amp; SKK</a></li><li><a href="#kerja">11 · Ruang kerja dan tinjauan internal</a></li>
+<li><a href="#smap">12 · Checklist internal SMAP</a></li><li><a href="#agenda">13 · Agenda persiapan</a></li>
+<li><a href="#ekspor">14 · Ringkasan, unduh dan cetak</a></li><li><a href="#mini">15 · Simulator dan Mini Apps</a></li>
+<li><a href="#skenario">16 · Contoh alur penggunaan</a></li><li><a href="#kendala">17 · Kendala dan pemulihan</a></li>
+<li><a href="#aman">18 · Keamanan dan istilah penting</a></li>
+</ul>
+<h3>Alur awal yang disarankan</h3>
+<ol><li>Masuk atau daftar, lalu lengkapi profil dan pilih peran yang sesuai.</li><li>Buka <strong>Kasus SBU → Kasus baru</strong>. Tentukan permohonan baru atau perpanjangan.</li><li>Siapkan identitas perusahaan, personel/SKK, dan dokumen yang terkait kasus.</li><li>Isi <strong>Deklarasi bukti</strong>. Gunakan penilaian awal sebagai daftar hal yang harus diperiksa, bukan keputusan kelulusan.</li><li>Gunakan sumber regulasi dan AI secara terarah; periksa rujukan dan batas setiap jawaban.</li><li>Catat tindak lanjut dan telaah internal. Unduh ringkasan saat bahan sudah siap dibahas dengan pendamping atau LSBU.</li></ol>
+<div class="note"><strong>Belajar sebelum memakai data nyata</strong><p>Cobalah Simulator SBU atau susun satu kasus latihan dengan data contoh. Jangan memasukkan nomor identitas atau dokumen pihak lain untuk sekadar mencoba aplikasi.</p></div>
+</section>
+
+<section class="page" id="akun">
+<div class="kicker">02 / Akses awal</div><h2>Akun, profil dan navigasi</h2>
+<h3>Masuk dan lengkapi profil</h3>
+<ol><li>Buka aplikasi melalui alamat yang diberikan pengelola. Pilih <strong>Masuk</strong> atau mulai pendaftaran akun.</li><li>Ikuti metode autentikasi yang muncul. Jangan membagikan kata sandi atau kode verifikasi.</li><li>Lengkapi nama, organisasi bila relevan, serta peran. Pilih sesuai kegiatan Anda, bukan untuk mencoba mendapatkan hak akses tambahan.</li><li>Setelah masuk, gunakan <strong>Pengaturan</strong> untuk memperbarui profil. Tunggu konfirmasi berhasil sebelum meninggalkan formulir.</li></ol>
+<table><thead><tr><th>Peran profil</th><th>Yang perlu dipahami</th></tr></thead><tbody><tr><td>Kontraktor / Konsultan</td><td>Dapat mengelola ruang kerja kasus sesuai kemampuan dan izin aplikasi.</td></tr><tr><td>Profesional / Asosiasi</td><td>Akses pengantar dan fungsi yang tersedia; tidak otomatis memperoleh pengelolaan kasus atau akses anggota bersama.</td></tr><tr><td>Peran percakapan AI</td><td>Hanya mengubah sudut pandang jawaban. Memilih “asesor” atau “LSBU” pada chat tidak memberikan kewenangan tersebut.</td></tr></tbody></table>
+<h3>Profil akun berbeda dari Profil perusahaan</h3>
+<p><strong>Pengaturan</strong> mengelola profil pengguna dan peran. Untuk data badan usaha, buka <strong>Profil perusahaan</strong>, lengkapi formulir lalu simpan sampai muncul konfirmasi. Data perusahaan tersimpan privat di akun Anda, berdasarkan isian sendiri; tidak diverifikasi dan tidak terhubung otomatis ke layanan lain.</p>
+<h3>Menggunakan ruang kerja</h3>
+<ul><li>Di komputer, menu utama ada di sisi kiri. Di ponsel, tekan tombol <strong>Buka navigasi</strong>, lalu pilih menu.</li><li>Gunakan tombol tema di bagian atas untuk berpindah antara tampilan terang dan gelap.</li><li><strong>Ringkasan</strong> menampilkan keadaan persiapan akun, bukan status resmi sertifikasi.</li><li>Menu <strong>Telaah sumber transisi</strong> hanya tersedia bagi penelaah yang diizinkan server. Mengganti peran profil tidak membuka menu tersebut.</li></ul>
+<div class="warn"><strong>Ruang kerja pribadi, bukan akun tim.</strong><p>Nama penanggung jawab pada catatan tidak memberikan akses kepada orang tersebut. Jangan memakai satu akun bersama untuk menggantikan pengaturan akses organisasi.</p></div>
+<p class="small">Saat berganti akun atau sesi berubah, ikuti permintaan masuk ulang/muat ulang. Jangan meneruskan formulir akun lama. Setelah memakai perangkat bersama, pilih <strong>Keluar akun</strong>.</p>
+</section>
+
+<section class="page" id="kasus">
+<div class="kicker">03 / Kasus SBU</div><h2>Mulai satu ruang persiapan</h2>
+<p>Satu kasus mengelompokkan catatan persiapan untuk satu konteks permohonan. Buat identitas dan konteksnya jelas agar dokumen atau tindak lanjut tidak tertukar.</p>
+<ol><li>Buka <strong>Kasus SBU → Kasus baru</strong>.</li><li>Isi <strong>Nama badan usaha</strong> sesuai dokumen yang Anda gunakan.</li><li>Pilih <strong>Jenis permohonan</strong>: baru atau perpanjangan. Lengkapi klasifikasi, kualifikasi dan isian lain yang ditampilkan.</li><li>Untuk perpanjangan, isi informasi SBU yang sudah ada dan tanggal berakhir bila diminta. Jangan memperkirakan tanggal tanpa memeriksa sertifikat.</li><li>Simpan, lalu buka kasus dari daftar. Periksa kembali identitas, jenis permohonan dan konteksnya sebelum menambahkan bahan.</li></ol>
+<div class="example"><strong>Contoh kasus latihan</strong><p>Nama badan usaha: “PT Contoh Persiapan”. Jenis: “Perpanjangan”. Catatan kerja: “Latihan menyusun daftar dokumen; bukan pengajuan nyata”. Gunakan contoh hanya di ruang yang memang ditujukan untuk latihan.</p></div>
+<h3>Mengubah data kasus</h3>
+<p>Buka detail kasus dan gunakan tindakan ubah yang tersedia. Setelah menyimpan, baca kembali detail. Bila sesi berubah atau aplikasi mendeteksi revisi yang lebih baru, muat ulang dan periksa data terbaru sebelum mengulang penyimpanan.</p>
+<h3>Menghapus kasus</h3>
+<div class="warn"><strong>Penghapusan bersifat permanen.</strong><p>Kasus beserta deklarasi bukti, daftar periksa, tindak lanjut, catatan kerja dan keputusan tinjauan internal terkait akan dihapus. Kasus yang masih memiliki dokumen asli tidak dapat dihapus sebelum dokumennya dihapus permanen. Unduh bahan yang masih diperlukan dan pastikan Anda memang berwenang menghapusnya.</p></div>
+<p class="small">Status seperti draf atau tahapan persiapan adalah catatan aplikasi. Jangan memperlakukannya sebagai hasil registrasi OSS, keputusan LSBU atau bukti penerbitan SBU.</p>
+</section>
+
+<section class="page" id="bukti">
+<div class="kicker">04 / Catatan dan temuan</div><h2>Deklarasi bukti &amp; penilaian awal</h2>
+<p><strong>Deklarasi bukti</strong> mencatat informasi yang Anda nyatakan. Ia berbeda dari berkas asli di Ruang Simpan dan berbeda pula dari hasil pemeriksaan manusia.</p>
+<ol><li>Buka detail kasus dan pilih tab <strong>Deklarasi bukti</strong>.</li><li>Gunakan <strong>Catat bukti</strong> atau tindakan tambah yang ditampilkan.</li><li>Pilih kategori, kemudian isi fakta, tanggal dan rujukan yang relevan. Gunakan keterangan yang dapat ditelusuri, bukan sekadar “sudah lengkap”.</li><li>Simpan dan periksa apakah kartu catatan sudah muncul. Gunakan ubah bila terdapat koreksi.</li><li>Buka <strong>Penilaian awal</strong> untuk membaca temuan persiapan. Cocokkan setiap temuan dengan bahan asli dan sumber yang berlaku.</li><li>Jadikan hal yang belum jelas sebagai tindak lanjut di ruang kerja kasus atau bahan konsultasi.</li></ol>
+<div class="grid"><div class="card"><h3>Catatan yang berguna</h3><p>“Tanggal berakhir telah dicocokkan dengan dokumen versi terbaru; masih perlu pemeriksaan kesesuaian klasifikasi.”</p></div><div class="card"><h3>Catatan yang perlu dihindari</h3><p>“Pasti lolos” atau “sudah sah” tanpa pemeriksaan dan dasar yang dapat ditelusuri.</p></div></div>
+<h3>Jika simpan gagal</h3>
+<p>Periksa pesan kesalahan. Pada formulir yang masih terbuka, tinjau kembali isian sebelum mencoba ulang. Jika membatalkan dialog, draf yang dibatalkan dapat dibuang; jangan menganggapnya sudah tersimpan. Setelah koneksi pulih, pastikan hasil tidak tercatat ganda.</p>
+<div class="warn"><strong>Tidak semua persyaratan menjadi aturan otomatis.</strong><p>Penilaian hanya mencakup aturan yang memang diaktifkan pada aplikasi. Area yang belum ditelaah atau belum didukung tidak boleh dianggap terpenuhi hanya karena tidak ada temuan otomatis.</p></div>
+<p class="small">Menghapus catatan bukti bukan tindakan yang sama dengan menghapus berkas asli. Periksa kedua tempat bila Anda perlu memperbaiki atau menarik suatu bahan.</p>
+</section>
+
+<section class="page" id="simpan">
+<div class="kicker">05 / Dokumen privat</div><h2>Menggunakan Ruang Simpan</h2>
+<p>Ruang Simpan adalah penyimpanan mandiri dalam aplikasi ini, bukan koneksi otomatis ke penyimpanan eksternal Gustafta.</p>
+<ol><li>Buka <strong>Ruang Simpan → Dokumen baru</strong>.</li><li>Pilih <strong>Kasus tujuan</strong> milik akun Anda. Bila belum ada, buat kasus terlebih dahulu.</li><li>Lengkapi nama/kategori dan pilih berkas yang diizinkan formulir. Ikuti batas ukuran dan format yang ditampilkan.</li><li>Jalankan unggahan dan tunggu proses penyelesaian serta status pemindaian. Jangan menutup halaman ketika proses belum selesai.</li><li>Gunakan filter kategori atau kasus untuk menemukan kembali berkas. Periksa identitas kasus dan versi sebelum membuka atau mengunduhnya.</li></ol>
+<table><thead><tr><th>Kondisi yang terlihat</th><th>Tindakan pengguna</th></tr></thead><tbody><tr><td>Belum selesai / masih diproses</td><td>Tunggu atau gunakan tindakan pemulihan yang ditawarkan. Jangan menganggap unggahan sudah siap dipakai.</td></tr><tr><td>Siap dan lolos pemindaian</td><td>Gunakan untuk pratinjau atau analisis bila fasilitas tersebut tersedia.</td></tr><tr><td>Ditolak, gagal atau pemeriksaan belum tersedia</td><td>Baca alasan yang muncul. Jangan berusaha melewati pemindaian atau mengubah ekstensi untuk memaksa unggahan.</td></tr></tbody></table>
+<h3>Versi dan penghapusan</h3>
+<p>Jika berkas diperbarui melalui tindakan yang tersedia, periksa versi terbaru. Tautan checklist, hasil analisis atau tinjauan versi lama tidak otomatis membuktikan keadaan versi baru.</p>
+<div class="warn"><strong>Hapus hanya bila benar-benar diperlukan.</strong><p>Penghapusan berkas bersifat permanen dan tidak dapat dipulihkan. Analisis tersimpan untuk versi yang dihapus juga ikut terhapus. Periksa dahulu hubungan berkas dengan checklist atau tinjauan internal.</p></div>
+<p class="small">Lolos pemindaian keamanan bukan verifikasi keaslian, validitas hukum, kesesuaian isi atau persetujuan sertifikasi.</p>
+</section>
+
+<section class="page" id="bedah">
+<div class="kicker">06 / Analisis dengan persetujuan</div><h2>Bedah Dokumen &amp; dialog dokumen</h2>
+<h3>Menganalisis halaman terpilih</h3>
+<ol><li>Buka dokumen yang sudah siap dan bersih, lalu panel <strong>Bedah Dokumen</strong>.</li><li>Periksa kasus, nama dokumen dan versi. Pilih halaman yang benar-benar diperlukan.</li><li>Buka pratinjau halaman yang akan dikirim. Pastikan tulisan terbaca dan tidak ada informasi yang tidak perlu Anda bagikan.</li><li>Ikuti batas analisis yang ditampilkan: maksimal <strong>10 halaman dan 4 MiB</strong>. Berkas yang tersimpan belum tentu memenuhi batas untuk dianalisis.</li><li>Baca pemberitahuan pemrosesan AI dan biaya/anggaran. Berikan persetujuan hanya jika Anda berwenang mengirim bahan tersebut.</li><li>Jalankan analisis. Baca hasil, rujukan halaman dan keterbatasannya, lalu cocokkan dengan berkas asli.</li></ol>
+<div class="note"><strong>Pratinjau bukan pengiriman AI.</strong><p>Mengubah pilihan halaman atau versi membatalkan pratinjau/persetujuan sebelumnya. Tinjau kembali bahan sebelum melanjutkan.</p></div>
+<h3>Berdialog melalui Asisten Dokumen</h3>
+<ol><li>Di Ruang Simpan, pilih <strong>Asisten Dokumen</strong> pada dokumen yang sesuai.</li><li>Pilih hasil analisis yang cocok dengan dokumen dan versi tersebut. Jika belum ada hasil, jalankan Bedah Dokumen terlebih dahulu.</li><li>Tinjau cuplikan dan referensinya. Setujui penggunaan cuplikan serta persetujuan chat secara terpisah.</li><li>Ajukan pertanyaan yang merujuk pada cuplikan itu, misalnya: “Bagian mana yang belum cukup jelas dan perlu saya cocokkan dengan dokumen asli?”</li></ol>
+<div class="warn"><strong>Dialog tidak membaca ulang seluruh berkas pada setiap pesan.</strong><p>Jawaban membahas cuplikan hasil analisis yang Anda setujui. Halaman lain, berkas lain dan profil perusahaan tidak otomatis ikut dikirim. Percakapan ini tidak memverifikasi keaslian dokumen.</p></div>
+<p class="small">Riwayat chat berada sementara di halaman. Memuat ulang, berpindah akun atau meninggalkan percakapan dapat mengakhirinya; simpan catatan penting melalui fasilitas yang sesuai.</p>
+</section>
+
+<section class="page" id="asisten">
+<div class="kicker">07 / Bantuan AI terarah</div><h2>Asisten peran: pilih tujuan dahulu</h2>
+<p>Buka <strong>Asisten peran</strong>. Pilih sudut pandang peran, tujuan percakapan dan fokus spesialis yang tersedia. Pilihan tersebut mengarahkan jawaban, bukan memberi akses ke data atau kewenangan resmi.</p>
+<table><thead><tr><th>Tujuan</th><th>Gunakan untuk</th></tr></thead><tbody>
+<tr><td>Tutor Regulasi</td><td>Memahami istilah, ruang lingkup, sumber dan batas verifikasi.</td></tr>
+<tr><td>Panduan Permohonan Baru</td><td>Menyusun pertanyaan klarifikasi, daftar bahan dan urutan persiapan awal.</td></tr>
+<tr><td>Panduan Perpanjangan SBU</td><td>Membahas konteks masa berlaku, periode dan kekurangan bahan yang perlu ditelaah.</td></tr>
+<tr><td>Pemeriksa Dokumen</td><td>Membahas cuplikan anonim yang diberikan atau hasil analisis yang dipilih dan disetujui.</td></tr>
+<tr><td>Pakar Studi Kasus</td><td>Membedakan fakta, asumsi, isu, alternatif dan risiko suatu situasi.</td></tr>
+<tr><td>Pendamping Proses</td><td>Menyusun prioritas kerja, dependensi, usulan tanggung jawab dan draf komunikasi.</td></tr>
+</tbody></table>
+<ol><li>Pilih tujuan yang paling sesuai. Contoh pertanyaan hanya mengisi draf, bukan langsung mengirimkannya.</li><li>Berikan konteks secukupnya: jenis permohonan, topik dan pertanyaan spesifik. Hindari identitas pribadi yang tidak diperlukan.</li><li>Baca dan berikan persetujuan pemrosesan AI. Periksa sisa kuota dan ketersediaan anggaran.</li><li>Kirim pertanyaan. Periksa kartu sumber, locator, tanggal dan batas verifikasi pada jawaban.</li><li>Jika menyalin jawaban, sertakan sumber dan keterbatasannya saat dipakai di luar aplikasi.</li></ol>
+<div class="note"><strong>Ganti konteks dengan sengaja.</strong><p>Bila sudah ada draf atau riwayat, perubahan tujuan, peran, spesialis atau skema dapat meminta konfirmasi untuk memulai percakapan baru. Batal mempertahankan percakapan; konfirmasi dapat mengosongkannya dan meminta persetujuan ulang.</p></div>
+<p class="small">Jika kuota tidak dapat dimuat atau anggaran tidak tersedia, pengiriman dapat dinonaktifkan. Gunakan <strong>Periksa lagi</strong> bila ditawarkan. Batas kuota bukan jaminan bahwa setiap permintaan pasti diterima.</p>
+</section>
+
+<section class="page" id="skema">
+<div class="kicker">08 / Pilot berbasis sumber</div><h2>Pakar Skema BG dan BS</h2>
+<p>Pakar Skema membantu memahami pemetaan subklasifikasi ke KBLI serta uraian ruang lingkupnya. Gunakan dari bagian <strong>Pakar Skema SBU</strong> dalam Asisten peran.</p>
+<div class="grid"><div class="card"><h3>BG · Bangunan Gedung</h3><p>Pilihan BG001–BG009, dengan pemetaan dan rujukan halaman yang dibatasi untuk tiap pilihan.</p></div><div class="card"><h3>BS · Bangunan Sipil</h3><p>Pilihan BS001–BS020. Nomor KBLI tidak selalu berurutan mengikuti nomor BS.</p></div></div>
+<ol><li>Pilih tujuan chat selain <strong>Pemeriksa Dokumen</strong>.</li><li>Gunakan tombol keluarga <strong>BG</strong> atau <strong>BS</strong> untuk menampilkan daftar. Ini hanya mengganti daftar yang terlihat, bukan skema aktif.</li><li>Pilih subklasifikasi yang ingin dibahas. Baca kode, KBLI dan nama lengkapnya.</li><li>Periksa indikator skema aktif. Jika sudah ada draf/percakapan, setujui pergantian hanya jika Anda memang ingin memulai konteks baru.</li><li>Ajukan pertanyaan tentang ruang lingkup. Baca pemetaan dan kartu sumber yang dikembalikan.</li></ol>
+<div class="example"><strong>Contoh pertanyaan aman</strong><p>“Untuk BS018, jelaskan cakupan KBLI 42995, pengecualiannya, halaman rujukan dan informasi pekerjaan apa yang masih perlu saya jelaskan.”</p></div>
+<h3>Hindari kesalahan pemetaan</h3>
+<p><strong>BS017 → 42999; BS018 → 42995; BS019 → 42996; BS020 → 42209.</strong> Jangan menebak KBLI hanya dengan menaikkan nomor kode. Pilih <strong>Tanpa skema</strong> bila kembali ke asisten umum.</p>
+<div class="warn"><strong>Pilot bukan skema sertifikasi lengkap.</strong><p>Belum mencakup seluruh persyaratan kualifikasi, tenaga kerja/SKK, alat, keuangan, pengalaman, aturan transisi atau autentikasi dokumen. Kartu pilot tetap memiliki batas verifikasi; keberadaan kutipan tidak menjadikannya pengesahan hukum. Klasifikasi lain belum tersedia pada pilot ini.</p></div>
+<p class="small">Pakar Skema tidak dipakai dalam chat dokumen Ruang Simpan dan tidak otomatis membaca berkas Anda. Sumber yang ditarik dapat membuat permintaan ditolak; jangan menggantinya dengan dugaan.</p>
+</section>
+
+<section class="page" id="regulasi">
+<div class="kicker">09 / Dasar pengetahuan</div><h2>Membaca Pusat regulasi dan sumber</h2>
+<p>Gunakan <strong>Pusat regulasi</strong> untuk mempelajari sumber yang disediakan aplikasi. Jangan menyamakan semua kartu sebagai peraturan yang setara atau sudah diverifikasi.</p>
+<ol><li>Buka menu dan pilih topik/sumber yang relevan dengan kebutuhan.</li><li>Gunakan pencarian atau filter bila tersedia pada versi yang Anda akses.</li><li>Baca judul, penerbit, versi, jenis sumber, tanggal dan status verifikasinya.</li><li>Baca bagian keterbatasan. Perhatikan apakah sumber berupa peraturan primer, panduan, contoh institusional atau bahan paparan.</li><li>Gunakan locator untuk menemukan pasal, bagian atau halaman. Jika pembaca PDF tersedia untuk sumber itu, buka dan cocokkan konteks sebelum mengambil kesimpulan.</li><li>Jika berkaitan dengan persyaratan operasional atau masa transisi, konfirmasikan dasar yang berlaku kepada pihak berwenang/LSBU.</li></ol>
+<table><thead><tr><th>Istilah pada sumber</th><th>Cara membacanya</th></tr></thead><tbody>
+<tr><td>Locator</td><td>Penunjuk lokasi, misalnya pasal, bagian, nomor PDF atau halaman cetak. Nomor PDF dapat berbeda dengan nomor yang tercetak pada halaman.</td></tr>
+<tr><td>Verified / unverified</td><td>Baca ruang lingkup pemeriksaannya. “Unverified” berarti jangan menganggap keaslian atau keberlakuannya telah dipastikan.</td></tr>
+<tr><td>Tanggal pemeriksaan</td><td>Waktu suatu pemeriksaan sumber; bukan otomatis tanggal mulai berlaku peraturan atau tanggal transisi.</td></tr>
+<tr><td>Tautan rujukan</td><td>Dapat menuju kanal institusi, bukan langsung ke PDF unggahan. Baca keterbatasan tautan sebelum menganggapnya lokasi penerbit asli.</td></tr>
+</tbody></table>
+<div class="warn"><strong>Contoh dan paparan bukan aturan baru.</strong><p>Usulan jadwal, materi presentasi, template LSBU atau contoh checklist tidak otomatis mengaktifkan kewajiban universal. Begitu pula, memakai KBLI versi tertentu memerlukan pemeriksaan penerapan pada sistem dan dasar regulasinya.</p></div>
+<p class="small">Pengguna biasa tidak dapat mengesahkan sumber hanya dengan mengunggah file atau memilih peran tertentu. Telaah sumber khusus dilakukan melalui izin pengelola yang terpisah.</p>
+</section>
+
+<section class="page" id="personel">
+<div class="kicker">10 / Sumber daya manusia</div><h2>Personel &amp; SKK</h2>
+<p>Menu ini membantu menata deklarasi personel dan sertifikat kompetensi yang berkaitan dengan persiapan kasus. Pencatatan bukan pemeriksaan langsung ke lembaga penerbit sertifikat.</p>
+<ol><li>Buka <strong>Personel &amp; SKK</strong> dan tambahkan personel melalui tindakan yang tersedia.</li><li>Isi identitas dan informasi yang diperlukan secara akurat. Hindari memasukkan data sensitif yang tidak diminta.</li><li>Buka detail personel dan catat SKK: nomor sertifikat, jenjang, tanggal serta informasi lain yang tersedia pada formulir.</li><li>Cocokkan setiap isian dengan sertifikat asli. Jika ada dokumen pendukung, gunakan hubungan dokumen yang tersedia tanpa menganggapnya telah diverifikasi.</li><li>Bila tersedia, hubungkan penugasan ke kasus yang tepat dan periksa uraian tanggung jawabnya.</li><li>Perbarui catatan ketika sertifikat berubah atau masa berlakunya perlu ditinjau. Baca kembali hubungan personel dengan kasus sebelum menghapus data.</li></ol>
+<h3>Menyiapkan pemetaan SKK–SBU</h3>
+<p>Gunakan catatan personel sebagai bahan membahas peran penanggung jawab dan tenaga teknik konstruksi. Cocokkan jabatan, klasifikasi/subklasifikasi, kualifikasi serta ketentuan skema yang relevan melalui sumber yang ditelaah.</p>
+<div class="example"><strong>Contoh tindak lanjut</strong><p>“Cocokkan jenjang dan bidang kompetensi pada sertifikat dengan kebutuhan penugasan kasus; minta konfirmasi LSBU bila dasar pemetaan belum jelas.”</p></div>
+<div class="warn"><strong>Tidak ada jaminan kecocokan otomatis.</strong><p>Adanya personel, SKK atau penugasan tercatat tidak membuktikan sertifikat asli, masih berlaku, bebas penggunaan ganda atau pasti memenuhi suatu skema. Pilot Pakar Skema BG/BS juga belum mengaktifkan seluruh kriteria SKK.</p></div>
+<p class="small">Jika ringkasan persiapan menampilkan data ini, baca indikator tanggal/acuan dan rujukan dokumennya. Ringkasan tetap mencerminkan deklarasi dalam aplikasi.</p>
+</section>
+
+<section class="page" id="kerja">
+<div class="kicker">11 / Pengendalian persiapan</div><h2>Ruang kerja &amp; tinjauan internal</h2>
+<p>Buka <strong>Kasus SBU → pilih kasus → Ruang kerja kasus</strong>. Gunakan ruang ini untuk mengubah temuan menjadi pekerjaan yang dapat ditindaklanjuti.</p>
+<h3>Catat pekerjaan</h3>
+<ol><li>Tambahkan atau perbarui butir daftar periksa dan tindakan yang relevan.</li><li>Tulis judul yang konkret, status, penanggung jawab, tenggat dan keterangan sesuai formulir.</li><li>Pakai catatan kerja untuk menjelaskan perubahan atau alasan keputusan yang perlu diingat.</li><li>Simpan, lalu periksa kembali hasilnya. Jika ada konflik revisi, muat versi terbaru sebelum menggabungkan perubahan Anda.</li><li>Tandai selesai hanya setelah pekerjaan yang dimaksud benar-benar dilakukan, bukan sekadar karena butir ingin dihilangkan dari daftar.</li></ol>
+<div class="example"><strong>Judul tindakan yang jelas</strong><p>“Periksa tanggal berakhir sertifikat pada dokumen versi terbaru” lebih berguna daripada “Urus berkas”. Tenggat adalah target kerja internal, bukan tenggat resmi LSBU/OSS.</p></div>
+<h3>Tinjau snapshot bahan sebelum persetujuan</h3>
+<ol><li>Buka fasilitas tinjauan/persetujuan internal pada kasus.</li><li>Baca pratinjau snapshot bahan yang akan ditinjau. Pastikan kasus dan versi sesuai.</li><li>Catat keputusan yang tersedia beserta catatan telaah yang dapat ditindaklanjuti.</li><li>Jika bahan berubah, periksa penanda perlu ditinjau ulang. Keputusan lama tetap merujuk pada snapshot lama, bukan otomatis menyetujui bahan baru.</li></ol>
+<div class="warn"><strong>Persetujuan internal saja.</strong><p>Keputusan ini bukan persetujuan LSBU/OSS, bukan tanda tangan digital resmi, tidak menerbitkan SBU dan tidak mengirim permohonan keluar aplikasi. Nama penanggung jawab juga hanya teks catatan, bukan undangan atau pemberian akses akun.</p></div>
+</section>
+
+<section class="page" id="smap">
+<div class="kicker">12 / Integritas usaha</div><h2>Checklist internal SMAP</h2>
+<p>Buka detail kasus, lalu bagian <strong>Checklist internal SMAP</strong>. Ini alat kesiapan internal dari bahan contoh; bukan mesin penentu kelulusan ISO, KPK atau LSBU.</p>
+<h3>Langkah 1 — deklarasi pemilik</h3>
+<ol><li>Pilih kelompok dan satu butir yang ingin diisi.</li><li>Baca rujukan, bukti yang disarankan dan fokus telaah.</li><li>Pilih jawaban <strong>Ada / Tidak ada / Belum dijawab</strong>, lalu isi catatan seperlunya.</li><li>Tautkan referensi dokumen dari kasus yang sama. Hanya dokumen versi terbaru yang siap dan bersih yang ditawarkan; unggah dahulu melalui Ruang Simpan bila belum tersedia.</li><li>Simpan deklarasi. Jangan menyamakan draf yang belum disimpan dengan jawaban tercatat.</li></ol>
+<h3>Langkah 2 — telaah internal</h3>
+<ol><li>Tinjau versi deklarasi yang telah disimpan dan dokumen yang ditautkan.</li><li>Pilih keputusan telaah yang tersedia dan isi catatan penjelas.</li><li>Periksa penanda <strong>Perlu telaah ulang</strong> jika dokumen hilang atau berganti versi.</li><li>Baca riwayat versi untuk membedakan keputusan lama dan keadaan terbaru. Menyimpan ulang deklarasi memerlukan telaah atas revisi yang baru.</li></ol>
+<div class="grid"><div class="card"><h3>Bahan penerapan</h3><p>Dokumen kebijakan, prosedur atau bukti penerapan dapat dicatat sesuai butir dan relevansinya.</p></div><div class="card"><h3>Sertifikat ISO</h3><p>Bila dimiliki dan relevan, sertifikat dapat menjadi bahan pendukung. Tetap periksa ruang lingkup, versi dan keabsahannya secara terpisah.</p></div></div>
+<div class="warn"><strong>SMAP dan PANCEK tidak boleh disamakan.</strong><p>Checklist tidak menerbitkan sertifikat ISO, konfirmasi PANCEK atau pengesahan KPK. Contoh dokumen juga tidak otomatis menjadi persyaratan normatif yang berlaku untuk seluruh badan usaha.</p></div>
+</section>
+
+<section class="page" id="agenda">
+<div class="kicker">13 / Kendali waktu</div><h2>Agenda persiapan kasus</h2>
+<p>Agenda mengambil tindakan yang sudah disimpan di ruang kerja. Ia tidak membuat persyaratan sertifikasi baru atau mengganti penilaian kasus.</p>
+<ol><li>Buka <strong>Agenda kasus</strong> untuk melihat tindakan lintas kasus milik akun Anda, atau agenda di dalam satu kasus.</li><li>Cari berdasarkan informasi yang ditawarkan, misalnya judul, penanggung jawab, perusahaan atau klasifikasi.</li><li>Gunakan filter seperti aktif, terlewat, hari ini, tujuh hari ke depan, tanpa tenggat, selesai atau semua.</li><li>Buka baris tindakan untuk masuk ke kasus dan memperbarui pekerjaannya.</li><li>Setelah perubahan dari sesi lain, gunakan muat ulang atau fokuskan kembali halaman untuk memperoleh data terbaru.</li></ol>
+<h3>Tanggal dan penanggung jawab</h3>
+<p>Acuan urgensi menggunakan tanggal WIB. Tanggal kalender dokumen berbeda dari waktu pembaruan sistem. Bila aplikasi menandai tanggal tidak sah, perbaiki sumber isian; jangan menggantinya dengan tanggal perkiraan hanya agar peringatan hilang.</p>
+<h3>Ekspor kalender pribadi</h3>
+<ol><li>Di agenda kasus, periksa tindakan aktif yang memiliki tenggat valid.</li><li>Baca pemberitahuan privasi ekspor, kemudian unduh berkas kalender <strong>.ics</strong> bila setuju.</li><li>Periksa isi sebelum mengimpor ke aplikasi kalender pilihan Anda.</li><li>Jika tindakan berubah atau dihapus, perbarui kalender luar secara manual sesuai fasilitas kalender tersebut.</li></ol>
+<div class="warn"><strong>Ekspor satu kali, bukan sinkronisasi.</strong><p>Ekspor dapat mencakup semua tindakan aktif bertenggat valid, bukan hanya hasil pencarian yang terlihat. Judul tindakan dapat berisi informasi privat. Mengimpor berkas dapat mengirimnya ke penyedia kalender. Tidak ada jaminan notifikasi otomatis, dan tanggalnya bukan tenggat resmi LSBU/OSS.</p></div>
+<p class="small">Nama penanggung jawab tidak berarti aplikasi sudah mengirim pengingat atau undangan kepada orang tersebut.</p>
+</section>
+
+<section class="page" id="ekspor">
+<div class="kicker">14 / Bahan pembahasan</div><h2>Ringkasan persiapan, unduh &amp; cetak</h2>
+<p>Ringkasan menyatukan catatan persiapan kasus menjadi bahan yang lebih mudah ditelaah. Gunakan untuk pembahasan internal atau pendampingan, bukan sebagai bukti pengesahan sertifikasi.</p>
+<ol><li>Buka kasus yang benar. Periksa nama badan usaha, jenis permohonan dan perubahan terakhir.</li><li>Gunakan fasilitas <strong>ringkasan persiapan</strong> pada detail kasus. Pilih unduh atau cetak sesuai tindakan yang tersedia.</li><li>Tunggu ringkasan selesai dimuat. Jangan berpindah kasus sambil menganggap hasil lama sebagai hasil kasus baru.</li><li>Baca identitas, deklarasi bukti, temuan, rujukan serta personel/SKK bila ditampilkan.</li><li>Periksa indikator tanggal/acuan. Jika data baru diubah, buat ringkasan baru; salinan yang sudah diunduh tidak ikut berubah.</li><li>Simpan berkas di lokasi yang aman. Jika mencetak, periksa pratinjau dan pastikan tidak ada bagian terpotong atau peringatan yang hilang.</li></ol>
+<h3>Unduhan HTML</h3>
+<p>Berkas HTML dapat dibuka di browser untuk dibaca. Ini salinan pada saat ekspor, bukan halaman yang terus tersinkron dengan data akun.</p>
+<h3>Cetak atau simpan ke PDF</h3>
+<p>Gunakan pengaturan browser. Awali dengan A4 portrait dan skala wajar; periksa semua halaman. Perbedaan browser, ukuran kertas dan skala dapat memengaruhi hasil. Jangan membuang halaman peringatan demi mempersingkat ringkasan.</p>
+<div class="warn"><strong>Periksa sebelum dibagikan.</strong><p>Ringkasan dapat berisi data badan usaha atau personel. Bagikan hanya kepada pihak yang berwenang. Tetap sertakan keterangan bahwa isinya deklarasi persiapan, bukan persetujuan sertifikasi atau verifikasi keaslian dokumen.</p></div>
+<p class="small">Bila unduhan/cetak gagal, periksa koneksi dan coba kembali dari kasus yang sama setelah halaman pulih. Jangan menganggap berkas kosong atau keluaran parsial sebagai ringkasan yang sah.</p>
+</section>
+
+<section class="page" id="mini">
+<div class="kicker">15 / Alat bantu ringan</div><h2>Simulator SBU &amp; Mini Apps</h2>
+<h3>Simulator SBU</h3>
+<ol><li>Buka <strong>Simulator SBU</strong> dari navigasi atau Mini Apps.</li><li>Pilih jenis permohonan dan lengkapi konteks yang diminta.</li><li>Untuk latihan, gunakan <strong>Muat DATA CONTOH</strong>. Tindakan ini menimpa isian saat ini.</li><li>Catat kondisi bahan dan referensinya. Referensi dalam simulator adalah teks yang Anda ketik; tidak ada berkas yang otomatis diunggah atau diperiksa.</li><li>Setujui pernyataan batas penggunaan, lalu baca status isian, temuan dan tindak lanjut.</li><li>Gunakan <strong>Unduh laporan teks</strong>, <strong>Ubah isian</strong> atau <strong>Mulai ulang</strong> bila diperlukan.</li></ol>
+<div class="note"><strong>Status isian, bukan peluang lolos.</strong><p>“Belum lengkap”, “Perlu diperiksa” dan “Tinjauan manusia” mencerminkan deklarasi. Cakupan penandaan area bukan skor kelayakan dan bukan hasil verifikasi dokumen.</p></div>
+<h3>Katalog Mini Apps SBU</h3>
+<table><thead><tr><th>Alat</th><th>Kegunaan dan batas</th></tr></thead><tbody>
+<tr><td>Sisa masa berlaku SBU/SKK</td><td>Menghitung hari kalender berdasarkan tanggal berakhir dan tanggal acuan yang Anda masukkan; bukan pemeriksaan penerbit.</td></tr>
+<tr><td>Pelacak tindakan manual</td><td>Daftar kerja sementara. Jangan mengandalkannya sebagai pengganti tindakan tersimpan pada kasus.</td></tr>
+<tr><td>Pemeriksa konsistensi identitas berkas</td><td>Membandingkan isian manual untuk menemukan perbedaan; bukan pembacaan atau verifikasi berkas asli.</td></tr>
+<tr><td>Pintasan fitur</td><td>Kasus SBU, checklist SMAP, Personel &amp; SKK, Ruang Simpan dan Pusat regulasi. Sebagian memerlukan login.</td></tr>
+</tbody></table>
+<p class="small">Mini Apps adalah alat siap pakai dan pemanfaatan fitur yang sudah ada, bukan pembuat aplikasi AI. Jangan menganggap seluruh isian lokal tersimpan permanen; ikuti pemberitahuan pada alat dan ekspor/catat hasil penting sebelum meninggalkan halaman.</p>
+</section>
+
+<section class="page" id="skenario">
+<div class="kicker">16 / Latihan pemakaian</div><h2>Tiga alur yang dapat diikuti</h2>
+<h3>A. Menyiapkan permohonan baru</h3>
+<ol><li>Buat kasus baru dengan jenis permohonan yang tepat.</li><li>Catat identitas perusahaan, personel dan bahan yang sudah tersedia.</li><li>Simpan dokumen ke kasus yang sesuai dan isi deklarasi bukti.</li><li>Baca temuan persiapan. Tanyakan hal yang belum jelas kepada Tutor Regulasi atau Panduan Permohonan Baru.</li><li>Ubah kekurangan bahan menjadi tindakan kerja. Lakukan telaah internal dan siapkan ringkasan untuk pembahasan.</li></ol>
+<h3>B. Menyiapkan perpanjangan</h3>
+<ol><li>Periksa sertifikat yang sudah ada dan tanggal kalender berakhirnya.</li><li>Buat kasus perpanjangan; jangan menyalin tanggal atau kondisi dari kasus lama tanpa pengecekan.</li><li>Periksa kembali dokumen, pengalaman, penugasan personel/SKK dan bahan lain yang relevan dengan skema yang berlaku.</li><li>Gunakan Panduan Perpanjangan SBU untuk menyusun pertanyaan dan gap bahan, bukan meminta kepastian kelulusan.</li><li>Susun agenda internal dan konfirmasikan ketentuan/tenggat resmi melalui kanal berwenang.</li></ol>
+<h3>C. Memahami dokumen yang sulit</h3>
+<ol><li>Unggah dokumen yang Anda berwenang gunakan dan tunggu status siap/bersih.</li><li>Pilih halaman relevan, pratinjau dan setujui Bedah Dokumen.</li><li>Periksa hasil analisis terhadap halaman asli.</li><li>Buka Asisten Dokumen, pilih hasil dan cuplikan, lalu setujui dialog.</li><li>Ajukan pertanyaan terarah dan catat tindak lanjut yang masih memerlukan pemeriksaan manusia.</li></ol>
+<div class="note"><strong>Klinik Konsultasi</strong><p>Gunakan untuk pembahasan terstruktur sesuai formulir dan pilihan yang tersedia. Tinjau setiap bahan yang Anda pilih untuk konsultasi. Membuka klinik bukan berarti otomatis ada penugasan kepada konsultan manusia atau berkas sudah diajukan ke LSBU.</p></div>
+<p class="small">Bila menggunakan formulir jasa pada landing page, tinjau ringkasan pesan sebelum membuka WhatsApp. Pesan baru terkirim setelah Anda sendiri mengirimkannya di WhatsApp; pengisian formulir bukan jaminan pemesanan atau layanan telah diterima pengelola.</p>
+</section>
+
+<section class="page" id="kendala">
+<div class="kicker">17 / Saat ada masalah</div><h2>Pemulihan tanpa kehilangan konteks</h2>
+<table><thead><tr><th>Gejala</th><th>Yang sebaiknya dilakukan</th></tr></thead><tbody>
+<tr><td>Menu Kasus SBU tidak terlihat</td><td>Periksa peran di Pengaturan. Tidak semua peran memiliki ruang kerja kasus. Jangan membuat akun lain untuk melewati batas izin.</td></tr>
+<tr><td>Diminta masuk ulang / identitas sesi berubah</td><td>Hentikan penyimpanan, pastikan akun yang benar, lalu muat ulang. Jangan meneruskan draf akun sebelumnya.</td></tr>
+<tr><td>Simpan gagal karena jaringan</td><td>Periksa apakah hasil sebenarnya sudah tersimpan sebelum mengulang. Pertahankan formulir jika draf masih diperlukan; membatalkan dapat membuang isian.</td></tr>
+<tr><td>Data sudah berubah / konflik revisi</td><td>Muat versi terbaru, bandingkan dengan catatan Anda, lalu lakukan perubahan yang masih relevan. Jangan memaksa menimpa revisi orang/sesi lain.</td></tr>
+<tr><td>Dokumen belum siap atau analisis tidak aktif</td><td>Tunggu penyelesaian/pemindaian, baca pesan format/ukuran, dan periksa versi. Menyimpan berkas tidak menjamin analisis AI tersedia.</td></tr>
+<tr><td>Tombol chat tidak dapat dikirim</td><td>Periksa persetujuan, sumber terpilih, kuota dan anggaran. Untuk chat dokumen, cuplikan yang cocok wajib dipilih. Gunakan “Periksa lagi” bila tersedia.</td></tr>
+<tr><td>Sumber lama dicabut / jawaban ditolak</td><td>Mulai dari sumber yang masih aktif. Jangan memakai kutipan lama sebagai pengganti pemeriksaan baru.</td></tr>
+<tr><td>Review perlu diulang</td><td>Periksa perubahan dokumen/deklarasi. Telaah versi terbaru; keputusan lama tidak otomatis berlaku untuk revisi baru.</td></tr>
+<tr><td>PDF sumber atau video tidak tampil</td><td>Periksa koneksi, muat ulang dan gunakan tindakan coba lagi/buka yang tersedia. Bila berlanjut, laporkan judul sumber dan langkah reproduksi kepada pengelola.</td></tr>
+<tr><td>Unduhan/cetak tidak muncul</td><td>Tunggu pemuatan selesai, periksa izin browser dan hasil unduhan. Pastikan tetap berada pada kasus yang benar.</td></tr>
+</tbody></table>
+<div class="warn"><strong>Saat melapor, jangan kirim rahasia.</strong><p>Sampaikan menu, langkah, waktu kejadian dan pesan kesalahan yang terlihat. Tutupi identitas, isi dokumen, nomor sertifikat sensitif, token, cookie dan kode verifikasi pada tangkapan layar. Jangan mengirim seluruh dokumen privat hanya untuk menjelaskan tombol yang gagal.</p></div>
+</section>
+
+<section class="page" id="aman">
+<div class="kicker">18 / Kebiasaan aman</div><h2>Checklist sebelum menutup sesi</h2>
+<ul class="checklist"><li>Akun, kasus dan versi dokumen sudah benar.</li><li>Perubahan penting sudah disimpan dan hasilnya sudah diperiksa.</li><li>Draf atau percakapan sementara yang penting sudah dicatat melalui sarana yang sesuai.</li><li>Jawaban AI sudah dibaca bersama sumber dan batas verifikasinya.</li><li>Dokumen yang dikirim ke AI telah dipilih dan disetujui oleh pihak yang berwenang.</li><li>Ringkasan, berkas kalender dan unduhan tidak dibagikan di luar pihak yang berhak.</li><li>Tidak ada klaim bahwa checklist, analisis atau persetujuan internal adalah keputusan LSBU/OSS.</li><li>Sesi sudah diakhiri dengan Keluar akun bila memakai perangkat bersama.</li></ul>
+<h3>Istilah yang perlu dibedakan</h3>
+<table><thead><tr><th>Istilah</th><th>Arti praktis di aplikasi</th></tr></thead><tbody>
+<tr><td>Deklarasi</td><td>Informasi yang dinyatakan pengguna; belum tentu diverifikasi.</td></tr>
+<tr><td>Penilaian awal</td><td>Pembacaan aturan persiapan yang didukung; bukan keputusan sertifikasi.</td></tr>
+<tr><td>Snapshot</td><td>Keadaan bahan pada satu waktu/versi yang menjadi dasar telaah.</td></tr>
+<tr><td>Versi dokumen</td><td>Identitas revisi berkas. Hasil analisis/telaah lama terikat pada versinya.</td></tr>
+<tr><td>Asisten AI</td><td>Bantuan generatif yang dapat keliru; perlu sumber, konteks dan pemeriksaan manusia.</td></tr>
+<tr><td>Persetujuan internal</td><td>Catatan keputusan persiapan di aplikasi, bukan persetujuan lembaga eksternal.</td></tr>
+<tr><td>Data sintetis</td><td>Data contoh/simulasi untuk latihan, bukan data orang atau perusahaan nyata.</td></tr>
+</tbody></table>
+<div class="note"><strong>Prinsip penggunaan</strong><p>Gunakan aplikasi untuk merapikan bahan, memahami sumber dan mengendalikan tindak lanjut. Gunakan pihak berwenang untuk memastikan keberlakuan persyaratan, keaslian dokumen dan keputusan sertifikasi.</p></div>
+<p class="small">Manual ini tidak mengganti peraturan, standar skema, panduan resmi penerbit atau ketentuan LSBU/OSS. Jika tampilan atau fungsi berbeda dari panduan, ikuti pesan pada versi aplikasi dan minta klarifikasi kepada pengelola.</p>
+<p class="small"><a href="#mulai">Kembali ke daftar isi</a> · Gustafta SBU Accelerator — Panduan Pengguna</p>
+</section>
+</main>
+<footer class="end">Panduan dapat dibaca tanpa koneksi internet setelah diunduh. Tombol cetak menggunakan fasilitas browser Anda.</footer>
+</body>
+</html>
