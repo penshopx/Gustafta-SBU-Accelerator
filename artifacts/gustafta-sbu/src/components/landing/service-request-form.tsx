@@ -50,8 +50,8 @@ export function ServiceRequestForm() {
     const message = buildServiceRequestMessage(draft);
     const href = buildWhatsAppUrl(message);
     return <div className="sr-panel" data-testid="panel-service-review">
-      <h3 ref={reviewRef} tabIndex={-1} className="display text-2xl font-extrabold text-white outline-none">Tinjau pesan sebelum dibuka di WhatsApp</h3>
-      <p className="mt-2 text-sm leading-6 text-[#c2d1e1]">Belum ada yang terkirim atau tersimpan. Pesan di bawah baru keluar dari halaman ini bila Anda menekan tautan, lalu Anda sendiri yang menekan kirim di WhatsApp ke <strong className="text-white">{SERVICE_WHATSAPP_DISPLAY}</strong>.</p>
+      <h3 ref={reviewRef} tabIndex={-1} className="display text-2xl font-extrabold text-[var(--lp-text)] outline-none">Tinjau pesan sebelum dibuka di WhatsApp</h3>
+      <p className="mt-2 text-sm leading-6 text-[var(--lp-t2)]">Belum ada yang terkirim atau tersimpan. Pesan di bawah baru keluar dari halaman ini bila Anda menekan tautan, lalu Anda sendiri yang menekan kirim di WhatsApp ke <strong className="text-[var(--lp-text)]">{SERVICE_WHATSAPP_DISPLAY}</strong>.</p>
       <pre data-testid="text-service-summary" className="sr-summary">{message}</pre>
       <div className="mt-6 flex flex-wrap gap-3">
         <a data-testid="link-open-whatsapp" href={href} target="_blank" rel="noopener noreferrer"
@@ -64,8 +64,8 @@ export function ServiceRequestForm() {
   }
 
   return <form noValidate={false} onSubmit={onSubmit} className="sr-panel" data-testid="form-service-request" aria-labelledby="service-form-title">
-    <h3 id="service-form-title" className="display text-2xl font-extrabold text-white">Isi kebutuhan Anda</h3>
-    <p className="mt-1 text-sm text-[#a9bacd]">Kolom bertanda * wajib. Jangan cantumkan NIK, NPWP, kata sandi, atau alamat lengkap.</p>
+    <h3 id="service-form-title" className="display text-2xl font-extrabold text-[var(--lp-text)]">Isi kebutuhan Anda</h3>
+    <p className="mt-1 text-sm text-[var(--lp-t3)]">Kolom bertanda * wajib. Jangan cantumkan NIK, NPWP, kata sandi, atau alamat lengkap.</p>
     {errList.length > 0 && <div ref={errRef} tabIndex={-1} role="alert" data-testid="summary-service-errors" className="sr-alert">
       <strong>Periksa {errList.length} isian:</strong>
       <ul className="mt-1 list-disc pl-5">{errList.map(f => <li key={f}><a href={`#${fid(f)}`} onClick={ev => { ev.preventDefault(); (document.getElementById(fid(f)) as HTMLElement | null)?.focus(); }}>{LABEL[f]}: {errors[f]}</a></li>)}</ul>
@@ -81,16 +81,16 @@ export function ServiceRequestForm() {
       <div className="flex flex-wrap gap-2">{APPLICATION_TYPES.map((a, i) => <label key={a.value} className="sr-chip">
         <input id={i === 0 ? fid('applicationType') : undefined} type="radio" name="sr-app" required value={a.value} data-testid={`radio-app-${a.value}`} checked={draft.applicationType === a.value} onChange={() => set('applicationType', a.value)} /><span>{a.label}</span></label>)}</div>
       <Err f="applicationType" /></fieldset>
-    <fieldset className="mt-6" aria-describedby={described('help')}><legend className="sr-label">Bantuan yang dibutuhkan * <span className="font-normal text-[#8ea3ba]">(boleh lebih dari satu)</span></legend>
+    <fieldset className="mt-6" aria-describedby={described('help')}><legend className="sr-label">Bantuan yang dibutuhkan * <span className="font-normal text-[var(--lp-t3)]">(boleh lebih dari satu)</span></legend>
       <div className="grid gap-2 sm:grid-cols-2">{HELP_AREAS.map((h, i) => <label key={h.value} className="sr-option">
         <input id={i === 0 ? fid('help') : undefined} type="checkbox" data-testid={`check-help-${h.value}`} checked={draft.help.includes(h.value)} onChange={() => toggleHelp(h.value)} />
-        <span><span className="block text-sm font-bold text-white">{h.label}</span><span className="block text-xs text-[#a9bacd]">{h.hint}</span></span></label>)}</div>
+        <span><span className="block text-sm font-bold text-[var(--lp-text)]">{h.label}</span><span className="block text-xs text-[var(--lp-t3)]">{h.hint}</span></span></label>)}</div>
       <Err f="help" /></fieldset>
-    <div className="mt-6"><label htmlFor={fid('classification')} className="sr-label">Subklasifikasi yang dituju <span className="font-normal text-[#8ea3ba]">(opsional)</span></label>
+    <div className="mt-6"><label htmlFor={fid('classification')} className="sr-label">Subklasifikasi yang dituju <span className="font-normal text-[var(--lp-t3)]">(opsional)</span></label>
       <input id={fid('classification')} data-testid="input-classification" maxLength={SERVICE_LIMITS.classification} value={draft.classification} onChange={e => set('classification', e.target.value)} aria-invalid={!!errors.classification} aria-describedby={described('classification')} className="sr-input" placeholder="Kode atau nama, jika sudah diketahui" /><Err f="classification" /></div>
-    <div className="mt-6"><label htmlFor={fid('notes')} className="sr-label">Catatan <span className="font-normal text-[#8ea3ba]">(opsional)</span></label>
+    <div className="mt-6"><label htmlFor={fid('notes')} className="sr-label">Catatan <span className="font-normal text-[var(--lp-t3)]">(opsional)</span></label>
       <textarea id={fid('notes')} data-testid="input-notes" rows={4} maxLength={SERVICE_LIMITS.notes} value={draft.notes} onChange={e => set('notes', e.target.value)} aria-invalid={!!errors.notes} aria-describedby={described('notes', 'sr-notes-count')} className="sr-input" />
-      <p id="sr-notes-count" aria-live="polite" className="mt-1 text-right font-mono text-[11px] text-[#8ea3ba]">{draft.notes.length > 0 ? `Sisa ${SERVICE_LIMITS.notes - draft.notes.length} karakter` : 'Singkat saja, cukup untuk konteks awal'}</p><Err f="notes" /></div>
+      <p id="sr-notes-count" aria-live="polite" className="mt-1 text-right font-mono text-[11px] text-[var(--lp-t3)]">{draft.notes.length > 0 ? `Sisa ${SERVICE_LIMITS.notes - draft.notes.length} karakter` : 'Singkat saja, cukup untuk konteks awal'}</p><Err f="notes" /></div>
     <label className="sr-consent mt-6">
       <input id={fid('consent')} type="checkbox" required data-testid="check-consent" checked={consent} onChange={e => { setConsent(e.target.checked); if (errors.consent) setErrors(x => { const n = { ...x }; delete n.consent; return n; }); }} aria-invalid={!!errors.consent} aria-describedby={described('consent')} />
       <span>Saya setuju isian yang saya pilih dikirim lewat WhatsApp (layanan Meta) kepada pengelola Gustafta di {SERVICE_WHATSAPP_DISPLAY} untuk menanggapi permintaan ini. Saya paham ini bukan permohonan resmi otomatis, belum menimbulkan biaya atau pembayaran, dan tidak menjamin SBU terbit. *</span>
@@ -98,7 +98,7 @@ export function ServiceRequestForm() {
     <Err f="consent" />
     <div className="mt-7 flex flex-wrap items-center gap-4">
       <button type="submit" data-testid="button-review-service" className="lp-btn lp-btn-blue">Tinjau pesan</button>
-      <span className="flex items-center gap-2 text-xs text-[#a9bacd]"><ShieldCheck size={15} className="shrink-0 text-[#4ea4ff]" />Tidak disimpan di server atau penyimpanan browser.</span>
+      <span className="flex items-center gap-2 text-xs text-[var(--lp-t3)]"><ShieldCheck size={15} className="shrink-0 text-[var(--lp-blue-text)]" />Tidak disimpan di server atau penyimpanan browser.</span>
     </div>
   </form>;
 }

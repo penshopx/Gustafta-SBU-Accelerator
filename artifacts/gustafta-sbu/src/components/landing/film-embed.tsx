@@ -59,12 +59,12 @@ export function FilmEmbed() {
         </button>}
     </div>
     <div>
-      <div data-testid="note-film-concept" role="note" className="rounded-xl border border-[#3b5878] bg-[#0e1a2a] p-5">
-        <div className="flex items-center gap-2 text-sm font-bold text-[#9ccbff]"><Info size={16} /> Catatan tentang film ini</div>
-        <p className="mt-3 text-sm leading-6 text-[#d5e2f0]">Kenali alur persiapan: catat bukti, baca sumber dan draf AI, lalu susun tindak lanjut. Ilustrasi ini bukan hasil pemeriksaan dokumen atau keputusan sertifikasi.</p>
-        <p className="mt-3 text-sm leading-6 text-[#d5e2f0]">Ruang Simpan saat ini berdiri sendiri dan privat untuk akun Anda.</p>
+      <div data-testid="note-film-concept" role="note" className="rounded-xl border border-[var(--lp-line-2)] bg-[var(--lp-surface-blue)] p-5">
+        <div className="flex items-center gap-2 text-sm font-bold text-[var(--lp-accent)]"><Info size={16} /> Catatan tentang film ini</div>
+        <p className="mt-3 text-sm leading-6 text-[var(--lp-t2)]">Kenali alur persiapan: catat bukti, baca sumber dan draf AI, lalu susun tindak lanjut. Ilustrasi ini bukan hasil pemeriksaan dokumen atau keputusan sertifikasi.</p>
+        <p className="mt-3 text-sm leading-6 text-[var(--lp-t2)]">Ruang Simpan saat ini berdiri sendiri dan privat untuk akun Anda.</p>
       </div>
-      <a data-testid="link-open-film" href={FILM_URL} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-[#9ccbff] hover:text-white">Buka film di tab baru <ArrowUpRight size={15} /></a>
+      <a data-testid="link-open-film" href={FILM_URL} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-[var(--lp-accent)] hover:text-[var(--lp-text)]">Buka film di tab baru <ArrowUpRight size={15} /></a>
     </div>
   </div>;
 }

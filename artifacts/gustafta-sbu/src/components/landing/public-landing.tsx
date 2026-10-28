@@ -4,6 +4,7 @@ import { FilmEmbed } from './film-embed';
 import { ServiceRequestForm } from './service-request-form';
 import { SERVICE_WHATSAPP_DISPLAY } from '@/lib/service-request';
 import { BoundaryScene, DeskScene, FlowScene, ReviewScene, SiteScene } from './illustrations';
+import { ThemeToggle } from '@/components/theme-toggle';
 import './landing.css';
 
 const scattered = [
@@ -24,38 +25,39 @@ const features: Feature[] = [
 ];
 
 const outputs = [
-  { tag: 'PEMERIKSAAN MANUAL', title: 'Konsistensi deklarasi', text: 'Pemeriksa identitas membandingkan apa yang Anda ketik: nama badan usaha, NIB, dan NPWP. Tidak membaca isi dokumen atau memverifikasi keasliannya.', tone: 'border-[#2c3d52]' },
-  { tag: 'DRAF AI', title: 'Bahan awal, bukan kesimpulan', text: 'Asisten menyusun draf penjelasan dengan sumber bila tersedia. Draf bisa keliru; periksa kembali rujukan dan batas jawabannya.', tone: 'border-[#4ea4ff]' },
-  { tag: 'VERIFIKASI MANUSIA', title: 'Keputusan tetap di tangan orang', text: 'Anda, tim, atau penelaah memeriksa sumber primer. Keputusan SBU sepenuhnya milik lembaga berwenang.', tone: 'border-[#9ccbff]' },
+  { tag: 'PEMERIKSAAN MANUAL', title: 'Konsistensi deklarasi', text: 'Pemeriksa identitas membandingkan apa yang Anda ketik: nama badan usaha, NIB, dan NPWP. Tidak membaca isi dokumen atau memverifikasi keasliannya.', tone: 'border-[var(--lp-line-2)]' },
+  { tag: 'DRAF AI', title: 'Bahan awal, bukan kesimpulan', text: 'Asisten menyusun draf penjelasan dengan sumber bila tersedia. Draf bisa keliru; periksa kembali rujukan dan batas jawabannya.', tone: 'border-[var(--lp-blue)]' },
+  { tag: 'VERIFIKASI MANUSIA', title: 'Keputusan tetap di tangan orang', text: 'Anda, tim, atau penelaah memeriksa sumber primer. Keputusan SBU sepenuhnya milik lembaga berwenang.', tone: 'border-[var(--lp-blue-2)]' },
 ];
 
 function Mark() {
-  return <Link href="/" data-testid="link-brand" className="inline-flex items-center gap-2.5 text-xl font-extrabold tracking-[-.045em] text-white">
-    <span className="grid h-9 w-9 place-items-center rounded-[9px] bg-[#277be5]"><span className="flex items-end gap-[2px]"><i className="h-3 w-1.5 bg-white" /><i className="h-5 w-1.5 bg-white" /><i className="h-2 w-1.5 bg-white" /></span></span>
-    gustafta<span className="ml-1 hidden border-l border-[#3a4b61] pl-2 font-mono text-[9px] font-normal uppercase leading-[1.35] tracking-[.12em] text-[#9fb4cc] sm:inline-block">SBU<br />Accelerator</span>
+  return <Link href="/" data-testid="link-brand" className="inline-flex shrink-0 items-center gap-2.5 text-xl font-extrabold max-[359px]:gap-2 max-[359px]:text-lg tracking-[-.045em] text-[var(--lp-text)]">
+    <span className="grid h-9 w-9 shrink-0 place-items-center max-[359px]:h-8 max-[359px]:w-8 rounded-[9px] bg-[#277be5]"><span className="flex items-end gap-[2px]"><i className="h-3 w-1.5 bg-white" /><i className="h-5 w-1.5 bg-white" /><i className="h-2 w-1.5 bg-white" /></span></span>
+    gustafta<span className="ml-1 hidden border-l border-[var(--lp-line-2)] pl-2 font-mono text-[9px] font-normal uppercase leading-[1.35] tracking-[.12em] text-[var(--lp-t3)] sm:inline-block">SBU<br />Accelerator</span>
   </Link>;
 }
 
 function Kicker({ n, children }: { n: string; children: string }) {
-  return <div className="eyebrow flex items-center gap-3 text-[#9ccbff]"><span className="text-[#4ea4ff]">{n}</span><span className="h-px w-8 bg-[#2f4560]" />{children}</div>;
+  return <div className="eyebrow flex items-center gap-3 text-[var(--lp-accent)]"><span className="text-[var(--lp-blue-text)]">{n}</span><span className="h-px w-8 bg-[var(--lp-line-2)]" />{children}</div>;
 }
 
 export const INDEPENDENCE_NOTE = 'Gustafta independen dan tidak terafiliasi dengan Ditjen Bina Konstruksi, LPJK, Kementerian PU atau LSBU. Bukan layanan atau kanal komunikasi lembaga berwenang.';
 
 export default function PublicLanding() {
   return <div className="lp min-h-[100dvh]" data-testid="page-landing">
-    <header className="sticky top-0 z-30 border-b border-[#1a2433] bg-[#06090fe6] backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-10"><Mark />
-        <nav className="flex items-center gap-4">
-          <Link data-testid="link-simulator" href="/simulator" className="hidden text-sm font-bold text-[#d5e2f0] hover:text-white sm:block">Simulator</Link>
-          <Link data-testid="link-mini-apps" href="/mini-apps" className="hidden text-sm font-bold text-[#d5e2f0] hover:text-white md:block">Mini Apps</Link>
-          <a data-testid="link-service-header" href="#layanan-pengurusan" className="hidden text-sm font-bold text-[#d5e2f0] hover:text-white lg:block">Jasa pengurusan</a>
-          <Link data-testid="link-sign-in" href="/sign-in" className="hidden text-sm font-bold text-[#d5e2f0] hover:text-white sm:block">Masuk</Link>
-          <Link data-testid="link-sign-up" href="/sign-up" className="lp-btn lp-btn-blue whitespace-nowrap !min-h-[40px] !px-4 !text-[13px]">Mulai sekarang <ArrowUpRight size={15} /></Link>
+    <header className="sticky top-0 z-30 border-b border-[var(--lp-line)] bg-[var(--lp-header)] backdrop-blur">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-5 py-4 max-[359px]:px-3 md:px-10"><Mark />
+        <nav className="flex shrink-0 items-center gap-3 max-[359px]:gap-2 sm:gap-4">
+          <Link data-testid="link-simulator" href="/simulator" className="hidden text-sm font-bold text-[var(--lp-t2)] hover:text-[var(--lp-text)] sm:block">Simulator</Link>
+          <Link data-testid="link-mini-apps" href="/mini-apps" className="hidden text-sm font-bold text-[var(--lp-t2)] hover:text-[var(--lp-text)] md:block">Mini Apps</Link>
+          <a data-testid="link-service-header" href="#layanan-pengurusan" className="hidden text-sm font-bold text-[var(--lp-t2)] hover:text-[var(--lp-text)] lg:block">Jasa pengurusan</a>
+          <Link data-testid="link-sign-in" href="/sign-in" className="hidden text-sm font-bold text-[var(--lp-t2)] hover:text-[var(--lp-text)] sm:block">Masuk</Link>
+          <ThemeToggle className="max-[359px]:!h-9 max-[359px]:!w-9" />
+          <Link data-testid="link-sign-up" href="/sign-up" className="lp-btn lp-btn-blue whitespace-nowrap !min-h-[40px] !px-4 !text-[13px] max-[359px]:!gap-1 max-[359px]:!px-3 max-[359px]:!text-[12px]">Mulai sekarang <ArrowUpRight size={15} className="max-[359px]:hidden" aria-hidden="true" /></Link>
         </nav>
       </div>
     </header>
-    <div role="note" data-testid="note-independence" className="border-b border-[#1d3a5c] bg-[#0b1a2c] px-5 py-2.5 text-center text-xs font-semibold leading-5 text-[#cfe3f8]">{INDEPENDENCE_NOTE}</div>
+    <div role="note" data-testid="note-independence" className="border-b border-[var(--lp-line-2)] bg-[var(--lp-surface-blue)] px-5 py-2.5 text-center text-xs font-semibold leading-5 text-[var(--lp-t2)]">{INDEPENDENCE_NOTE}</div>
 
     <main>
       {/* Problem */}
@@ -64,22 +66,22 @@ export default function PublicLanding() {
         <div className="relative mx-auto grid max-w-7xl gap-14 px-5 pb-20 pt-16 md:px-10 lg:grid-cols-[1.1fr_.9fr] lg:pt-24">
           <div className="fade-up">
             <Kicker n="00">PERSIAPAN SBU / JASA KONSTRUKSI</Kicker>
-            <h1 className="display mt-7 text-[clamp(2.7rem,6vw,5.6rem)] font-extrabold leading-[1.02]">Berkas SBU tercecer?<br /><span className="text-[#4ea4ff]">Kumpulkan, baca, tindak lanjuti.</span></h1>
-            <p className="mt-7 max-w-xl text-[17px] leading-8 text-[#c9d7e6]">Gustafta adalah ruang kerja persiapan untuk badan usaha konstruksi. Catat bukti yang Anda punya, lihat yang belum tercatat, telusuri sumber aturannya, dan susun langkah berikutnya. Kami bukan LSBU dan tidak menerbitkan apa pun.</p>
+            <h1 className="display mt-7 text-[clamp(2.7rem,6vw,5.6rem)] font-extrabold leading-[1.02]">Berkas SBU tercecer?<br /><span className="text-[var(--lp-blue-text)]">Kumpulkan, baca, tindak lanjuti.</span></h1>
+            <p className="mt-7 max-w-xl text-[17px] leading-8 text-[var(--lp-t2)]">Gustafta adalah ruang kerja persiapan untuk badan usaha konstruksi. Catat bukti yang Anda punya, lihat yang belum tercatat, telusuri sumber aturannya, dan susun langkah berikutnya. Kami bukan LSBU dan tidak menerbitkan apa pun.</p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link data-testid="link-start" href="/sign-up" className="lp-btn lp-btn-blue">Buat ruang kerja <ArrowRight size={16} /></Link>
               <Link data-testid="link-try-simulator" href="/simulator" className="lp-btn lp-btn-ghost">Coba simulator tanpa akun</Link>
             </div>
-            <Link data-testid="link-login-hero" href="/sign-in" className="mt-5 inline-block text-sm font-semibold text-[#9ccbff] underline-offset-4 hover:underline">Saya sudah punya akun</Link>
-            <a data-testid="link-service-hero" href="#layanan-pengurusan" className="mt-3 block text-sm font-semibold text-[#d5e2f0] underline underline-offset-4 hover:text-white">Ingin dibantu menyiapkan dokumen? Isi formulir kontak awal</a>
+            <Link data-testid="link-login-hero" href="/sign-in" className="mt-5 inline-block text-sm font-semibold text-[var(--lp-accent)] underline-offset-4 hover:underline">Saya sudah punya akun</Link>
+            <a data-testid="link-service-hero" href="#layanan-pengurusan" className="mt-3 block text-sm font-semibold text-[var(--lp-t2)] underline underline-offset-4 hover:text-[var(--lp-text)]">Ingin dibantu menyiapkan dokumen? Isi formulir kontak awal</a>
             <SiteScene className="mt-10 max-w-[520px] opacity-95" />
           </div>
           <div className="relative">
-            <div className="eyebrow mb-4 text-[#8ea3ba]">SITUASI YANG SERING TERJADI</div>
+            <div className="eyebrow mb-4 text-[var(--lp-t3)]">SITUASI YANG SERING TERJADI</div>
             <ul className="lp-scatter grid grid-cols-2 gap-3">
-              {scattered.map(([t, w, r]) => <li key={t} style={{ ['--r' as string]: r, transform: `rotate(${r})` }} className="lp-card p-4"><div className="text-sm font-bold text-white">{t}</div><div className="mt-1 text-xs leading-5 text-[#a9bacd]">{w}</div></li>)}
+              {scattered.map(([t, w, r]) => <li key={t} style={{ ['--r' as string]: r, transform: `rotate(${r})` }} className="lp-card p-4"><div className="text-sm font-bold text-[var(--lp-text)]">{t}</div><div className="mt-1 text-xs leading-5 text-[var(--lp-t3)]">{w}</div></li>)}
             </ul>
-            <div className="mt-5 rounded-xl border border-[#4ea4ff] bg-[#0b1a2c] p-4 text-sm leading-6 text-[#e3eefa]">Tidak ada yang tahu pasti mana yang sudah siap, mana yang kurang, dan aturan mana yang jadi acuan.</div>
+            <div className="mt-5 rounded-xl border border-[var(--lp-blue)] bg-[var(--lp-surface-blue)] p-4 text-sm leading-6 text-[var(--lp-text)]">Tidak ada yang tahu pasti mana yang sudah siap, mana yang kurang, dan aturan mana yang jadi acuan.</div>
           </div>
         </div>
       </section>
@@ -92,13 +94,13 @@ export default function PublicLanding() {
       </section>
 
       {/* Agitate -> Solve: how it works */}
-      <section className="border-t border-[#1a2433] bg-[#0a0f18]">
+      <section className="border-t border-[var(--lp-line)] bg-[var(--lp-bg-alt)]">
         <div className="mx-auto max-w-7xl px-5 py-20 md:px-10">
-          <div className="grid gap-6 md:grid-cols-[.8fr_1.2fr] md:items-end"><div><Kicker n="02">CARA KERJA</Kicker><h2 className="display mt-4 text-4xl font-extrabold leading-tight">Dari tumpukan berkas ke daftar tindakan.</h2></div><p className="text-base leading-8 text-[#c2d1e1]">Celah yang tidak terlihat baru ketahuan saat permohonan berjalan. Gustafta membuatnya terlihat lebih awal, dari data yang Anda deklarasikan sendiri.</p></div>
+          <div className="grid gap-6 md:grid-cols-[.8fr_1.2fr] md:items-end"><div><Kicker n="02">CARA KERJA</Kicker><h2 className="display mt-4 text-4xl font-extrabold leading-tight">Dari tumpukan berkas ke daftar tindakan.</h2></div><p className="text-base leading-8 text-[var(--lp-t2)]">Celah yang tidak terlihat baru ketahuan saat permohonan berjalan. Gustafta membuatnya terlihat lebih awal, dari data yang Anda deklarasikan sendiri.</p></div>
           <FlowScene className="mt-12 hidden md:block" />
-          <ol className="mt-6 grid gap-px overflow-hidden rounded-2xl border border-[#1f2b3b] bg-[#1f2b3b] md:grid-cols-4">
+          <ol className="mt-6 grid gap-px overflow-hidden rounded-2xl border border-[var(--lp-line)] bg-[var(--lp-line)] md:grid-cols-4">
             {[['Buka kasus', 'Perusahaan, jenis permohonan, kualifikasi, klasifikasi.'], ['Deklarasikan bukti', 'Tandai yang ada, simpan salinan privat bila perlu.'], ['Baca temuan', 'Kebutuhan yang belum tercatat beserta sumber rujukannya.'], ['Susun tindakan', 'Penanggung jawab, tenggat, lalu ekspor ringkasan persiapan.']].map(([t, d], i) =>
-              <li key={t} className="bg-[#0c121c] p-6"><span className="mono text-xs text-[#4ea4ff]">0{i + 1}</span><h3 className="display mt-6 text-xl font-extrabold text-white">{t}</h3><p className="mt-2 text-sm leading-6 text-[#b4c4d6]">{d}</p></li>)}
+              <li key={t} className="bg-[var(--lp-surface)] p-6"><span className="mono text-xs text-[var(--lp-blue-text)]">0{i + 1}</span><h3 className="display mt-6 text-xl font-extrabold text-[var(--lp-text)]">{t}</h3><p className="mt-2 text-sm leading-6 text-[var(--lp-t3)]">{d}</p></li>)}
           </ol>
         </div>
       </section>
@@ -106,40 +108,40 @@ export default function PublicLanding() {
       {/* Features */}
       <section className="mx-auto max-w-7xl px-5 py-20 md:px-10">
         <Kicker n="03">YANG SUDAH BISA DIPAKAI</Kicker>
-        <div className="mt-4 flex flex-col justify-between gap-4 md:flex-row md:items-end"><h2 className="display max-w-2xl text-4xl font-extrabold leading-tight">Alat konkret, bukan janji.</h2><div className="flex items-end gap-6"><p className="max-w-sm text-sm leading-6 text-[#b4c4d6]">Simulator dan Mini Apps terbuka untuk umum. Ruang kerja lain memerlukan akun dan bersifat pribadi.</p><DeskScene className="hidden w-[220px] shrink-0 lg:block" /></div></div>
+        <div className="mt-4 flex flex-col justify-between gap-4 md:flex-row md:items-end"><h2 className="display max-w-2xl text-4xl font-extrabold leading-tight">Alat konkret, bukan janji.</h2><div className="flex items-end gap-6"><p className="max-w-sm text-sm leading-6 text-[var(--lp-t3)]">Simulator dan Mini Apps terbuka untuk umum. Ruang kerja lain memerlukan akun dan bersifat pribadi.</p><DeskScene className="hidden w-[220px] shrink-0 lg:block" /></div></div>
         <ul className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {features.map(({ href, title, text, icon: Icon, access }, i) => <li key={href} className={i === 0 ? 'sm:col-span-2 lg:row-span-2' : ''}>
-            <Link href={href} data-testid={`link-feature-${href.slice(1)}`} className={`group flex h-full flex-col rounded-2xl border p-5 transition-colors ${i === 0 ? 'border-[#4ea4ff] bg-[#0d1d33]' : 'border-[#1f2b3b] bg-[#0c121c] hover:border-[#4ea4ff]'}`}>
-              <div className="flex items-center justify-between"><Icon size={i === 0 ? 30 : 20} className="text-[#4ea4ff]" /><span className={`mono rounded px-2 py-0.5 text-[10px] font-bold uppercase ${access === 'Publik' ? 'bg-[#4ea4ff] text-[#04111f]' : 'bg-[#1c2a3c] text-[#c9d7e6]'}`}>{access}</span></div>
-              <h3 className={`display font-extrabold text-white ${i === 0 ? 'mt-auto pt-16 text-3xl' : 'mt-5 text-lg'}`}>{title}</h3>
-              <p className={`mt-2 leading-6 text-[#b9c8da] ${i === 0 ? 'max-w-md text-base' : 'text-sm'}`}>{text}</p>
-              <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#9ccbff]">Buka <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" /></span>
+            <Link href={href} data-testid={`link-feature-${href.slice(1)}`} className={`group flex h-full flex-col rounded-2xl border p-5 transition-colors ${i === 0 ? 'border-[var(--lp-blue)] bg-[var(--lp-surface-blue)]' : 'border-[var(--lp-line)] bg-[var(--lp-surface)] hover:border-[var(--lp-blue)]'}`}>
+              <div className="flex items-center justify-between"><Icon size={i === 0 ? 30 : 20} className="text-[var(--lp-blue-text)]" /><span className={`mono rounded px-2 py-0.5 text-[10px] font-bold uppercase ${access === 'Publik' ? 'bg-[#4ea4ff] text-[#04111f]' : 'bg-[var(--lp-chip)] text-[var(--lp-t2)]'}`}>{access}</span></div>
+              <h3 className={`display font-extrabold text-[var(--lp-text)] ${i === 0 ? 'mt-auto pt-16 text-3xl' : 'mt-5 text-lg'}`}>{title}</h3>
+              <p className={`mt-2 leading-6 text-[var(--lp-t3)] ${i === 0 ? 'max-w-md text-base' : 'text-sm'}`}>{text}</p>
+              <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[var(--lp-accent)]">Buka <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" /></span>
             </Link></li>)}
         </ul>
       </section>
 
       {/* Three kinds of output */}
-      <section className="border-y border-[#1a2433] bg-[#0a0f18]">
+      <section className="border-y border-[var(--lp-line)] bg-[var(--lp-bg-alt)]">
         <div className="mx-auto max-w-7xl px-5 py-20 md:px-10">
           <Kicker n="04">TIGA JENIS HASIL, TIGA LABEL</Kicker>
           <div className="mt-4 flex items-end justify-between gap-8"><h2 className="display max-w-3xl text-4xl font-extrabold leading-tight">Bedakan hasil pemeriksaan, draf AI, dan keputusan manusia.</h2><ReviewScene className="hidden w-[200px] shrink-0 md:block" /></div>
           <div className="mt-10 grid gap-4 lg:grid-cols-[1fr_1.1fr_1.2fr]">
-            {outputs.map(o => <article key={o.tag} data-testid={`card-output-${o.tag.split(' ')[0].toLowerCase()}`} className={`rounded-2xl border-t-4 bg-[#0c121c] p-6 ${o.tone}`}><div className="eyebrow text-[#9ccbff]">{o.tag}</div><h3 className="display mt-5 text-xl font-extrabold text-white">{o.title}</h3><p className="mt-3 text-sm leading-6 text-[#c2d1e1]">{o.text}</p></article>)}
+            {outputs.map(o => <article key={o.tag} data-testid={`card-output-${o.tag.split(' ')[0].toLowerCase()}`} className={`rounded-2xl border-t-4 bg-[var(--lp-surface)] p-6 ${o.tone}`}><div className="eyebrow text-[var(--lp-accent)]">{o.tag}</div><h3 className="display mt-5 text-xl font-extrabold text-[var(--lp-text)]">{o.title}</h3><p className="mt-3 text-sm leading-6 text-[var(--lp-t2)]">{o.text}</p></article>)}
           </div>
-          <div className="mt-6 flex items-start gap-3 text-sm leading-6 text-[#b4c4d6]"><FileSearch size={18} className="mt-0.5 shrink-0 text-[#4ea4ff]" />Pusat regulasi memuat ringkasan aturan terpilih, bukan seluruh regulasi nasional. Selalu buka sumber primernya sebelum bertindak.</div>
+          <div className="mt-6 flex items-start gap-3 text-sm leading-6 text-[var(--lp-t3)]"><FileSearch size={18} className="mt-0.5 shrink-0 text-[var(--lp-blue-text)]" />Pusat regulasi memuat ringkasan aturan terpilih, bukan seluruh regulasi nasional. Selalu buka sumber primernya sebelum bertindak.</div>
         </div>
       </section>
 
       {/* Service enquiry */}
-      <section id="layanan-pengurusan" data-testid="section-service-request" className="scroll-mt-24 border-t border-[#1a2433] bg-[#0a0f18]">
+      <section id="layanan-pengurusan" data-testid="section-service-request" className="scroll-mt-24 border-t border-[var(--lp-line)] bg-[var(--lp-bg-alt)]">
         <div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 md:px-10 lg:grid-cols-[.8fr_1.2fr]">
           <div><Kicker n="05">JASA PENGURUSAN DOKUMEN</Kicker>
             <h2 className="display mt-4 text-4xl font-extrabold leading-tight">Ingin dibantu menyiapkan berkas permohonan SBU?</h2>
-            <p className="mt-5 text-base leading-7 text-[#c2d1e1]">Ceritakan kebutuhan Anda. Formulir ini menyusun pesan kontak awal untuk pengelola Gustafta. Kami membantu menyiapkan bukti dan dokumen; penilaian dan penerbitan SBU tetap wewenang lembaga sertifikasi.</p>
-            <ol className="mt-8 space-y-4 text-sm leading-6 text-[#d5e2f0]">
-              {['Isi kebutuhan di formulir.', 'Tinjau ringkasan pesan persis seperti yang akan dikirim.', 'Buka WhatsApp dan tekan kirim sendiri.'].map((t, i) => <li key={t} className="flex gap-3"><span className="mono text-[#4ea4ff]">0{i + 1}</span>{t}</li>)}
+            <p className="mt-5 text-base leading-7 text-[var(--lp-t2)]">Ceritakan kebutuhan Anda. Formulir ini menyusun pesan kontak awal untuk pengelola Gustafta. Kami membantu menyiapkan bukti dan dokumen; penilaian dan penerbitan SBU tetap wewenang lembaga sertifikasi.</p>
+            <ol className="mt-8 space-y-4 text-sm leading-6 text-[var(--lp-t2)]">
+              {['Isi kebutuhan di formulir.', 'Tinjau ringkasan pesan persis seperti yang akan dikirim.', 'Buka WhatsApp dan tekan kirim sendiri.'].map((t, i) => <li key={t} className="flex gap-3"><span className="mono text-[var(--lp-blue-text)]">0{i + 1}</span>{t}</li>)}
             </ol>
-            <div data-testid="text-service-destination" className="mt-8 rounded-xl border border-[#1f2b3b] bg-[#0c121c] p-4 text-sm leading-6 text-[#c9d7e6]">WhatsApp pengelola: <strong className="mono text-white">{SERVICE_WHATSAPP_DISPLAY}</strong><br />Isian tidak disimpan di situs ini. Informasi baru keluar saat Anda membuka tautan WhatsApp. Ini permintaan kontak awal, bukan pengajuan resmi, dan tidak menjamin SBU terbit.</div>
+            <div data-testid="text-service-destination" className="mt-8 rounded-xl border border-[var(--lp-line)] bg-[var(--lp-surface)] p-4 text-sm leading-6 text-[var(--lp-t2)]">WhatsApp pengelola: <strong className="mono text-[var(--lp-text)]">{SERVICE_WHATSAPP_DISPLAY}</strong><br />Isian tidak disimpan di situs ini. Informasi baru keluar saat Anda membuka tautan WhatsApp. Ini permintaan kontak awal, bukan pengajuan resmi, dan tidak menjamin SBU terbit.</div>
           </div>
           <ServiceRequestForm />
         </div>
@@ -147,17 +149,17 @@ export default function PublicLanding() {
 
       {/* Boundaries + Action */}
       <section className="mx-auto max-w-7xl px-5 pb-24 md:px-10">
-        <div className="grid overflow-hidden rounded-3xl border border-[#1f2b3b] lg:grid-cols-2">
-          <div className="bg-[#0c121c] p-8 md:p-12"><Kicker n="06">BATAS YANG JELAS</Kicker><ul className="mt-6 space-y-4 text-[15px] leading-7 text-[#d5e2f0]">
+        <div className="grid overflow-hidden rounded-3xl border border-[var(--lp-line)] lg:grid-cols-2">
+          <div className="bg-[var(--lp-surface)] p-8 md:p-12"><Kicker n="06">BATAS YANG JELAS</Kicker><ul className="mt-6 space-y-4 text-[15px] leading-7 text-[var(--lp-t2)]">
             <li>Status "persiapan selesai" bukan keputusan LSBU dan bukan jaminan sertifikat terbit.</li>
             <li>Bukti yang dideklarasikan atau disimpan belum berarti terverifikasi.</li>
             <li>Tidak ada pengiriman otomatis ke sistem lembaga mana pun.</li>
           </ul><BoundaryScene className="mt-10 max-w-[420px]" /></div>
           <div className="bg-[#4ea4ff] p-8 text-[#04111f] md:p-12"><div className="eyebrow">MULAI HARI INI</div><h2 className="display mt-5 text-4xl font-extrabold leading-tight">Rapikan persiapan sebelum tenggat mendekat.</h2>
-            <div className="mt-8 flex flex-wrap gap-3"><Link href="/sign-up" data-testid="link-join-bottom" className="lp-btn bg-[#06090f] text-white">Mulai persiapan <ArrowRight size={16} /></Link><Link href="/mini-apps" data-testid="link-mini-apps-bottom" className="lp-btn border border-[#06090f]">Lihat Mini Apps</Link></div></div>
+            <div className="mt-8 flex flex-wrap gap-3"><Link href="/sign-up" data-testid="link-join-bottom" className="lp-btn lp-btn-ink">Mulai persiapan <ArrowRight size={16} /></Link><Link href="/mini-apps" data-testid="link-mini-apps-bottom" className="lp-btn border border-[var(--lp-ink-border)]">Lihat Mini Apps</Link></div></div>
         </div>
       </section>
     </main>
-    <footer className="border-t border-[#1a2433] px-5 py-8 md:px-10"><div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 text-xs leading-5 text-[#b4c4d6] sm:flex-row"><span>&copy; {new Date().getFullYear()} Gustafta &middot; Ruang kerja persiapan SBU</span><span>Independen; tidak terafiliasi dengan Ditjen Bina Konstruksi, LPJK, Kementerian PU atau LSBU.</span></div></footer>
+    <footer className="border-t border-[var(--lp-line)] px-5 py-8 md:px-10"><div className="mx-auto flex max-w-7xl flex-col justify-between gap-4 text-xs leading-5 text-[var(--lp-t3)] sm:flex-row"><span>&copy; {new Date().getFullYear()} Gustafta &middot; Ruang kerja persiapan SBU</span><span>Independen; tidak terafiliasi dengan Ditjen Bina Konstruksi, LPJK, Kementerian PU atau LSBU.</span></div></footer>
   </div>;
 }

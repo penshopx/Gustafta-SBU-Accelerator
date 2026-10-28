@@ -1,0 +1,294 @@
+/* Screen-only dark compatibility palette for workspace/auth/onboarding fixed-colour utilities.
+   Generated from exact class matches (scripted audit). Light surfaces -> card tokens, pale status panels -> dark tinted
+   panels of the same hue, dark/muted text -> foreground tokens, status text -> light tint of the same hue.
+   Already-dark panels, saturated buttons, light text, .lp landing, media and print are untouched. */
+@media screen {
+  html.dark .border-\[\#c9d7e3\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .text-\[\#14253a\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .border-\[\#b5c7d8\]:not(.lp, .lp *) { border-color: hsl(212 40% 34%); }
+  html.dark .text-\[\#56718a\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#1769d1\]:not(.lp, .lp *) { color: #8cc8ff; }
+  html.dark .text-\[\#526b81\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#d8e4ec\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .hover\:bg-\[\#ecf4f9\]:hover:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#2b4159\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .text-\[\#688096\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#eaf4ff\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .border-\[\#d1dfe9\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .hover\:bg-\[\#f4f9fc\]:hover:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#647b90\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#b34442\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .text-\[\#19745f\]:not(.lp, .lp *) { color: #74dcb8; }
+  html.dark .bg-\[\#eef5fa\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#5f758b\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#eaf3fa\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .border-\[\#cddde9\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .bg-\[\#f9fcfe\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#547088\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#102438\]:not(.lp, .lp *) { color: #8cc8ff; }
+  html.dark .text-\[\#58718a\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#e0e9ef\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .text-\[\#6b8296\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .hover\:text-\[\#1769d1\]:hover:not(.lp, .lp *) { color: #8cc8ff; }
+  html.dark .text-\[\#6c859a\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#60788d\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#e9f3ff\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .border-\[\#d3e0e9\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .hover\:bg-\[\#eff6fb\]:hover:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .border-\[\#d4e1ea\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .text-\[\#617a90\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#567088\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#dceefa\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#486a82\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#60798e\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#58708a\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#586f86\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#678096\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#42637e\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#e7f3fc\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#326384\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#57728a\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#e1eaf0\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .text-\[\#27425a\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .bg-\[\#f3f7fa\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .border-\[\#d2e0ea\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .border-\[\#bfd0de\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .hover\:bg-\[\#eef6fc\]:hover:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .border-\[\#bfcedc\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .bg-\[\#e3f4ee\]:not(.lp, .lp *) { background-color: hsl(160 38% 12%); }
+  html.dark .text-\[\#155f4e\]:not(.lp, .lp *) { color: #74dcb8; }
+  html.dark .bg-\[\#eef2f6\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#3d5267\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#fbeceb\]:not(.lp, .lp *) { background-color: hsl(2 42% 15%); }
+  html.dark .text-\[\#a3362f\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .bg-\[\#fff3dc\]:not(.lp, .lp *) { background-color: hsl(36 48% 13%); }
+  html.dark .text-\[\#8a5a00\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .bg-\[\#e4f0fd\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#1559ad\]:not(.lp, .lp *) { color: #8cc8ff; }
+  html.dark .bg-\[\#eaf1f6\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#3c566d\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#f0f3f6\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .bg-\[\#e3f4ef\]:not(.lp, .lp *) { background-color: hsl(160 38% 12%); }
+  html.dark .border-\[\#d4e2ec\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .bg-\[\#f7fbfe\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#47667e\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#19324a\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .text-\[\#7a8999\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#e8f3fd\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .border-\[\#dbe8f1\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .text-\[\#4a647b\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#9fb6c9\]:not(.lp, .lp *) { border-color: hsl(212 40% 34%); }
+  html.dark .text-\[\#ae3b3a\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .hover\:bg-\[\#fbeeed\]:hover:not(.lp, .lp *) { background-color: hsl(2 42% 15%); }
+  html.dark .border-\[\#efc9c4\]:not(.lp, .lp *) { border-color: hsl(2 40% 36%); }
+  html.dark .border-\[\#f1dcae\]:not(.lp, .lp *) { border-color: hsl(36 45% 34%); }
+  html.dark .border-\[\#c4daf3\]:not(.lp, .lp *) { border-color: hsl(212 40% 34%); }
+  html.dark .border-\[\#dbe7ef\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .bg-\[\#fff4dc\]:not(.lp, .lp *) { background-color: hsl(36 48% 13%); }
+  html.dark .text-\[\#7a5410\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .bg-\[\#fbe9e8\]:not(.lp, .lp *) { background-color: hsl(2 42% 15%); }
+  html.dark .text-\[\#8e2f2d\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .border-\[\#b9d5e9\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .bg-\[\#edf6fd\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#173d5d\]:not(.lp, .lp *) { color: #8cc8ff; }
+  html.dark .border-\[\#ecd9a8\]:not(.lp, .lp *) { border-color: hsl(36 45% 34%); }
+  html.dark .bg-\[\#fff9ea\]:not(.lp, .lp *) { background-color: hsl(36 48% 13%); }
+  html.dark .text-\[\#6a4a0e\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .border-\[\#c9d9e6\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .border-\[\#e7b7b5\]:not(.lp, .lp *) { border-color: hsl(2 40% 36%); }
+  html.dark .bg-\[\#fdf1f0\]:not(.lp, .lp *) { background-color: hsl(2 42% 15%); }
+  html.dark .text-\[\#0c4a96\]:not(.lp, .lp *) { color: #8cc8ff; }
+  html.dark .border-\[\#ecc58f\]:not(.lp, .lp *) { border-color: hsl(36 45% 34%); }
+  html.dark .bg-\[\#fdf1e3\]:not(.lp, .lp *) { background-color: hsl(36 48% 13%); }
+  html.dark .text-\[\#6b3a08\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .text-\[\#9a3432\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .bg-\[\#f4f8fb\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .border-\[\#8fa6ba\]:not(.lp, .lp *) { border-color: #8cc8ff; }
+  html.dark .text-\[\#5d7388\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .hover\:bg-\[\#e3eef7\]:hover:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .hover\:bg-\[\#fbe9e8\]:hover:not(.lp, .lp *) { background-color: hsl(2 42% 15%); }
+  html.dark .text-\[\#7d2927\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .border-\[\#d6dfe7\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .border-\[\#b9dccf\]:not(.lp, .lp *) { border-color: hsl(160 35% 30%); }
+  html.dark .border-\[\#e3b3b2\]:not(.lp, .lp *) { border-color: hsl(2 40% 36%); }
+  html.dark .text-\[\#7a420a\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .border-\[\#9fc3e6\]:not(.lp, .lp *) { border-color: hsl(212 40% 34%); }
+  html.dark .text-\[\#8e2f2e\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .bg-\[\#f4f9fc\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#34506a\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#e5c58f\]:not(.lp, .lp *) { border-color: hsl(36 45% 34%); }
+  html.dark .bg-\[\#fff7e8\]:not(.lp, .lp *) { background-color: hsl(36 48% 13%); }
+  html.dark .text-\[\#64420e\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .bg-\[\#dff0fc\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#566f85\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#8a5a12\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .border-\[\#e5b8b3\]:not(.lp, .lp *) { border-color: hsl(2 40% 36%); }
+  html.dark .bg-\[\#fdf1ef\]:not(.lp, .lp *) { background-color: hsl(2 42% 15%); }
+  html.dark .text-\[\#607d98\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#cddcea\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .text-\[\#1d3651\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .text-\[\#8a4b0b\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .bg-\[\#e6f1fb\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#175eae\]:not(.lp, .lp *) { color: #8cc8ff; }
+  html.dark .border-\[\#e0e9f0\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .bg-\[\#f3f9fe\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#2f465d\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .bg-\[\#eef6fd\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#365a76\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .hover\:bg-\[\#eaf4fc\]:hover:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#ad4a48\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .hover\:bg-\[\#fff0ef\]:hover:not(.lp, .lp *) { background-color: hsl(2 42% 15%); }
+  html.dark .bg-\[\#f3f8fc\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .border-\[\#c7deef\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .bg-\[\#eff7fd\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .bg-\[\#eaf4fc\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#5c758b\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#456986\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#ecf4f9\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#527089\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .hover\:bg-\[\#fdf1ef\]:hover:not(.lp, .lp *) { background-color: hsl(2 42% 15%); }
+  html.dark .text-\[\#bb5451\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .border-\[\#e3c3c2\]:not(.lp, .lp *) { border-color: hsl(2 40% 36%); }
+  html.dark .bg-\[\#fbeeed\]:not(.lp, .lp *) { background-color: hsl(2 42% 15%); }
+  html.dark .text-\[\#8f2f2e\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .bg-\[\#e8edf2\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#52677e\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#e1f4ee\]:not(.lp, .lp *) { background-color: hsl(160 38% 12%); }
+  html.dark .bg-\[\#fdf1dc\]:not(.lp, .lp *) { background-color: hsl(36 48% 13%); }
+  html.dark .text-\[\#8a5a10\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .hover\:bg-\[\#f1f7fb\]:hover:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#80511b\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .text-\[\#19634b\]:not(.lp, .lp *) { color: #74dcb8; }
+  html.dark .border-\[\#ecc977\]:not(.lp, .lp *) { border-color: #f3c871; }
+  html.dark .bg-\[\#fff3d9\]:not(.lp, .lp *) { background-color: hsl(36 48% 13%); }
+  html.dark .text-\[\#7a5200\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .border-\[\#c9d4de\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .text-\[\#42576b\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#a9d8c9\]:not(.lp, .lp *) { border-color: hsl(160 35% 30%); }
+  html.dark .bg-\[\#e4f5ee\]:not(.lp, .lp *) { background-color: hsl(160 38% 12%); }
+  html.dark .text-\[\#19614f\]:not(.lp, .lp *) { color: #74dcb8; }
+  html.dark .bg-\[\#e6f1fc\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#445d74\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#3e5c73\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#dce7ee\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .text-\[\#648097\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#203b51\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .text-\[\#6b8192\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#b9d2e3\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .border-\[\#d7e5ee\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .text-\[\#142b42\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .text-\[\#647c90\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#506d83\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .hover\:bg-\[\#e5f0f7\]:hover:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .bg-\[\#dbeefa\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#19364e\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .text-\[\#71889a\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#cadce8\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .bg-\[\#edf5fa\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#23425a\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .border-\[\#e8c6bb\]:not(.lp, .lp *) { border-color: hsl(2 40% 36%); }
+  html.dark .bg-\[\#fff3ef\]:not(.lp, .lp *) { background-color: hsl(2 42% 15%); }
+  html.dark .text-\[\#9b3e32\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .border-\[\#d6e5ed\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .bg-\[\#f8fbfd\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .bg-\[\#fff0e6\]:not(.lp, .lp *) { background-color: hsl(36 48% 13%); }
+  html.dark .text-\[\#ab5b25\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .text-\[\#19334b\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .text-\[\#526e82\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#fff0e8\]:not(.lp, .lp *) { background-color: hsl(36 48% 13%); }
+  html.dark .text-\[\#8e4730\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .text-\[\#658095\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#172d42\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .border-\[\#e4c8c1\]:not(.lp, .lp *) { border-color: hsl(2 40% 36%); }
+  html.dark .bg-\[\#fff7f2\]:not(.lp, .lp *) { background-color: hsl(36 48% 13%); }
+  html.dark .text-\[\#a84c38\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .text-\[\#654c49\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#6b5651\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#f9fcfd\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .border-\[\#dbe6ed\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .text-\[\#638196\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#123d60\]:not(.lp, .lp *) { color: #8cc8ff; }
+  html.dark .text-\[\#38566c\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .hover\:bg-\[\#edf5f9\]:hover:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#3479aa\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#d6eee7\]:not(.lp, .lp *) { background-color: hsl(160 38% 12%); }
+  html.dark .text-\[\#236657\]:not(.lp, .lp *) { color: #74dcb8; }
+  html.dark .bg-\[\#f5ebd9\]:not(.lp, .lp *) { background-color: hsl(36 48% 13%); }
+  html.dark .text-\[\#876139\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .bg-\[\#edf5f9\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#527087\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#b8dccc\]:not(.lp, .lp *) { border-color: hsl(160 35% 30%); }
+  html.dark .bg-\[\#eaf6f0\]:not(.lp, .lp *) { background-color: hsl(160 38% 12%); }
+  html.dark .text-\[\#27614e\]:not(.lp, .lp *) { color: #74dcb8; }
+  html.dark .text-\[\#9b4839\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .text-\[\#162f46\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .text-\[\#6b8294\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#b6ccdb\]:not(.lp, .lp *) { border-color: hsl(212 40% 34%); }
+  html.dark .bg-\[\#dbeaf4\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#3d779d\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#5b768b\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#eaf4fa\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#42718e\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#1d455e\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .text-\[\#28745c\]:not(.lp, .lp *) { color: #74dcb8; }
+  html.dark .text-\[\#a16e35\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .bg-\[\#d8eee7\]:not(.lp, .lp *) { background-color: hsl(160 38% 12%); }
+  html.dark .text-\[\#286b58\]:not(.lp, .lp *) { color: #74dcb8; }
+  html.dark .bg-\[\#fae4db\]:not(.lp, .lp *) { background-color: hsl(2 42% 15%); }
+  html.dark .text-\[\#9a4b38\]:not(.lp, .lp *) { color: #ffaaa3; }
+  html.dark .bg-\[\#f4ebd8\]:not(.lp, .lp *) { background-color: hsl(36 48% 13%); }
+  html.dark .text-\[\#806035\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .text-\[\#2273a6\]:not(.lp, .lp *) { color: #8cc8ff; }
+  html.dark .hover\:text-\[\#104c9d\]:hover:not(.lp, .lp *) { color: #8cc8ff; }
+  html.dark .text-\[\#236e56\]:not(.lp, .lp *) { color: #74dcb8; }
+  html.dark .text-\[\#a06137\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .border-\[\#cddfe9\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .text-\[\#47738f\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#bfd5e7\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .bg-\[\#e5f2fc\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#142c46\]:not(.lp, .lp *) { color: #8cc8ff; }
+  html.dark .text-\[\#456780\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#bfd5e7\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .bg-\[\#f8fcff\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#526f86\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#d5eaf9\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#355a76\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#eaf5fd\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#236e5b\]:not(.lp, .lp *) { color: #74dcb8; }
+  html.dark .border-\[\#efd9af\]:not(.lp, .lp *) { border-color: hsl(36 45% 34%); }
+  html.dark .bg-\[\#fff8e9\]:not(.lp, .lp *) { background-color: hsl(36 48% 13%); }
+  html.dark .text-\[\#775517\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .bg-\[\#f5f9fc\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#526e85\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-\[\#e8f7f3\]:not(.lp, .lp *) { background-color: hsl(160 38% 12%); }
+  html.dark .border-\[\#bde4d9\]:not(.lp, .lp *) { border-color: hsl(160 35% 30%); }
+  html.dark .bg-\[\#fff5df\]:not(.lp, .lp *) { background-color: hsl(36 48% 13%); }
+  html.dark .text-\[\#8e6214\]:not(.lp, .lp *) { color: #f3c871; }
+  html.dark .border-\[\#ecd5a5\]:not(.lp, .lp *) { border-color: hsl(36 45% 34%); }
+  html.dark .bg-\[\#edf4fb\]:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .text-\[\#366283\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#caddea\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .text-\[\#70889c\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#e3ebf0\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .text-\[\#71889b\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#bcd9ef\]:not(.lp, .lp *) { border-color: hsl(212 40% 34%); }
+  html.dark .bg-\[\#e8f4fd\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#496984\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#648096\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#55718a\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .border-\[\#e1e9ef\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .text-\[\#617c93\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .hover\:bg-\[\#f4f9fd\]:hover:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  html.dark .border-\[\#e2eaf0\]:not(.lp, .lp *) { border-color: hsl(var(--border)); }
+  html.dark .bg-\[\#e7f2fc\]:not(.lp, .lp *) { background-color: hsl(213 46% 15%); }
+  html.dark .text-\[\#183049\]:not(.lp, .lp *) { color: hsl(var(--foreground)); }
+  html.dark .text-\[\#637c92\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#70869a\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#60788c\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .text-\[\#71879b\]:not(.lp, .lp *) { color: hsl(var(--muted-foreground)); }
+  html.dark .bg-white:not(.lp, .lp *) { background-color: hsl(var(--card)); }
+  /* Light-blue buttons keep their dark ink (contrast ~11:1). */
+  html.dark .bg-\[\#8bccff\].text-\[\#102438\]:not(.lp, .lp *) { color: #102438; }
+  /* Native media/PDF frames are never recoloured. */
+  html.dark :is(video, canvas, iframe, embed, object, img) { filter: none; }
+}

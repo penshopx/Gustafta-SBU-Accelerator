@@ -1,7 +1,7 @@
 // Locally authored, decorative scene illustrations for the public landing.
 // Purely visual: no seals, stamps or approval marks.
 type P = { className?: string };
-const B = '#4ea4ff', B2 = '#9ccbff', L = '#2c3d52', D = '#0c121c', D2 = '#13202f';
+const B = 'var(--lp-ill-b)', B2 = 'var(--lp-ill-b2)', L = 'var(--lp-ill-line)', D = 'var(--lp-ill-d)', D2 = 'var(--lp-ill-d2)';
 
 /** Hero: a building under construction with a crane carrying a folder towards an organised shelf. */
 export function SiteScene({ className = '' }: P) {
@@ -60,8 +60,8 @@ export function DeskScene({ className = '' }: P) {
     <path d="M10 170h340" stroke={L} strokeWidth="2" />
     <rect x="30" y="100" width="110" height="70" rx="4" fill={D} stroke={L} strokeWidth="2" />
     {[0, 1, 2].map(i => <g key={i}><rect x="38" y={108 + i * 20} width="94" height="16" rx="2" fill={D2} /><rect x="76" y={114 + i * 20} width="18" height="4" rx="2" fill={i === 1 ? B : B2} /></g>)}
-    <path d="M58 100a28 24 0 0156 0z" fill={B} /><rect x="50" y="96" width="72" height="6" rx="3" fill={B2} /><path d="M86 76v24" stroke="#0b1a2c" strokeWidth="3" />
-    <g transform="translate(160 70)"><rect width="170" height="100" rx="4" fill="#0d1d33" stroke={B} strokeWidth="2" /><g stroke={B2} strokeWidth="1.5" fill="none" opacity=".8"><path d="M20 80V30h60v50M80 50h70v30H20M50 30v50M110 50v30" /><path d="M20 20h60" strokeDasharray="3 3" /></g><path d="M150 0v100" stroke={L} strokeWidth="6" /></g>
+    <path d="M58 100a28 24 0 0156 0z" fill={B} /><rect x="50" y="96" width="72" height="6" rx="3" fill={B2} /><path d="M86 76v24" stroke="var(--lp-surface-blue)" strokeWidth="3" />
+    <g transform="translate(160 70)"><rect width="170" height="100" rx="4" fill="var(--lp-surface-blue)" stroke={B} strokeWidth="2" /><g stroke={B2} strokeWidth="1.5" fill="none" opacity=".8"><path d="M20 80V30h60v50M80 50h70v30H20M50 30v50M110 50v30" /><path d="M20 20h60" strokeDasharray="3 3" /></g><path d="M150 0v100" stroke={L} strokeWidth="6" /></g>
     <circle cx="330" cy="70" r="10" fill={D2} stroke={B2} strokeWidth="2" />
   </svg>;
 }
@@ -74,7 +74,7 @@ export function ReviewScene({ className = '' }: P) {
     <path d="M36 118h88M36 136h60" stroke={B} strokeWidth="4" strokeLinecap="round" strokeDasharray="6 6" />
     <text x="36" y="172" fill={B2} fontFamily="monospace" fontSize="11" letterSpacing="1.5">DRAF</text>
     <circle cx="214" cy="80" r="26" fill={D2} stroke={B2} strokeWidth="2" />
-    <path d="M168 190c0-40 20-64 46-64s46 24 46 64z" fill="#0d1d33" stroke={B2} strokeWidth="2" />
+    <path d="M168 190c0-40 20-64 46-64s46 24 46 64z" fill="var(--lp-surface-blue)" stroke={B2} strokeWidth="2" />
     <path d="M190 64a26 18 0 0148 0z" fill={B} /><rect x="184" y="62" width="60" height="6" rx="3" fill={B2} />
     <circle cx="150" cy="120" r="20" fill="none" stroke={B} strokeWidth="4" /><path d="M164 134l16 16" stroke={B} strokeWidth="6" strokeLinecap="round" />
   </svg>;
