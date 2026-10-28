@@ -1,5 +1,14 @@
 # Dasar aturan dan batasan MVP SBU
 
+## Tambahan paparan TERAS LPJK Episode 12
+
+Lihat [catatan kurasi TERAS LPJK](knowledge-intake-teras-lpjk.md) untuk tiga
+materi unggahan: ketentuan/usulan konversi, kesiapan sistem, dan perspektif
+pelaku usaha. Sembilan cuplikannya adalah panduan/perspektif belum
+terverifikasi, bukan sumber primer tambahan atau pembaruan aturan aktif.
+Usulan timeline, biaya, otomatisasi dan perbedaan uraian SMAP tidak mengubah
+gerbang transisi, penilaian, atau matriks BG001.
+
 Dokumen ini mencatat aturan yang sudah dijadikan **panduan persiapan** aplikasi, bukan pendapat hukum atau pengganti evaluasi LSBU. Berkas sumber primer tersedia pada `.local/conversation-workspace/files/attached_assets/` dalam proyek ini. Nomor halaman di bawah adalah nomor halaman **PDF unggahan**, bukan nomor halaman cetak.
 
 | Urutan | Sumber | Penggunaan dalam aplikasi |

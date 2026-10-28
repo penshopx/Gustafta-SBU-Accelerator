@@ -24,7 +24,11 @@ detail sumber yang sudah tidak ada dalam respons terbaru juga menghilang.
 Ini bukan push real-time atau jaminan bahwa keputusan yang terjadi setelah
 snapshot langsung terlihat sebelum pembacaan berikutnya.
 
-Katalog awal hanya empat cuplikan dari dua dokumen primer. Filter tidak
+Katalog awal memuat empat cuplikan dari dua dokumen primer. Kurasi TERAS
+LPJK Episode 12 menambahkan sembilan cuplikan dari tiga paparan: dua
+berjenis panduan dan satu perspektif praktik, seluruhnya belum terverifikasi.
+Identitas salinan, halaman PDF versus slide, dan batasnya dicatat di
+`knowledge-intake-teras-lpjk.md`. Filter tidak
 menambahkan sumber klasifikasi KBLI, panduan, atau praktik yang belum
 dikurasi. Dokumen baru perlu klasifikasi eksplisit di server sebelum
 ditampilkan; katalog tidak menerima dokumen/URL bebas dari pengguna.

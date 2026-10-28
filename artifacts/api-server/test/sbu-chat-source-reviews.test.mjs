@@ -49,13 +49,15 @@ await build({
   plugins: [{
     name: "isolated-source-review-dependencies",
     setup(builder) {
+      builder.onResolve({ filter: /\/consultation-analysis$/ }, () => ({ path: "analysis-reader", namespace: "fixture" }));
       builder.onResolve({ filter: /^@workspace\/db$/ }, () => ({ path: "db", namespace: "fixture" }));
       builder.onResolve({ filter: /^@clerk\/express$/ }, () => ({ path: "clerk", namespace: "fixture" }));
       builder.onResolve({ filter: /^@workspace\/api-zod$/ }, () => ({
         path: fileURLToPath(new URL("../../../lib/api-zod/src/index.ts", import.meta.url)),
       }));
       builder.onLoad({ filter: /.*/, namespace: "fixture" }, ({ path }) => ({
-        contents: path === "db" ? "export const pool = globalThis.__sourceReviewPool;"
+        contents: path === "analysis-reader" ? "export async function consultationAnalysis(){ throw Error('unexpected private analysis read'); }"
+          : path === "db" ? "export const pool = globalThis.__sourceReviewPool;"
           : "export const getAuth = req => ({ userId: req.get('X-Test-Identity') ?? null });",
         loader: "js",
       }));
@@ -115,7 +117,8 @@ test("concurrent review writers cannot silently overwrite a decision; withdrawal
   assert.equal(results.filter(r => r.status === "fulfilled").length, 1);
   assert.ok(results.find(r => r.status === "rejected").reason instanceof SourceReviewConflict);
   const active = await other.active();
-  assert.deepEqual(active.map(v => v.sourceKey), ["kepdirjen-281-2026"]);
+  assert.deepEqual(active.map(v => v.sourceKey),
+    catalog.filter(v => v.baseline && v.sourceKey !== baseline.sourceKey).map(v => v.sourceKey));
   assert.deepEqual(retrieveChatSources("permen berlaku", active), []);
   assert.deepEqual(retrieveChatSources("modal personel BG001 K1", active), []);
   const read = await store.read();

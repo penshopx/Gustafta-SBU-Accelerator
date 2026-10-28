@@ -1,4 +1,5 @@
 import type { SbuChatCitation } from "@workspace/api-zod";
+import { TERAS_LPJK_VERSIONS } from "./sbu-chat-teras-lpjk";
 
 export const RETRIEVAL_NOTICE = "Pencarian lokal pada ringkasan sumber publik terkurasi, bukan dokumen lengkap atau verifikasi live. Nomor halaman merujuk PDF yang ditelaah. Draf BG001 tidak digunakan; status terkini dan penerapan harus dikonfirmasi.";
 
@@ -65,7 +66,7 @@ export type ChatSourceVersion = {
   keywords: Readonly<Record<string, readonly string[]>>;
 };
 
-export const CHAT_SOURCE_VERSIONS: readonly ChatSourceVersion[] = [
+const PRIMARY_SOURCE_VERSIONS: readonly ChatSourceVersion[] = [
   { sourceKey: "permen-pu-6-2025", versionId: "pu6-20260926-r1", prefix: "pu6-" },
   { sourceKey: "kepdirjen-281-2026", versionId: "dk281-20260926-r1", prefix: "dk281-" },
 ].map(({ sourceKey, versionId, prefix }) => ({
@@ -75,6 +76,10 @@ export const CHAT_SOURCE_VERSIONS: readonly ChatSourceVersion[] = [
   keywords: Object.fromEntries(Object.entries(keywords).filter(([id]) => id.startsWith(prefix))
     .map(([id, terms]) => [`${id}@${versionId}`, terms])),
 }));
+
+export const CHAT_SOURCE_VERSIONS: readonly ChatSourceVersion[] = [
+  ...PRIMARY_SOURCE_VERSIONS, ...TERAS_LPJK_VERSIONS,
+];
 
 export function retrieveChatSources(question: string, versions: readonly ChatSourceVersion[] = CHAT_SOURCE_VERSIONS): SbuChatCitation[] {
   const normalized = question.toLocaleLowerCase("id");

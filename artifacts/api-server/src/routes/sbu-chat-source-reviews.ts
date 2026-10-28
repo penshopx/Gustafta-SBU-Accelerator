@@ -3,6 +3,14 @@ import { getAuth } from "@clerk/express";
 import { ListKnowledgeSourcesResponse, ListSbuChatSourceReviewsResponse, RecordSbuChatSourceReviewBody, RecordSbuChatSourceReviewResponse } from "@workspace/api-zod";
 import { chatSourceReviewStore, InvalidSourceReview, SourceReviewConflict, type ChatSourceReviewStore } from "../lib/sbu-chat-source-reviews";
 
+const SOURCE_CLASSIFICATIONS: Record<string, { sourceRole: "primer" | "panduan" | "praktik"; topics: string[] }> = {
+  "permen-pu-6-2025": { sourceRole: "primer", topics: ["Perizinan", "SMAP", "Transisi SBU"] },
+  "kepdirjen-281-2026": { sourceRole: "primer", topics: ["Skema sertifikasi", "SMAP", "Transisi SBU"] },
+  "teras-lpjk-12-konversi": { sourceRole: "panduan", topics: ["TERAS LPJK", "Transisi SBU", "Persiapan dokumen", "SMAP"] },
+  "teras-lpjk-12-sistem": { sourceRole: "panduan", topics: ["TERAS LPJK", "Kesiapan sistem", "Transisi SBU"] },
+  "teras-lpjk-12-pelaku-usaha": { sourceRole: "praktik", topics: ["TERAS LPJK", "Pendampingan", "SMAP", "PUB", "LKUT"] },
+};
+
 // Operations-only API: a selected chat role/profile never grants review rights.
 export function createChatSourceReviewsRouter(store: ChatSourceReviewStore = chatSourceReviewStore): IRouter {
   const router = Router();
@@ -21,14 +29,13 @@ export function createChatSourceReviewsRouter(store: ChatSourceReviewStore = cha
       const sources = versions.flatMap(version => {
         // Only classify sources whose origin is known. A future catalog must
         // explicitly classify new documents instead of silently calling them law.
-        if (!["permen-pu-6-2025", "kepdirjen-281-2026"].includes(version.sourceKey)) {
+        const classification = SOURCE_CLASSIFICATIONS[version.sourceKey];
+        if (!classification) {
           throw new Error("unclassified_source");
         }
         return version.citations.map(citation => ({
         ...citation, sourceKey: version.sourceKey, versionId: version.versionId,
-        sourceRole: "primer" as const,
-        topics: version.sourceKey === "permen-pu-6-2025"
-          ? ["Perizinan", "SMAP", "Transisi SBU"] : ["Skema sertifikasi", "SMAP", "Transisi SBU"],
+        ...classification,
         }));
       });
       res.json(ListKnowledgeSourcesResponse.parse(sources));
