@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowUpRight, PencilLine, ShieldCheck } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 import {
   APPLICATION_TYPES, HELP_AREAS, SERVICE_LIMITS, SERVICE_WHATSAPP_DISPLAY, buildServiceRequestMessage, buildWhatsAppUrl,
   emptyServiceRequest, validateServiceRequest, type HelpArea, type ServiceRequestDraft, type ServiceRequestErrors, type ServiceRequestField,
@@ -38,6 +39,7 @@ export function ServiceRequestForm() {
     setErrors(e);
     if (Object.keys(e).length) { setFocusTarget('errors'); return; }
     setStage('review'); setFocusTarget('review');
+    trackEvent('service_request_reviewed');
   };
 
   const errList = ORDER.filter(f => errors[f]);
@@ -52,7 +54,10 @@ export function ServiceRequestForm() {
       <p className="mt-2 text-sm leading-6 text-[#c2d1e1]">Belum ada yang terkirim atau tersimpan. Pesan di bawah baru keluar dari halaman ini bila Anda menekan tautan, lalu Anda sendiri yang menekan kirim di WhatsApp ke <strong className="text-white">{SERVICE_WHATSAPP_DISPLAY}</strong>.</p>
       <pre data-testid="text-service-summary" className="sr-summary">{message}</pre>
       <div className="mt-6 flex flex-wrap gap-3">
-        <a data-testid="link-open-whatsapp" href={href} target="_blank" rel="noopener noreferrer" className="lp-btn lp-btn-blue">Buka WhatsApp <ArrowUpRight size={16} /><span className="sr-only">dengan pesan ini (tab baru)</span></a>
+        <a data-testid="link-open-whatsapp" href={href} target="_blank" rel="noopener noreferrer"
+          onClick={() => trackEvent('service_whatsapp_clicked')}
+          onAuxClick={event => { if (event.button === 1) trackEvent('service_whatsapp_clicked'); }}
+          className="lp-btn lp-btn-blue">Buka WhatsApp <ArrowUpRight size={16} /><span className="sr-only">dengan pesan ini (tab baru)</span></a>
         <button type="button" data-testid="button-edit-service" onClick={() => { setStage('edit'); setFocusTarget('form'); }} className="lp-btn lp-btn-ghost"><PencilLine size={16} /> Ubah isian</button>
       </div>
     </div>;

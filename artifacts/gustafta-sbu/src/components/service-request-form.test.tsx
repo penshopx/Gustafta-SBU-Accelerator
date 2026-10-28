@@ -13,6 +13,14 @@ test('service form: validate, review, edit, explicit WhatsApp link, no persisten
   g.window = win as unknown as Window & typeof globalThis;
   g.document = win.document as unknown as Document;
   g.IS_REACT_ACT_ENVIRONMENT = true;
+  const analyticsCalls: unknown[][] = [];
+  let analyticsFailure: 'none' | 'sync' | 'async' = 'none';
+  Reflect.set(win, 'umami', { track: (...args: unknown[]) => {
+    analyticsCalls.push(args);
+    if (analyticsFailure === 'sync') throw new Error('synthetic tracker failure');
+    if (analyticsFailure === 'async') return Promise.reject(new Error('synthetic async tracker failure'));
+    return undefined;
+  } });
   let fetches = 0;
   g.fetch = (async () => { fetches++; throw new Error('no network'); }) as typeof fetch;
   const rootDir = fileURLToPath(new URL('../../', import.meta.url));
@@ -36,6 +44,18 @@ test('service form: validate, review, edit, explicit WhatsApp link, no persisten
   });
   const click = async (id: string) => act(async () => { find(id)!.click(); });
   const submit = async () => act(async () => { find('form-service-request')!.dispatchEvent(new win.Event('submit', { bubbles: true, cancelable: true }) as unknown as Event); });
+  const clickWhatsApp = async () => {
+    let preventedByComponent = true;
+    // Observe after React, then cancel in the test only: never visit WhatsApp.
+    container.addEventListener('click', event => {
+      preventedByComponent = event.defaultPrevented;
+      event.preventDefault();
+    }, { once: true });
+    await act(async () => {
+      find('link-open-whatsapp')!.dispatchEvent(new win.Event('click', { bubbles: true, cancelable: true }) as unknown as Event);
+    });
+    assert.equal(preventedByComponent, false, 'analytics must not cancel normal link navigation');
+  };
   try {
     const { ServiceRequestForm } = await server.ssrLoadModule('/src/components/landing/service-request-form.tsx');
     await act(async () => root.render(React.createElement(ServiceRequestForm)));
@@ -52,6 +72,7 @@ test('service form: validate, review, edit, explicit WhatsApp link, no persisten
     await click('radio-app-perpanjangan'); await click('check-help-smap'); await click('check-consent');
     await submit();
     assert.ok(find('error-phone'), 'letters rejected');
+    assert.deepEqual(analyticsCalls, [], 'typing, invalid submissions and consent changes are not tracked');
     await type('input-phone', '+62 812-3456-7890');
     await submit();
     const summary = find('text-service-summary')!;
@@ -64,14 +85,37 @@ test('service form: validate, review, edit, explicit WhatsApp link, no persisten
     assert.equal(link.getAttribute('rel'), 'noopener noreferrer');
     assert.match(container.textContent!, /Belum ada yang terkirim/);
     assert.doesNotMatch(container.textContent!, /berhasil dikirim|terkirim\./i);
+    assert.deepEqual(analyticsCalls, [['service_request_reviewed']]);
+    await clickWhatsApp();
+    assert.deepEqual(analyticsCalls, [['service_request_reviewed'], ['service_whatsapp_clicked']]);
     await click('button-edit-service');
     assert.equal(find('link-open-whatsapp'), null, 'no stale link while editing');
     assert.equal(win.document.activeElement, find('input-name'));
     assert.equal((find('input-company') as unknown as HTMLInputElement).value, 'CV Tirta Bangun');
     assert.equal((find('check-consent') as unknown as HTMLInputElement).checked, true);
+    assert.equal(analyticsCalls.length, 2, 'editing is not an analytics event');
     await type('input-company', 'PT Baru Jaya');
     await submit();
     assert.match(find('text-service-summary')!.textContent!, /Badan usaha: PT Baru Jaya/);
+    assert.match(new URL(find('link-open-whatsapp')!.getAttribute('href')!).searchParams.get('text')!, /PT Baru Jaya/);
+    analyticsFailure = 'sync';
+    await clickWhatsApp();
+    assert.ok(find('panel-service-review'), 'synchronous tracker failure leaves review intact');
+    analyticsFailure = 'async';
+    await click('button-edit-service');
+    await submit();
+    await clickWhatsApp();
+    assert.ok(find('panel-service-review'), 'async tracker failure leaves link and review intact');
+    assert.deepEqual(analyticsCalls, [
+      ['service_request_reviewed'], ['service_whatsapp_clicked'],
+      ['service_request_reviewed'], ['service_whatsapp_clicked'],
+      ['service_request_reviewed'], ['service_whatsapp_clicked'],
+    ], 'only exact event names, never identities, draft values or WhatsApp URLs');
+    Reflect.deleteProperty(win, 'umami');
+    await click('button-edit-service');
+    await submit();
+    await clickWhatsApp();
+    assert.equal(analyticsCalls.length, 6, 'missing tracker is a safe no-op');
     assert.match(new URL(find('link-open-whatsapp')!.getAttribute('href')!).searchParams.get('text')!, /PT Baru Jaya/);
     assert.equal(container.querySelector('iframe'), null);
     assert.equal(fetches, 0);
