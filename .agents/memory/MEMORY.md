@@ -25,6 +25,7 @@
 - [Validation console formatting](validation-console-formatting.md) — configured checks may force ANSI coloring even for piped subprocesses; normalize CLI messages before assertions.
 - [PDF page isolation](pdf-page-isolation.md) — render selected pixels into a fresh PDF; copying source page objects cannot establish isolation from unselected content.
 - [PDF reader verification](pdf-reader-verification.md) — valid PDF bytes and page fragments do not prove visible pages; native viewers may remain blank in test browsers.
+- [Embedded media verification](embedded-media-verification.md) — standalone playback does not prove the landing-page embed works; check its timeline and failure recovery.
 - [Route fixture SQL boundaries](route-fixture-sql-boundaries.md) — declaring a SQL expression at import time is not a database query; keep execution blocked in isolated route tests.
 - [Cleanup timeout safety](cleanup-timeout-safety.md) — stopping a storage wait does not cancel DELETE; cleanup targets must never become eligible for ready/adoption afterward.
 - [Async fixture imports](async-fixture-imports.md) — keep asynchronous fixture initialization separate from the entry point that dynamically loads its consumers.

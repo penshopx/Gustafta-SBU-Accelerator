@@ -47,10 +47,22 @@ test('landing: renders honest copy, working CTAs, and mounts film only on click'
     assert.match(find('note-film-concept')?.textContent ?? '', /berdiri sendiri dan privat/);
     assert.doesNotMatch(text, /konsep lama|Gagasan awal: satu sumber/);
     assert.equal(find('link-open-film')?.getAttribute('href'), '/gustafta-film/');
+    let filmRequests = 0;
+    globalThis.fetch = async (url) => {
+      assert.equal(url, '/gustafta-film/');
+      filmRequests++;
+      return filmRequests === 1
+        ? new Response('Unavailable', { status: 503 })
+        : new Response('<html><head><title>Film</title></head><body><div id="root"></div></body></html>', { headers: { 'Content-Type': 'text/html' } });
+    };
     await act(async () => { (find('button-load-film') as unknown as HTMLButtonElement).click(); });
+    assert.match(container.querySelector('[role="alert"]')?.textContent ?? '', /Video belum dapat dimuat/);
+    assert.equal(find('iframe-film'), null);
+    await act(async () => { (Array.from(container.querySelectorAll('button')).find(b => b.textContent === 'Coba lagi') as unknown as HTMLButtonElement).click(); });
     const frame = find('iframe-film');
-    assert.ok(frame); assert.equal(frame.getAttribute('src'), '/gustafta-film/'); assert.ok(frame.getAttribute('title'));
-    assert.equal(frame.getAttribute('loading'), 'lazy'); assert.ok(frame.hasAttribute('allowfullscreen'));
+    assert.ok(frame); assert.equal(frame.getAttribute('src'), null); assert.ok(frame.getAttribute('title'));
+    assert.match(frame.getAttribute('srcdoc') ?? '', /<base href="https?:\/\/[^"]+\/gustafta-film\/">/);
+    assert.equal(filmRequests, 2); assert.ok(frame.hasAttribute('allowfullscreen'));
   } finally {
     await act(async () => root.unmount());
     await server.close();
