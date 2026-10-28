@@ -1,0 +1,14 @@
+.lp { --ink: #06090f; --ink-2: #0c121c; --line: #1f2b3b; --text: #eef4fb; --soft: #b9c8da; --blue: #4ea4ff; --blue-2: #9ccbff; background: var(--ink); color: var(--text); }
+.lp-grid { background-image: linear-gradient(#121c29 1px, transparent 1px), linear-gradient(90deg, #121c29 1px, transparent 1px); background-size: 48px 48px; mask-image: radial-gradient(ellipse at 70% 30%, #000 20%, transparent 75%); }
+.lp-card { background: var(--ink-2); border: 1px solid var(--line); border-radius: 14px; }
+.lp-btn { display: inline-flex; align-items: center; gap: 9px; min-height: 46px; padding: 0 20px; border-radius: 10px; font-weight: 700; font-size: 14px; transition: transform .2s, background-color .2s; }
+.lp-btn:hover { transform: translateY(-2px); }
+.lp-btn-blue { background: var(--blue); color: #04111f; }
+.lp-btn-blue:hover { background: var(--blue-2); }
+.lp-btn-ghost { border: 1px solid #3a4b61; color: var(--text); }
+.lp-btn-ghost:hover { background: #121c29; }
+.lp a:focus-visible, .lp button:focus-visible { outline: 2px solid var(--blue-2); outline-offset: 3px; }
+.lp-scatter > * { animation: lp-drift 6s ease-in-out infinite alternate; }
+.lp-scatter > *:nth-child(2n) { animation-delay: -2s; }
+.lp-scatter > *:nth-child(3n) { animation-delay: -4s; }
+@keyframes lp-drift { to { transform: translate(4px, -6px) rotate(var(--r, 0deg)); } }
