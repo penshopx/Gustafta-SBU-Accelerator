@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Panduan Pengguna — Gustafta SBU Accelerator</title>
+<title>Panduan User — Gustafta SBU Accelerator</title>
 <style>
 :root{--navy:#102a43;--blue:#1261b5;--ink:#23394d;--muted:#516779;--line:#d6e1ea;--paper:#fff;--soft:#edf5fc}
 *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:75px}body{margin:0;background:#eaf0f5;color:var(--ink);font:16px/1.65 Arial,Helvetica,sans-serif}h1,h2,h3{color:var(--navy);line-height:1.2}h1{font-size:42px;letter-spacing:-1px;margin:15px 0 22px}h2{font-size:30px;letter-spacing:-.6px;margin:10px 0 20px}h3{font-size:18px;margin:24px 0 9px}p{margin:10px 0 16px}a{color:var(--blue)}strong{color:var(--navy)}li{padding-left:3px;margin:8px 0}ol,ul{padding-left:24px}.top{position:sticky;top:0;z-index:3;background:var(--navy);color:white;display:flex;justify-content:space-between;align-items:center;padding:13px 24px;gap:18px}.top strong{color:white;font-size:14px;letter-spacing:.5px}.top button{background:white;color:var(--navy);border:0;border-radius:6px;padding:10px 15px;cursor:pointer;font-weight:bold}.top button:focus-visible,a:focus-visible{outline:3px solid #f5ab25;outline-offset:3px}main{max-width:900px;margin:28px auto 70px}.page{background:var(--paper);border:1px solid var(--line);border-radius:8px;margin-bottom:24px;padding:48px 52px;scroll-margin-top:80px}.kicker{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;color:var(--blue)}.lead{font-size:20px;line-height:1.5;color:var(--muted)}.note,.warn,.example{padding:15px 18px;border-left:4px solid var(--blue);background:var(--soft);margin:20px 0;border-radius:0 6px 6px 0}.warn{border-color:#af751c;background:#fff7e9}.example{border-color:#6a8194;background:#f3f6f8}.note p,.warn p,.example p{margin:4px 0}.small{font-size:13px;color:var(--muted)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card{border:1px solid var(--line);padding:16px;border-radius:7px}.card h3{margin:0 0 8px}.flow{display:flex;gap:10px;margin:26px 0}.flow div{flex:1;background:var(--soft);padding:14px 12px;border-top:3px solid var(--blue);font-size:14px}.flow b{display:block;color:var(--navy);margin-bottom:5px}.toc{columns:2;column-gap:30px;list-style:none;padding:0}.toc li{break-inside:avoid;margin:8px 0;padding:0}.toc a{text-decoration:none;border-bottom:1px solid #d6e1ea}.tag{display:inline-block;background:#dcecff;color:#144e85;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:bold;margin-bottom:8px}table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14px;line-height:1.45}th,td{border:1px solid var(--line);padding:10px 11px;vertical-align:top;text-align:left}th{background:var(--soft);color:var(--navy)}.cover{border-top:8px solid var(--blue);padding-top:50px}.cover h1{font-size:48px;max-width:650px}.cover .subtitle{font-size:25px;color:var(--blue);font-weight:700}.cover hr{border:0;border-top:1px solid var(--line);margin:30px 0}.checklist{list-style:none;padding-left:0}.checklist li:before{content:"□";color:var(--blue);font-size:19px;margin-right:9px}.end{text-align:center;padding:18px;color:var(--muted);font-size:13px}
@@ -13,18 +13,18 @@
 </style>
 </head>
 <body>
-<header class="top"><strong>GUSTAFTA / PANDUAN PENGGUNA</strong><button type="button" onclick="window.print()">Cetak / Simpan PDF</button></header>
+<header class="top"><strong>GUSTAFTA / PANDUAN USER</strong><button type="button" onclick="window.print()">Cetak / Simpan PDF</button></header>
 <main>
 <section class="page cover" id="sampul">
-<div class="kicker">Manual operasional pengguna</div>
+<div class="kicker">Panduan User / Pemilik ruang kerja</div>
 <h1>Gustafta<br>SBU Accelerator</h1>
 <p class="subtitle">Kumpulkan, baca, tindak lanjuti.</p>
 <p class="lead">Panduan menggunakan ruang kerja persiapan Sertifikat Badan Usaha jasa konstruksi untuk permohonan baru dan perpanjangan.</p>
 <div class="flow"><div><b>Susun bahan</b>Kasus, dokumen, personel dan deklarasi bukti.</div><div><b>Pahami konteks</b>Rujukan regulasi, analisis dokumen dan percakapan AI.</div><div><b>Kelola tindak lanjut</b>Daftar kerja, telaah internal, agenda dan ringkasan.</div></div>
-<div class="note"><strong>Untuk siapa panduan ini?</strong><p>Admin BUJK, pendamping persiapan, serta pengguna yang ingin mempelajari skema dan proses sertifikasi. Fitur yang terlihat bergantung pada peran akun dan izin yang diberikan server.</p></div>
+<div class="note"><strong>Untuk siapa panduan User ini?</strong><p>Pemilik ruang kerja, operator/admin BUJK dan pendamping yang menggunakan akun sendiri untuk menyiapkan kasus. “Admin BUJK” di sini bukan Admin pengelola aplikasi. Pengelolaan layanan dan sumber dibahas dalam panduan Admin; kebijakan akses dan operasi sistem dalam panduan Super Admin.</p></div>
 <div class="warn"><strong>Bukan sistem penerbitan SBU.</strong><p>Aplikasi membantu persiapan dan pemahaman. Menyimpan berkas, menandai checklist, memperoleh jawaban AI atau mencetak ringkasan bukan persetujuan LSBU/OSS dan tidak membuktikan keaslian dokumen.</p></div>
 <hr>
-<p class="small"><strong>Cakupan edisi ini:</strong> ruang kerja mandiri, Asisten peran, serta pilot Pakar Skema BG001–BG009 dan BS001–BS020. Panduan disusun dari fitur pada kode aplikasi saat penyusunan, bukan bukti bahwa semua pembaruan sudah aktif di situs publik. Menu publik dapat berbeda bila versi terbaru belum dipublikasikan.</p>
+<p class="small"><strong>Cakupan edisi ini:</strong> ruang kerja mandiri, Asisten peran, serta pilot Pakar Skema BG001–BG009 dan BS001–BS020. Panduan disusun dari fitur pada kode aplikasi saat penyusunan, bukan bukti bahwa semua pembaruan sudah aktif di situs publik. Menu publik dapat berbeda bila versi terbaru belum dipublikasikan. Pembagian Super Admin/Admin/User adalah pembagian tanggung jawab manual; tidak menambahkan hierarki hak akses baru.</p>
 <p class="small">Contoh nama perusahaan, pertanyaan dan situasi dalam panduan bersifat sintetis. Tidak ada data pelanggan atau dokumen privat yang digunakan.</p>
 </section>
 

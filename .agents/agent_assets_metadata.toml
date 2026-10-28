@@ -78,3 +78,45 @@ mtime_ms = 1793222920919
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/69d91c9a-55d6-4c9a-bd4d-0b975f4f35c9/bff3cb47-82e6-4f43-ac4c-b6dc0c411615"
 storage_version_token = "1793222952251944"
 content_type = "text/html"
+
+[[outputs]]
+id = "DvQtvU_OMOuonQ8JjXV9D"
+uri = "file://generated-artifacts/manual/Panduan-Super-Admin-Gustafta-SBU-Accelerator.pdf"
+type = "pdf"
+title = "Panduan Super Admin — 8 halaman"
+description = "SOP penanggung jawab sistem: kebijakan akses, konfigurasi AI dan biaya, keamanan, rilis, insiden dan tata kelola sumber. Menjelaskan batas fitur administratif yang belum tersedia."
+logical_id = "b3709808-5d94-40bf-87f3-4da73789dd38"
+content_hash = "sha256:cadf8529690de512af0f2de7d300e177023db12af950beab9b8833ed7fe08ab6"
+size = 59782
+mtime_ms = 1793223850952
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/b3709808-5d94-40bf-87f3-4da73789dd38/19e749e5-5de6-436d-bf75-e2f9c5e591cd"
+storage_version_token = "1793223906181177"
+content_type = "application/pdf"
+
+[[outputs]]
+id = "NiF14qb84svQZtARX5aYY"
+uri = "file://generated-artifacts/manual/Panduan-Admin-Gustafta-SBU-Accelerator.pdf"
+type = "pdf"
+title = "Panduan Admin — 7 halaman"
+description = "SOP pengelola operasional: mutu sumber, telaah sesuai izin, dukungan User, triage layanan, eskalasi dan serah terima. Tidak memberikan akses lintas akun."
+logical_id = "3e1a41bc-e69e-4424-83dd-ed7bf746588c"
+content_hash = "sha256:ba6251b61f2b421b21c7b2326235de363d456cab3f8a3a62a5e4d348f8a3757a"
+size = 50076
+mtime_ms = 1793223852292
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/3e1a41bc-e69e-4424-83dd-ed7bf746588c/053ded45-0682-4770-97ab-cee8244ac0f4"
+storage_version_token = "1793223907476019"
+content_type = "application/pdf"
+
+[[outputs]]
+id = "M1ZKjWww84wuqrUOBxgq8"
+uri = "file://generated-artifacts/manual/Panduan-User-Gustafta-SBU-Accelerator.pdf"
+type = "pdf"
+title = "Panduan User — 19 halaman"
+description = "Manual penggunaan sehari-hari: akun, kasus SBU, dokumen, AI, Pakar Skema BG/BS, personel, checklist, agenda dan ekspor. Admin BUJK sebagai operator kasus termasuk pengguna panduan ini."
+logical_id = "a5a70f91-fdfc-425b-b719-fbe647b3cd87"
+content_hash = "sha256:aa39499cd85d3ad0c390b4f539c5df782b7777aa2df9fa1a1fff3cd621d08e4f"
+size = 107134
+mtime_ms = 1793223853864
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/a5a70f91-fdfc-425b-b719-fbe647b3cd87/5391032d-7d13-48cf-a198-01a8656f5b4a"
+storage_version_token = "1793223908758283"
+content_type = "application/pdf"

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panduan Admin — Gustafta SBU Accelerator</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eaf0f5;color:#23394d;font:16px/1.6 Arial,Helvetica,sans-serif}header{background:#102a43;color:#fff;padding:14px 24px;display:flex;justify-content:space-between;gap:15px;align-items:center}header button{padding:9px 14px;background:white;border:0;border-radius:5px;color:#102a43;font-weight:bold;cursor:pointer}main{max-width:900px;margin:28px auto}.page{background:#fff;padding:48px 52px;margin-bottom:24px;border:1px solid #d6e1ea;border-radius:7px}h1,h2,h3{color:#102a43;line-height:1.2}h1{font-size:46px;letter-spacing:-1px;margin:20px 0}h2{font-size:30px;margin:12px 0 20px}h3{font-size:19px;margin:22px 0 9px}.kicker{color:#1261b5;font-size:12px;text-transform:uppercase;letter-spacing:1.4px;font-weight:bold}.lead{font-size:21px;color:#516779}p{margin:10px 0 15px}li{margin:8px 0}.note,.warn,.example{background:#edf5fc;border-left:4px solid #1261b5;padding:14px 18px;margin:20px 0;border-radius:0 5px 5px 0}.warn{background:#fff7e9;border-color:#af751c}.example{background:#f3f6f8;border-color:#6a8194}.small{font-size:13px;color:#516779}table{width:100%;border-collapse:collapse;font-size:14px;line-height:1.45;margin:16px 0}th,td{border:1px solid #d6e1ea;padding:10px 11px;text-align:left;vertical-align:top}th{background:#edf5fc;color:#102a43}.cover{border-top:8px solid #1261b5}.toc{padding-left:22px}a{color:#1261b5}a:focus-visible,button:focus-visible{outline:3px solid #e7a22d;outline-offset:3px}.check{list-style:none;padding:0}.check li:before{content:"□";color:#1261b5;margin-right:9px;font-size:19px}html{scroll-behavior:smooth}
+main{overflow-wrap:anywhere}table{table-layout:fixed}
+@media(max-width:680px){main{margin:12px 10px}.page{padding:28px 22px}h1{font-size:35px}h2{font-size:26px}header{padding:12px;font-size:12px}table{font-size:12px}th,td{padding:8px 6px}}
+@page{size:A4;margin:18mm 16mm 18mm}
+@media print{body{background:#fff;font-size:10.5pt;line-height:1.45;print-color-adjust:exact;-webkit-print-color-adjust:exact}header{display:none}main{max-width:none;margin:0}.page{border:0;border-radius:0;padding:0;margin:0;break-after:page}.page:last-child{break-after:auto}.cover{border-top:6px solid #1261b5;padding-top:24px}h1{font-size:35pt}h2{font-size:24pt}h3{font-size:13pt;margin:17px 0 7px}h1,h2,h3{break-after:avoid}.kicker,.small{font-size:9pt}.lead{font-size:15pt}p{margin:8px 0 11px}li{margin:6px 0}table{font-size:9pt}th,td{padding:7px 8px}.note,.warn,.example{padding:11px 13px;margin:15px 0;break-inside:avoid}tr{break-inside:avoid}a{text-decoration:none}}
+</style></head><body>
+<header><strong>GUSTAFTA / PANDUAN ADMIN</strong><button onclick="window.print()" type="button">Cetak / Simpan PDF</button></header>
+<main>
+<section class="page cover" id="awal"><div class="kicker">Pengelola operasional &amp; pengetahuan</div><h1>Panduan Admin</h1><p class="lead">Gustafta SBU Accelerator<br>Menjaga mutu layanan, sumber dan pendampingan pengguna.</p>
+<div class="note"><strong>Siapa Admin dalam manual ini?</strong><p>Petugas yang ditunjuk pengelola untuk dukungan operasional, pemeriksaan mutu pengetahuan dan koordinasi tindak lanjut. Admin hanya melakukan tindakan yang benar-benar diizinkan untuk akunnya.</p></div>
+<table><thead><tr><th>Super Admin</th><th>Admin</th><th>User</th></tr></thead><tbody><tr><td>Kebijakan, akses pengelola, konfigurasi teknis, keamanan dan keputusan rilis.</td><td>Dukungan pengguna, mutu sumber dan pekerjaan telaah yang secara khusus diizinkan.</td><td>Menyiapkan kasus dan bahan milik akun sendiri.</td></tr></tbody></table>
+<div class="warn"><strong>Belum ada hierarki tiga role administratif otomatis.</strong><p>Profil aplikasi saat ini menggunakan Kontraktor, Konsultan, Profesional dan Asosiasi. Izin penelaah sumber diberikan terpisah oleh server. Manual ini tidak membuat akun “Admin” dengan hak membuka semua kasus atau dokumen pengguna.</p></div>
+<h3>Daftar isi</h3><ol class="toc"><li><a href="#akses">Batas akses dan awal giliran</a></li><li><a href="#sumber">Mengelola mutu sumber pengetahuan</a></li><li><a href="#telaah">Telaah sumber transisi yang diizinkan</a></li><li><a href="#dukungan">Mendampingi User dengan aman</a></li><li><a href="#operasional">Triage layanan dan eskalasi</a></li><li><a href="#serah">Checklist dan serah terima</a></li></ol>
+<p class="small">Panduan ini merupakan SOP operasional. Bagian yang memerlukan perubahan teknis dilakukan bersama Super Admin/teknisi berwenang, bukan melalui menu yang belum tersedia. Tidak membuktikan kesiapan produksi atau pengesahan regulasi.</p></section>
+
+<section class="page" id="akses"><div class="kicker">01 / Awal pekerjaan</div><h2>Batas akses dan awal giliran</h2>
+<ol><li>Masuk memakai akun sendiri. Pastikan identitas dan sesi benar; jangan meminjam akun User atau meminta kata sandinya.</li><li>Periksa penugasan pengelola: dukungan pengguna, telaah sumber atau koordinasi insiden. Ketiganya tidak otomatis memberikan akses ke semua data.</li><li>Periksa apakah fitur yang akan dibantu tersedia pada versi publik atau hanya development. Catat lingkungan yang diperiksa.</li><li>Untuk pekerjaan penelaah, pastikan menu <strong>Telaah sumber transisi</strong> tersedia dan server mengizinkan akses.</li><li>Jika akses ditolak, hentikan dan ajukan pemeriksaan izin kepada Super Admin. Jangan mengganti peran profil untuk mencoba melewati penolakan.</li></ol>
+<table><thead><tr><th>Kegiatan</th><th>Batas Admin</th></tr></thead><tbody>
+<tr><td>Menjelaskan fitur dan langkah penggunaan</td><td>Boleh berdasarkan panduan dan versi yang sedang digunakan.</td></tr>
+<tr><td>Mencatat keputusan telaah sumber transisi</td><td>Hanya bila akun memiliki izin penelaah dan pemeriksaan memang telah dilakukan.</td></tr>
+<tr><td>Membuka kasus/dokumen orang lain</td><td>Tidak tersedia sebagai kewenangan umum Admin. Jangan memakai akun User sebagai jalan pintas.</td></tr>
+<tr><td>Mengubah model, tarif, kuota atau konfigurasi</td><td>Eskalasi ke Super Admin/teknisi; bukan tindakan melalui profil pengguna.</td></tr>
+<tr><td>Menetapkan kelulusan atau menerbitkan SBU</td><td>Di luar kewenangan aplikasi maupun Admin.</td></tr>
+</tbody></table>
+<div class="note"><strong>Bedakan Admin aplikasi dan admin BUJK.</strong><p>Admin BUJK yang menyiapkan dokumen perusahaan adalah <strong>User operasional</strong>. Ia mengikuti Panduan User untuk ruang kerja milik akunnya, bukan otomatis menjadi pengelola aplikasi.</p></div>
+</section>
+
+<section class="page" id="sumber"><div class="kicker">02 / Kurasi pengetahuan</div><h2>Menjaga mutu sumber</h2>
+<ol><li>Identifikasi kebutuhan: regulasi primer, skema institusional, pedoman, contoh atau paparan. Jangan menyamakan status kelimanya.</li><li>Catat judul, penerbit, nomor dokumen bila ada, versi/tanggal dan asal file. Bedakan unggahan pengguna dari salinan yang telah diperiksa pada penerbit.</li><li>Baca bagian yang akan digunakan beserta halaman sebelum/sesudahnya agar pengecualian atau kelanjutan paragraf tidak hilang.</li><li>Catat locator: pasal/bagian, nomor halaman PDF dan halaman cetak bila berbeda.</li><li>Catat keterbatasan, status verifikasi, hak distribusi dan pertanyaan yang masih terbuka.</li><li>Ajukan hasil kepada penelaah/teknisi yang berwenang untuk penerapan pada katalog atau retrieval. Unggahan file saja tidak otomatis mengaktifkan sumber di chatbot.</li><li>Setelah disetujui dan diterapkan, periksa tampilan sumber, kutipan, keterbatasan dan keadaan sumber lama.</li></ol>
+<h3>Kontrol khusus Pakar Skema</h3>
+<p>Pilot saat ini mencakup BG001–BG009 dan BS001–BS020 untuk pemetaan KBLI dan ruang lingkup saja. Penambahan persyaratan numerik, SKK, keuangan, pengalaman atau transisi memerlukan telaah terpisah. Jangan mempromosikan bahan inventaris sebagai aturan yang sudah aktif.</p>
+<div class="example"><strong>Contoh pemeriksaan</strong><p>Untuk BS018, periksa KBLI 42995 beserta kelanjutannya pada PDF 581–582 dan pengecualian fasilitas dengan radiasi pengion. Untuk BS017 dan BS020, jangan menebak pemetaan dari urutan kode.</p></div>
+<div class="warn"><strong>Tiga keputusan berbeda.</strong><p>Izin memakai sumber untuk retrieval, verifikasi legal sumber, dan aktivasi aturan penilaian bukan hal yang sama. Penggantian isi sumber dapat memerlukan peninjauan kode dan pengujian teknis, bukan hanya keputusan pada halaman telaah.</p></div>
+<p class="small">Gunakan catatan intake untuk mengusulkan sumber baru. Manual ini tidak menyatakan ada dashboard unggah Knowledge Base universal atau editor prompt/model untuk Admin.</p>
+</section>
+
+<section class="page" id="telaah"><div class="kicker">03 / Khusus akun penelaah</div><h2>Telaah sumber transisi</h2>
+<p>Fasilitas ini tersedia hanya bila server memberi izin kepada akun. Pemilihan profil “Asosiasi”, peran chat “LSBU” atau status Admin operasional tidak otomatis cukup.</p>
+<ol><li>Buka <strong>Telaah sumber transisi</strong>. Jika menu tidak ada atau akses ditolak, minta pengelola memeriksa penugasan.</li><li>Pilih rekaman yang sesuai. Baca rekaman saat ini sebelum membuat catatan baru atau memperbaruinya.</li><li>Periksa dokumen resmi dan dasar status yang akan dicatat. Jangan menggunakan tanggal paparan/usulan sebagai tanggal berlaku tanpa dasar yang sah.</li><li>Isi seluruh kolom yang ditampilkan dengan hasil pemeriksaan nyata. Tindakan penggantian rekaman dapat mengganti seluruh isi, bukan hanya satu kolom.</li><li>Jangan menyatakan sumber terverifikasi bila status dokumen tidak mendukungnya. Aplikasi mensyaratkan status dokumen “berlaku” untuk penandaan terverifikasi pada formulir ini.</li><li>Tinjau konfirmasi perubahan, simpan, lalu periksa kembali rekaman yang tersimpan.</li><li>Jika terjadi konflik, sesi berakhir atau izin berubah, muat ulang/masuk ulang sesuai pesan. Jangan mengulang keputusan lama tanpa membaca keadaan terbaru.</li></ol>
+<div class="warn"><strong>Bukan tombol aktivasi seluruh aturan.</strong><p>Catatan verifikasi transisi tidak otomatis mengaktifkan semua persyaratan BG001, memperluas skema, mengesahkan sertifikat atau memberikan izin memakai seluruh bahan pada chatbot. Alur sumber retrieval mempunyai pengendalian versi dan keputusan tersendiri.</p></div>
+<h3>Mengoreksi sumber bermasalah</h3>
+<p>Catat sumber/versi dan alasan koreksi. Untuk pencabutan atau penggantian sumber chat, eskalasi ke pengelola alur retrieval yang berwenang; jangan menjanjikan bahwa perubahan pada satu layar langsung menarik semua kutipan dari semua layanan.</p>
+<p class="small">Bukti telaah harus menjelaskan apa yang benar-benar diperiksa. “Sudah dibaca”, “diunggah”, “tes lulus” dan “terverifikasi pada penerbit” adalah klaim yang berbeda.</p>
+</section>
+
+<section class="page" id="dukungan"><div class="kicker">04 / Pendampingan</div><h2>Membantu User tanpa mengambil akun</h2>
+<ol><li>Tanyakan tujuan dan menu yang bermasalah, bukan meminta berkas privat terlebih dahulu.</li><li>Minta langkah reproduksi dan pesan kesalahan yang sudah disamarkan. Jangan meminta token, cookie, kata sandi atau kode OTP.</li><li>Pastikan User mengetahui akun, kasus dan versi dokumennya. Tidak perlu meminta salinan identitas untuk sekadar menjelaskan tombol.</li><li>Berikan langkah sesuai Panduan User. Minta User sendiri membuka dan melakukan tindakan di akunnya.</li><li>Untuk bantuan isi dokumen, gunakan cuplikan minimum yang secara sah disetujui pemilik melalui sarana yang dibenarkan. Jangan mengunggah salinan User ke akun Admin atau ke AI atas inisiatif sendiri.</li><li>Catat hasil dukungan secara minimal: fitur, masalah, tindakan, hasil dan kebutuhan eskalasi. Hindari isi dokumen atau identitas yang tidak perlu.</li></ol>
+<table><thead><tr><th>Pertanyaan User</th><th>Jawaban yang tepat</th></tr></thead><tbody>
+<tr><td>“Dokumen bersih, berarti sah?”</td><td>Pemindaian keamanan bukan verifikasi keaslian atau legalitas.</td></tr>
+<tr><td>“Checklist selesai, berarti pasti lolos?”</td><td>Checklist adalah persiapan internal; keputusan tetap pada proses berwenang.</td></tr>
+<tr><td>“Saya pilih peran LSBU di chat, sudah jadi asesor?”</td><td>Peran chat hanya sudut pandang jawaban, bukan hak akses atau penunjukan resmi.</td></tr>
+<tr><td>“Bisa Admin langsung membetulkan kasus saya?”</td><td>Tidak ada kewenangan umum untuk membuka/menulis kasus akun lain; arahkan pemilik mengubah sendiri.</td></tr>
+</tbody></table>
+<div class="note"><strong>Bantuan bukan persetujuan sertifikasi.</strong><p>Jika pertanyaan menyangkut keberlakuan aturan, autentikasi sertifikat atau keputusan kelayakan, arahkan kepada LSBU/pihak berwenang dengan konteks dan sumber yang jelas.</p></div>
+</section>
+
+<section class="page" id="operasional"><div class="kicker">05 / Pemantauan operasional</div><h2>Triage dan eskalasi</h2>
+<table><thead><tr><th>Masalah</th><th>Tindakan Admin</th><th>Eskalasi</th></tr></thead><tbody>
+<tr><td>Sesi atau izin ditolak</td><td>Periksa lingkungan dan arahkan masuk ulang. Jangan melewati pemeriksaan pemilik.</td><td>Super Admin bila izin resmi tidak sesuai penugasan.</td></tr>
+<tr><td>Kuota/anggaran AI tidak tersedia</td><td>Bedakan batas akun, anggaran bersama dan kegagalan pemeriksaan. Arahkan “Periksa lagi” bila tersedia.</td><td>Pengelola kebijakan biaya, bukan meminta reset riwayat.</td></tr>
+<tr><td>Unggahan/pemindaian gagal</td><td>Catat status dan waktu tanpa menyalin isi file.</td><td>Teknisi pemindai/penyimpanan. Jangan menyatakan file siap.</td></tr>
+<tr><td>Sumber keliru atau dicabut</td><td>Catat sumber, versi, locator dan klaim yang dipermasalahkan.</td><td>Penelaah sumber dan teknisi retrieval.</td></tr>
+<tr><td>Data akun lain tampak</td><td>Hentikan penggunaan alur terkait; jangan menyalin/menyebarkan data yang terlihat.</td><td>Segera ke Super Admin sebagai insiden privasi.</td></tr>
+<tr><td>Perubahan belum muncul publik</td><td>Bedakan development, hasil merge, publish dan verifikasi produksi.</td><td>Pengelola rilis memeriksa versi yang benar.</td></tr>
+</tbody></table>
+<h3>Periksa kanal operasional yang ditugaskan</h3>
+<p>Bila diberi akses, pantau peringatan antivirus pada kanal operasional yang disetujui pengelola. Baca tingkat gangguan dan pemulihannya. Tidak adanya pesan bukan bukti layanan sehat; ada kemungkinan jalur pengiriman juga terganggu.</p>
+<div class="warn"><strong>Admin tidak memperbaiki insiden dengan mematikan pagar pengaman.</strong><p>Jangan membuka dokumen yang belum siap, mematikan pemindaian, menghapus penghitung biaya, atau meminta User mengirim seluruh berkas ke kanal publik agar proses “lebih cepat”.</p></div>
+</section>
+
+<section class="page" id="serah"><div class="kicker">06 / Penutupan pekerjaan</div><h2>Checklist dan serah terima Admin</h2>
+<ul class="check"><li>Penugasan dan izin akun yang dipakai sesuai pekerjaan.</li><li>Masalah User tercatat tanpa credential atau isi dokumen privat.</li><li>Keputusan sumber menjelaskan versi, dasar dan batas pemeriksaan.</li><li>Perubahan pada sumber belum disebut aktif sebelum penerapannya diperiksa.</li><li>Tidak ada klaim kelulusan, sertifikasi atau verifikasi penerbit yang tidak didukung.</li><li>Insiden yang belum selesai sudah diteruskan ke penanggung jawab berwenang.</li><li>User mengetahui tindakan yang harus dilakukan sendiri dan hal yang masih menunggu.</li><li>Akun telah keluar pada perangkat bersama.</li></ul>
+<h3>Format catatan serah terima</h3>
+<div class="example"><p><strong>Fitur/lingkungan:</strong> nama menu; development atau publik.<br><strong>Masalah:</strong> ringkasan tanpa data sensitif.<br><strong>Yang diperiksa:</strong> langkah dan bukti yang benar-benar ada.<br><strong>Hasil:</strong> pulih / belum pulih / menunggu telaah.<br><strong>Tindak lanjut:</strong> pekerjaan dan pihak penanggung jawab.<br><strong>Batas:</strong> hal yang belum diuji atau belum dapat dipastikan.</p></div>
+<h3>Batas kewenangan yang selalu berlaku</h3><p>Admin tidak otomatis menjadi pemilik kasus, operator akun pengguna, penentu tarif, penerbit sertifikat atau pemegang izin penelaah. Tanggung jawab operasional harus selalu disertai izin nyata untuk setiap tindakan.</p>
+<p class="small">Dokumen pendamping: Panduan User untuk penggunaan fitur sehari-hari dan Panduan Super Admin untuk kebijakan, konfigurasi dan operasi teknis. Tidak ada perubahan hak akses aplikasi yang dilakukan oleh penerbitan manual ini.</p>
+</section>
+</main></body></html>
