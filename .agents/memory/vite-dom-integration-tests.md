@@ -29,3 +29,14 @@ in Happy DOM, even though this CSS form is valid in browsers.
 **How to apply:** Do not interpret missing synthetic style values as proof of
 a broken layout. Assert numeric computed branches where appropriate and
 check responsive CSS in an actual browser.
+
+Use the application's automatic JSX transform when testing a Vite component
+that does not import a default React binding.
+
+**Why:** A direct tsx import under the root test configuration can use classic
+JSX and throw `React is not defined`, even though the production Vite build is
+valid. Adding a global React binding masks the loader mismatch.
+
+**How to apply:** Load the component through an isolated Vite SSR server with
+automatic JSX. Disable dependency discovery for the small fixture so closing
+the server does not interrupt an unrelated whole-app dependency scan.

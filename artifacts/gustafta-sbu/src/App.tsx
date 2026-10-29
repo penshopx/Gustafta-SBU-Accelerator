@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ComponentProps, type FormEvent, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ClerkProvider, SignIn, SignUp, Show, useClerk, useAuth } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
@@ -13,26 +13,10 @@ import {
   getGetMeQueryKey, getGetDashboardQueryKey, getListCasesQueryKey, getGetCaseQueryKey, getGetAssessmentQueryKey,
   type Profile, type ProfileInput, type SbuCase, type CaseInput
 } from '@workspace/api-client-react';
-import SbuSimulatorPage from '@/components/sbu-simulator-page';
-import MiniAppsPage from '@/components/mini-apps-page';
+import { lazyFeature } from '@/components/lazy-feature';
 import HelpDesk from '@/components/help-desk';
-import PersonnelPage from '@/components/personnel-page';
-import ConsultationsPage from '@/components/consultations-page';
-import SbuChatPage from '@/components/sbu-chat-page';
 import { ErrorBoundary } from '@/components/error-boundary';
-import { RegulationsPage } from '@/components/regulations-page';
-import { TransitionVerificationsPage } from '@/components/transition-verifications-page';
 import { AssessmentResults, CaseSummary } from '@/components/case-detail-display';
-import { CaseWorkroom } from '@/components/case-workroom';
-import { AccountAgendaPage } from '@/components/account-agenda-page';
-import { CaseWorkroomReviews } from '@/components/case-workroom-reviews';
-import { CaseSmapChecklist } from '@/components/case-smap-checklist';
-import { CaseEvidence } from '@/components/case-evidence';
-import { CaseActionPlan } from '@/components/case-action-plan';
-import { CasePreparationExport } from '@/components/case-preparation-export';
-import { LocalCompanyProfilePage } from '@/components/local-company-profile-page';
-import { CaseDocuments } from '@/components/case-documents';
-import { DocumentVaultPage } from '@/components/document-vault-page';
 import { AccountQueries, CrossTabAccountGate, useFormMutationOptions, useAccountReadOptions } from '@/components/account-queries';
 import { CaseRows, DashboardResult, Empty, Status, statusLabels } from '@/components/dashboard-overview';
 import { Disclaimer } from '@/components/disclaimer';
@@ -45,6 +29,25 @@ import { getMe } from '@workspace/api-client-react';
 import { expiryInputValue, expiryPayload } from '@/lib/case-expiry';
 import { hasVisibleNameCharacter, ProfileNameField } from '@/components/profile-name-field';
 import PublicHome from '@/components/landing/public-landing';
+
+// Declare modules once, but mount them only at their existing guarded call sites.
+const SbuSimulatorPage = lazyFeature(() => import('@/components/sbu-simulator-page'));
+const MiniAppsPage = lazyFeature(() => import('@/components/mini-apps-page'));
+const PersonnelPage = lazyFeature(() => import('@/components/personnel-page'));
+const ConsultationsPage = lazyFeature(() => import('@/components/consultations-page'));
+const SbuChatPage = lazyFeature(() => import('@/components/sbu-chat-page'));
+const RegulationsPage = lazyFeature<NonNullable<ComponentProps<typeof import('@/components/regulations-page').RegulationsPage>>>(() => import('@/components/regulations-page').then(m => ({ default: m.RegulationsPage })));
+const TransitionVerificationsPage = lazyFeature(() => import('@/components/transition-verifications-page').then(m => ({ default: m.TransitionVerificationsPage })));
+const CaseWorkroom = lazyFeature(() => import('@/components/case-workroom').then(m => ({ default: m.CaseWorkroom })));
+const AccountAgendaPage = lazyFeature(() => import('@/components/account-agenda-page').then(m => ({ default: m.AccountAgendaPage })));
+const CaseWorkroomReviews = lazyFeature(() => import('@/components/case-workroom-reviews').then(m => ({ default: m.CaseWorkroomReviews })));
+const CaseSmapChecklist = lazyFeature(() => import('@/components/case-smap-checklist').then(m => ({ default: m.CaseSmapChecklist })));
+const CaseEvidence = lazyFeature(() => import('@/components/case-evidence').then(m => ({ default: m.CaseEvidence })));
+const CaseActionPlan = lazyFeature(() => import('@/components/case-action-plan').then(m => ({ default: m.CaseActionPlan })));
+const CasePreparationExport = lazyFeature(() => import('@/components/case-preparation-export').then(m => ({ default: m.CasePreparationExport })));
+const LocalCompanyProfilePage = lazyFeature(() => import('@/components/local-company-profile-page').then(m => ({ default: m.LocalCompanyProfilePage })));
+const CaseDocuments = lazyFeature(() => import('@/components/case-documents').then(m => ({ default: m.CaseDocuments })));
+const DocumentVaultPage = lazyFeature(() => import('@/components/document-vault-page').then(m => ({ default: m.DocumentVaultPage })));
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 const clerkPubKey = publishableKeyFromHost(window.location.hostname, import.meta.env.VITE_CLERK_PUBLISHABLE_KEY);

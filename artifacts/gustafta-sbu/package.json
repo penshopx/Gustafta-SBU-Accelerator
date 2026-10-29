@@ -9,6 +9,7 @@
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "test": "node --import tsx --test src/components/*.test.tsx src/lib/*.test.ts test/bfcache/*.test.mjs test/print/*.test.mjs test/chat/*.test.mjs test/form-owner/*.test.mjs",
     "test:typecheck": "node --test test/typecheck/*.test.mjs",
+    "test:bundle": "node test/bundle/initial-payload.mjs && node --test test/bundle/public-navigation.test.mjs",
     "test:bfcache": "node test/bfcache/run.mjs",
     "test:bfcache:unit": "node --test test/bfcache/*.test.mjs",
     "test:print": "node --test test/print/*.test.mjs",
