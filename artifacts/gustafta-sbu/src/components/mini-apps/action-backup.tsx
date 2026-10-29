@@ -46,7 +46,7 @@ export function ActionBackup({ rows, onRestore, onDownloadStarted }: { rows: Act
     <p className="mt-2 text-xs leading-5 text-[#526b81]">Unduh JSON untuk melanjutkan di sesi lain. File memuat seluruh judul, penanggung jawab, tenggat, dan status sesuai isian; tidak dienkripsi. Periksa data sensitif sebelum menyimpan atau membagikan. Pemulihan hanya membaca file di browser, tidak mengunggahnya. Maksimal 200 tindakan / 256 KiB.</p>
     <div className="mt-3 flex flex-wrap items-center gap-3">
       <button type="button" data-testid="button-backup-actions" className="btn btn-outline" disabled={!rows.length} onClick={exportBackup}>Unduh cadangan JSON</button>
-      <label className="text-sm font-bold">Pilih cadangan JSON<input data-testid="input-backup-actions" className="mt-1 block max-w-full text-xs" type="file" accept=".json,application/json" onChange={event => { void select(event.currentTarget); }} /></label>
+      <label className="min-w-0 max-w-full text-sm font-bold">Pilih cadangan JSON<input data-testid="input-backup-actions" className="mt-1 block w-full min-w-0 max-w-full text-xs" type="file" accept=".json,application/json" onChange={event => { void select(event.currentTarget); }} /></label>
     </div>
     {reading && <div className="mt-3"><p role="status">Membaca cadangan lokal…</p><button type="button" className="btn btn-outline mt-2" onClick={cancel}>Batal</button></div>}
     {error && <p data-testid="error-backup" role="alert" className="mt-3 text-sm text-[#9a3432]">{error}</p>}

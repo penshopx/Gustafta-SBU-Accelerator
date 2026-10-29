@@ -74,6 +74,43 @@ test('built routes load on demand and recover from a missing feature chunk', asy
     await page.locator('h1').waitFor();
     assert.ok(requests.some(url => /mini-apps-page-.*\.js/.test(url)));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+    // Native date inputs must not impose their intrinsic width on implicit
+    // grid tracks. Check the whole page and the actual controls, not clipping.
+    for (const width of [320, 360, 390, 402, 768, 1280]) {
+      await page.setViewportSize({ width, height: 874 });
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+        false,
+        `Mini Apps overflows at ${width}px`,
+      );
+      for (const name of ['input-expiry-date', 'input-expiry-asof', 'input-backup-actions']) {
+        const bounds = await page.getByTestId(name).boundingBox();
+        assert.ok(bounds && bounds.width > 100 && bounds.x >= 0 && bounds.x + bounds.width <= width,
+          `${name} must remain inside the ${width}px viewport`);
+      }
+      const calculator = await page.getByTestId('tool-expiry').boundingBox();
+      const tracker = await page.getByTestId('tool-tracker').boundingBox();
+      assert.ok(calculator && tracker);
+      if (width < 1024) {
+        assert.ok(tracker.y >= calculator.y + calculator.height, 'tools stack on narrow screens');
+      } else {
+        assert.ok(tracker.x >= calculator.x + calculator.width, 'tools remain side by side on desktop');
+        assert.equal(tracker.y, calculator.y);
+      }
+    }
+    await page.setViewportSize({ width: 402, height: 874 });
+    await page.getByTestId('input-expiry-asof').fill('2026-11-01');
+    await page.getByTestId('input-expiry-date').fill('2026-11-30');
+    assert.match(await page.getByTestId('text-expiry-result').textContent(),
+      /29 hari kalender lagi menuju tanggal berakhir SBU/);
+    await page.getByTestId('radio-expiry-skk').click();
+    assert.equal(await page.getByTestId('radio-expiry-skk').getAttribute('aria-checked'), 'true');
+    assert.match(await page.getByTestId('text-expiry-result').textContent(),
+      /29 hari kalender lagi menuju tanggal berakhir SKK/);
+    await page.getByTestId('input-expiry-date').fill('2026-10-31');
+    assert.match(await page.getByTestId('text-expiry-result').textContent(),
+      /SKK sudah lewat 1 hari kalender/);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     assert.deepEqual(errors, []);
 
     // Fresh page, missing module; explicit retry should fetch the module again.
