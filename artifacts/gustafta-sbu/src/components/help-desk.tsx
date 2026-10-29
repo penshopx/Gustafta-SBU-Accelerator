@@ -9,8 +9,8 @@ export const HELP_MAX_EXCHANGES = 12;
 
 type Exchange = { id: number; question: string; answer: HelpAnswer };
 
-export default function HelpDesk() {
-  const [open, setOpen] = useState(false);
+export default function HelpDesk({ initiallyOpen = false }: { initiallyOpen?: boolean } = {}) {
+  const [open, setOpen] = useState(initiallyOpen);
   const [draft, setDraft] = useState('');
   const [history, setHistory] = useState<Exchange[]>([]);
   const [error, setError] = useState('');

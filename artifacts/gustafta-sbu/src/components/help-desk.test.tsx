@@ -46,6 +46,14 @@ test('help desk: memory-only guided answers, links, reset, bounded history, safe
   const find = (id: string) => doc.querySelector(`[data-testid="${id}"]`);
   const node = (id: string) => { const n = find(id); assert.ok(n, id); return n; };
   const click = (id: string) => act(async () => { (node(id) as unknown as HTMLButtonElement).click(); });
+  const openHelp = async () => {
+    await click('help-desk-trigger');
+    // The real dialog is now imported on demand through the Vite module graph.
+    for (let i = 0; !find('help-desk-dialog') && i < 200; i++) {
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+    }
+    assert.ok(find('help-desk-dialog'), 'deferred Help Desk opens');
+  };
   const input = (id: string, value: string) => act(async () => {
     const n = node(id);
     Object.getOwnPropertyDescriptor(win.HTMLInputElement.prototype, 'value')!.set!.call(n, value);
@@ -54,7 +62,7 @@ test('help desk: memory-only guided answers, links, reset, bounded history, safe
   const send = async (text: string) => { await input('help-desk-input', text); await act(async () => { (node('help-desk-input').closest('form') as unknown as HTMLFormElement).requestSubmit(); }); };
   const exchanges = () => doc.querySelectorAll('[data-testid^="help-desk-exchange-"]').length;
   try {
-    const { default: HelpDesk } = await server.ssrLoadModule('/src/components/help-desk.tsx');
+    const { default: HelpDesk } = await server.ssrLoadModule('/src/components/help-desk-entry.tsx');
     const knowledge = await server.ssrLoadModule('/src/lib/help-desk-knowledge.ts');
     await act(async () => root.render(React.createElement(Router, {
       base: '/sbu',
@@ -63,7 +71,7 @@ test('help desk: memory-only guided answers, links, reset, bounded history, safe
     })));
     assert.match(node('help-desk-trigger').textContent!, /Bantuan/);
     assert.equal(find('help-desk-dialog'), null);
-    await click('help-desk-trigger');
+    await openHelp();
     const dialog = node('help-desk-dialog');
     assert.equal(dialog.getAttribute('role'), 'dialog');
     assert.match(dialog.textContent!, /Help Desk/);
@@ -107,7 +115,7 @@ test('help desk: memory-only guided answers, links, reset, bounded history, safe
     await input('help-desk-input', 'draf tertahan');
     await click('help-desk-close');
     assert.equal(find('help-desk-dialog'), null);
-    await click('help-desk-trigger');
+    await openHelp();
     assert.equal(exchanges(), 3, 'state kept across close/reopen');
     assert.equal((node('help-desk-input') as unknown as HTMLInputElement).value, 'draf tertahan');
 
@@ -125,7 +133,7 @@ test('help desk: memory-only guided answers, links, reset, bounded history, safe
       hook: () => ['/dashboard', () => {}] as [string, (location: string) => void],
       children: React.createElement(HelpDesk, { key: 'different-identity' }),
     })));
-    await click('help-desk-trigger');
+    await openHelp();
     assert.equal(exchanges(), 0, 'identity-key remount clears old history');
     assert.equal((node('help-desk-input') as unknown as HTMLInputElement).value, '', 'identity remount clears draft');
     assert.equal(requests, 0);

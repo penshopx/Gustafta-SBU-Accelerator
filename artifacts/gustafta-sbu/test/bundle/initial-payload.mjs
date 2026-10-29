@@ -18,7 +18,7 @@ visit('index.html');
 
 const features = [
   'sbu-simulator-page', 'mini-apps-page', 'sbu-chat-page', 'personnel-page',
-  'document-vault-page', 'regulations-page', 'case-workroom',
+  'document-vault-page', 'regulations-page', 'case-workroom', 'help-desk',
 ];
 for (const feature of features) {
   const key = `src/components/${feature}.tsx`;
@@ -33,6 +33,6 @@ const files = [...initial].map(key => {
 const bytes = files.reduce((total, file) => total + file.bytes, 0);
 const gzip = files.reduce((total, file) => total + file.gzip, 0);
 // The measured pre-split graph was 951,544 bytes / 263,484 gzip.
-assert.ok(bytes < 713658, `Initial JS exceeds the 75% baseline budget: ${bytes}`);
-assert.ok(gzip < 197613, `Initial gzip JS exceeds the 75% baseline budget: ${gzip}`);
+assert.ok(bytes < 570926, `Initial JS exceeds the 60% baseline budget: ${bytes}`);
+assert.ok(gzip < 158090, `Initial gzip JS exceeds the 60% baseline budget: ${gzip}`);
 console.log(JSON.stringify({ files, bytes, gzip, deferredFeatures: features }, null, 2));

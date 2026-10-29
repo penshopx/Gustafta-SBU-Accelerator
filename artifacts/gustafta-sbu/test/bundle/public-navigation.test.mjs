@@ -40,10 +40,35 @@ test('built routes load on demand and recover from a missing feature chunk', asy
     for (const name of ['sbu-chat-page', 'personnel-page', 'document-vault-page', 'mini-apps-page']) {
       assert.ok(!requests.some(url => url.includes(`${name}-`)), `${name} fetched too early`);
     }
+    assert.ok(!requests.some(url => /\/help-desk-[^/]+\.js/.test(url)), 'support chunk fetched before interaction');
+    let releaseHelp;
+    const helpGate = new Promise(resolve => { releaseHelp = resolve; });
+    await page.route('**/assets/help-desk-*.js', async route => {
+      await helpGate;
+      await route.continue();
+    });
+    await page.getByTestId('help-desk-trigger').click();
+    await page.getByRole('button', { name: 'Batalkan pemuatan Help Desk' }).waitFor();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Buka Help Desk, pemandu aplikasi' }).waitFor();
+    const helpResponse = page.waitForResponse(response => /\/help-desk-[^/]+\.js/.test(response.url()));
+    releaseHelp();
+    await helpResponse;
+    assert.equal(await page.getByRole('dialog').count(), 0, 'late module must not reopen cancelled help');
     await page.getByTestId('help-desk-trigger').click();
     await page.getByRole('dialog').waitFor();
+    await page.getByTestId('help-desk-input').fill('Bagaimana cara membuat kasus SBU?');
+    await page.getByTestId('help-desk-send').click();
+    await page.locator('[data-testid^="help-desk-answer-"]').waitFor();
+    await page.getByTestId('help-desk-input').fill('draf contoh belum dikirim');
     await page.keyboard.press('Escape');
     assert.equal(await page.getByRole('dialog').count(), 0);
+    assert.equal(await page.getByTestId('help-desk-trigger').evaluate(element => element === document.activeElement), true);
+    await page.getByTestId('help-desk-trigger').click();
+    await page.getByRole('dialog').waitFor();
+    assert.equal(await page.locator('[data-testid^="help-desk-answer-"]').count(), 1);
+    assert.equal(await page.getByTestId('help-desk-input').inputValue(), 'draf contoh belum dikirim');
+    await page.getByTestId('help-desk-close').click();
 
     await page.goto(`${origin}/mini-apps`);
     await page.locator('h1').waitFor();
@@ -72,6 +97,34 @@ test('built routes load on demand and recover from a missing feature chunk', asy
     ]);
     await recovery.locator('h1').waitFor();
     assert.equal(await recovery.getByRole('heading', { name: 'Fitur belum dapat dimuat' }).count(), 0);
+
+    const supportRecovery = await browser.newPage();
+    supportRecovery.setDefaultTimeout(10000);
+    let supportFailed = false;
+    await supportRecovery.route('**/*', route => {
+      const url = route.request().url();
+      if (/\/help-desk-[^/]+\.js/.test(url) && !supportFailed) {
+        supportFailed = true;
+        return route.abort();
+      }
+      return new URL(url).origin === origin ? route.continue() : route.abort();
+    });
+    await supportRecovery.goto(`${origin}/mini-apps`);
+    await supportRecovery.getByTestId('help-desk-trigger').click();
+    await supportRecovery.getByRole('heading', { name: 'Bantuan belum dapat dimuat' }).waitFor();
+    assert.ok(supportFailed);
+    assert.match(await supportRecovery.getByRole('alert').textContent(), /isian yang belum disimpan/);
+    await supportRecovery.getByRole('button', { name: 'Tutup', exact: true }).click();
+    await supportRecovery.getByTestId('help-desk-trigger').waitFor();
+    assert.equal(await supportRecovery.locator('h1').isVisible(), true, 'support failure leaves the main page usable');
+    await supportRecovery.getByTestId('help-desk-trigger').click();
+    await supportRecovery.getByRole('button', { name: 'Muat ulang halaman', exact: true }).waitFor();
+    await Promise.all([
+      supportRecovery.waitForEvent('load'),
+      supportRecovery.getByRole('button', { name: 'Muat ulang halaman', exact: true }).click(),
+    ]);
+    await supportRecovery.getByTestId('help-desk-trigger').click();
+    await supportRecovery.getByRole('dialog').waitFor();
   } finally {
     await browser?.close();
     await new Promise((resolve, reject) => server.httpServer.close(error => error ? reject(error) : resolve()));

@@ -14,7 +14,7 @@ import {
   type Profile, type ProfileInput, type SbuCase, type CaseInput
 } from '@workspace/api-client-react';
 import { lazyFeature } from '@/components/lazy-feature';
-import HelpDesk from '@/components/help-desk';
+import HelpDesk from '@/components/help-desk-entry';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { AssessmentResults, CaseSummary } from '@/components/case-detail-display';
 import { AccountQueries, CrossTabAccountGate, useFormMutationOptions, useAccountReadOptions } from '@/components/account-queries';
