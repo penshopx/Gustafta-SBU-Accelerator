@@ -49,6 +49,7 @@ test('CasePreparationExport disposes isolated native print surfaces and HTML dow
 
     async function scenario(name, mode, run, {
       holdLoad = false, responseStatus = 200, exportMode = 'print',
+      holdSummary = false,
       failDownloadClick = false,
       expectedRequests = ['/api/cases/1/preparation-summary'],
       expectedConsoleErrors = [],
@@ -84,6 +85,23 @@ test('CasePreparationExport disposes isolated native print surfaces and HTML dow
             await page.evaluate(installPrintProbe);
             await page.evaluate(({ mode, holdLoad }) => Object.assign(window.printProbe, { mode, holdLoad }), { mode, holdLoad });
           }
+          if (holdSummary) await page.evaluate(() => {
+            const fetch = window.fetch.bind(window);
+            window.pendingExport = { aborted: false, received: false, returned: false };
+            let first = true;
+            window.fetch = async (input, init) => {
+              if (!first || !String(input).endsWith('/1/preparation-summary')) return fetch(input, init);
+              first = false;
+              init.signal.addEventListener('abort', () => { window.pendingExport.aborted = true; });
+              // Deliberately non-cooperative transport: a response already in
+              // flight may settle despite abort. The client must reject it too.
+              const response = await fetch(input, { ...init, signal: undefined });
+              window.pendingExport.received = true;
+              await new Promise((resolve) => { window.pendingExport.release = resolve; });
+              window.pendingExport.returned = true;
+              return response;
+            };
+          });
           await page.getByTestId(`button-${exportMode}-summary`).click();
           await run(page);
           assert.deepEqual(requests, expectedRequests);
@@ -166,6 +184,46 @@ test('CasePreparationExport disposes isolated native print surfaces and HTML dow
         frames: window.printProbe.frames.length, calls: window.printProbe.calls.length, timers: window.printProbe.timers.size,
       })), { frames: 0, calls: 0, timers: 0 });
     }, { responseStatus: 500 });
+
+    for (const action of ['caseId', 'unmount', 'suspense', 'route']) {
+      await scenario(`pending download: ${action} discards a late successful response before a new export`, 'native', async (page) => {
+        await until(page, () => window.pendingExport.received);
+        assert.equal(await page.getByTestId('button-download-summary').isDisabled(), true);
+        if (action === 'route') {
+          // Navigation can change before React tears down the old export.
+          await page.evaluate(() => history.pushState(null, '', '/cases/2'));
+        } else {
+          await page.getByText(action === 'caseId' ? 'Ganti kasus'
+            : action === 'unmount' ? 'Lepas komponen' : 'Tangguhkan tampilan', { exact: true }).click();
+        }
+        if (action === 'suspense') await page.getByTestId('export-fallback').waitFor();
+        await page.evaluate(() => window.pendingExport.release());
+        await until(page, () => window.pendingExport.returned);
+        // Drain the async response parsing and React notifications.
+        await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 100)));
+        assert.equal(await page.evaluate(() => window.downloadProbe.clicks.length), 0);
+        assert.equal(await page.evaluate(() => window.downloadProbe.blobs.length), 0);
+        assert.equal(await page.locator('iframe').count(), 0);
+        assert.equal(await page.getByRole('alert').count(), 0);
+        if (action !== 'route') assert.equal(await page.evaluate(() => window.pendingExport.aborted), true);
+        if (action !== 'unmount') {
+          if (action !== 'caseId') await page.getByText('Ganti kasus', { exact: true }).click();
+          assert.equal(await page.getByTestId('case-id').textContent(), '2');
+          assert.equal(await page.getByTestId('button-download-summary').isEnabled(), true);
+          const event = page.waitForEvent('download');
+          await page.getByTestId('button-download-summary').click();
+          const download = await event;
+          assert.equal(await readFile(await download.path(), 'utf8'),
+            await page.evaluate(() => window.summaryFixture.html));
+          assert.equal(await page.evaluate(() => window.downloadProbe.clicks.length), 1);
+          await download.delete();
+        }
+      }, {
+        holdSummary: true, exportMode: 'download',
+        expectedRequests: action === 'unmount' ? ['/api/cases/1/preparation-summary']
+          : ['/api/cases/1/preparation-summary', '/api/cases/2/preparation-summary'],
+      });
+    }
 
     async function assertDownload(page, index = 0) {
       await until(page, () => window.downloadProbe.timers.size === 1);

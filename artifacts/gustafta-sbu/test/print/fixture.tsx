@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CasePreparationExport } from '../../src/components/case-preparation-export';
 import { preparationSummary } from '../../../api-server/src/lib/preparation-summary';
@@ -30,14 +30,24 @@ const html = preparationSummary({
 // this synthetic response at the network boundary, never the live API.
 Object.assign(window, { summaryFixture: { html, companyName } });
 
+const suspended = new Promise<never>(() => {});
+function ExportSurface({ caseId, hidden }: { caseId: number; hidden: boolean }) {
+  if (hidden) throw suspended;
+  return <CasePreparationExport caseId={caseId}/>;
+}
+
 function Fixture() {
   const [caseId, setCaseId] = useState(1);
   const [mounted, setMounted] = useState(true);
+  const [hidden, setHidden] = useState(false);
   return <>
-    <button onClick={() => setCaseId((id) => id + 1)}>Ganti kasus</button>
+    <button onClick={() => { setCaseId((id) => id + 1); setHidden(false); }}>Ganti kasus</button>
+    <button onClick={() => setHidden(true)}>Tangguhkan tampilan</button>
     <button onClick={() => setMounted(false)}>Lepas komponen</button>
     <output data-testid="case-id">{caseId}</output>
-    {mounted && <CasePreparationExport caseId={caseId}/>}
+    {mounted && <Suspense fallback={<p data-testid="export-fallback">Memuat kasus berikutnya</p>}>
+      <ExportSurface caseId={caseId} hidden={hidden}/>
+    </Suspense>}
   </>;
 }
 createRoot(document.getElementById('root')!).render(<Fixture/>);

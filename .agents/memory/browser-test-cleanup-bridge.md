@@ -53,3 +53,16 @@ object where the host cleanup contract requires a list, preventing cleanup.
 
 **How to apply:** Check the payload shape without logging its identifiers, and
 normalize only the outer container; never broaden the exact synthetic scope.
+
+Validate generated synthetic email addresses against the cleanup allowlist
+before creating the account, including the suffix alphabet.
+
+**Why:** An otherwise synthetic address used a random suffix containing
+punctuation that the cleanup helper rejected. Clerk also canonicalized its
+case, so a byte-for-byte comparison with the original input failed. Successful
+sign-in does not establish cleanup eligibility.
+
+**How to apply:** Use lowercase-alphanumeric suffixes and run the helper's
+actual allowlist validation before sign-in. Keep exact owner and canonical
+email verification in cleanup; never weaken the shared allowlist to recover
+one malformed fixture.

@@ -39,6 +39,13 @@ timeout, pergantian `caseId`, unmount, dan ekspor berikutnya; URL yang direvoke
 harus tidak dapat dibaca lagi. Respons ringkasan gagal tidak boleh membuat Blob
 URL, klik unduhan, atau timer pembersihan.
 
+Respons sukses yang tertunda juga diuji sebelum HTML tersedia: pergantian
+kasus, unmount, tampilan yang disembunyikan oleh Suspense, serta perubahan
+alamat sebelum teardown React. Transport fixture sengaja mengabaikan abort
+agar pengabaian hasil lama diperiksa secara terpisah dari pembatalan jaringan.
+Hasil lama tidak boleh membuat Blob, klik unduhan, iframe, atau pesan kesalahan;
+ekspor berikutnya harus tetap menghasilkan berkas native yang utuh.
+
 Injeksi kegagalan klik anchor melempar sebelum klik native dijalankan.
 Uji mewajibkan URL langsung direvoke, timer dibatalkan, pesan kegagalan
 ditampilkan, dan kedua tombol kembali aktif. Percobaan ulang harus menghasilkan

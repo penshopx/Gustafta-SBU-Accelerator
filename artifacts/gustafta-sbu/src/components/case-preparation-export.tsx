@@ -1,15 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
+import { useLocation } from 'wouter';
 import { getPreparationSummary } from '@workspace/api-client-react';
 import { Download, Printer } from 'lucide-react';
 import { useFormMutationOptions } from './account-queries';
 
 export function CasePreparationExport({ caseId }: { caseId: number }) {
   const options = useFormMutationOptions();
+  const [location] = useLocation();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const abort = useRef<AbortController | null>(null);
   const cleanup = useRef<(() => void) | null>(null);
-  useEffect(() => {
+  // Suspense can hide a route without unmounting it. Layout cleanup runs
+  // when that happens; passive effect cleanup alone can leave its export live.
+  useLayoutEffect(() => {
     // A reused component starts a new case without waiting for the old transport.
     setPending(false);
     setError('');
@@ -19,11 +23,14 @@ export function CasePreparationExport({ caseId }: { caseId: number }) {
       cleanup.current?.();
       cleanup.current = null;
     };
-  }, [caseId]);
+  }, [caseId, location]);
 
   async function exportSummary(mode: 'download' | 'print') {
     if (abort.current && !abort.current.signal.aborted) return;
     const controller = new AbortController();
+    const requestPath = window.location.pathname;
+    const isCurrent = () => !controller.signal.aborted
+      && abort.current === controller && window.location.pathname === requestPath;
     abort.current = controller;
     setPending(true);
     setError('');
@@ -32,8 +39,9 @@ export function CasePreparationExport({ caseId }: { caseId: number }) {
       const html = await getPreparationSummary(caseId, {
         ...options.request, signal: controller.signal, cache: 'no-store', responseType: 'text',
       });
-      // A previous account's pending response must not create a file or print surface.
-      if (controller.signal.aborted || abort.current !== controller) return;
+      // Reject obsolete results even if transport ignores abort, or navigation
+      // has changed the URL before React commits the route's layout cleanup.
+      if (!isCurrent()) return;
       if (mode === 'download') {
         const url = URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' }));
         let timer: number | undefined;
@@ -93,9 +101,9 @@ export function CasePreparationExport({ caseId }: { caseId: number }) {
         document.body.appendChild(frame);
       }
     } catch {
-      if (!controller.signal.aborted && abort.current === controller) setError('Ringkasan terbaru tidak dapat dibuat. Periksa sesi Anda dan coba lagi. Tidak ada data lama yang diekspor.');
+      if (isCurrent()) setError('Ringkasan terbaru tidak dapat dibuat. Periksa sesi Anda dan coba lagi. Tidak ada data lama yang diekspor.');
     } finally {
-      if (!controller.signal.aborted && abort.current === controller) {
+      if (isCurrent()) {
         setPending(false);
         abort.current = null;
       }
