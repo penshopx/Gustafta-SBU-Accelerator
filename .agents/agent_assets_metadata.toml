@@ -134,3 +134,17 @@ mtime_ms = 1793582442010
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/d4d9bf4d-87b5-4890-afba-1ed499214963/5cb08bb3-41ef-4a49-ba03-b067359b16dd"
 storage_version_token = "1793582451529118"
 content_type = "text/html"
+
+[[outputs]]
+id = "cXzhaAk9cKxg7MmnY3FmL"
+uri = "file://generated-artifacts/sbu-preparation-proof/laporan-pemeriksaan.html"
+type = "html"
+title = "Laporan pemeriksaan SBU Baru dan Perpanjangan"
+description = "Tabel UI vs server, log gagal simpan dan retry, hasil edit/hapus, perbedaan label, serta konfirmasi pembersihan."
+logical_id = "4da45c5d-1fd4-4529-8b82-d6f33607b437"
+content_hash = "sha256:02db26b9980604c18b23623da861cb39a6081aa815040a479fa4bd06aafe5774"
+size = 98274
+mtime_ms = 1793584378687
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/4da45c5d-1fd4-4529-8b82-d6f33607b437/7640e7d0-a7fa-4ca0-9f01-b33f4e49d4e7"
+storage_version_token = "1793584387863950"
+content_type = "text/html"
