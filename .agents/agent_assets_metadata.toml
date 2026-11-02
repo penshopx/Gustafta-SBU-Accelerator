@@ -120,3 +120,17 @@ mtime_ms = 1793223853864
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/a5a70f91-fdfc-425b-b719-fbe647b3cd87/5391032d-7d13-48cf-a198-01a8656f5b4a"
 storage_version_token = "1793223908758283"
 content_type = "application/pdf"
+
+[[outputs]]
+id = "ooqGVmofnlYOHhPmZ6nc3"
+uri = "file://generated-artifacts/export-b-proof/laporan-verifikasi.html"
+type = "html"
+title = "Laporan verifikasi ekspor B"
+description = "Perbandingan lengkap tujuh kategori dan sembilan temuan dengan data server, log transport tersanitasi, serta konfirmasi pembersihan."
+logical_id = "d4d9bf4d-87b5-4890-afba-1ed499214963"
+content_hash = "sha256:535db87c938295b4af88d3bcb420a9ca179fc345ffe5762da8e6740be81573a4"
+size = 11249
+mtime_ms = 1793582442010
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/d4d9bf4d-87b5-4890-afba-1ed499214963/5cb08bb3-41ef-4a49-ba03-b067359b16dd"
+storage_version_token = "1793582451529118"
+content_type = "text/html"
