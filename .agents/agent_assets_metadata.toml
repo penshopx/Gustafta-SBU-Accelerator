@@ -148,3 +148,17 @@ mtime_ms = 1793584378687
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/4da45c5d-1fd4-4529-8b82-d6f33607b437/7640e7d0-a7fa-4ca0-9f01-b33f4e49d4e7"
 storage_version_token = "1793584387863950"
 content_type = "text/html"
+
+[[outputs]]
+id = "i_3eXS1DpQT7hjBt0RMgv"
+uri = "file://generated-artifacts/case-status-label-proof/laporan-konsistensi-label.html"
+type = "html"
+title = "Hasil uji konsistensi label kasus SBU"
+description = "Perbandingan UI dan HTML pada kasus baru/perpanjangan, hasil edit-hapus bukti, serta pembersihan lengkap."
+logical_id = "d1bcb8e0-f1dd-4739-a4d6-001a8c985107"
+content_hash = "sha256:03428dc158badf8a31bb5d524f60ae5a71e676e838570be18bcdcc20ea6aecc0"
+size = 9875
+mtime_ms = 1793586884119
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:704201a9-3434-41dc-bc6d-c6695d389c90/d1bcb8e0-f1dd-4739-a4d6-001a8c985107/6b1144b0-2394-463a-b881-e7b371ddc52b"
+storage_version_token = "1793586892897332"
+content_type = "text/html"

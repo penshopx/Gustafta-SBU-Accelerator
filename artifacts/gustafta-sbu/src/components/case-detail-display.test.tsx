@@ -71,6 +71,32 @@ const assessment: Assessment = {
   ],
 };
 
+test('label penilaian eksplisit tanpa mengubah data penilaian atau ringkasan kasus', () => {
+  for (const requestType of ['baru', 'perpanjangan'] as const) {
+    const input: Assessment = {
+      ...assessment,
+      status: 'perlu_bukti',
+      recordedCount: 1,
+      requiredCount: 2,
+      findings: [
+        { code: 'legalitas', title: 'Legalitas', status: 'tercatat', detail: 'Belum diverifikasi.', source: 'Fixture' },
+        { code: 'keuangan', title: 'Keuangan', status: 'perlu_bukti', detail: 'Belum ada catatan.', source: 'Fixture' },
+      ],
+    };
+    const before = structuredClone(input);
+    const summary = renderToStaticMarkup(createElement(CaseSummary, {
+      sbuCase: { ...sbuCase, requestType },
+    }));
+    const html = renderToStaticMarkup(createElement(AssessmentResults, { assessment: input }));
+    assert.match(summary, /status-draf/);
+    assert.match(html, /<h3[^>]*>Perlu catatan bukti<\/h3>/);
+    assert.match(html, /data-testid="status-perlu_bukti"[^>]*>[\s\S]*?Perlu catatan bukti<\/span>/);
+    assert.match(html, /data-testid="status-tercatat"[^>]*>[\s\S]*?Tercatat, belum diverifikasi<\/span>/);
+    assert.deepEqual(input, before);
+    assert.equal(input.findings.filter(finding => finding.status === 'perlu_bukti').length, 1);
+  }
+});
+
 test('detail perpanjangan menampilkan kedaluwarsa hanya sebagai masa berlaku SBU, bukan tenggat konversi', () => {
   const summary = renderToStaticMarkup(createElement(CaseSummary, { sbuCase }));
   const findings = renderToStaticMarkup(createElement(AssessmentResults, { assessment }));

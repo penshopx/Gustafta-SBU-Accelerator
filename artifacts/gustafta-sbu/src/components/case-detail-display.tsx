@@ -3,7 +3,7 @@ import type { Assessment, SbuCase } from '@workspace/api-client-react';
 import { formatCalendarDate, formatTimestampDate } from '../lib/display-date';
 
 const date = formatTimestampDate;
-const statusLabels: Record<string, string> = { draf: 'Draf', ditinjau: 'Dalam peninjauan', selesai_persiapan: 'Persiapan selesai', tercatat: 'Tercatat', perlu_bukti: 'Perlu bukti', perlu_tinjauan: 'Perlu tinjauan' };
+const statusLabels: Record<string, string> = { draf: 'Draf', ditinjau: 'Dalam peninjauan', selesai_persiapan: 'Persiapan selesai', tercatat: 'Tercatat, belum diverifikasi', perlu_bukti: 'Perlu catatan bukti', perlu_tinjauan: 'Perlu tinjauan' };
 function Status({ value }: { value: string }) { return <span data-testid={`status-${value}`} className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold ${value === 'selesai_persiapan' || value === 'tercatat' ? 'bg-[#e8f7f3] text-[#19745f] border-[#bde4d9]' : value === 'ditinjau' || value === 'perlu_tinjauan' ? 'bg-[#fff5df] text-[#8e6214] border-[#ecd5a5]' : 'bg-[#edf4fb] text-[#366283] border-[#caddea]'}`}><span className="h-1.5 w-1.5 rounded-full bg-current" />{statusLabels[value] || value}</span>; }
 
 export function CaseSummary({ sbuCase }: { sbuCase: SbuCase }) {
