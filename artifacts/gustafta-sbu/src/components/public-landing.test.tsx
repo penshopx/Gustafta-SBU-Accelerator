@@ -32,7 +32,35 @@ test('landing: renders honest copy, working CTAs, and mounts film only on click'
     await act(async () => root.render(React.createElement(Router, { hook: () => ['/', () => {}] as [string, (l: string) => void], children: React.createElement(Page) })));
     const hrefs: Record<string, string> = { 'link-sign-up': '/sign-up', 'link-start': '/sign-up', 'link-join-bottom': '/sign-up', 'link-sign-in': '/sign-in', 'link-login-hero': '/sign-in', 'link-simulator': '/simulator', 'link-mini-apps': '/mini-apps', 'link-feature-cases': '/cases', 'link-feature-documents': '/documents', 'link-feature-regulations': '/regulations', 'link-feature-assistant': '/assistant', 'link-feature-personnel': '/personnel', 'link-feature-agenda': '/agenda' };
     for (const [id, href] of Object.entries(hrefs)) assert.equal(find(id)?.getAttribute('href'), href, id);
+    assert.equal(find('link-feature-consultations')?.getAttribute('href'), '/consultations');
+    const catalog = find('section-local-features')!;
+    assert.ok(catalog);
+    const expectedAccess = new Map([
+      ['/cases', 'Perlu masuk'], ['/documents', 'Perlu masuk'], ['/personnel', 'Perlu masuk'],
+      ['/consultations', 'Perlu masuk'], ['/regulations', 'Perlu masuk'], ['/assistant', 'Perlu masuk'],
+      ['/agenda', 'Perlu masuk'], ['/simulator', 'Publik'], ['/mini-apps', 'Publik'],
+    ]);
+    const cards = catalog.querySelectorAll('[data-testid^="link-feature-"]');
+    assert.equal(cards.length, expectedAccess.size);
+    for (const card of cards) {
+      const href = card.getAttribute('href')!;
+      assert.ok(expectedAccess.has(href), `local module: ${href}`);
+      assert.equal(card.querySelector('span')?.textContent, expectedAccess.get(href));
+    }
+    assert.match(find('link-feature-cases')!.textContent!, /Workroom.*tinjauan internal.*bukan persetujuan LSBU/);
+    assert.match(find('link-feature-documents')!.textContent!, /privat terkait kasus.*pilih kasus, berkas, versi dan halaman.*pratinjau.*setujui pengiriman/);
+    assert.match(find('link-feature-consultations')!.textContent!, /privat.*setujui konteks.*bukan konsultasi dengan petugas LSBU/);
+    assert.match(find('note-sbu-skk-path')!.textContent!, /Tidak menyediakan pengajuan, pelatihan, atau penerbitan SKK/);
+    assert.deepEqual(Array.from(find('note-sbu-skk-path')!.querySelectorAll('a'), a => a.getAttribute('href')), ['/simulator', '/cases', '/personnel']);
+    assert.match(find('section-audiences')!.textContent!, /badan usaha.*kontraktor.*konsultan.*pendamping.*Bukan dashboard klien bersama.*akses lintas akun/);
+    assert.match(find('note-feature-access')!.textContent!, /peran kontraktor dan konsultan.*tidak menambah hak akses/);
+    assert.match(find('card-output-draf')!.textContent!, /persetujuan.*tidak ada pembacaan semua berkas otomatis.*bukan verifikasi dokumen.*tidak otomatis mengubah bukti atau penilaian/);
+    for (const a of Array.from(catalog.querySelectorAll('a'))) {
+      assert.ok(expectedAccess.has(a.getAttribute('href')!), 'no external links or fabricated case/document IDs');
+    }
+    assert.doesNotMatch(catalog.textContent!, /LexCom|Brain Project|KonstruksiAI|Ebook|Bimtek|LKPM|berlangganan|memenangkan proyek/i);
     const text = container.textContent ?? '';
+    assert.match(text, /Akun, profil dan dokumen tidak disinkronkan dengan Gustafta\.my\.id/);
     const sections = container.querySelectorAll('main > section');
     assert.equal(sections[1]?.getAttribute('data-testid'), 'section-introduction-video', 'video follows opening section');
     assert.equal(container.querySelectorAll('[data-testid="button-load-film"]').length, 1, 'video is not duplicated');

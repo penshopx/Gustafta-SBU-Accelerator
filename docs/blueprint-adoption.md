@@ -15,6 +15,36 @@ persetujuan sertifikasi. Rincian batas dan pengamanan berlaku di `replit.md`.
 
 ## Hasil penelaahan
 
+### Kurasi katalog fitur untuk persiapan SBU
+
+Daftar fitur ekosistem merupakan referensi konsep, bukan bukti kewajiban hukum,
+lisensi produk, integrasi aktif, atau izin mengubah hak akses. Keputusan kurasi:
+
+| Referensi | Keputusan | Penerapan / batas dalam SBU Accelerator |
+| --- | --- | --- |
+| Kasus SBU, Simulator, Mini Apps | Digunakan kembali | `/cases`, `/simulator`, `/mini-apps`; persiapan baru/perpanjangan, bukan pengajuan atau penerbitan. |
+| Ruang Simpan | Digunakan kembali | `/documents`; dokumen privat terkait kasus, bukan arsip umum atau berbagi tim. Adapter integrasi lama tetap nonaktif. |
+| Bedah Dokumen | Digunakan kembali | Tindakan di alur dokumen; pilih kasus, dokumen, versi, halaman dan persetujuan. Tidak membuat rute atau tombol pemrosesan langsung baru. |
+| Klinik Konsultasi, Asisten | Digunakan kembali | `/consultations` dan `/assistant`; bantuan AI lokal dengan persetujuan, bukan konsultan manusia atau akses otomatis seluruh dokumen. |
+| Workroom / ruang kerja / tinjauan internal | Digunakan kembali | Bagian detail kasus yang dipilih pemilik; bukan halaman baru, dashboard klien bersama atau persetujuan lembaga. |
+| Personel & SKK, jalur SBU–SKK | Relevan terbatas | `/personnel` bersama Kasus dan Simulator; catatan sertifikat/penugasan, bukan verifikasi kecocokan resmi, pengajuan, pelatihan, PKB atau penerbitan SKK. |
+| Regulasi, legalitas/OSS, E-SIMPAN, SIMPK, asosiasi | Relevan terbatas | Sumber terkurasi, catatan bukti dan konteks persiapan; bukan koneksi akun, pemeriksaan status resmi atau pengiriman eksternal. |
+| LKUT–PUB, ISO / SMAP / PANCEK | Relevan terbatas | Konteks persiapan bersumber dan checklist internal yang tersedia; tidak membangun pelaporan, modul ISO atau menetapkan edisi/kewajiban baru dari daftar fitur. |
+| Agenda, tindak lanjut | Digunakan kembali | `/agenda` dan tindakan dalam kasus; nama penanggung jawab tidak memberikan akses atau pemberitahuan otomatis. |
+| EXUM | Relevan terbatas | Hanya inspirasi ringkasan persiapan yang sudah ada di kasus, bukan layanan baru atau executive summary terverifikasi. |
+| Tender, proyek umum, portfolio, LKPM | Diabaikan untuk lingkup sekarang | Tidak menambah menu, modul pelaporan atau janji memenangkan/menjalankan proyek. Topik bantuan yang sudah ada bukan layanan pengajuan. |
+| LexCom, Brain Project, KonstruksiAI, Ebook, Bimtek, produk / paket berlangganan / marketplace | Diabaikan untuk lingkup sekarang | Tidak disalin sebagai menu, layanan hukum, pelatihan, katalog komersial atau pembayaran. |
+
+Landing menjelaskan manfaat bagi badan usaha/kontraktor dan konsultan/pendamping,
+tanpa mengubah peran atau akses per akun. Semua tautan menunjuk modul lokal yang
+sudah ada; kasus, dokumen dan konteks dipilih setelah masuk. Simulator dan Mini
+Apps tetap publik. Fitur privat tetap melewati penjagaan sesi, persetujuan dan
+otorisasi lama; daftar fitur bukan izin membuka kembali integrasi Gustafta.my.id.
+
+Catatan historis di bawah tetap merekam tahapan blueprint lama. Untuk status
+penyimpanan dan modul saat ini gunakan keputusan produk terbaru di atas dan
+batas operasional di `replit.md`, bukan larangan storage lama di bagian historis.
+
 Blueprint relevan untuk mengembangkan pencatatan persiapan menjadi workbench
 yang memiliki katalog, matriks persyaratan, personel, dan tindakan yang dapat
 ditindaklanjuti. Ini bukan bukti validasi pasar atau kelayakan rilis berbayar.

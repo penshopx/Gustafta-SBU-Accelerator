@@ -1,5 +1,5 @@
 import { Link } from 'wouter';
-import { ArrowRight, ArrowUpRight, BookOpen, BriefcaseBusiness, CalendarDays, FileSearch, Folder, LayoutGrid, MessagesSquare, Search, UsersRound, type LucideIcon } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, BookOpen, BriefcaseBusiness, CalendarDays, FileSearch, Folder, LayoutGrid, MessagesSquare, Search, Stethoscope, UsersRound, type LucideIcon } from 'lucide-react';
 import { FilmEmbed } from './film-embed';
 import { ServiceRequestForm } from './service-request-form';
 import { SERVICE_WHATSAPP_DISPLAY } from '@/lib/service-request';
@@ -14,9 +14,10 @@ const scattered = [
 
 type Feature = { href: string; title: string; text: string; icon: LucideIcon; access: 'Publik' | 'Perlu masuk' };
 const features: Feature[] = [
-  { href: '/cases', title: 'Kasus SBU', text: 'Satu kasus per permohonan: deklarasi bukti, temuan celah, checklist internal SMAP, rencana tindakan, dan ekspor persiapan.', icon: BriefcaseBusiness, access: 'Perlu masuk' },
-  { href: '/documents', title: 'Ruang Simpan', text: 'Simpan dokumen privat di akun Anda. Tersimpan tidak berarti terverifikasi.', icon: Folder, access: 'Perlu masuk' },
-  { href: '/personnel', title: 'Personel & SKK', text: 'Catat tenaga ahli, SKK, dan penugasannya agar terhubung ke kasus.', icon: UsersRound, access: 'Perlu masuk' },
+  { href: '/cases', title: 'Kasus SBU', text: 'Persiapan baru atau perpanjangan: catatan bukti, temuan celah, checklist internal SMAP, dan ekspor ringkasan. Ruang kerja kasus (Workroom) memuat tindak lanjut dan tinjauan internal, bukan persetujuan LSBU.', icon: BriefcaseBusiness, access: 'Perlu masuk' },
+  { href: '/documents', title: 'Ruang Simpan', text: 'Dokumen privat terkait kasus, bukan arsip umum atau ruang berbagi tim. Bedah Dokumen ada dalam alur dokumen: pilih kasus, berkas, versi dan halaman, tinjau pratinjau, lalu setujui pengiriman ke AI. Tersimpan tidak berarti terverifikasi.', icon: Folder, access: 'Perlu masuk' },
+  { href: '/personnel', title: 'Personel & SKK', text: 'Catat personel, sertifikat SKK dan penugasan terkait kasus. Pencatatan dan indikator tanggal bukan verifikasi keaslian atau kecocokan resmi SKK–SBU.', icon: UsersRound, access: 'Perlu masuk' },
+  { href: '/consultations', title: 'Klinik Konsultasi', text: 'Percakapan AI privat yang tersimpan di akun ini. Pilih dan setujui konteks kasus atau cuplikan hasil Bedah Dokumen sebelum dikirim; bukan konsultasi dengan petugas LSBU atau konsultan manusia.', icon: Stethoscope, access: 'Perlu masuk' },
   { href: '/regulations', title: 'Pusat regulasi', text: 'Ringkasan aturan terpilih dengan tautan sumber primer dan catatan masa transisi.', icon: BookOpen, access: 'Perlu masuk' },
   { href: '/assistant', title: 'Asisten peran', text: 'Draf penjelasan AI dengan rujukan bila tersedia. Tetap perlu Anda periksa.', icon: MessagesSquare, access: 'Perlu masuk' },
   { href: '/agenda', title: 'Agenda kasus', text: 'Tenggat dan tindak lanjut dari semua kasus dalam satu daftar.', icon: CalendarDays, access: 'Perlu masuk' },
@@ -26,7 +27,7 @@ const features: Feature[] = [
 
 const outputs = [
   { tag: 'PEMERIKSAAN MANUAL', title: 'Konsistensi deklarasi', text: 'Pemeriksa identitas membandingkan apa yang Anda ketik: nama badan usaha, NIB, dan NPWP. Tidak membaca isi dokumen atau memverifikasi keasliannya.', tone: 'border-[var(--lp-line-2)]' },
-  { tag: 'DRAF AI', title: 'Bahan awal, bukan kesimpulan', text: 'Asisten menyusun draf penjelasan dengan sumber bila tersedia. Draf bisa keliru; periksa kembali rujukan dan batas jawabannya.', tone: 'border-[var(--lp-blue)]' },
+  { tag: 'DRAF AI', title: 'Bahan awal, bukan kesimpulan', text: 'Bedah Dokumen, Asisten peran dan Klinik Konsultasi memberi bantuan awal. Pilih konteks dan berikan persetujuan sebelum mengirim ke AI; tidak ada pembacaan semua berkas otomatis. Hasil bisa keliru, bukan verifikasi dokumen atau keputusan sertifikasi, dan tidak otomatis mengubah bukti atau penilaian.', tone: 'border-[var(--lp-blue)]' },
   { tag: 'VERIFIKASI MANUSIA', title: 'Keputusan tetap di tangan orang', text: 'Anda, tim, atau penelaah memeriksa sumber primer. Keputusan SBU sepenuhnya milik lembaga berwenang.', tone: 'border-[var(--lp-blue-2)]' },
 ];
 
@@ -106,7 +107,7 @@ export default function PublicLanding() {
       </section>
 
       {/* Features */}
-      <section className="mx-auto max-w-7xl px-5 py-20 md:px-10">
+      <section data-testid="section-local-features" className="mx-auto max-w-7xl px-5 py-20 md:px-10">
         <Kicker n="03">YANG SUDAH BISA DIPAKAI</Kicker>
         <div className="mt-4 flex flex-col justify-between gap-4 md:flex-row md:items-end"><h2 className="display max-w-2xl text-4xl font-extrabold leading-tight">Alat konkret, bukan janji.</h2><div className="flex items-end gap-6"><p className="max-w-sm text-sm leading-6 text-[var(--lp-t3)]">Simulator dan Mini Apps terbuka untuk umum. Ruang kerja lain memerlukan akun dan bersifat pribadi.</p><DeskScene className="hidden w-[220px] shrink-0 lg:block" /></div></div>
         <ul className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -118,6 +119,21 @@ export default function PublicLanding() {
               <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[var(--lp-accent)]">Buka <ArrowRight size={13} className="transition-transform group-hover:translate-x-1" /></span>
             </Link></li>)}
         </ul>
+        <div data-testid="note-sbu-skk-path" className="mt-6 rounded-2xl border border-[var(--lp-line-2)] bg-[var(--lp-surface-blue)] p-5 text-sm leading-7 text-[var(--lp-t2)]">
+          <h3 className="display font-extrabold text-[var(--lp-text)]">Jalur persiapan SBU–SKK</h3>
+          <p className="mt-2">Mulai latihan di <Link href="/simulator" className="font-bold underline underline-offset-4">Simulator SBU</Link>, kelola permohonan di <Link href="/cases" className="font-bold underline underline-offset-4">Kasus SBU</Link>, lalu catat personel dan penugasannya di <Link href="/personnel" className="font-bold underline underline-offset-4">Personel &amp; SKK</Link>. Tidak menyediakan pengajuan, pelatihan, atau penerbitan SKK.</p>
+        </div>
+        <div data-testid="section-audiences" className="mt-6 grid min-w-0 gap-4 md:grid-cols-2">
+          <article className="rounded-2xl border border-[var(--lp-line)] bg-[var(--lp-surface)] p-5">
+            <h3 className="display text-lg font-extrabold text-[var(--lp-text)]">Untuk badan usaha / kontraktor</h3>
+            <p className="mt-2 text-sm leading-7 text-[var(--lp-t2)]">Rapikan dokumen per permohonan, catat yang belum tersedia, dan susun tindak lanjut persiapan baru maupun perpanjangan.</p>
+          </article>
+          <article className="rounded-2xl border border-[var(--lp-line)] bg-[var(--lp-surface)] p-5">
+            <h3 className="display text-lg font-extrabold text-[var(--lp-text)]">Untuk konsultan / pendamping pengurusan</h3>
+            <p className="mt-2 text-sm leading-7 text-[var(--lp-t2)]">Gunakan catatan kasus dan ringkasan persiapan untuk membantu penelaahan. Bukan dashboard klien bersama; tidak ada undangan tim atau akses lintas akun.</p>
+          </article>
+        </div>
+        <p data-testid="note-feature-access" className="mt-5 text-sm leading-7 text-[var(--lp-t3)]">Masuk diperlukan untuk fitur privat; Kasus SBU dan ruang kerja di dalamnya tersedia bagi peran kontraktor dan konsultan. Memilih mode chat atau menuliskan penanggung jawab tidak menambah hak akses.</p>
       </section>
 
       {/* Three kinds of output */}
@@ -154,6 +170,7 @@ export default function PublicLanding() {
             <li>Status "persiapan selesai" bukan keputusan LSBU dan bukan jaminan sertifikat terbit.</li>
             <li>Bukti yang dideklarasikan atau disimpan belum berarti terverifikasi.</li>
             <li>Tidak ada pengiriman otomatis ke sistem lembaga mana pun.</li>
+            <li>Aplikasi SBU berdiri sendiri. Akun, profil dan dokumen tidak disinkronkan dengan Gustafta.my.id atau aplikasi lain.</li>
           </ul><BoundaryScene className="mt-10 max-w-[420px]" /></div>
           <div className="bg-[#4ea4ff] p-8 text-[#04111f] md:p-12"><div className="eyebrow">MULAI HARI INI</div><h2 className="display mt-5 text-4xl font-extrabold leading-tight">Rapikan persiapan sebelum tenggat mendekat.</h2>
             <div className="mt-8 flex flex-wrap gap-3"><Link href="/sign-up" data-testid="link-join-bottom" className="lp-btn lp-btn-ink">Mulai persiapan <ArrowRight size={16} /></Link><Link href="/mini-apps" data-testid="link-mini-apps-bottom" className="lp-btn border border-[var(--lp-ink-border)]">Lihat Mini Apps</Link></div></div>
