@@ -60,6 +60,29 @@ Catatan ini tidak mengubah aturan aplikasi atau memperluas kutipan secara diam-d
 
 ## Syarat penutupan penuh
 
+### Penelusuran lanjutan kanal pemerintah
+
+Pada penelusuran lanjutan 4 November 2026 ditemukan
+[katalog SIBIKON Dinas PUPR-PERA Kalimantan Timur](https://sibikon-dpuprpera.kaltimprov.go.id/peraturan).
+Halaman terbaca dan mencantumkan Permen 7/2024, judul Pengembangan Usaha
+Berkelanjutan, kategori PUB serta label **Berlaku**. Halaman menautkan
+[PDF salinan pemerintah daerah](https://sibikon-dpuprpera.kaltimprov.go.id/storages/peraturan/202474407_1768979985.pdf).
+
+Unduhan menggunakan curl dan Node fetch dengan verifikasi TLS normal sama-sama
+gagal memverifikasi rantai sertifikat (`unable to get local issuer certificate`
+dan `UNABLE_TO_VERIFY_LEAF_SIGNATURE`). Ini adalah hambatan transport pada
+lingkungan pemeriksaan, bukan bukti bahwa dokumen salah atau situs berbahaya.
+Verifikasi TLS tidak dinonaktifkan dan tidak ada hash PDF yang dihasilkan.
+Situs pemerintah daerah bukan instansi penerbit regulasi; label katalognya hanya
+bukti pendukung, bukan autentikasi penerbit atau audit perubahan hukum.
+
+Pembaca web JDIH PU tetap gagal (HTTP 500 pada layanan pembaca). Pencarian
+berdomain peraturan.go.id tidak menghasilkan halaman relevan yang dapat
+diverifikasi dalam hasil yang diterima; ini tidak membuktikan dokumen tidak
+tersedia di sana. Tidak memakai mirror nonpemerintah untuk menaikkan status.
+Hasil keseluruhan tetap **terbukti sebagian**; pemeriksaan byte dan hubungan
+peraturan belum dapat ditutup.
+
 1. Peroleh byte PDF dari tautan resmi yang dapat diakses tanpa melewati
    pembatasan layanan; catat URL akhir, waktu akses, hash dan jumlah halaman.
 2. Bandingkan dengan salinan unggahan. Bila hash berbeda, bandingkan teks dan
