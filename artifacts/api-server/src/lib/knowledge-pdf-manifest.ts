@@ -35,6 +35,16 @@ export const KNOWLEDGE_PDFS = [
       "implementasi-pu6-transisi": 44,
     },
   },
+  {
+    sourceKey: "permen-pupr-7-2024", versionId: "pupr7-20261104-r1",
+    sha256: "d2af3e4ac7b8f1b5b503ae88d4a1afb8aee76ba80989d4719dd7af3b765cd228",
+    pageCount: 169, filename: "permen-pupr-7-2024-pengembangan-usaha-berkelanjutan.pdf",
+    upload: "permen-pupr-no-7-tahun-2024_1793790683021.pdf",
+    pages: {
+      "pupr7-pub": 3, "pupr7-pub-umum": 4, "pupr7-pub-khusus": 5,
+      "pupr7-lkut": 5, "pupr7-tanggung-jawab": 9, "pupr7-format-lkut": 11,
+    },
+  },
 ] as const;
 
 // Same archived bytes, new immutable citation snapshot; no duplicate upload.

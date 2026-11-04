@@ -2,6 +2,7 @@ import type { SbuChatCitation } from "@workspace/api-zod";
 import { TERAS_LPJK_VERSIONS } from "./sbu-chat-teras-lpjk";
 import { IMPLEMENTASI_PU6_VERSIONS } from "./sbu-chat-implementasi-pu6";
 import { IMPLEMENTASI_PU6_EXPANDED } from "./sbu-chat-implementasi-pu6-expanded";
+import { PUPR7_SOURCE } from "./sbu-chat-pupr7";
 import { BG_SOURCE_VERSIONS } from "./sbu-chat-schemes";
 import { BS_SOURCE_VERSIONS } from "./sbu-chat-bs-schemes";
 
@@ -84,7 +85,7 @@ const PRIMARY_SOURCE_VERSIONS: readonly ChatSourceVersion[] = [
 export const CHAT_SOURCE_VERSIONS: readonly ChatSourceVersion[] = [
   ...PRIMARY_SOURCE_VERSIONS, ...TERAS_LPJK_VERSIONS,
   ...IMPLEMENTASI_PU6_VERSIONS.map(v => ({ ...v, baseline: false })),
-  IMPLEMENTASI_PU6_EXPANDED, ...BG_SOURCE_VERSIONS, ...BS_SOURCE_VERSIONS,
+  IMPLEMENTASI_PU6_EXPANDED, PUPR7_SOURCE, ...BG_SOURCE_VERSIONS, ...BS_SOURCE_VERSIONS,
 ];
 
 export function retrieveChatSources(question: string, versions: readonly ChatSourceVersion[] = CHAT_SOURCE_VERSIONS.filter(v => v.baseline)): SbuChatCitation[] {

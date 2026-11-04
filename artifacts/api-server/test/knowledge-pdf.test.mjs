@@ -54,7 +54,7 @@ test("all historical and current targets bind exact immutable version, SHA and P
     const pdf = knowledgePdf(version.sourceKey, version.versionId, citation.id);
     if (pdf) { count++; assert.ok(pdf.metadata.page <= pdf.metadata.pageCount); }
   }
-  assert.equal(count, 29);
+  assert.equal(count, 35);
   const pdf = knowledgePdf("teras-lpjk-12-pelaku-usaha", "teras12-pelaku-20261028-r1", "teras12-pelaku-smap-pub@teras12-pelaku-20261028-r1");
   assert.equal(pdf.metadata.page, 6);
   assert.equal(knowledgePdf(KNOWLEDGE_PDFS[0].sourceKey, "unknown", id), undefined);
