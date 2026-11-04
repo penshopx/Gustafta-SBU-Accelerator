@@ -3,8 +3,10 @@ import { ObjectStorageService, objectStorageClient } from "./objectStorage";
 import { knowledgePdfObjectName, type KnowledgePdfFile } from "./knowledge-pdf-manifest";
 
 export const MAX_KNOWLEDGE_PDF_BYTES = 8 * 1024 * 1024;
+export const knowledgePdfByteLimit = (file: KnowledgePdfFile) =>
+  "maxBytes" in file ? file.maxBytes : MAX_KNOWLEDGE_PDF_BYTES;
 export function assertKnowledgePdf(bytes: Buffer, file: KnowledgePdfFile) {
-  if (!bytes.length || bytes.length > MAX_KNOWLEDGE_PDF_BYTES ||
+  if (!bytes.length || bytes.length > knowledgePdfByteLimit(file) ||
       bytes.subarray(0, 5).toString() !== "%PDF-" ||
       createHash("sha256").update(bytes).digest("hex") !== file.sha256) {
     throw new Error("knowledge_pdf_integrity");
@@ -15,7 +17,8 @@ export const knowledgePdfStorage = {
     signal.throwIfAborted();
     const [bucket, ...prefix] = new ObjectStorageService().getPrivateObjectDir().replace(/^\/|\/$/g, "").split("/");
     const object = objectStorageClient.bucket(bucket).file([...prefix, knowledgePdfObjectName(file)].join("/"));
-    const stream = object.createReadStream({ start: 0, end: MAX_KNOWLEDGE_PDF_BYTES });
+    const limit = knowledgePdfByteLimit(file);
+    const stream = object.createReadStream({ start: 0, end: limit });
     const abort = () => stream.destroy(new Error("knowledge_pdf_aborted"));
     signal.addEventListener("abort", abort, { once: true });
     const chunks: Buffer[] = [];
@@ -25,7 +28,7 @@ export const knowledgePdfStorage = {
         signal.throwIfAborted();
         const chunk = Buffer.from(raw);
         size += chunk.length;
-        if (size > MAX_KNOWLEDGE_PDF_BYTES) throw new Error("knowledge_pdf_too_large");
+        if (size > limit) throw new Error("knowledge_pdf_too_large");
         chunks.push(chunk);
       }
       const bytes = Buffer.concat(chunks);

@@ -6,6 +6,7 @@ import { knowledgePdf } from "../lib/knowledge-pdf-manifest";
 import { createKnowledgePdfRouter } from "./knowledge-pdf";
 
 const SOURCE_CLASSIFICATIONS: Record<string, { sourceRole: "primer" | "panduan" | "praktik"; topics: string[] }> = {
+  "implementasi-permen-pu6-diskusi": { sourceRole: "panduan", topics: ["Implementasi Permen PU 6/2025", "LKUT", "PUB", "SMAP", "Kualifikasi", "Peralatan", "Perpanjangan", "Transisi SBU"] },
   "pilot-bs-institutional-scope": { sourceRole: "panduan", topics: ["Pilot BS", "Bangunan Sipil", "Pemetaan KBLI"] },
   "pilot-bs-kbli2025-scope": { sourceRole: "panduan", topics: ["Pilot BS", "KBLI 2025", "Ruang lingkup"] },
   "pilot-bg-institutional-scope": { sourceRole: "panduan", topics: ["Pilot BG", "Subklasifikasi", "Pemetaan KBLI"] },

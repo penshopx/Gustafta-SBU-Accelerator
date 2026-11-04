@@ -29,7 +29,7 @@ await build({
   }],
 });
 const { createKnowledgePdfRouter, CHAT_SOURCE_VERSIONS, KNOWLEDGE_PDFS, knowledgePdf,
-  knowledgePdfStorage, assertKnowledgePdf } = await import(join(temp, "fixture.mjs"));
+  knowledgePdfStorage, assertKnowledgePdf, knowledgePdfByteLimit, MAX_KNOWLEDGE_PDF_BYTES } = await import(join(temp, "fixture.mjs"));
 const catalog = structuredClone(CHAT_SOURCE_VERSIONS);
 let versions = catalog, failLedger = false, readCalls = 0, read = async () => Buffer.from("%PDF-synthetic");
 const store = { async active() { if (failLedger) throw Error("secret-ledger-error"); return structuredClone(versions); } };
@@ -48,16 +48,25 @@ after(async () => {
   delete globalThis.__pdfStream; delete globalThis.__pdfObjectName;
 });
 
-test("all nine targets bind exact immutable version, SHA and PDF page (not printed slide)", () => {
+test("all sixteen targets bind exact immutable version, SHA and PDF page (not printed slide)", () => {
   let count = 0;
   for (const version of catalog) for (const citation of version.citations) {
     const pdf = knowledgePdf(version.sourceKey, version.versionId, citation.id);
     if (pdf) { count++; assert.ok(pdf.metadata.page <= pdf.metadata.pageCount); }
   }
-  assert.equal(count, 9);
+  assert.equal(count, 16);
   const pdf = knowledgePdf("teras-lpjk-12-pelaku-usaha", "teras12-pelaku-20261028-r1", "teras12-pelaku-smap-pub@teras12-pelaku-20261028-r1");
   assert.equal(pdf.metadata.page, 6);
   assert.equal(knowledgePdf(KNOWLEDGE_PDFS[0].sourceKey, "unknown", id), undefined);
+});
+test("large curated original has an explicit bound without raising other PDF limits", () => {
+  const file = KNOWLEDGE_PDFS.find(f => f.sourceKey === "implementasi-permen-pu6-diskusi");
+  assert.equal(knowledgePdfByteLimit(file), 33387216);
+  assert.equal(knowledgePdfByteLimit(KNOWLEDGE_PDFS[0]), MAX_KNOWLEDGE_PDF_BYTES);
+  assert.equal(MAX_KNOWLEDGE_PDF_BYTES, 8 * 1024 * 1024);
+  const bytes = Buffer.from("%PDF-fixture");
+  const limited = { ...file, maxBytes: 4, sha256: createHash("sha256").update(bytes).digest("hex") };
+  assert.throws(() => assertKnowledgePdf(bytes, limited), /integrity/);
 });
 test("no session, forged owner, unknown ID, and old version never read storage", async () => {
   for (const [citation, h, code] of [

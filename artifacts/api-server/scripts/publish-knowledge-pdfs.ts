@@ -6,7 +6,7 @@ import { PDFDocument } from "pdf-lib";
 import { ObjectStorageService, objectStorageClient } from "../src/lib/objectStorage";
 import { KNOWLEDGE_PDFS, knowledgePdfObjectName } from "../src/lib/knowledge-pdf-manifest";
 import { assertKnowledgePdf } from "../src/lib/knowledge-pdf-storage";
-import { validateDocumentBytes } from "../src/lib/document-validation";
+import { MAX_DOCUMENT_BYTES, validateDocumentBytes } from "../src/lib/document-validation";
 
 const root = process.argv[2];
 if (!root) throw new Error("Pass the absolute workspace root");
@@ -14,8 +14,16 @@ const [bucket, ...prefix] = new ObjectStorageService().getPrivateObjectDir().rep
 for (const file of KNOWLEDGE_PDFS) {
   const bytes = await readFile(resolve(root, "attached_assets", file.upload));
   assertKnowledgePdf(bytes, file);
-  await validateDocumentBytes(bytes, "application/pdf");
-  if ((await PDFDocument.load(bytes)).getPageCount() !== file.pageCount) throw new Error("knowledge_pdf_pages");
+  if (bytes.length <= MAX_DOCUMENT_BYTES) await validateDocumentBytes(bytes, "application/pdf");
+  // Large curated originals are SHA-bound in the manifest, not user uploads.
+  // Preserve format checks without changing the 20 MiB user-document limit.
+  if (!/%%EOF[\s\0]*$/.test(bytes.subarray(-1024).toString("latin1"))) throw new Error("knowledge_pdf_eof");
+  const pdf = await PDFDocument.load(bytes, { throwOnInvalidObject: true, updateMetadata: false });
+  if (pdf.getPageCount() !== file.pageCount) throw new Error("knowledge_pdf_pages");
+  for (const page of pdf.getPages()) {
+    const { width, height } = page.getSize();
+    if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) throw new Error("knowledge_pdf_dimensions");
+  }
   const object = objectStorageClient.bucket(bucket).file([...prefix, knowledgePdfObjectName(file)].join("/"));
   try {
     await object.save(bytes, {

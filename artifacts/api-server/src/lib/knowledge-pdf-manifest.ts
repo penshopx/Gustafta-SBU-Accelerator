@@ -21,6 +21,20 @@ export const KNOWLEDGE_PDFS = [
     upload: "TERAS_LPJK_#12_Materi_3_-_Perspektif_Pelaku_Usaha_Pak_Ruslan_1793168014142.pdf",
     pages: { "teras12-pelaku-jalur": 3, "teras12-pelaku-smap-pub": 6, "teras12-pelaku-pendampingan": 5 },
   },
+  {
+    sourceKey: "implementasi-permen-pu6-diskusi", versionId: "implementasi-pu6-20261104-r1",
+    sha256: "d73f21bdf0432577b7d1daa7f1f7afc1c8a3217ef8b348cdc2f8283db4b60041",
+    pageCount: 91, filename: "implementasi-permen-pu-6-materi-diskusi.pdf",
+    upload: "NEW_PK-2026-1._Implementasi_Permen_PU_6_OK_1793785998101.pdf",
+    // Exact allowlisted original only; not an increase to user-upload limits.
+    maxBytes: 33387216,
+    pages: {
+      "implementasi-pu6-lkut": 25, "implementasi-pu6-pub": 32,
+      "implementasi-pu6-kualifikasi": 57, "implementasi-pu6-peralatan": 67,
+      "implementasi-pu6-tambahan": 69, "implementasi-pu6-smap": 81,
+      "implementasi-pu6-transisi": 44,
+    },
+  },
 ] as const;
 
 export type KnowledgePdfFile = typeof KNOWLEDGE_PDFS[number];
