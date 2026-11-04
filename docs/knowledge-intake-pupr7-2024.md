@@ -46,3 +46,11 @@ Metadata tetap **unverified** dan tautan JDIH hanya kanal rujukan.
 
 PDF asli diarsipkan privat dengan hash, pemeriksaan format, struktur dan
 jumlah halaman; tautan pembaca tetap memerlukan sesi dan pemilik yang cocok.
+
+## Pemeriksaan lanjutan sumber resmi
+
+Lihat [laporan pemeriksaan 4 November 2026](knowledge-verification-pupr7-2024.md).
+Metadata BPK mencantumkan Berlaku dan ekstraksi PDF BPK mendukung pokok enam
+ringkasan. Byte PDF resmi belum berhasil diperoleh untuk perbandingan hash dan
+akses halaman penerbit PU terhalang. Karena bukti tersebut belum lengkap,
+snapshot dan status `unverified` tetap dipertahankan.
