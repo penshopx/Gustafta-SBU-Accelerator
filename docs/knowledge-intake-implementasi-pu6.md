@@ -6,6 +6,8 @@
 - Salinan: 91 halaman, 33.387.216 byte.
 - SHA-256: `d73f21bdf0432577b7d1daa7f1f7afc1c8a3217ef8b348cdc2f8283db4b60041`.
 - Kurasi: 4 November 2026; versi `implementasi-pu6-20261104-r1`.
+- Perluasan pada tanggal yang sama: `implementasi-pu6-20261104-r2`;
+  total 13 ringkasan (7 dipertahankan, 6 tambahan). Snapshot r1 tetap utuh.
 - Sampul menyebut **MATERI DISKUSI**. Penerbit, tanggal paparan dan keaslian
   salinan belum diautentikasi. Tanggal metadata PDF bukan tanggal penetapan.
 - Peran sumber: **panduan**, bukan peraturan baru atau sumber primer.
@@ -21,6 +23,11 @@ Halaman 91 tidak menjadi sumber ringkasan. Ini **bukan** OCR lengkap,
 indeks seluruh teks, atau validasi setiap tabel dalam 91 halaman.
 Tidak ada pengiriman PDF ke AI berbayar.
 
+Untuk perluasan, halaman 16–18, 62–64, 73 dan 77 diperiksa pada render
+lebih besar. Ringkasan tambahan tetap kualitatif; angka jumlah personel,
+jenjang SKK, waktu pembayaran/proses, sanksi dan masa pemulihan dalam
+slide tidak menjadi ambang atau tenggat aplikasi.
+
 ## Cuplikan dan penggunaan fitur
 
 | Halaman PDF | Topik | Referensi fitur, bukan perubahan aturan |
@@ -32,12 +39,29 @@ Tidak ada pengiriman PDF ke AI berbayar.
 | 69 | SMAP, asosiasi, pemilik manfaat; LKUT/PUB perpanjangan | Checklist bahan persiapan, bukan putusan kelengkapan/kelayakan resmi |
 | 81; pembanding 74 | Bukti dan pendampingan SMAP | Dokumen/sertifikat dan catatan SMAP; bukan sertifikasi atau persamaan Pancek–ISO |
 | 44 | Ketentuan peralihan | Penjelasan transisi; bukan surat pemicu, tanggal operasional, atau keputusan pencabutan |
+| 16 | Tingkat risiko, NIB, Sertifikat Standar dan izin | Referensi legalitas/OSS; bukan penetapan risiko KBLI atau kecukupan NIB |
+| 17–18 | Standar usaha, OSS, SBU dan lisensi LSBU/LSP | Membedakan proses BUJK dari proses lisensi lembaga; bukan pengajuan eksternal |
+| 62 | PJBU, PJTBU, PJKBU; penugasan/penggantian TKK | Referensi Personel/SKK; bukan verifikasi keaslian atau penetapan jabatan |
+| 63–64 | Kebutuhan personel/jenjang dan multi-subklasifikasi | Belum menjadi matriks SKK–SBU atau pengecualian rangkap jabatan |
+| 73 | Kelengkapan, proses LSBU, validasi dan SBU digital | Panduan alur; bukan integrasi, biaya resmi atau janji durasi |
+| 77 | Ragam permohonan dan keputusan akhir | Pembedaan persiapan dari keputusan otoritas; tidak memperluas jenis layanan aplikasi |
 
 Nomor di atas adalah **halaman PDF**, bukan nomor slide yang mungkin
 tercetak di gambar. Kutipan menyimpan locator, batasan, dan versi salinan.
 Katalog Pusat Pengetahuan dan retrieval Asisten menggunakan sumber berversi
 yang sama, mengikuti ledger penarikan/penggantian yang sudah ada.
 Fitur deterministik tidak otomatis memakai korpus chat sebagai aturan.
+
+## Versi, persetujuan dan penarikan
+
+Kedua versi memakai **source key yang sama**. Tanpa keputusan ledger,
+r2 menjadi baseline editorial. Jika sumber sudah ditarik atau tidak
+disetujui, penambahan versi tidak mengaktifkannya kembali. Persetujuan lama
+yang mengunci r1 tetap memilih r1 sampai penelaah menyetujui r2 lewat alur
+yang sudah ada. Tidak ada penulisan keputusan penelaah dalam perluasan ini.
+Snapshot kutipan historis tidak diubah. Tombol PDF pada r1 dan r2 mengarah
+ke objek asli yang sama berdasarkan SHA, dengan locator sesuai versinya;
+tidak perlu mengunggah salinan berkas kedua.
 
 ## Perbedaan yang tidak diselesaikan oleh unggahan
 

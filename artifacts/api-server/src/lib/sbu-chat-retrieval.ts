@@ -1,6 +1,7 @@
 import type { SbuChatCitation } from "@workspace/api-zod";
 import { TERAS_LPJK_VERSIONS } from "./sbu-chat-teras-lpjk";
 import { IMPLEMENTASI_PU6_VERSIONS } from "./sbu-chat-implementasi-pu6";
+import { IMPLEMENTASI_PU6_EXPANDED } from "./sbu-chat-implementasi-pu6-expanded";
 import { BG_SOURCE_VERSIONS } from "./sbu-chat-schemes";
 import { BS_SOURCE_VERSIONS } from "./sbu-chat-bs-schemes";
 
@@ -81,10 +82,12 @@ const PRIMARY_SOURCE_VERSIONS: readonly ChatSourceVersion[] = [
 }));
 
 export const CHAT_SOURCE_VERSIONS: readonly ChatSourceVersion[] = [
-  ...PRIMARY_SOURCE_VERSIONS, ...TERAS_LPJK_VERSIONS, ...IMPLEMENTASI_PU6_VERSIONS, ...BG_SOURCE_VERSIONS, ...BS_SOURCE_VERSIONS,
+  ...PRIMARY_SOURCE_VERSIONS, ...TERAS_LPJK_VERSIONS,
+  ...IMPLEMENTASI_PU6_VERSIONS.map(v => ({ ...v, baseline: false })),
+  IMPLEMENTASI_PU6_EXPANDED, ...BG_SOURCE_VERSIONS, ...BS_SOURCE_VERSIONS,
 ];
 
-export function retrieveChatSources(question: string, versions: readonly ChatSourceVersion[] = CHAT_SOURCE_VERSIONS): SbuChatCitation[] {
+export function retrieveChatSources(question: string, versions: readonly ChatSourceVersion[] = CHAT_SOURCE_VERSIONS.filter(v => v.baseline)): SbuChatCitation[] {
   const normalized = question.toLocaleLowerCase("id");
   return versions.flatMap(version => version.citations.map(source => ({
     source, score: (version.keywords[source.id] ?? []).filter(term => normalized.includes(term)).length,

@@ -9,14 +9,19 @@ import { build } from "esbuild";
 const temp = await mkdtemp(join(tmpdir(), "implementasi-pu6-"));
 after(() => rm(temp, { recursive: true, force: true }));
 await build({
-  entryPoints: [fileURLToPath(new URL("../src/lib/sbu-chat-retrieval.ts", import.meta.url))],
+  stdin: {
+    contents: 'export * from "./sbu-chat-retrieval"; export * from "./sbu-chat-source-reviews";',
+    resolveDir: fileURLToPath(new URL("../src/lib/", import.meta.url)),
+  },
+  external: ["@workspace/db"],
   outfile: join(temp, "retrieval.mjs"), bundle: true, platform: "node", format: "esm",
 });
-const { CHAT_SOURCE_VERSIONS, retrieveChatSources } = await import(pathToFileURL(join(temp, "retrieval.mjs")).href);
-const source = CHAT_SOURCE_VERSIONS.find(v => v.sourceKey === "implementasi-permen-pu6-diskusi");
+const { CHAT_SOURCE_VERSIONS, retrieveChatSources, createChatSourceReviewStore } = await import(pathToFileURL(join(temp, "retrieval.mjs")).href);
+const source = CHAT_SOURCE_VERSIONS.find(v => v.sourceKey === "implementasi-permen-pu6-diskusi" && v.versionId.endsWith("-r1"));
+const expanded = CHAT_SOURCE_VERSIONS.find(v => v.sourceKey === source.sourceKey && v.baseline);
 
 test("discussion deck exposes seven immutable, bounded, unverified page summaries", () => {
-  assert.equal(source.baseline, true);
+  assert.equal(source.baseline, false, "historical snapshot retained, no longer the default");
   assert.equal(source.citations.length, 7);
   const all = CHAT_SOURCE_VERSIONS.flatMap(v => v.citations);
   assert.equal(new Set(all.map(c => c.id)).size, all.length);
@@ -40,10 +45,68 @@ test("each curated topic is retrievable with the inspected PDF page", () => {
     ["implementasi smap iso 37001 sertifikat smap komitmen smap", "smap", 81],
     ["implementasi ketentuan peralihan konversi transisi surat pemicu", "transisi", 44],
   ]) {
-    const found = retrieveChatSources(question);
+    const found = retrieveChatSources(question, [source]);
     assert.equal(found[0].id, `implementasi-pu6-${id}@${source.versionId}`);
     assert.match(found[0].locator, new RegExp(`PDF hlm\\. ${page} `));
   }
+});
+
+test("expanded snapshot keeps old content immutable and adds six inspected page references", () => {
+  assert.equal(expanded.versionId, "implementasi-pu6-20261104-r2");
+  assert.equal(expanded.citations.length, 13);
+  for (const before of source.citations) {
+    const after = expanded.citations.find(c => c.id.split("@")[0] === before.id.split("@")[0]);
+    assert.deepEqual({ ...after, id: before.id }, before);
+  }
+  for (const c of expanded.citations) {
+    assert.equal(c.verificationStatus, "unverified");
+    assert.ok(c.id.endsWith(`@${expanded.versionId}`));
+    assert.ok(expanded.keywords[c.id].length);
+  }
+  for (const [question, name, page] of [
+    ["legalitas nib sertifikat standar perizinan berbasis risiko pp 28/2025", "legalitas", 16],
+    ["oss standar kegiatan usaha lisensi lsbu lisensi lsp portal kementerian", "oss", 17],
+    ["tenaga kerja tkk pjbu pjtbu pjkbu penugasan penggantian personel", "tkk", 62],
+    ["jenjang skk persyaratan personel multi-klasifikasi multi-subklasifikasi perangkapan jabatan", "skk", 63],
+    ["tahapan permohonan registrasi kelengkapan data pembayaran lsbu sbu digital alur sertifikasi", "tahapan", 73],
+    ["jenis permohonan permohonan baru perubahan kualifikasi perubahan data pencabutan persetujuan penolakan", "jenis", 77],
+  ]) {
+    const [found] = retrieveChatSources(question);
+    assert.equal(found.id, `implementasi-pu6-${name}@${expanded.versionId}`);
+    assert.match(found.locator, new RegExp(`PDF hlm\\. ${page}`));
+  }
+});
+
+test("same-source withdrawal blocks both versions; a pinned old approval is not silently replaced", async () => {
+  let rows = [];
+  const store = createChatSourceReviewStore({
+    async query() { return { rows }; },
+    async connect() { throw Error("unexpected write"); },
+  });
+  const active = async () => (await store.active()).filter(v => v.sourceKey === source.sourceKey);
+  assert.deepEqual((await active()).map(v => v.versionId), [expanded.versionId]);
+  const decision = {
+    sourceKey: source.sourceKey, versionId: source.versionId,
+    status: "withdrawn", decidedAt: new Date("2026-11-04T00:00:00Z"), citations: source.citations,
+  };
+  rows = [decision];
+  assert.equal((await active()).length, 0);
+  rows = [{ ...decision, status: "approved" }];
+  assert.deepEqual((await active()).map(v => v.versionId), [source.versionId]);
+  rows = [{ ...decision, status: "approved", versionId: expanded.versionId, citations: expanded.citations }];
+  assert.deepEqual((await active()).map(v => v.versionId), [expanded.versionId]);
+  const [answer] = retrieveChatSources("legalitas nib sertifikat standar", await active());
+  assert.ok(answer.id.endsWith(`@${expanded.versionId}`));
+});
+
+test("expanded references do not certify OSS, staffing, SKK or external submissions", () => {
+  const find = name => expanded.citations.find(c => c.id.startsWith(`implementasi-pu6-${name}@`));
+  assert.match(find("legalitas").limitation, /Tidak menyimpulkan NIB saja cukup/);
+  assert.match(find("oss").limitation, /tidak mengirim permohonan/);
+  assert.match(find("tkk").limitation, /bukan verifikasi keaslian/);
+  assert.match(find("skk").limitation, /belum diadopsi sebagai matriks SKK–SBU/);
+  assert.match(find("tahapan").limitation, /bukan jaminan.*tarif, durasi/);
+  assert.match(find("jenis").limitation, /tidak menambah jenis layanan otomatis/);
 });
 
 test("ISO editions, local equipment states and transition dates are not promoted to rules", () => {

@@ -48,16 +48,25 @@ after(async () => {
   delete globalThis.__pdfStream; delete globalThis.__pdfObjectName;
 });
 
-test("all sixteen targets bind exact immutable version, SHA and PDF page (not printed slide)", () => {
+test("all historical and current targets bind exact immutable version, SHA and PDF page", () => {
   let count = 0;
   for (const version of catalog) for (const citation of version.citations) {
     const pdf = knowledgePdf(version.sourceKey, version.versionId, citation.id);
     if (pdf) { count++; assert.ok(pdf.metadata.page <= pdf.metadata.pageCount); }
   }
-  assert.equal(count, 16);
+  assert.equal(count, 29);
   const pdf = knowledgePdf("teras-lpjk-12-pelaku-usaha", "teras12-pelaku-20261028-r1", "teras12-pelaku-smap-pub@teras12-pelaku-20261028-r1");
   assert.equal(pdf.metadata.page, 6);
   assert.equal(knowledgePdf(KNOWLEDGE_PDFS[0].sourceKey, "unknown", id), undefined);
+  const expanded = catalog.find(v => v.sourceKey === "implementasi-permen-pu6-diskusi" && v.baseline);
+  for (const citation of expanded.citations) {
+    const { file, metadata } = knowledgePdf(expanded.sourceKey, expanded.versionId, citation.id);
+    const original = KNOWLEDGE_PDFS.find(f => f.sourceKey === expanded.sourceKey);
+    assert.equal(file.sha256, original.sha256);
+    assert.equal(metadata.pageCount, 91);
+    assert.equal(metadata.page, Number(citation.locator.match(/PDF hlm\. (\d+)/)[1]));
+    assert.equal(knowledgePdf(expanded.sourceKey, expanded.versionId, citation.id.replace("-r2", "-r1")), undefined);
+  }
 });
 test("large curated original has an explicit bound without raising other PDF limits", () => {
   const file = KNOWLEDGE_PDFS.find(f => f.sourceKey === "implementasi-permen-pu6-diskusi");

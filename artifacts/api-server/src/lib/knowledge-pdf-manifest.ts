@@ -37,9 +37,21 @@ export const KNOWLEDGE_PDFS = [
   },
 ] as const;
 
-export type KnowledgePdfFile = typeof KNOWLEDGE_PDFS[number];
+// Same archived bytes, new immutable citation snapshot; no duplicate upload.
+const implementationPdf = KNOWLEDGE_PDFS[3];
+const EXPANDED_IMPLEMENTATION_PDF = {
+  ...implementationPdf, versionId: "implementasi-pu6-20261104-r2",
+  pages: {
+    ...implementationPdf.pages,
+    "implementasi-pu6-legalitas": 16, "implementasi-pu6-oss": 17,
+    "implementasi-pu6-tkk": 62, "implementasi-pu6-skk": 63,
+    "implementasi-pu6-tahapan": 73, "implementasi-pu6-jenis": 77,
+  },
+} as const;
+
+export type KnowledgePdfFile = typeof KNOWLEDGE_PDFS[number] | typeof EXPANDED_IMPLEMENTATION_PDF;
 export function knowledgePdf(sourceKey: string, versionId: string, citationId: string) {
-  const file = KNOWLEDGE_PDFS.find(f => f.sourceKey === sourceKey && f.versionId === versionId);
+  const file = [...KNOWLEDGE_PDFS, EXPANDED_IMPLEMENTATION_PDF].find(f => f.sourceKey === sourceKey && f.versionId === versionId);
   if (!file || !citationId.endsWith(`@${versionId}`)) return undefined;
   const page = (file.pages as Readonly<Record<string, number>>)[citationId.slice(0, -(versionId.length + 1))];
   if (!Number.isInteger(page) || page < 1 || page > file.pageCount) return undefined;
