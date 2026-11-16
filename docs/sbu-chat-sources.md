@@ -24,14 +24,21 @@ detail sumber yang sudah tidak ada dalam respons terbaru juga menghilang.
 Ini bukan push real-time atau jaminan bahwa keputusan yang terjadi setelah
 snapshot langsung terlihat sebelum pembacaan berikutnya.
 
-Katalog awal memuat empat cuplikan dari dua dokumen primer. Kurasi TERAS
-LPJK Episode 12 menambahkan sembilan cuplikan dari tiga paparan: dua
-berjenis panduan dan satu perspektif praktik, seluruhnya belum terverifikasi.
+Katalog kode baseline saat ini berisi 90 cuplikan pada 11 snapshot sumber
+(dihitung 16 November 2026; keputusan ledger runtime dapat mengubah versi yang
+aktif). Kelompoknya: 10 cuplikan primer, 77 panduan, dan 3 perspektif praktik.
+Korpus mencakup Permen PU 6/2025, Kepdirjen 281/2026, Permen PUPR 7/2024,
+ringkasan implementasi/TERAS, serta pilot terbatas BG/BS dan KBLI 2025.
+Angka katalog bukan ukuran kelengkapan regulasi atau semua kewajiban SBU.
+
+TERAS LPJK Episode 12 menyumbang sembilan cuplikan dari tiga paparan: dua
+panduan dan satu perspektif praktik, seluruhnya belum terverifikasi.
 Identitas salinan, halaman PDF versus slide, dan batasnya dicatat di
-`knowledge-intake-teras-lpjk.md`. Filter tidak
-menambahkan sumber klasifikasi KBLI, panduan, atau praktik yang belum
-dikurasi. Dokumen baru perlu klasifikasi eksplisit di server sebelum
-ditampilkan; katalog tidak menerima dokumen/URL bebas dari pengguna.
+`knowledge-intake-teras-lpjk.md`. Pilot BG/BS dan KBLI 2025 adalah pemetaan
+institusional/ruang lingkup terbatas, bukan skema normatif lengkap atau
+persyaratan yang telah terverifikasi. Dokumen baru perlu klasifikasi
+eksplisit di server sebelum ditampilkan; katalog tidak menerima dokumen/URL
+bebas dari pengguna.
 Pencarian/detail tidak memanggil AI, memakai kuota, mengirim konteks ke
 Klinik, atau mengaktifkan draf BG001.
 
@@ -42,6 +49,15 @@ Klinik, atau mengaktifkan draf BG001.
 - Kepdirjen 281/KPTS/DK/2026: ringkasan surat pengantar PDF halaman 1,
   diktum KEEMPAT–KELIMA halaman 4, dan skema SMAP halaman 27–32.
   URL kanal DJBK bukan tautan salinan keputusan terautentikasi.
+- Permen PUPR 7/2024: enam cuplikan PUB/LKUT dalam snapshot baseline
+  `pupr7-20261104-r1`, semuanya `unverified`; intake dan locator ada di
+  `knowledge-intake-pupr7-2024.md`.
+- Kandidat `pupr7-20261104-r2` berisi tautan JDIH BPK spesifik, satu kartu
+  metadata dengan cakupan terverifikasi terbatas pada halaman BPK tanggal
+  4 November 2026, enam ringkasan yang tetap `unverified`, dan tambahan
+  Pasal 17 ayat (3). Kandidat ini **tidak aktif** sebelum keputusan `approved`
+  pada ledger. Unduhan byte resmi terhalang, jadi identitas PDF unggahan
+  belum diautentikasi; rincian ada di `knowledge-verification-pupr7-2024.md`.
 - Status `verified` **hanya** dipakai untuk metadata penerbit pada tanggal
   pemeriksaan terdokumentasi. Tidak berarti seluruh teks, status sekarang,
   kesiapan SIJK, atau penerapan permohonan telah diverifikasi.
@@ -61,14 +77,16 @@ Keputusan pada alur ini tidak mengubah semuanya itu, tidak mengambil sumber
 live, dan tidak mengaktifkan matriks BG001.
 
 Katalog kode `CHAT_SOURCE_VERSIONS` mempertahankan versi snapshot yang tidak
-boleh diedit di tempat. Identitas awal adalah `pu6-20260926-r1` dan
-`dk281-20260926-r1`. ID kutipan berbentuk
+boleh diedit di tempat. Identitas termasuk `pu6-20260926-r1`,
+`dk281-20260926-r1`, `pupr7-20261104-r1`, dan kandidat non-baseline
+`pupr7-20261104-r2`. ID kutipan berbentuk
 `pu6-smap@pu6-20260926-r1`, sehingga ID tanpa versi dan ID versi yang
 diganti tidak dapat digunakan sebagai kutipan versi baru.
-Katalog awal berstatus baseline: persetujuan terbatas berdasarkan cakupan
-persiapan dan pemeriksaan 26 September 2026 di atas, bukan keputusan telaah
+Versi `baseline: true` adalah snapshot kode bawaan, bukan keputusan telaah
 baru atau verifikasi live. Baseline hanya dipakai sebelum ada keputusan
-tersimpan untuk sumber tersebut.
+tersimpan untuk sumber tersebut; setelah itu hanya versi yang secara tepat
+disetujui ledger yang aktif. Kandidat baru tetap tidak aktif sampai penelaah
+yang diizinkan merekam keputusan.
 
 Alur operasional untuk penelaah resmi melalui API (bukan formulir pengguna):
 
