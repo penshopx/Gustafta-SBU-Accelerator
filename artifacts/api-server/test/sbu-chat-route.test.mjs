@@ -400,7 +400,9 @@ test("budget availability requires session owner, discloses no totals and cannot
 test("knowledge catalog follows active versions, enforces session owner and never exposes the reviewer ledger", async () => {
   const quotaBefore = (await restricted.pool.query("SELECT * FROM sbu_chat_quota ORDER BY user_id")).rows;
   const decisionsBefore = (await restricted.pool.query("SELECT * FROM sbu_chat_source_decisions ORDER BY source_key,revision")).rows;
-  let versions = structuredClone(CHAT_SOURCE_VERSIONS);
+  // `active()` represents retrieval eligibility, not the whole historical
+  // catalog. Keep non-baseline versions out until the review ledger approves.
+  let versions = structuredClone(CHAT_SOURCE_VERSIONS.filter(version => version.baseline));
   let fail = false, reads = 0;
   const forbidden = async () => { assert.fail("knowledge reads must not call providers, write reviews or reserve funds"); };
   const reviews = { read: forbidden, record: forbidden, active: async () => {
@@ -426,9 +428,9 @@ test("knowledge catalog follows active versions, enforces session owner and neve
     assert.equal(response.status, 200, "ordinary readers do not need reviewer rights");
     assert.equal(response.headers.get("cache-control"), "private, no-store");
     const data = await response.json();
-    assert.equal(data.length, 71);
-    assert.equal(data.filter(source => source.sourceRole === "primer").length, 4);
-    assert.equal(data.filter(source => source.sourceRole === "panduan").length, 64);
+    assert.equal(data.length, 90);
+    assert.equal(data.filter(source => source.sourceRole === "primer").length, 10);
+    assert.equal(data.filter(source => source.sourceRole === "panduan").length, 77);
     assert.equal(data.filter(source => source.sourceRole === "praktik").length, 3);
     assert.ok(data.every(source => source.id.endsWith(`@${source.versionId}`)));
     assert.ok(data.filter(source => source.sourceKey.startsWith("teras-")).every(source => source.verificationStatus === "unverified"));

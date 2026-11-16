@@ -1,6 +1,8 @@
 import type { ChatSourceVersion } from "./sbu-chat-retrieval";
 
 const versionId = "pupr7-20261104-r1";
+const reviewVersionId = "pupr7-20261104-r2";
+const bpkRecordUrl = "https://peraturan.bpk.go.id/Details/291479/permen-pupr-no-7-tahun-2024";
 const entries = [
   {
     id: "pupr7-pub", page: 3, locator: "Pasal 2–4 — PDF hlm. 3",
@@ -55,4 +57,49 @@ export const PUPR7_SOURCE: ChatSourceVersion = {
     limitation: `${e.limitation} Tautan JDIH adalah kanal rujukan, bukan URL berkas penerbit yang telah diautentikasi.`,
   })),
   keywords: Object.fromEntries(entries.map(e => [`${e.id}@${versionId}`, [...e.terms]])),
+};
+
+// Candidate snapshot: links to the exact BPK record, adds a narrowly scoped
+// official-metadata citation, and completes Pasal 17(3). It is deliberately
+// not baseline: only the existing human source-review workflow can activate it.
+export const PUPR7_REVIEW_CANDIDATE: ChatSourceVersion = {
+  sourceKey: PUPR7_SOURCE.sourceKey,
+  versionId: reviewVersionId,
+  baseline: false,
+  citations: [
+    ...PUPR7_SOURCE.citations.map(citation => ({
+      ...citation,
+      id: citation.id.replace(`@${versionId}`, `@${reviewVersionId}`),
+      version: "Salinan unggahan; teks ringkasan dicocokkan secara terbatas dengan ekstraksi PDF JDIH BPK, 4 November 2026",
+      sourceUrl: bpkRecordUrl,
+    })).map(citation => citation.id.startsWith(`pupr7-tanggung-jawab@${reviewVersionId}`)
+      ? {
+        ...citation,
+        excerpt: `${citation.excerpt} Pasal 17 ayat (3) juga menyebut setiap BUJK mendapatkan pembinaan paling sedikit satu kali dalam satu tahun.`,
+        limitation: `${citation.limitation} Pernyataan frekuensi pembinaan merujuk teks Pasal 17 ayat (3) pada salinan yang ditelaah; bukan bukti bahwa suatu BUJK telah menerima pembinaan.`,
+      }
+      : citation),
+    {
+      id: `pupr7-bpk-metadata@${reviewVersionId}`,
+      document: "Metadata JDIH BPK — Permen PUPR Nomor 7 Tahun 2024",
+      version: "Metadata halaman BPK diperiksa 4 November 2026",
+      locator: "Halaman detail JDIH BPK — metadata peraturan",
+      excerpt: "Halaman detail JDIH BPK mencantumkan judul dan nomor Permen PUPR 7 Tahun 2024, tanggal penetapan 19 Juni 2024, tanggal pengundangan dan tanggal berlaku 5 Juli 2024, sumber Berita Negara 2024 Nomor 371 (169 halaman), serta metadata Status: Berlaku.",
+      sourceUrl: bpkRecordUrl,
+      checkedOn: "2026-11-04",
+      verificationStatus: "verified",
+      verificationScope: "Metadata yang ditampilkan pada halaman detail JDIH BPK diperiksa 4 November 2026 saja; bukan autentikasi byte salinan unggahan, audit perubahan hukum menyeluruh, atau pendapat hukum.",
+      documentStatus: "Metadata JDIH BPK mencantumkan Status: Berlaku pada tanggal pemeriksaan; autentikasi berkas unggahan dan penelusuran perubahan/pencabutan secara menyeluruh belum dilakukan.",
+      limitation: "Status berlaku adalah apa yang ditampilkan metadata BPK pada tanggal pemeriksaan, bukan jaminan penerapan atau keberlakuan hukum menyeluruh saat jawaban dibaca. PDF resmi tidak berhasil diunduh untuk dibandingkan hash-nya dengan salinan unggahan.",
+    },
+  ],
+  keywords: {
+    ...Object.fromEntries(Object.entries(PUPR7_SOURCE.keywords).map(([id, terms]) => [
+      id.replace(`@${versionId}`, `@${reviewVersionId}`), terms,
+    ])),
+    [`pupr7-bpk-metadata@${reviewVersionId}`]: [
+      "status permen 7 2024", "status berlaku", "jdih bpk", "tanggal pengundangan",
+      "tanggal berlaku", "berita negara 371", "metadata permen pupR",
+    ],
+  },
 };

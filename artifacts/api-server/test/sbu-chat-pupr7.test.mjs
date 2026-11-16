@@ -18,9 +18,10 @@ await build({
 });
 const { CHAT_SOURCE_VERSIONS, retrieveChatSources, createChatSourceReviewStore, knowledgePdf } = await import(pathToFileURL(join(temp, "check.mjs")));
 const source = CHAT_SOURCE_VERSIONS.find(s => s.sourceKey === "permen-pupr-7-2024");
+const candidate = CHAT_SOURCE_VERSIONS.find(s => s.sourceKey === "permen-pupr-7-2024" && s.versionId === "pupr7-20261104-r2");
 
 test("one uploaded regulation has six bounded citations and exact private PDF references", () => {
-  assert.equal(CHAT_SOURCE_VERSIONS.filter(s => s.sourceKey === source.sourceKey).length, 1);
+  assert.equal(CHAT_SOURCE_VERSIONS.filter(s => s.sourceKey === source.sourceKey).length, 2);
   assert.equal(source.citations.length, 6);
   // Actual original-byte validation belongs to the operator archive check.
   // Regression tests must not depend on untracked attachment files.
@@ -35,6 +36,43 @@ test("one uploaded regulation has six bounded citations and exact private PDF re
     assert.equal(metadata.pageCount, 169);
     assert.equal(metadata.page, Number(c.locator.match(/PDF hlm\. (\d+)/)[1]));
   }
+});
+
+test("official metadata and the annual BUJK coaching detail are versioned and wait for source review", async () => {
+  assert.equal(source.versionId, "pupr7-20261104-r1");
+  assert.equal(source.baseline, true, "current approved/default snapshot stays active");
+  assert.equal(candidate.versionId, "pupr7-20261104-r2");
+  assert.equal(candidate.baseline, false, "candidate must not silently replace active retrieval");
+
+  const responsibility = candidate.citations.find(c => c.id.startsWith("pupr7-tanggung-jawab@"));
+  assert.match(responsibility.excerpt, /Pasal 17 ayat \(3\).*paling sedikit satu kali dalam satu tahun/);
+  assert.equal(responsibility.sourceUrl, "https://peraturan.bpk.go.id/Details/291479/permen-pupr-no-7-tahun-2024");
+
+  const metadata = candidate.citations.find(c => c.id.startsWith("pupr7-bpk-metadata@"));
+  assert.equal(metadata.verificationStatus, "verified");
+  assert.match(metadata.verificationScope, /metadata.*saja/i);
+  assert.match(metadata.limitation, /PDF resmi tidak berhasil diunduh.*hash/i);
+  assert.equal(knowledgePdf(source.sourceKey, candidate.versionId, metadata.id), undefined,
+    "external metadata card must not masquerade as an archived PDF page");
+
+  const rows = [];
+  const mockPool = {
+    async query() { return { rows }; },
+    async connect() { throw Error("candidate test only reads decisions"); },
+  };
+  const store = createChatSourceReviewStore(mockPool);
+  assert.ok((await store.active()).some(v => v.versionId === source.versionId));
+  assert.ok(!(await store.active()).some(v => v.versionId === candidate.versionId));
+
+  rows.push({
+    sourceKey: candidate.sourceKey, versionId: candidate.versionId, status: "approved",
+    citations: candidate.citations, decidedAt: new Date("2026-11-04T00:00:00Z"),
+  });
+  const activeAfterReview = await store.active();
+  assert.ok(activeAfterReview.some(v => v.versionId === candidate.versionId));
+  assert.ok(!activeAfterReview.some(v => v.versionId === source.versionId));
+  assert.equal(retrieveChatSources("metadata JDIH BPK status berlaku 5 Juli 2024", activeAfterReview)
+    .find(c => c.id === metadata.id)?.verificationStatus, "verified");
 });
 
 test("primary excerpts are found by distinct questions with the correct article and page", () => {

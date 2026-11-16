@@ -54,3 +54,8 @@ Metadata BPK mencantumkan Berlaku dan ekstraksi PDF BPK mendukung pokok enam
 ringkasan. Byte PDF resmi belum berhasil diperoleh untuk perbandingan hash dan
 akses halaman penerbit PU terhalang. Karena bukti tersebut belum lengkap,
 snapshot dan status `unverified` tetap dipertahankan.
+
+Snapshot kandidat `pupr7-20261104-r2` menambahkan tautan catatan BPK yang
+spesifik, kartu metadata terbatas, dan rincian Pasal 17 ayat (3). Kandidat
+tetap nonaktif sampai ditinjau dan disetujui lewat ledger sumber; PDF tidak
+diarsipkan ulang karena hash upload yang sama dipakai kembali.

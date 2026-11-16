@@ -13,6 +13,15 @@ perubahan hukum hingga tanggal pemeriksaan.
 Status aplikasi tetap `unverified`. Tidak ada promosi versi, perubahan kutipan
 historis, keputusan ledger penelaah, aktivasi tenggat, grade atau skor otomatis.
 
+Perbaikan berikutnya menyiapkan snapshot kandidat `pupr7-20261104-r2`:
+tautan sumber diarahkan ke catatan spesifik JDIH BPK, metadata status BPK
+disajikan sebagai kartu kutipan dengan cakupan sempit, dan ringkasan Pasal 17
+ditambah ayat (3). **Kandidat belum aktif**; `r1` tetap versi bawaan hingga
+penelaah berwenang menyetujui snapshot melalui ledger aplikasi. Kartu metadata
+terverifikasi hanya mengulang apa yang tercantum di halaman BPK pada 4 November
+2026; ia tidak mengautentikasi byte PDF unggahan atau menutup keterbatasan di
+bawah.
+
 ## Sumber dan hasil akses
 
 | Sumber | Hasil aktual | Batas bukti |
@@ -20,6 +29,7 @@ historis, keputusan ledger penelaah, aktivasi tenggat, grade atau skor otomatis.
 | [JDIH PU, halaman dokumen](https://jdih.pu.go.id/detail-dokumen/PermenPUPR-nomor-7-tahun-2024-Pengembangan-Usaha-Berkelanjutan) | Hasil pencarian mengidentifikasi judul/nomor yang sesuai; pembacaan halaman gagal dan koneksi HTTP langsung timeout setelah 50 detik | Cuplikan pencarian bukan konfirmasi isi lengkap atau status penerbit |
 | [JDIH BPK, metadata](https://peraturan.bpk.go.id/Details/291479/permen-pupr-no-7-tahun-2024) | Isi halaman terbaca: ditetapkan 19 Juni 2024, diundangkan/berlaku 5 Juli 2024, BN 2024 (371), 169 halaman, metadata Status: Berlaku | Bagian terpisah STATUS PERATURAN menyebut Belum Tersedia; tidak membuktikan tidak ada perubahan/pencabutan |
 | [JDIH BPK, tautan PDF](https://peraturan.bpk.go.id/Download/350771/permen-pupr-no-7-tahun-2024.pdf) | Pembaca web menghasilkan ekstraksi teks, termasuk pasal 1–20 dan awal lampiran. Unduhan byte langsung menghasilkan HTTP 403, HTML tantangan Cloudflare 5.582 byte, bukan PDF | Ekstraksi mendukung isi teks, bukan hash atau jumlah halaman fisik PDF resmi |
+| [SIBIKON Dinas PUPR-PERA Kalimantan Timur](https://sibikon-dpuprpera.kaltimprov.go.id/peraturan) | Katalog pemerintah daerah mencantumkan Permen 7/2024, kategori PUB dan label Berlaku | Sumber pendukung, bukan penerbit regulasi atau autentikasi dokumen |
 
 Penelusuran memakai judul lengkap, nomor, serta kata perubahan/pencabutan dan
 domain resmi. Tidak ditemukan bukti perubahan/pencabutan dalam hasil yang
@@ -44,6 +54,10 @@ ulang tata letak PDF resmi. Tidak menyatakan dua berkas identik.
 Teks Pasal 19 menyebut pencabutan **ketentuan penilaian kinerja dan LKUT dalam
 lampiran Permen PUPR 6/2021**, bukan pencabutan seluruh Permen 6/2021.
 Catatan ini tidak mengubah aturan aplikasi atau memperluas kutipan secara diam-diam.
+Teks Pasal 17 ayat (3) pada ekstraksi BPK juga menyatakan setiap BUJK
+mendapatkan pembinaan paling sedikit satu kali dalam satu tahun. Hal ini
+ditambahkan ke snapshot kandidat `r2`, bukan disisipkan ke kutipan aktif
+`r1` secara diam-diam.
 
 ## Identitas salinan dan bagian yang belum terbukti
 
