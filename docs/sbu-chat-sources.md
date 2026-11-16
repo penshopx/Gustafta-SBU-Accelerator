@@ -88,15 +88,19 @@ tersimpan untuk sumber tersebut; setelah itu hanya versi yang secara tepat
 disetujui ledger yang aktif. Kandidat baru tetap tidak aktif sampai penelaah
 yang diizinkan merekam keputusan.
 
-Alur operasional untuk penelaah resmi melalui API (bukan formulir pengguna):
+Penelaah yang diizinkan membuka halaman `/source-reviews` atau memakai API
+terlindungi berikut. Halaman memuat hanya katalog/ledger dari endpoint resmi;
+keputusan tetap merupakan tindakan eksplisit manusia.
 
 1. Masuk menggunakan akun penelaah yang sudah diizinkan oleh allowlist server
    yang sama dengan penelaah transisi. Pilihan peran chat, profil, ataupun
-   header pemilik tidak memberi kewenangan penelaah.
-2. Baca `GET /api/openai/sbu/source-reviews`, dengan
-   `X-SBU-Form-Owner` sesuai akun sesi. Respons memuat versi terkurasi dan
-   riwayat keputusan; revisi awal per `sourceKey` adalah 0.
-3. Setelah telaah manusia yang sah, kirim
+   header pemilik tidak memberi kewenangan penelaah. Menu hanya muncul setelah
+   probe izin server berhasil; akses langsung tetap diperiksa oleh endpoint.
+2. Halaman membaca `GET /api/openai/sbu/source-reviews` dengan sesi dan
+   `X-SBU-Form-Owner` yang sesuai. Respons memuat snapshot terkurasi dan riwayat
+   append-only; revisi awal per `sourceKey` adalah 0.
+3. Setelah telaah manusia yang sah dan pengisian alasan serta rujukan nyata,
+   halaman mengirim
    `POST /api/openai/sbu/source-reviews`, dengan header pemilik yang sama:
 
    ```json

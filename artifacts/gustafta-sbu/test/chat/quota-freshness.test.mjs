@@ -11,13 +11,17 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const A = 'synthetic-chat-owner', B = 'synthetic-chat-owner-b';
-const beforeReset = '2026-10-20T23:59:50Z'; // 06.59.50 WIB
-const resetAt = '2026-10-21T00:00:00Z'; // 07.00 WIB
+const resetDay = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+const resetAt = new Date(Date.UTC(resetDay.getUTCFullYear(), resetDay.getUTCMonth(), resetDay.getUTCDate())).toISOString();
+const beforeReset = new Date(Date.parse(resetAt) - 10_000).toISOString();
+const nextResetAt = new Date(Date.parse(resetAt) + 24 * 60 * 60 * 1000).toISOString();
+const afterReset = new Date(Date.parse(resetAt) + 60_000).toISOString();
+const displayDate = value => new Intl.DateTimeFormat('id-ID').format(new Date(value));
 const draft = 'Draf sintetis untuk regresi kuota.';
 const quotaFor = (owner, now, used) => ({
   userId: owner, dailyLimit: 30, dailyRemaining: 30 - used,
   minuteLimit: 6, minuteRemaining: 6 - used, busy: false, retryAfterSeconds: 0,
-  dailyResetAt: now >= Date.parse(resetAt) ? '2026-10-22T00:00:00Z' : resetAt,
+  dailyResetAt: now >= Date.parse(resetAt) ? nextResetAt : resetAt,
   minuteResetAt: new Date(Math.floor(now / 60000) * 60000 + 60000).toISOString(),
 });
 const deferred = () => {
@@ -241,11 +245,11 @@ test('browser quota freshness and fail-closed recovery with synthetic accounts',
     await t.test('sleeping tab crossing 07.00 WIB fetches the next day quota on return', async () => {
       await scenario(async ({ open, state, requests }) => {
         const page = await open();
-        assert.match(await page.getByTestId('text-chat-quota').innerText(), /21\/10\/2026/);
+        assert.match(await page.getByTestId('text-chat-quota').innerText(), new RegExp(displayDate(resetAt).replaceAll('/', '\\/')));
         await visibility(page, 'hidden');
         const reads = requests.length;
         // Jump wall time without firing polling timers, like a suspended tab.
-        state.now = Date.parse('2026-10-21T00:01:00Z');
+        state.now = Date.parse(afterReset);
         state.used[A] = 0;
         await page.clock.setSystemTime(new Date(state.now));
         assert.equal(requests.length, reads);
@@ -253,7 +257,7 @@ test('browser quota freshness and fail-closed recovery with synthetic accounts',
         await visibility(page, 'visible');
         await seeQuota(page, 30, 6);
         assert.ok(requests.length > reads);
-        assert.match(await page.getByTestId('text-chat-quota').innerText(), /22\/10\/2026/);
+        assert.match(await page.getByTestId('text-chat-quota').innerText(), new RegExp(displayDate(nextResetAt).replaceAll('/', '\\/')));
         assert.equal(await page.getByTestId('input-chat-message').inputValue(), draft);
         await seeSend(page, true);
       });

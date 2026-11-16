@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import React, { createElement } from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
+import { Router } from 'wouter';
 import { AccountQueries } from './account-queries';
 import { CasePreparationExport } from './case-preparation-export';
 
@@ -24,6 +25,7 @@ for (const mode of ['download', 'print'] as const) {
         let downloads = 0;
         let prints = 0;
         Object.defineProperty(globalThis, 'window', { configurable: true, value: {
+          location: { pathname: '/cases/12' },
           setTimeout: () => 1, clearTimeout() {},
         } });
         Object.defineProperty(globalThis, 'document', { configurable: true, value: {
@@ -48,8 +50,11 @@ for (const mode of ['download', 'print'] as const) {
         globalThis.fetch = (url, init) => new Promise(resolve => {
           requests.push({ url: String(url), signal: init!.signal!, resolve });
         });
-        const tree = (caseId: number) => createElement(AccountQueries, {
-          userId: 'owner-a', children: createElement(CasePreparationExport, { caseId }),
+        const tree = (caseId: number) => createElement(Router, {
+          hook: () => [`/cases/${caseId}`, () => {}] as [string, (to: string) => void],
+          children: createElement(AccountQueries, {
+            userId: 'owner-a', children: createElement(CasePreparationExport, { caseId }),
+          }),
         });
         const button = () => renderer!.root.findByProps({ 'data-testid': `button-${mode}-summary` });
         const assertPending = (expected: boolean) => {
@@ -140,6 +145,7 @@ test('ekspor mengambil HTML terbaru, bisa dicoba ulang, mencetak tanpa URL kasus
   const requests: { url: string; owner: string | null; cache?: RequestCache }[] = [];
   const timers = new Set<ReturnType<typeof setTimeout>>();
   Object.defineProperty(globalThis, 'window', { configurable: true, value: {
+    location: { pathname: '/cases/12' },
     setTimeout: (fn: () => void, time: number) => {
       const timer = setTimeout(fn, time); timers.add(timer); return timer;
     },
@@ -166,8 +172,11 @@ test('ekspor mengambil HTML terbaru, bisa dicoba ulang, mencetak tanpa URL kasus
     return new Response('<!doctype html><p>Snapshot terbaru</p>', { headers: { 'content-type': 'text/html' } });
   };
   const mount = async () => {
-    await act(async () => { renderer = TestRenderer.create(createElement(AccountQueries, {
-      userId: 'owner-a', children: createElement(CasePreparationExport, { caseId: 12 }),
+    await act(async () => { renderer = TestRenderer.create(createElement(Router, {
+      hook: () => ['/cases/12', () => {}] as [string, (to: string) => void],
+      children: createElement(AccountQueries, {
+        userId: 'owner-a', children: createElement(CasePreparationExport, { caseId: 12 }),
+      }),
     })); });
   };
   const button = (id: string) => renderer!.root.findByProps({ 'data-testid': id });
