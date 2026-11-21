@@ -271,6 +271,12 @@ await build({
              export const asc = (column) => ({ column, direction: "asc" });
              export const ilike = () => { throw new Error("unexpected vault query"); };
              export const or = () => { throw new Error("unexpected vault query"); };
+              export const count = () => { throw new Error("unexpected workroom query"); };
+              export const gte = () => { throw new Error("unexpected workroom query"); };
+              export const isNull = () => { throw new Error("unexpected workroom query"); };
+              export const lte = () => { throw new Error("unexpected workroom query"); };
+              export const lt = () => { throw new Error("unexpected workroom query"); };
+              export const ne = () => { throw new Error("unexpected workroom query"); };
              export const sql = (strings) => {
                // These locks are declared at module load, not executed here.
                if (strings.length === 1 && [

@@ -125,6 +125,7 @@ await build({
           export const auditLogsTable = {}, clientsTable = {}, workspacesTable = {};
           export const consultationsTable = {}, personnelTable = {}, skkCertificatesTable = {};
           export const workroomItemsTable = {}, workroomReviewsTable = {};
+          export const smapChecklistRevisionsTable = {};
           export const db = new Proxy({}, { get() {
             globalThis.__retirementDatabaseCalls++;
             throw new Error("Unexpected database access");
